@@ -29,6 +29,7 @@
       "ended": "Time up",
       "stopped": "stopped",
       "remaining": "Time left",
+      "remainingUncertain": "Time left (uncertain)",
       "pause": "Break",
       "pauseHalftime": "Break · $t(sport:phases.halftime)",
       "overtime": "$t(sport:phases.overtime)"
@@ -96,6 +97,9 @@
       "scorerNoNumber": "no number – {{team}}",
       "scorerOwnGoals": "Own goals for {{team}}"
     }
+  },
+  "verbindung": {
+    "stand": "As of {{time}} – no connection"
   },
   "dauerbetrieb": {
     "wakeLockHint": "Screen may turn off – check power saving"

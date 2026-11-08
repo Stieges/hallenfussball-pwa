@@ -17,8 +17,9 @@ import type { MonitorTheme } from '../../types/monitor';
 import type { MatchStatus } from '../../hooks/useLiveMatches';
 import { useMonitorTheme } from '../../hooks';
 import { DEFAULT_CLOCK_MODE, type ClockMode } from '../../core/match/clockDisplay';
-import { monitorUhrMitSperre, monitorUhrOf, type MatchView, type MonitorUhrEingabe, type MonitorUhrModell, type MonitorUhrText } from '../../core/view';
+import { formatRemaining, monitorUhrMitSperre, monitorUhrOf, type MatchView, type MonitorUhrEingabe, type MonitorUhrModell, type MonitorUhrText } from '../../core/view';
 import { NowSourceContext } from '../schedule/useTickingNow';
+import { UhrSicherheitContext } from './UhrSicherheitContext';
 import { cachedElapsedSeconds } from '../schedule/matchResult';
 import { ZeitBalken } from '../ui/atoms/ZeitBalken';
 import {
@@ -70,12 +71,6 @@ const TEXT_KEY: Record<MonitorUhrText, UhrTextKey> = {
   zeitAbgelaufen: 'ended',
 };
 
-function formatTime(totalSeconds: number): string {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = Math.floor(totalSeconds % 60);
-  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-}
-
 function eingabeOf(props: MatchTimerProps, nowMs: number): MonitorUhrEingabe {
   const { uhr } = props;
   if (uhr !== undefined) {
@@ -123,15 +118,18 @@ export const MatchTimer: React.FC<MatchTimerProps> = (props) => {
   const { themeColors } = useMonitorTheme(theme);
   const uhr = useMonitorUhr(props);
   const stufe = STUFEN[size];
+  // Eingefrorene Verbindung (@ME-030, @ZM-085): die Restzeit zählt weiter, ist aber grau und als „unsicher“ gekennzeichnet
+  const sicher = useContext(UhrSicherheitContext);
+  const unsicher = !sicher && uhr?.text === 'restzeit';
 
   return (
     <div style={containerStyle(stufe)}>
       <div style={labelRowStyle(size, stufe)} data-testid="clock-hints">
-        {uhr && <div style={labelStyle(stufe, themeColors)} data-testid="clock-label" data-text={uhr.text}>{t(`liveMatch.clock.${TEXT_KEY[uhr.text]}`)}</div>}
+        {uhr && <div style={labelStyle(stufe, themeColors)} data-testid="clock-label" data-text={uhr.text}>{t(unsicher ? 'liveMatch.clock.remainingUncertain' : `liveMatch.clock.${TEXT_KEY[uhr.text]}`)}</div>}
       </div>
       {uhr?.restSekunden !== undefined && uhr.restSekunden !== null && (
-        <div style={clockBoxStyle(size)} data-testid="monitor-clock" data-phase={uhr.schlussphase ? 'schlussphaseAngehalten' : uhr.text === 'zeitAbgelaufen' ? 'abgelaufen' : 'normal'}>
-          <span style={timeStyle(stufe, themeColors, uhr.schlussphase)} data-monitor="uhr">{formatTime(uhr.restSekunden)}</span>
+        <div style={clockBoxStyle(size)} data-testid="monitor-clock" data-sicherheit={sicher ? 'sicher' : 'unsicher'} data-phase={uhr.schlussphase ? 'schlussphaseAngehalten' : uhr.text === 'zeitAbgelaufen' ? 'abgelaufen' : 'normal'}>
+          <span style={timeStyle(stufe, themeColors, uhr.schlussphase, !sicher)} data-monitor="uhr">{formatRemaining(uhr.restSekunden)}</span>
         </div>
       )}
       {showProgress && uhr?.balken && (

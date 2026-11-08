@@ -49,10 +49,12 @@ export function clockBoxStyle(size: MatchTimerSize): CSSProperties {
 }
 
 /** @ZM-137: in der angehaltenen Schlussphase eigene Hervorhebungsfarbe (Violett), keine Teamfarbe, kein Rot. */
-export function timeStyle(stufe: Stufe, colors: MonitorThemeColors, schlussphase: boolean): CSSProperties {
+export function timeStyle(stufe: Stufe, colors: MonitorThemeColors, schlussphase: boolean, unsicher = false): CSSProperties {
+  // @ZM-085: bei eingefrorener Verbindung grau (Textfarbe zweiter Stufe, Kontrast ≥ 4,5 : 1); die Kennzeichnung „unsicher“ steht als Text darüber
+  const farbe = unsicher ? colors.textSecondary : schlussphase ? cssVars.colors.scoreboardFinalPhase : colors.timerNormal;
   return {
     fontSize: stufe.time, fontWeight: cssVars.fontWeights.bold, fontFamily: cssVars.fontFamilies.heading,
-    color: schlussphase ? cssVars.colors.scoreboardFinalPhase : colors.timerNormal,
+    color: farbe,
     textShadow: colors.textShadowLight, letterSpacing: L.clockLetterSpacing, lineHeight: L.clockLineHeight,
   };
 }

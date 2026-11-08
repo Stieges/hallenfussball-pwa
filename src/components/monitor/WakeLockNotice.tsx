@@ -3,10 +3,8 @@
  * Bildrands (Ecke des sicheren Bereichs). Steht nur auf Einrichtungs- und QR-Folien ohne laufendes Spiel, 10 Sekunden lang (Regeln in useWakeLockHinweis).
  * Schrift nie unter 3 % der Bildhöhe, Maße aus den Display-Tokens.
  */
-import type { CSSProperties } from 'react';
-import { cssVars, displayFontSizes, displayLayout, type MonitorThemeColors } from '../../design-tokens';
-
-const layout = displayLayout.scoreArea;
+import { displayFontSizes, type MonitorThemeColors } from '../../design-tokens';
+import { noticeBoxStyle } from './noticeBoxStyle';
 
 export interface WakeLockNoticeProps {
   text: string;
@@ -36,32 +34,8 @@ function BatterySymbol({ color }: { color: string }) {
 }
 
 export function WakeLockNotice({ text, themeColors }: WakeLockNoticeProps) {
-  const style: CSSProperties = {
-    // Die Ecke des sicheren Bereichs (innerhalb des Bildrands, @ME-067): kein zweiter Rand
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    // Eine Zeile mit fester Höhe: die Folie rückt um genau diese Höhe nach unten (@ME-006)
-    height: displayLayout.noticeHeight,
-    maxWidth: '100%',
-    whiteSpace: 'nowrap',
-    zIndex: cssVars.zIndex.sticky,
-    display: 'flex',
-    alignItems: 'center',
-    gap: layout.noticeGap,
-    boxSizing: 'border-box',
-    padding: `${layout.noticePadY} ${layout.noticePadX}`,
-    border: `${layout.noticeBorderWidth} solid ${themeColors.border}`,
-    borderRadius: layout.noticeRadius,
-    background: themeColors.backgroundGradient,
-    color: themeColors.text,
-    fontSize: displayFontSizes.notice,
-    fontWeight: cssVars.fontWeights.semibold,
-    lineHeight: layout.noticeLineHeight,
-    textAlign: 'left',
-  };
   return (
-    <div style={style} data-testid="monitor-wakelock-hint" role="status">
+    <div style={noticeBoxStyle(themeColors)} data-testid="monitor-wakelock-hint" role="status">
       <BatterySymbol color={themeColors.warningSymbol} />
       <span>{text}</span>
     </div>

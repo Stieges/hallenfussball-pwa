@@ -29,6 +29,7 @@
       "ended": "Zeit abgelaufen",
       "stopped": "angehalten",
       "remaining": "Restzeit",
+      "remainingUncertain": "Restzeit (unsicher)",
       "pause": "Pause",
       "pauseHalftime": "Pause · $t(sport:phases.halftime)",
       "overtime": "$t(sport:phases.overtime)"
@@ -96,6 +97,9 @@
       "scorerNoNumber": "ohne Nummer – {{team}}",
       "scorerOwnGoals": "Eigentore für {{team}}"
     }
+  },
+  "verbindung": {
+    "stand": "Stand von {{time}} – keine Verbindung"
   },
   "dauerbetrieb": {
     "wakeLockHint": "Bildschirm kann ausgehen – Energiesparen prüfen"

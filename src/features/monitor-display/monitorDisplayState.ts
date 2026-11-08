@@ -46,6 +46,15 @@ export interface DisplayContext {
 }
 
 /**
+ * Hat der Server geantwortet? Auch „unverändert“ und eine unlesbare Antwort sind Antworten; eine lokale Kopie als Rückfall nach
+ * gescheiterter Cloud-Abfrage (`lookupFailed`) und ein gescheiterter Abruf nicht. Grundlage des Hinweises „Stand von hh:mm“
+ * (@ME-030, @ZM-085).
+ */
+export function istAntwort(delta: DisplayDelta): boolean {
+  return delta.kind === 'unchanged' || delta.kind === 'unreadable' || !delta.lookupFailed;
+}
+
+/**
  * Wendet einen Abruf-Ergebnis-Delta an. Gibt bei „nichts ändern“ dieselbe Referenz zurück.
  */
 export function applyDelta(

@@ -3,7 +3,8 @@
  */
 import { useEffect, useState } from 'react';
 import type { WakeLockStatus } from '../../hooks/useWakeLock';
-import { MAUSZEIGER_RUHE_MS, istAbgefangenerTastendruck, istEingabeZiel } from './monitorDauerbetrieb';
+import { MAUSZEIGER_RUHE_MS, istAbgefangenerTastendruck, istCacheTaste, istEingabeZiel, istVollbildTaste } from './monitorDauerbetrieb';
+import { vollbildUmschalten } from './vollbild';
 
 /**
  * Liefert `true`, wenn der Mauszeiger ruht (kein Mausbewegen und kein Tippen auf dem Bildschirm seit `ruheMs`).
@@ -75,4 +76,24 @@ export function useWakeLockNachEingabe(status: WakeLockStatus, anfordern: () => 
       window.removeEventListener('keydown', nochmal);
     };
   }, [erneut, anfordern]);
+}
+
+/** Tasten der Monitor-Seite: „f“ schaltet das Vollbild um, „c“ die Cache-Anzeige (Admin); gibt zurück, ob sie sichtbar ist. */
+export function useMonitorTasten(): boolean {
+  const [zeigeCache, setZeigeCache] = useState(false);
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (istEingabeZiel(e.target)) { return; }
+      if (istVollbildTaste(e)) {
+        vollbildUmschalten();
+        return;
+      }
+      if (istCacheTaste(e)) {
+        setZeigeCache((s) => !s);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+  return zeigeCache;
 }
