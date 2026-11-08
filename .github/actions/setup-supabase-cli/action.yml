@@ -22,7 +22,7 @@ runs:
       uses: actions/cache@v6
       with:
         path: ${{ runner.temp }}/supabase-cli-bin
-        key: supabase-cli-${{ runner.os }}-${{ runner.arch }}-${{ inputs.version }}-npmtest
+        key: supabase-cli-${{ runner.os }}-${{ runner.arch }}-${{ inputs.version }}
 
     - name: Cache-Treffer in den PATH aufnehmen
       if: steps.cache.outputs.cache-hit == 'true'
@@ -31,7 +31,7 @@ runs:
 
     - name: Supabase CLI über setup-cli (GitHub-Release)
       id: setup
-      if: false # TEST-ONLY: npm-Ausweichweg erzwingen
+      if: steps.cache.outputs.cache-hit != 'true'
       uses: supabase/setup-cli@v1
       continue-on-error: true
       with:
