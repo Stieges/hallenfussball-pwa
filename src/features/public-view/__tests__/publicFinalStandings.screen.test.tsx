@@ -84,6 +84,12 @@ async function serverAntwortVerarbeitet(): Promise<void> {
 describe('R3-6 Zuschauer-Seite: Endstand', () => {
   beforeEach(() => { supabaseGet.mockReset(); localGet.mockReset(); rpc.mockReset(); localStorage.clear(); });
 
+  it('@ZM-141 nach dem Abschluss steht oben der Endstand, kein Kopfblock „Läuft gerade / Als Nächstes“', async () => {
+    await renderWith(buildLiveViewTournament(), stored());
+    await screen.findByTestId('final-standings-list');
+    expect(screen.queryByTestId('public-current')).toBeNull();
+  });
+
   it('@LZ-074 @ET-044: nach dem Abschluss alle Plätze 1 bis 8 in der Reihenfolge des gespeicherten Endstands, mit Sieger und Abzeichen', async () => {
     await renderWith(buildLiveViewTournament(), stored());
     const list = await screen.findByTestId('final-standings-list');

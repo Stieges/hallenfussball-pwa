@@ -46,6 +46,7 @@ import { showsFinalStandings, showsKidsEnded } from '../features/public-view/sho
 import { PublicEndedBadge, PublicFinalStandingsBlock } from '../features/public-view/components/PublicFinalStandings';
 import { MyTeamBar } from '../features/public-view/components/MyTeamBar';
 import { PublicPdfRow } from '../features/public-view/components/PublicPdfRow';
+import { PublicCurrentBlock } from '../features/public-view/components/PublicCurrentBlock';
 import { PublicFilterBar } from '../features/public-view/components/PublicFilterBar';
 import { TeamSelectorDialog } from '../features/public-view/components/TeamSelectorDialog';
 import { joinMeta } from '../core/view';
@@ -140,6 +141,8 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
   const groups = uniqueGroups(tournament);
   const finalShown = showsFinalStandings(view, finalStandings);
   const ended = finalShown || showsKidsEnded(tournament, view);
+  const currentMatches = publicMatches(tournament, view.rules);
+  const visibleIds = new Set(filteredSchedule.allMatches.map((m) => m.id));
   const pdfRow = <PublicPdfRow tournament={tournament} schedule={schedule} standings={currentStandings} view={view} finalStandings={finalStandings} />;
 
   return (
@@ -183,6 +186,11 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
           <div style={{ marginBottom: cssVars.spacing.md }}>
             <PublicConnectionHint hint={connectionHint} />
           </div>
+        )}
+
+        {/* Kopfblock (@ZM-141): läuft gerade / als Nächstes / zuletzt beendet, ohne Scrollen sichtbar; nach dem Abschluss steht der Endstand */}
+        {tab === 'schedule' && !ended && (
+          <PublicCurrentBlock view={view} schedule={schedule} tournament={tournament} currentMatches={currentMatches} visibleIds={visibleIds} locale={ANZEIGE_SPRACHE} />
         )}
 
         {/* Endstand oben (R3-6), Spielplan darunter wie heute */}
@@ -238,8 +246,9 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
                 currentStandings={filteredStandings}
                 showGroupTables={standingsTabAvailable(view.rules)}
                 participantStandings={view.rules.results ? undefined : schedule.initialStandings}
-                currentMatches={publicMatches(tournament, view.rules)}
+                currentMatches={currentMatches}
                 tournamentTeams={tournament.teams}
+                showTournamentHeader={false}
                 editable={false}
               />
             </Card>
