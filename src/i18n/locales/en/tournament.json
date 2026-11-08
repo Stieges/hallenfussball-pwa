@@ -617,6 +617,8 @@
     "groups": "Groups"
   },
   "matchCard": {
+    "winnerAria": "Winner, trophy",
+    "bibSpoken": "{{team}} wearing bibs",
     "bibAria": "Bib",
     "timePenalty": "$t(sport:events.timePenalty) #{{number}} · {{rest}}",
     "timePenaltyNoNumber": "$t(sport:events.timePenalty) · {{rest}}",

@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BOX_BLACK, BOX_WHITE, type BoxFill } from '../../../../core/models/scoreBoxColors';
-import { borderWidths, cssVars, displayLayout, monitorThemes } from '../../../../design-tokens';
+import { borderWidths, cssVars, displayLayout, monitorThemes, scoreDigitFontSize } from '../../../../design-tokens';
 import { mixHex } from '../../../../design-tokens/displayColor';
 import { ScoreBox, type ScoreBoxProps } from '../ScoreBox';
 import { LOSER_DIM_SHARE, pairFrameStrength } from '../scoreBoxStyle';
@@ -112,7 +112,7 @@ describe('ScoreBox Weste = Trainingsleibchen (@ZM-161)', () => {
     // Das Leibchen liegt zwischen den Seitenkanten `edge` und 100 − `edge` (große Form); Teile links und rechts enden dort
     const el = draw({ fill: vest(GELB, ROT), size: 'cockpit', background: HELL, textColor: TEXT_DUNKEL });
     const [links, rechts, hals] = Array.from(el.querySelectorAll<HTMLElement>('[data-teil]'));
-    const { edge, strap, neckHalf, neckDepth } = displayLayout.scoreArea.vest.large;
+    const { edge, strap, neckHalf, neckDepth } = displayLayout.scoreArea.vest.cockpit;
     expect(parseFloat(links.style.left)).toBe(0);
     expect(parseFloat(links.style.width)).toBe(strap);
     expect(parseFloat(rechts.style.left) + parseFloat(rechts.style.width)).toBeCloseTo(100, 1);
@@ -124,12 +124,16 @@ describe('ScoreBox Weste = Trainingsleibchen (@ZM-161)', () => {
     expect(parseFloat(hals.style.height)).toBeLessThanOrEqual(neckDepth);
   });
 
-  it('@ZM-161 kleine Kästen (compact) tragen die kleine Geometrie: schmalere Teile, flacherer Hals', () => {
-    const gross = draw({ fill: vest(GELB, ROT), size: 'cockpit', testId: 'gross' });
+  it('@ZM-161 jede Größe trägt ihre Geometrie: Monitor groß, Handy-Kasten (compact) klein, Cockpit-Kasten mit flachem Hals', () => {
+    const hals = (el: HTMLElement) => parseFloat(el.querySelectorAll<HTMLElement>('[data-teil]')[2].style.height);
+    const gross = draw({ fill: vest(GELB, ROT), size: 'display', testId: 'gross' });
     const klein = draw({ fill: vest(GELB, ROT), size: 'compact', testId: 'klein' });
-    const hoehe = (el: HTMLElement) => parseFloat(el.querySelectorAll<HTMLElement>('[data-teil]')[2].style.height);
-    expect(hoehe(klein)).toBeLessThan(hoehe(gross));
-    expect(hoehe(klein)).toBe(displayLayout.scoreArea.vest.small.neckDepth);
+    const cockpit = draw({ fill: vest(GELB, ROT), size: 'cockpit', testId: 'cockpit' });
+    const V = displayLayout.scoreArea.vest;
+    expect(hals(gross)).toBe(V.large.neckDepth);
+    expect(hals(klein)).toBe(V.small.neckDepth);
+    expect(hals(cockpit)).toBe(V.cockpit.neckDepth);
+    expect(V.cockpit.neckDepth).toBeLessThan(V.small.neckDepth);
   });
 
   it('@ZM-161 der Rahmen liegt als oberste Schicht über den Teilen, die Weste hat keinen eigenen Rand (kein doppelter Rahmen, kein Überstand)', () => {
@@ -172,7 +176,7 @@ describe('ScoreBox Ziffern im Kasten haben Luft (Controller-Zusatz zu H3) und bl
     draw({ size: 'display', score: 12, fill: solid(BLAU) });
     const flaeche = screen.getByTestId('box-digits').parentElement!;
     expect(flaeche.style.containerType).toBe('size');
-    expect(screen.getByTestId('box-digits').style.fontSize).toBe('min(60cqh, 50cqw)');
+    expect(screen.getByTestId('box-digits').style.fontSize).toBe(scoreDigitFontSize());
     expect(screen.getByTestId('box-digits')).toHaveTextContent('12');
   });
 
@@ -188,8 +192,8 @@ describe('ScoreBox Ziffern im Kasten haben Luft (Controller-Zusatz zu H3) und bl
   it('@ZM-161 Gegenbeispiele: einstellig auf der Weste und zweistellig ohne Weste behalten die gewohnte Schrift', () => {
     draw({ size: 'display', score: 9, fill: vest(GELB, ROT), testId: 'eins' });
     draw({ size: 'display', score: 10, fill: solid(GELB), testId: 'zehn' });
-    expect(screen.getByTestId('eins-digits').style.fontSize).toBe('min(60cqh, 50cqw)');
-    expect(screen.getByTestId('zehn-digits').style.fontSize).toBe('min(60cqh, 50cqw)');
+    expect(screen.getByTestId('eins-digits').style.fontSize).toBe(scoreDigitFontSize());
+    expect(screen.getByTestId('zehn-digits').style.fontSize).toBe(scoreDigitFontSize());
   });
 });
 

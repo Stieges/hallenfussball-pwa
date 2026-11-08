@@ -27,12 +27,7 @@ async function oeffneMonitor(page: Page, szene: Szene, groesse: { width: number;
   await page.setViewportSize(groesse);
   await installiereSaat(page.context(), leibchenSaat(szene));
   await page.goto(`/#/display/${LEIBCHEN_TURNIER_ID}/${LEIBCHEN_MONITOR_ID}`);
-  if (PHASE === 'vorher') {
-    // alter Stand: die Folie „Nächstes Spiel“ hat kein Raster; Bilder erst, wenn die Folie steht
-    await page.waitForTimeout(4000);
-  } else {
-    await expect(page.getByTestId('live-grid')).toBeVisible({ timeout: 25000 });
-  }
+  await expect(page.getByTestId('live-grid')).toBeVisible({ timeout: 25000 });
   await page.evaluate(() => document.fonts.ready);
 }
 
@@ -263,12 +258,15 @@ test.describe('Leibchen-Anzeige Zuschauer-Seite 390', () => {
     await bild(page, 'z-vor');
   });
 
-  test('@ZM-158 Gegenbeispiel: ein beendetes Spiel zeigt die Zahl wie bisher, ohne Kasten', async ({ page }) => {
+  test('@ZM-158 Gegenbeispiel Gruppenspiel: ein beendetes Gruppenspiel zeigt die Zahl wie bisher, ohne Kasten', async ({ page }) => {
     await oeffneZuschauer(page, 'beendet');
     const karteSpiel2 = page.locator('.mobile-view [data-match-card]').first();
     await expect(karteSpiel2.getByTestId(/^match-box-/)).toHaveCount(0);
     await expect(karteSpiel2.getByTestId(/^match-goals-.*-home$/)).toContainText('1');
   });
+
+  // Das beendete Finale (Ring, Pokal, Weste am Handy) prüft `ZM-158-karte-kasten.test.tsx` bis in die Finalrunde der Zuschauer-Seite: die Saat der App regeneriert
+  // die Finalrunde aus der Gruppenphase, ein vorgefertigtes Finale erscheint hier nicht als Finalkarte.
 });
 
 const COCKPITS = [{ name: 'laptop', width: 1280, height: 720 }, { name: 'handy', width: 390, height: 844 }];
@@ -287,5 +285,35 @@ for (const g of COCKPITS) {
         await expect(kopf.locator('[data-teil]')).toHaveCount(0);
       });
     }
+  });
+}
+
+/** Cockpit-Stufen: Handy, Laptop knapp (< 720 px Fensterhöhe), normal, groß (ab 800 px). */
+const STUFEN = [
+  { name: 'handy', width: 390, height: 844 }, { name: 'knapp', width: 1280, height: 680 },
+  { name: 'normal', width: 1280, height: 760 }, { name: 'gross', width: 1280, height: 900 },
+];
+for (const g of STUFEN) {
+  test(`@SL-176 @ZM-161 Cockpit-Kasten: die Oberkante der großen Ziffer liegt unter dem Halsausschnitt, die Ziffer steht ganz auf der Leibchenfarbe (${g.name})`, async ({ page }) => {
+    await oeffneCockpit(page, g, NAMEN[0]);
+    const gemessen = await page.evaluate(() => {
+      const kasten = document.querySelector('[data-testid="scoreboard-box-links"]')!;
+      const k = kasten.getBoundingClientRect();
+      const ziffer = kasten.querySelector('[data-testid="scoreboard-box-links-digits"]')!;
+      const rect = ziffer.getBoundingClientRect();
+      const stil = getComputedStyle(ziffer);
+      // Tintenoberkante der Ziffer „0“: Grundlinie der Zeile minus tatsächliche Zeichenhöhe (Schriftmaße der Zeichenfläche)
+      const ctx = document.createElement('canvas').getContext('2d')!;
+      ctx.font = `${stil.fontWeight} ${stil.fontSize} ${stil.fontFamily}`;
+      const m = ctx.measureText('0');
+      const zeile = parseFloat(stil.fontSize) * (stil.lineHeight === 'normal' ? 1 : parseFloat(stil.lineHeight) / parseFloat(stil.fontSize));
+      const grundlinie = rect.top + (zeile - (m.fontBoundingBoxAscent + m.fontBoundingBoxDescent)) / 2 + m.fontBoundingBoxAscent;
+      const tinteOben = grundlinie - m.actualBoundingBoxAscent;
+      const hals = kasten.querySelectorAll('[data-teil]')[2].getBoundingClientRect();
+      return { tinteOben, halsUnten: hals.bottom, tintenHoehe: m.actualBoundingBoxAscent + m.actualBoundingBoxDescent, kastenOben: k.top };
+    });
+    expect(gemessen.tinteOben, `Ziffer (Oberkante ${gemessen.tinteOben.toFixed(1)}) unter dem Hals (Unterkante ${gemessen.halsUnten.toFixed(1)})`).toBeGreaterThanOrEqual(gemessen.halsUnten);
+    expect(gemessen.tintenHoehe, 'Ziffernhöhe bleibt ≥ 11 mm (≈ 41 px)').toBeGreaterThanOrEqual(41);
+    await bild(page, `c-${g.name}-hals-fix1`);
   });
 }

@@ -88,7 +88,7 @@ describe('Monitor mit nur der Live-Folie vor dem Anpfiff (@ZM-138, @ZP-090)', ()
 
   // Entscheidung Daniel 08.11. (Bild-OK Leibchen-Anzeige): Logo und Initialen kommen erst mit dem Neubau der Kästen (#418), nicht in Schritt 1.
   // Das Szenario @ZM-138 verlangt sie weiterhin: rot bleibt sichtbar, bis es so weit ist.
-  it.fails('@ZM-138 Logo bzw. Initialen auf der Folie „Nächstes Spiel“ (kommen mit #418)', async () => {
+  it.fails('C-MONITOR-INITIALEN-NAECHSTES @ZM-138 Logo bzw. Initialen auf der Folie „Nächstes Spiel“ (kommen mit dem Neubau #418)', async () => {
     const teams = FIXTURE_TEAMS.map(t => (t.id === 'team-sued' ? { ...t, logo: { type: 'url' as const, value: 'https://logos.example/sued.png' } } : t));
     await zeigeUm(um(15, 26), turnier({ teams, spiele: [spiel('m1', 1, 1, 15, 30)], folien: [slide('live', { fieldId: 'field-1' })] }));
     await waitFor(() => expect(screen.getByText('Nächstes Spiel')).toBeInTheDocument());

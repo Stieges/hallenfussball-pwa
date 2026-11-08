@@ -296,6 +296,9 @@ export const displayLayout = {
     // Rest: Rundung der Achsel-Ecke und Form des runden Halses (Anteil der Tiefe, an dem die Rundung beginnt, Kurvenspannung, Ausbauchung) und Stützpunkte.
     vest: {
       large: { edge: 20, strap: 28, armRise: 33, neckHalf: 38, neckDepth: 22 },
+      // Cockpit-Kasten (flach, Ziffer ≥ 11 mm): flacher Hals, damit die Ziffer ganz auf der Leibchenfarbe steht – der Platz über der Ziffer ist bei der
+      // knappen Stufe (Kasten 68 px, Ziffer 76 px) nur ≈ 9 % der Kastenhöhe
+      cockpit: { edge: 20, strap: 28, armRise: 33, neckHalf: 38, neckDepth: 7 },
       small: { edge: 18, strap: 27, armRise: 33, neckHalf: 41, neckDepth: 19 },
       armCorner: 2,
       neckShoulder: 0.42,
@@ -306,6 +309,9 @@ export const displayLayout = {
       // Zweistelliger Stand auf der Weste: Schrift höchstens dieser Anteil der Kastenbreite (zwei Ziffern ≈ 1,3 em), damit die Ziffern ganz auf der Leibchenfarbe stehen
       digitsFontShare: 0.4,
     },
+    // Ziffern im Kasten haben Luft (Controller-Zusatz zu H3): Schrift höchstens dieser Anteil der Kastenhöhe bzw. -breite – die EINE Quelle
+    // (`scoreDigitFontSize`) für `ScoreBox` und die Layout-Tests
+    digitMaxOfBox: { height: 0.6, width: 0.5 },
     // Leibchen-Zeichen am Monitor-Kasten (@ZM-157): innen in der Ecke oben links, Abstand wie beim Zeitstrafen-Kreis
     bibInset: '1.6cqh',
     // Zeitstrafe am Monitor (@ZM-182, @ZM-192; Mockup zeitstrafe-monitor Variante A, Daniel 05.11.): Kreis so groß wie der
@@ -319,6 +325,12 @@ export const displayLayout = {
     penaltyTrackMix: '22%',
   },
 } as const;
+
+/** Schrift der Ziffern im Monitor-Kasten (cq-Einheiten der Ziffernfläche): höchstens 60 % der Höhe und 50 % der Breite (`digitMaxOfBox`). */
+export function scoreDigitFontSize(): string {
+  const { height, width } = displayLayout.scoreArea.digitMaxOfBox;
+  return `min(${height * 100}cqh, ${width * 100}cqw)`;
+}
 
 /**
  * B-44a3: Anzeige ohne laufendes Spiel (NoMatchDisplay), vorher feste Werte im Bauteil.

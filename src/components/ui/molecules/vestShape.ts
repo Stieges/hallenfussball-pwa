@@ -7,7 +7,7 @@
  */
 import { displayLayout } from '../../../design-tokens';
 
-export type VestSize = 'large' | 'small';
+export type VestSize = 'large' | 'small' | 'cockpit';
 export type VestPoint = readonly [number, number];
 /** Ein Teil als Vieleck; ein dritter Wert an einem Punkt rundet diese Ecke mit dem Radius (in Prozent) ab, Punkte ohne Radius bleiben scharf (Kastenkanten). */
 type CornerPoint = readonly [number, number, number?];

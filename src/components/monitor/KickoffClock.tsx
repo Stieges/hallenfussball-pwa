@@ -26,7 +26,6 @@ export function KickoffClock({ time, size = 'xl', theme = 'dark', notes }: Kicko
       <div style={labelRowStyle(size, stufe)}>
         <div style={labelStyle(stufe, themeColors)} data-testid="kickoff-label">{t('slides.live.kickoff')}</div>
       </div>
-      {' '}
       <div style={clockBoxStyle(size)} data-testid="monitor-clock" data-phase="anstoss">
         <span style={timeStyle(stufe, themeColors, false)} data-monitor="uhr" data-testid="kickoff-time">{time}</span>
       </div>

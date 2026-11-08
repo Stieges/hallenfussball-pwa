@@ -6,7 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import { borderWidths, cssVars, displayLayout, monitorThemes } from '..';
 import { getContrastRatio } from '../display';
-import { getBlockFrame, getBlockFrames, mixHex } from '../displayColor';
+import { getBlockFrame, getBlockFrames, mixHex, overHex } from '../displayColor';
 import { palette } from '../colors/palette';
 
 const L = displayLayout.scoreArea;
@@ -87,6 +87,15 @@ describe('mixHex (B4: Anteil kommt als Zahl, nicht als „30%“)', () => {
 
   it('Gegenbeispiel: ungültige Farbe wird unverändert zurückgegeben statt zu werfen', () => {
     expect(mixHex('blau', palette.neutral[0], 0.3)).toBe('blau');
+  });
+});
+
+describe('overHex: halbdurchsichtige Fläche über dem Untergrund', () => {
+  it('rgba mit Deckkraft 0,05 weiß über #0A0A14 hellt nur leicht auf; Deckkraft 1 und Hex bleiben, Ungültiges fällt auf den Untergrund', () => {
+    expect(overHex('rgba(255, 255, 255, 0.05)', '#000000')).toBe('#0D0D0D');
+    expect(overHex('rgba(10, 20, 30, 1)', '#FFFFFF')).toBe('#0A141E');
+    expect(overHex('#F5F5F5', '#000000')).toBe('#F5F5F5');
+    expect(overHex('keine Farbe', '#123456')).toBe('#123456');
   });
 });
 

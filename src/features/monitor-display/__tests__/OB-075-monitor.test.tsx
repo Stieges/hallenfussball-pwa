@@ -1,6 +1,6 @@
 /**
- * @OB-075 / @OB-076 am Monitor, Deutsch und Englisch: die Tabelle trägt im Kopf die Kurzformen mit ausgeschriebenem Hinweis
- * (Vorlesetext), die Live-Folie ohne laufendes Spiel nennt das nächste Spiel mit „gegen“ bzw. „vs“, und der Satz
+ * @OB-075 am Monitor, Deutsch und Englisch: die Tabelle trägt im Kopf die Kurzformen mit ausgeschriebenem Hinweis
+ * (Vorlesetext), die Live-Folie ohne laufendes Spiel zeigt das nächste Spiel als Kästen mit Doppelpunkt (kein „gegen“/„vs“ mehr), und der Satz
  * „Nächstes Spiel in ~5 Minuten“ steht ausgeschrieben (keine Kurzform, auch nicht an der Uhr).
  */
 import { describe, expect, it, vi } from 'vitest';
@@ -43,7 +43,7 @@ describe('@OB-075 Monitor-Tabelle: Kurzformen im Kopf mit Vorlesetext', () => {
   });
 });
 
-describe('@OB-076 Monitor Live-Folie: das nächste Spiel (seit @ZM-195 als Kästen „0 : 0“)', () => {
+describe('Monitor Live-Folie: das nächste Spiel (seit @ZM-195 als Kästen „0 : 0“, ohne „gegen“/„vs“)', () => {
   const performanceSettings = {} as PerformanceSettings;
   const ohneLaufendesSpiel = () => buildTournament({ matches: FIXTURE_MATCHES.map((m) => (m.matchStatus === 'running' ? { ...m, matchStatus: 'scheduled' as const } : m)) });
 

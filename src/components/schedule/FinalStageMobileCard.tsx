@@ -3,10 +3,15 @@
  *
  * Mannschaften untereinander, ihre Tore rechts in der Zeile; Strafstoß kleiner daneben, Sieger fett.
  * Ein offenes Spiel lässt sich hier eintragen (C-FINALRUNDE-MOBIL-EINGABE, `useScoreDraft`, @FU-101).
+ * Mit `kasten` steht die Torzahl im kleinen Kasten in Teamfarbe (Weste mit Leibchen-Zeichen bei Leibchen); beim beendeten Finale mit Ring um den Sieger und
+ * Pokal oben rechts (@ZM-158, @ZM-156: in der Finalrunde hat der Sieger den Pokal).
  */
 import { type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
+import { useTheme } from '../../hooks/useTheme';
+import { ScoreBox } from '../ui/molecules/ScoreBox';
+import { pairFrameStrength } from '../ui/molecules/scoreBoxStyle';
 import type { ScheduledMatch } from '../../core/generators';
 import { MatchStatusBadge } from '../ui/molecules/MatchStatusBadge';
 import { MatchClock } from '../ui/molecules/MatchClock';
@@ -14,7 +19,7 @@ import { ZeitstrafeHinweis } from '../ui/molecules/ZeitstrafeHinweis';
 import { ScoreDraftInput } from '../ui/atoms';
 import { entryScore } from './runningEntryScore';
 import { ScoreChangedHint, ScoreDraftHint, ScoreSaveButton, useScoreDraft, type ScoreCommitResult } from '../ui/molecules';
-import type { MatchBadgeModel, SpectatorClock, ViewMatchStatus } from '../../core/view';
+import type { MatchBadgeModel, MatchView, SpectatorClock, ViewMatchStatus } from '../../core/view';
 import type { ResultFigures } from './matchResult';
 import { MatchMenuSlot, OriginalTimeNote } from './MatchTimeShiftSlots';
 import { MatchActionTrigger } from './actionMenu/MatchActionTrigger';
@@ -62,6 +67,8 @@ export interface FinalStageMobileCardProps {
   onFieldChange?: (matchId: string, fieldNumber: number) => void;
   /** B-12: weitere Aktion der Turnierleitung (z. B. „Nicht angetreten“) unter dem Stand */
   extraAction?: ReactNode;
+  /** Kästen der Ansicht (`MatchView.boxes`) beim laufenden und beim beendeten Finalspiel; ohne Angabe steht die Zahl wie bisher */
+  kasten?: MatchView['boxes'];
 }
 
 const nameStyle: CSSProperties = { overflowWrap: 'break-word' };
@@ -82,9 +89,10 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
   const {
     match, label, homeName, awayName, homePending, awayPending, result, isRunning, isFinished, badge, clock, viewStatus, canEditScore,
     onScoreChange, onOpenActions, changeAuthorOf, showReferees, showFields, editingSchedule, displayedRef, displayedField,
-    hasPendingRef, hasPendingField, refereeOptions, fieldOptions, onRefereeChange, onFieldChange, extraAction,
+    hasPendingRef, hasPendingField, refereeOptions, fieldOptions, onRefereeChange, onFieldChange, extraAction, kasten,
   } = props;
   const { t } = useTranslation('tournament');
+  const { colors } = useTheme();
   const decided = result?.winner !== undefined && result.winner !== null;
   const note = isFinished
     ? result?.decision === 'penalty' ? t('matchResult.finishedPenalty') : result?.decision === 'overtime' ? t('matchResult.finishedOvertime') : undefined
@@ -96,6 +104,9 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
     onCommit: (a, b) => onScoreChange?.(match.id, a, b), allowUnchanged: isRunning,
     resolveAuthor: changeAuthorOf ? () => changeAuthorOf(match.id) : undefined,
   });
+
+  // Gleiche Rahmenbreite beider Kästen; Hintergrund hinter dem Kasten ist die Fläche der Karte (`colors.background`)
+  const rahmen = kasten === undefined ? undefined : pairFrameStrength({ fill: kasten.home.fill }, { fill: kasten.away.fill }, colors.background);
 
   const renderRow = (side: 'a' | 'b', name: string, pending: boolean) => {
     const isWinner = decided && result?.winner === side;
@@ -133,7 +144,21 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
               style={{ fontSize: cssVars.fontSizes.xl, fontWeight: isWinner ? cssVars.fontWeights.bold : cssVars.fontWeights.semibold }}
               data-testid={`final-goals-${match.id}-${rowKey}`}
             >
-              {goals ?? '–'}
+              {kasten === undefined ? (goals ?? '–') : (
+                <ScoreBox
+                  score={goals ?? 0}
+                  fill={(side === 'a' ? kasten.home : kasten.away).fill}
+                  size="compact"
+                  background={colors.background}
+                  textColor={colors.textPrimary}
+                  bib={(side === 'a' ? kasten.home : kasten.away).bib}
+                  outcome={isFinished && decided ? (isWinner ? 'winner' : 'loser') : undefined}
+                  cup={isFinished && isWinner}
+                  frameStrength={rahmen}
+                  ariaLabel={[`${name}: ${String(goals ?? 0)}`, isFinished && isWinner ? t('matchCard.winnerAria') : null, (side === 'a' ? kasten.home : kasten.away).bib ? t('matchCard.bibAria') : null].filter((x) => x !== null).join(', ')}
+                  testId={`final-box-${match.id}-${rowKey}`}
+                />
+              )}
             </span>
             {penalty !== undefined && (
               <span style={{ fontSize: cssVars.fontSizes.md, color: cssVars.colors.textSecondary }} data-testid={`final-penalty-${match.id}-${rowKey}`}>

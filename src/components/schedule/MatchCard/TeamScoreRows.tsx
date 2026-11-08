@@ -14,6 +14,7 @@
 import { Fragment, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
+import { overHex } from '../../../design-tokens/displayColor';
 import { useTheme } from '../../../hooks/useTheme';
 import { TeamAvatar } from '../../ui/TeamAvatar';
 import { ScoreBox } from '../../ui/molecules/ScoreBox';
@@ -80,8 +81,15 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
     return t('matchCard.scoreAriaFinal', values);
   })();
 
-  // Gleiche Rahmenbreite beider Kästen; der Hintergrund hinter dem Kasten ist die Fläche der Seite (hell oder dunkel)
-  const rahmen = kasten === undefined ? undefined : pairFrameStrength({ fill: kasten.home.fill }, { fill: kasten.away.fill }, colors.background);
+  // Hintergrund hinter dem Kasten = die sichtbare Farbe der Karte (Fläche der Karte über der Seite; das laufende Spiel zusätzlich mit der Tönung), hell oder dunkel
+  const kartenFarbe = overHex(colors.surface, colors.background);
+  const hintergrund = status === 'running' ? overHex(colors.primaryMedium, kartenFarbe) : kartenFarbe;
+  // Gleiche Rahmenbreite beider Kästen
+  const rahmen = kasten === undefined ? undefined : pairFrameStrength({ fill: kasten.home.fill }, { fill: kasten.away.fill }, hintergrund);
+
+  // „Leibchen“ ist auch für Bildschirmleser hörbar: der Vorlesetext des Stands nennt die Mannschaften mit Leibchen (@ZM-158, @ZM-161)
+  const bibTeams = kasten === undefined ? [] : [kasten.home.bib ? homeTeam.name : null, kasten.away.bib ? awayTeam.name : null].filter((name) => name !== null);
+  const spokenWithBib = bibTeams.length === 0 ? spokenResult : `${spokenResult}. ${bibTeams.map((name) => t('matchCard.bibSpoken', { team: name })).join(', ')}`;
 
   const renderRow = (side: Side, team: Team) => {
     const isWinner = decided && result?.winner === side;
@@ -120,7 +128,7 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
             fontWeight: isWinner ? cssVars.fontWeights.bold : cssVars.fontWeights.semibold,
             color: isLoser || goals === undefined ? cssVars.colors.textSecondary : cssVars.colors.textPrimary,
           }}
-          aria-label={first ? spokenResult : undefined}
+          aria-label={first ? spokenWithBib : undefined}
           aria-hidden={first ? undefined : true}
           tabIndex={first && !disabled ? 0 : -1}
           onClick={(e) => { e.stopPropagation(); if (!disabled) { onScoreClick(); } }}
@@ -130,7 +138,7 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
               score={goals ?? 0}
               fill={(first ? kasten.home : kasten.away).fill}
               size="compact"
-              background={colors.background}
+              background={hintergrund}
               textColor={colors.textPrimary}
               bib={(first ? kasten.home : kasten.away).bib}
               frameStrength={rahmen}

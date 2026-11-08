@@ -10,7 +10,7 @@
  */
 import type { CSSProperties } from 'react';
 import { BOX_BLACK, BOX_WHITE, type BoxFill } from '../../../core/models/scoreBoxColors';
-import { borderWidths, cssVars, displayLayout, displayList } from '../../../design-tokens';
+import { borderWidths, cssVars, displayLayout, displayList, scoreDigitFontSize } from '../../../design-tokens';
 import { getContrastRatio } from '../../../design-tokens/display';
 import { getBlockFrame, mixHex, type BlockFrame, type BlockFrameWidths } from '../../../design-tokens/displayColor';
 import type { VestSize } from './vestShape';
@@ -65,12 +65,6 @@ interface SizeLayout {
   digitFontSize: string;
 }
 
-/**
- * Ziffernhöhe im Monitor-Kasten (Controller-Zusatz zu H3, gleiche Regel wie `monitor/scoreDigitSize.ts`): höchstens 60 % der
- * Kastenhöhe und 50 % der Kastenbreite; `ui/` darf nicht aus `components/monitor` importieren.
- */
-const DIGIT_HEIGHT_MAX_OF_BOX = 0.6;
-const DIGIT_WIDTH_MAX_OF_BOX = 0.5;
 /** Zeilen-Kasten (Monitor-Folienzeile): Maße in em der Zeilenschrift `displayList.fontSizes.team` (Feinschliff in Aufgabe 3.2). */
 const ROW_BOX_WIDTH_EM = 2.4;
 const ROW_BOX_HEIGHT_EM = 1.8;
@@ -88,7 +82,7 @@ const LAYOUTS: Record<ScoreBoxSize, SizeLayout> = {
     frame: { subtle: L.frameWidthSubtle, strong: L.frameWidthStrong },
     ringWidth: L.frameWidthStrong,
     ringOffset: L.frameWidthSubtle,
-    digitFontSize: `min(${DIGIT_HEIGHT_MAX_OF_BOX * 100}cqh, ${DIGIT_WIDTH_MAX_OF_BOX * 100}cqw)`,
+    digitFontSize: scoreDigitFontSize(),
   },
   row: {
     width: `${ROW_BOX_WIDTH_EM}em`,
@@ -215,9 +209,9 @@ export function digitsStyle(size: ScoreBoxSize, narrow = false): CSSProperties {
   };
 }
 
-/** Geometrie der Weste: kleine Kästen (Handy, Zeile) schmaler mit flacherem Hals, die übrigen die große Form. */
+/** Geometrie der Weste: kleine Kästen (Handy, Zeile) schmaler mit flacherem Hals, der Cockpit-Kasten mit flachem Hals (Ziffer), die übrigen die große Form. */
 export function vestSizeOf(size: ScoreBoxSize): VestSize {
-  return size === 'compact' || size === 'row' ? 'small' : 'large';
+  return size === 'compact' || size === 'row' ? 'small' : size === 'cockpit' ? 'cockpit' : 'large';
 }
 
 /** Schicht der Weste: füllt den Kasten, rundet wie der Kasten und schneidet die Teile an der Rundung ab. */

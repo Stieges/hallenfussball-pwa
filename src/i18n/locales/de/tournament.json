@@ -617,6 +617,8 @@
     "groups": "Gruppen"
   },
   "matchCard": {
+    "winnerAria": "Sieger, Pokal",
+    "bibSpoken": "{{team}} in Leibchen",
     "bibAria": "Leibchen",
     "timePenalty": "$t(sport:events.timePenalty) #{{number}} · {{rest}}",
     "timePenaltyNoNumber": "$t(sport:events.timePenalty) · {{rest}}",
