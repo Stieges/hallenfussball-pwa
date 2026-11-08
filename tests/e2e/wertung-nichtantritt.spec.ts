@@ -11,6 +11,7 @@ import { join } from 'node:path';
 import type { Page } from '@playwright/test';
 import { test, expect } from './helpers/test-fixtures';
 import { buildVisualTournament } from './visual/helpers';
+import { neuLaden } from './helpers/neuLaden';
 
 const ID = 'r2c-wertung';
 /** Team-IDs wie in `buildVisualTournament` (FC Nordstadt, SV Südpark, TSV Westtal). */
@@ -79,7 +80,7 @@ test.describe('Wertung bei Nichtantritt (@W2A-025, @W2A-078)', () => {
       await feld.fill('3');
       await feld.blur();
       await expect(page.getByTestId('settings-forfeit-score-field')).toContainText('3:0');
-      await page.reload();
+      await neuLaden(page);
       await expect(page.getByTestId('settings-forfeit-score')).toHaveValue('3', { timeout: 15000 });
     });
 

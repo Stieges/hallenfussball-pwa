@@ -8,6 +8,7 @@ import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
 // @ts-expect-error – .mjs ohne Typen; derselbe Lader wie bei `npm run visual:metrics --saat`
 import { installiereSaat, leseSaat } from '../../../scripts/visual-metrics/saat/lader.mjs';
+import { neuLaden } from '../helpers/neuLaden';
 
 const TURNIER = 'hallencup-messlauf';
 const DESKTOP = { width: 1280, height: 900 };
@@ -31,7 +32,7 @@ test.describe('@OB-029 Direktaufruf: Spielplan der Turnierleitung', () => {
     await expect(page.locator('[data-testid="filter-group"]')).toHaveValue('B', { timeout: 25000 });
     await page.locator('[data-testid="filter-field"]').selectOption('2');
     await expect.poll(() => page.url()).toContain('f=2');
-    await page.reload();
+    await neuLaden(page);
     await expect(page.locator('[data-testid="filter-group"]')).toHaveValue('B', { timeout: 25000 });
     await expect(page.locator('[data-testid="filter-field"]')).toHaveValue('2');
   });
@@ -68,7 +69,7 @@ test.describe('@OB-029 Direktaufruf: Wizard-Schritt', () => {
     await expect(page.locator('[role="tab"]').nth(1)).toHaveAttribute('aria-current', 'step', { timeout: 25000 });
     await page.getByRole('button', { name: /^weiter/i }).click();
     await expect.poll(() => page.url()).toContain('step=3');
-    await page.reload();
+    await neuLaden(page);
     await expect(page.locator('[role="tab"]').nth(2)).toHaveAttribute('aria-current', 'step', { timeout: 25000 });
   });
 });

@@ -48,10 +48,22 @@ function stored(): unknown {
 
 const finished = (): Tournament => ({ ...buildLiveViewTournament(), lifecycleStatus: 'finished' });
 
+/** Wer auf einen Abruf des Endstands wartet (@ZM-193); die gemockte Antwort meldet jeden Aufruf von `public_final_standings`. */
+const abrufHoerer = new Set<() => void>();
+
+function rpcAntwort(reply: unknown): (name: string) => Promise<unknown> {
+  return (name) => {
+    if (name === 'public_final_standings') {
+      abrufHoerer.forEach((hoerer) => { hoerer(); });
+    }
+    return Promise.resolve(name === 'public_final_standings' ? { data: reply, error: null } : { data: null, error: { message: 'x' } });
+  };
+}
+
 async function renderAt(tournament: Tournament, reply: unknown, query: string) {
   supabaseGet.mockResolvedValue(tournament);
   localGet.mockResolvedValue(null);
-  rpc.mockImplementation((name: string) => Promise.resolve(name === 'public_final_standings' ? { data: reply, error: null } : { data: null, error: { message: 'x' } }));
+  rpc.mockImplementation(rpcAntwort(reply));
   const view = render(
     <RepositoryProvider user={null}>
       <MemoryRouter initialEntries={[`/live/${SHARE_CODE}${query}`]}><LiveViewScreen shareCode={SHARE_CODE} /></MemoryRouter>
@@ -94,6 +106,30 @@ describe('@ZM-193 Abrufe des Endstands auf der Zuschauer-Seite', () => {
   const takt = async (): Promise<void> => {
     await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
   };
+  /**
+   * Wartet auf den Abruf selbst, nicht auf eine DOM-Änderung (C-ZM193-UNIT-WACKELT): mit gefälschtem `setInterval` prüft das
+   * `waitFor` der Testing Library nur noch nach DOM-Änderungen nach. Der Abruf beim Öffnen läuft in Reacts Effekt-Aufgabe
+   * (Scheduler, `setImmediate`); unter Last ist `findBy…` schon vorher fertig, und die Antwort „none“ ändert am DOM nichts.
+   */
+  const bisAbrufe = async (anzahl: number): Promise<void> => {
+    await act(async () => {
+      await new Promise<void>((resolve, reject) => {
+        const frist = setTimeout(() => {
+          abrufHoerer.delete(pruefe);
+          reject(new Error(`Endstand ${finalAbrufe()}× statt ${anzahl}× erfragt`));
+        }, 2000);
+        function pruefe(): void {
+          if (finalAbrufe() >= anzahl) {
+            clearTimeout(frist);
+            abrufHoerer.delete(pruefe);
+            resolve();
+          }
+        }
+        abrufHoerer.add(pruefe);
+        pruefe();
+      });
+    });
+  };
 
   beforeEach(() => {
     supabaseGet.mockReset(); localGet.mockReset(); rpc.mockReset(); localStorage.clear();
@@ -103,18 +139,20 @@ describe('@ZM-193 Abrufe des Endstands auf der Zuschauer-Seite', () => {
 
   it('läuft das Turnier, wird der Endstand beim Öffnen einmal erfragt und danach nicht mehr im Takt', async () => {
     await renderAt({ ...buildLiveViewTournament(), lifecycleStatus: 'fixed' }, { status: 'none' }, '');
-    await waitFor(() => { expect(finalAbrufe()).toBe(1); });
+    await bisAbrufe(1);
+    expect(finalAbrufe()).toBe(1);
     await takt(); await takt(); await takt();
     expect(finalAbrufe()).toBe(1);
   });
 
   it('@ZM-193 wird das Turnier abgeschlossen, während die Seite offen ist, steht der Endstand spätestens einen Takt danach da', async () => {
     await renderAt({ ...buildLiveViewTournament(), lifecycleStatus: 'fixed' }, { status: 'none' }, '');
-    await waitFor(() => { expect(finalAbrufe()).toBe(1); });
+    await bisAbrufe(1);
+    expect(finalAbrufe()).toBe(1);
     expect(screen.queryByTestId('final-standings-list')).toBeNull();
     // Abschluss auf dem Server: Spielplan meldet „abgeschlossen“, der Endstand liegt vor
     supabaseGet.mockResolvedValue(finished());
-    rpc.mockImplementation((name: string) => Promise.resolve(name === 'public_final_standings' ? { data: stored(), error: null } : { data: null, error: { message: 'x' } }));
+    rpc.mockImplementation(rpcAntwort(stored()));
     // Der heutige Leseweg (Adapter a) hat keinen eigenen Takt für den Spielplan: die Seite holt ihn bei Rückkehr in den Vordergrund
     for (const state of ['hidden', 'visible']) {
       Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state });
@@ -127,8 +165,10 @@ describe('@ZM-193 Abrufe des Endstands auf der Zuschauer-Seite', () => {
 
   it('Gegenbeispiel: nach dem Abschluss wird der Endstand mit jedem Takt erfragt', async () => {
     await renderAt(finished(), { status: 'none' }, '');
-    await waitFor(() => { expect(finalAbrufe()).toBe(1); });
+    await bisAbrufe(1);
+    expect(finalAbrufe()).toBe(1);
     await takt(); await takt();
-    await waitFor(() => { expect(finalAbrufe()).toBe(3); });
+    await bisAbrufe(3);
+    expect(finalAbrufe()).toBe(3);
   });
 });

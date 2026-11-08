@@ -24,6 +24,7 @@ import { t } from '../helpers/i18n';
 import { schliesseTorAuswahl } from '../helpers/cockpitNeu';
 
 import { abpfiffHalten } from '../helpers/abpfiff';
+import { neuLaden } from '../helpers/neuLaden';
 // CI skip removed - using reliable seeding fixture
 
 /**
@@ -591,7 +592,7 @@ test.describe('Spielplan 2.0 - Score-Eingabe', () => {
 
           // THEN - Score should be persisted
           // Refresh and verify
-          await page.reload();
+          await neuLaden(page);
           await navigateToSpielplan(page);
 
           // Score should show "1" somewhere - verify score display exists

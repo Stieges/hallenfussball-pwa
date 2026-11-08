@@ -23,6 +23,7 @@ import { engineCupTarget, expectEngineMatchRunningUi, expectSeededEngineMatch, f
 import { expectLegacyQueueKeysEmpty, queueKeys } from './helpers';
 import { E2E_USERS, engineCupIds } from './testData';
 import { HOLD_RETRY_MS } from '../../../src/core/services/mutationQueueRetry';
+import { neuLaden } from '../helpers/neuLaden';
 
 test('Cup QUEUE: eine dauerhaft abgelehnte Turnier-Mutation ist innerhalb von 10s als gescheitert sichtbar, retry/verwerfen wirken (Task A4, C-SYNC Teil B, @FU-126, @FU-127)', async ({ asRole }, testInfo) => {
   test.skip(!testInfo.project.name.includes('desktop'), 'Engine-Cups nur auf cloud-desktop.');
@@ -51,7 +52,7 @@ test('Cup QUEUE: eine dauerhaft abgelehnte Turnier-Mutation ist innerhalb von 10
   // Uhr der Seite steuerbar machen (läuft normal weiter, bis `fastForward` sie über die 30-s-Pause schiebt).
   await ownerPage.clock.install();
   // Neu laden: eine frische Queue lädt den Eintrag und unternimmt (online) den ersten von 5 Versuchen.
-  await ownerPage.reload();
+  await neuLaden(ownerPage);
   await ownerPage.waitForLoadState('networkidle');
   await expectEngineMatchRunningUi(ownerPage);
   await expectLegacyQueueKeysEmpty(ownerPage);
@@ -107,7 +108,7 @@ test('Cup QUEUE: eine dauerhaft abgelehnte Turnier-Mutation ist innerhalb von 10
     },
     { id: unklarId, tournamentId: ids.tournamentId, queueKey: keys.queue, failedKey: keys.failed }
   );
-  await ownerPage.reload();
+  await neuLaden(ownerPage);
   await ownerPage.waitForLoadState('networkidle');
   await expectEngineMatchRunningUi(ownerPage);
   await expect(syncStatus).toHaveAttribute('data-state', 'error', { timeout: 10000 });
@@ -135,7 +136,7 @@ test('Cup QUEUE: eine dauerhaft abgelehnte Turnier-Mutation ist innerhalb von 10
     },
     { id: badMutationId, queueKey: keys.queue, failedKey: keys.failed }
   );
-  await ownerPage.reload();
+  await neuLaden(ownerPage);
   await ownerPage.waitForLoadState('networkidle');
   await expectEngineMatchRunningUi(ownerPage);
   await expect(syncStatus).toHaveAttribute('data-state', 'error', { timeout: 10000 });
