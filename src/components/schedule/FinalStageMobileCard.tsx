@@ -95,8 +95,9 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
   const { t } = useTranslation('tournament');
   const { colors } = useTheme();
   const decided = result?.winner !== undefined && result.winner !== null;
-  // Kopfzeile wie bisher (@OB-064); mit Kasten steht „n. V.“ zusätzlich klein beim Stand des Siegers (@ZM-158) – der doppelte Zustand ist Befund C-ENDE-DOPPELT
-  const note = isFinished
+  // Mit Kasten steht der Zusatz „nach Verlängerung“ klein beim Stand des Siegers und das Strafstoßergebnis als „(4)“, nicht in der Kopfzeile (@OB-064, @ZM-158: „beim Stand statt in
+  // der Kopfzeile“, Befund C-ENDE-DOPPELT). Ohne Kasten (Verwaltung, Kindermodus) bleibt die Kopfzeile wie bisher.
+  const note = isFinished && kasten === undefined
     ? result?.decision === 'penalty' ? t('matchResult.finishedPenalty') : result?.decision === 'overtime' ? t('matchResult.finishedOvertime') : undefined
     : undefined;
   const statusNote = viewStatus === 'awarded' ? t('view.status.awarded') : undefined;
@@ -165,7 +166,7 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
             </span>
             {kasten !== undefined && isFinished && isWinner && result?.decision === 'overtime' && (
               <span style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary }} data-testid={`final-overtime-${match.id}-${rowKey}`}>
-                {t('matchResult.overtimeShort')}
+                {t('matchResult.afterOvertime')}
               </span>
             )}
             {penalty !== undefined && (

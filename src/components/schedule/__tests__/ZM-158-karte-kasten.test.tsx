@@ -73,7 +73,7 @@ describe('@ZM-158 @ZM-161 Läuft gerade: kleiner Kasten in Teamfarbe', () => {
     expect(screen.queryByRole('button', { name: /Leibchen/ })).toBeNull();
   });
 
-  it('@ZM-158 Gegenbeispiel: ohne Kästen (Spielliste) steht die Zahl wie bisher, ohne Kasten, Form und Zeichen', () => {
+  it('@ZM-158 Gegenbeispiel: ohne die Eigenschaft `kasten` steht die Zahl wie bisher, ohne Kasten, Form und Zeichen', () => {
     laeuft(undefined);
     expect(screen.queryByTestId('match-box-m2-home')).toBeNull();
     expect(screen.getByTestId('match-goals-m2-home')).toHaveTextContent('1');
@@ -167,10 +167,11 @@ describe('@ZM-158 @ZM-156 beendetes Finale am Handy: kleiner Kasten mit Ring, Po
     expect(screen.getByTestId('final-box-finale-away')).toHaveTextContent('2');
   });
 
-  it('@ZM-158 3:2 nach Verlängerung: beim Stand von FC Nord steht klein „n. V.“, nicht beim Verlierer, kein Strafstoßergebnis', () => {
+  it('@ZM-158 3:2 nach Verlängerung: beim Stand von FC Nord steht klein „nach Verlängerung“ (ausgeschrieben), nicht beim Verlierer, nichts in der Kopfzeile, kein Strafstoßergebnis', () => {
     finale(ERGEBNIS(3, 2, { decision: 'overtime' }));
     const nv = screen.getByTestId('final-overtime-finale-home');
-    expect(nv).toHaveTextContent('n. V.');
+    expect(nv).toHaveTextContent(/^nach Verlängerung$/);
+    expect(screen.queryByTestId('final-decision-finale')).toBeNull();
     expect(screen.getByTestId('final-goals-finale-home')).toContainElement(screen.getByTestId('final-box-finale-home'));
     expect(nv.parentElement).toBe(screen.getByTestId('final-goals-finale-home').parentElement);
     expect(nv.style.fontSize).toBe(cssVars.fontSizes.xs); // klein: kleiner als der Strafstoßwert („md“)
@@ -178,9 +179,9 @@ describe('@ZM-158 @ZM-156 beendetes Finale am Handy: kleiner Kasten mit Ring, Po
     expect(screen.queryByTestId('final-penalty-finale-home')).toBeNull();
   });
 
-  it('@ZM-158 Gegenbeispiel: nach regulärer Zeit steht kein „n. V.“', () => {
+  it('@ZM-158 Gegenbeispiel: nach regulärer Zeit steht kein „nach Verlängerung“ und kein „n. V.“', () => {
     finale(ERGEBNIS(2, 1));
-    expect(document.body.textContent).not.toContain('n. V.');
+    expect(document.body.textContent).not.toMatch(/n\. V\.|nach Verlängerung/);
   });
 
   it('@ZM-158 der zugängliche Name nennt Sieger/Pokal und Leibchen', () => {

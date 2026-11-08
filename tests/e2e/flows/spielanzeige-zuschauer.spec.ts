@@ -69,8 +69,8 @@ test.describe('@ZM-162 Restzeit statt Spielzeit', () => {
     const m = await messeKarte(page);
     expect(m.gewicht).toBe('800');
     expect(m.ziffern).toContain('tabular-nums');
-    expect(m.uhr, `Restzeit ${m.uhr} px gegen übrigen Text der Karte ${m.andere} px`).toBeGreaterThanOrEqual(m.andere);
-    expect(m.stand, `Stand ${m.stand} px gegen übrigen Text der Karte ${m.andere} px`).toBeGreaterThanOrEqual(m.andere);
+    expect(m.uhr, `Restzeit ${m.uhr} px gegen übrigen Text der Karte ${m.andere} px`).toBeGreaterThan(m.andere);
+    expect(m.stand, `Stand ${m.stand} px gegen übrigen Text der Karte ${m.andere} px`).toBeGreaterThan(m.andere);
   });
 
   test('@OB-067 Gegenprobe: ein größerer Text innerhalb der Karte würde die Prüfung rot machen', async ({ page }) => {

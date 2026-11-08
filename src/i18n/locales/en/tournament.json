@@ -643,6 +643,7 @@
   },
   "matchResult": {
     "overtimeShort": "$t(short:ergebniszelle.extraTime)",
+    "afterOvertime": "$t(sport:phases.afterExtraTime)",
     "penaltyShort": "$t(short:ergebniszelle.afterPenalties)",
     "finishedPenalty": "ended on penalties",
     "running": "live",
