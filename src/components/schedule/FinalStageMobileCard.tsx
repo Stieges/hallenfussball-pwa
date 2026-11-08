@@ -96,7 +96,7 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
   const { colors } = useTheme();
   const decided = result?.winner !== undefined && result.winner !== null;
   // Mit Kasten steht der Zusatz „nach Verlängerung“ klein beim Stand des Siegers und das Strafstoßergebnis als „(4)“, nicht in der Kopfzeile (@OB-064, @ZM-158: „beim Stand statt in
-  // der Kopfzeile“, Befund C-ENDE-DOPPELT). Ohne Kasten (Verwaltung, Kindermodus) bleibt die Kopfzeile wie bisher.
+  // der Kopfzeile“, Befund C-ENDE-DOPPELT). Die Verwaltung bekommt den Kasten ebenfalls (`visibility.ts`); ohne Kasten bleibt die Kopfzeile wie bisher nur im Kindermodus und bei Ansichten ohne `view`.
   const note = isFinished && kasten === undefined
     ? result?.decision === 'penalty' ? t('matchResult.finishedPenalty') : result?.decision === 'overtime' ? t('matchResult.finishedOvertime') : undefined
     : undefined;
@@ -119,6 +119,7 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
     const penalty = side === 'a' ? result?.penaltyA : result?.penaltyB;
     const rowKey = side === 'a' ? 'home' : 'away';
     return (
+      <div>
       <div
         style={{
           display: 'flex',
@@ -164,11 +165,6 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
                 />
               )}
             </span>
-            {kasten !== undefined && isFinished && isWinner && result?.decision === 'overtime' && (
-              <span style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary }} data-testid={`final-overtime-${match.id}-${rowKey}`}>
-                {t('matchResult.afterOvertime')}
-              </span>
-            )}
             {penalty !== undefined && (
               <span style={{ fontSize: cssVars.fontSizes.md, color: cssVars.colors.textSecondary }} data-testid={`final-penalty-${match.id}-${rowKey}`}>
                 ({penalty})
@@ -176,6 +172,13 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
             )}
           </span>
         )}
+      </div>
+      {/* @ZM-158: klein beim Stand des Siegers, unter seiner Zeile rechts – so nimmt der Zusatz dem Namen keine Breite (VISUAL-DESIGN § 1) */}
+      {kasten !== undefined && isFinished && isWinner && result?.decision === 'overtime' && (
+        <div style={{ textAlign: 'right', fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary }} data-testid={`final-overtime-${match.id}-${rowKey}`}>
+          {t('matchResult.afterOvertime')}
+        </div>
+      )}
       </div>
     );
   };

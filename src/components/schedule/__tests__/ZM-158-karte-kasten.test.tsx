@@ -173,7 +173,10 @@ describe('@ZM-158 @ZM-156 beendetes Finale am Handy: kleiner Kasten mit Ring, Po
     expect(nv).toHaveTextContent(/^nach Verlängerung$/);
     expect(screen.queryByTestId('final-decision-finale')).toBeNull();
     expect(screen.getByTestId('final-goals-finale-home')).toContainElement(screen.getByTestId('final-box-finale-home'));
-    expect(nv.parentElement).toBe(screen.getByTestId('final-goals-finale-home').parentElement);
+    // in der Zeile des Siegers (unter seinem Stand, rechts), nicht in der des Verlierers
+    expect(nv.parentElement).toContainElement(screen.getByTestId('final-goals-finale-home'));
+    expect(nv.parentElement).not.toContainElement(screen.getByTestId('final-goals-finale-away'));
+    expect(nv.style.textAlign).toBe('right');
     expect(nv.style.fontSize).toBe(cssVars.fontSizes.xs); // klein: kleiner als der Strafstoßwert („md“)
     expect(screen.queryByTestId('final-overtime-finale-away')).toBeNull();
     expect(screen.queryByTestId('final-penalty-finale-home')).toBeNull();
