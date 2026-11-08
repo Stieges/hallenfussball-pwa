@@ -185,6 +185,18 @@ describe('Regel 1 – abgelöst oder abgemeldet: lokal abschalten, kein Ton dana
     expect(a.tab.laufzeit.getSnapshot().rolle).toBe('still');
   });
 
+  it('N1 (H3b-3): die Prüfung auf Turnierende kehrt nie zurück → das Lebenszeichen kommt trotzdem nach höchstens 3 s', async () => {
+    const { server, tab } = lage();
+    const a = tab('A');
+    a.endePruefungHaengt = true;
+    await a.starte({ aktivieren: false });
+    await a.vor(1900);
+    expect(server.lebenszeichen).toEqual([]); // die Frist von 2 s läuft noch
+    await a.vor(1100);
+    expect(lebenszeichenVon(server, 'tabA')).toBeGreaterThanOrEqual(1);
+    expect(server.lebenszeichen[0]?.state).toBe('not_activated');
+  });
+
   it('W1 Schutz: antwortet der Server doch einmal 55000, schaltet der Lautsprecher ebenfalls still ab', async () => {
     const { server, tab } = lage();
     const a = tab('A');
