@@ -35,6 +35,7 @@ import { expectLegacyQueueKeysEmpty, getLocalServiceRoleClient, queueKeys, safeC
 import { E2E_USERS } from './testData';
 import { mapTournamentFromSupabase } from '../../../src/core/repositories/supabaseMappers';
 import type { Database } from '../../../src/types/supabase';
+import { neuLaden } from '../helpers/neuLaden';
 
 type TournamentRow = Database['public']['Tables']['tournaments']['Row'];
 type TeamRow = Database['public']['Tables']['teams']['Row'];
@@ -397,7 +398,7 @@ test('Owner löscht ein Turnier mit Spielen UND Ereignissen: wird abgelehnt (B-0
       window.localStorage.setItem(queueKey, JSON.stringify([item]));
     }, { id: tournamentId, queueKey: deleteKeys.queue });
 
-    await ownerPage.reload();
+    await neuLaden(ownerPage);
     await ownerPage.waitForLoadState('networkidle');
 
     // 1. Die Mutation wurde versucht und als PERMANENTER Fehler gezählt -- der Fehler ist nicht

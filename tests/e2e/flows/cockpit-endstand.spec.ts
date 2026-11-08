@@ -10,6 +10,7 @@ import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
 import { wartePicker } from '../helpers/cockpitNeu';
 import { abpfiffHalten } from '../helpers/abpfiff';
+import { neuLaden } from '../helpers/neuLaden';
 
 const ID = 'e2e-endstand-cup';
 const TEAMS = ['e1', 'e2', 'e3', 'e4'].map((n) => `00000000-0000-4000-8000-0000000000${n}`);
@@ -102,7 +103,7 @@ test.describe('Cockpit: Endstand nach dem Abpfiff (B-10a)', () => {
     test.setTimeout(90_000);
     await pfeifeAb(page);
     await pruefeEndstand(page);
-    await page.reload();
+    await neuLaden(page);
     await expect(page.getByTestId('scoreboard')).toBeVisible({ timeout: 15000 });
     await pruefeEndstand(page); // die Frist hängt am Abpfiff-Zeitpunkt, nicht an dieser Seite
     await expect(page.getByTestId('team-name-home')).toHaveText('TSV Ost', { timeout: 40_000 });
@@ -139,7 +140,7 @@ test.describe('Cockpit: Endstand nach dem Abpfiff (B-10a)', () => {
     await page.getByTestId('result-entry-cancel').click();
     await expect(page.getByTestId('scoreboard-score')).toHaveText('1:0'); // Abbruch ändert nichts
     // @SL-115: nach dem Neuladen steht die Zusammenfassung für den Rest der Frist wieder da
-    await page.reload();
+    await neuLaden(page);
     await expect(page.getByTestId('scoreboard')).toBeVisible({ timeout: 15000 });
     await expect(page.getByTestId('team-summary-home')).toContainText('Tore (1)');
     await expect(page.getByTestId('match-correct-button')).toBeVisible();

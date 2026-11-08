@@ -7,6 +7,7 @@
 import { test, expect } from '../helpers/test-fixtures';
 // @ts-expect-error – .mjs ohne Typen; derselbe Lader wie bei `npm run visual:metrics --saat`
 import { installiereSaat, leseSaat } from '../../../scripts/visual-metrics/saat/lader.mjs';
+import { neuLaden } from '../helpers/neuLaden';
 
 const ID = 'nikolaus-gleichstand';
 
@@ -36,7 +37,7 @@ test('@W2A-075 Tabelle sofort sichtbar mit Markierung, Ansicht in der Adresse, N
   await expect(page.locator('[data-testid="place-medal"][data-medal="gold"]')).toHaveCount(1);
   await expect(page.locator('[data-testid="place-medal"][data-medal="bronze"]')).toHaveCount(0); // Platz 3 ist offen (Petting, Otting)
 
-  await page.reload();
+  await neuLaden(page);
   await expect(page.getByTestId('place-medal').first()).toBeVisible({ timeout: 25000 });
   await expect(page).toHaveURL(/ansicht=platzierung/);
   await expect(page.locator('[data-testid="place-medal"][data-medal="bronze"]')).toHaveCount(0);

@@ -7,6 +7,7 @@
  */
 import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
+import { neuLaden } from '../helpers/neuLaden';
 
 const NORD = '00000000-0000-4000-8000-0000000000c1';
 const SUED = '00000000-0000-4000-8000-0000000000c2';
@@ -93,7 +94,7 @@ test.describe('@FU-103 @FU-101 C-SCHNELLEINGABE-ENTWURF-VERLOREN: der Eintrag bl
 
     // @FU-101: Halbfinale 1 ist beendet mit 10:2 – die Felder verschwinden, nur Halbfinale 2 läuft weiter
     await expect(feld(page, 'home')).toHaveCount(0, { timeout: 10_000 });
-    await page.reload();
+    await neuLaden(page);
     await page.waitForLoadState('networkidle');
     const karte = (page.viewportSize()?.width ?? 0) <= 768;
     if (karte) {
@@ -140,7 +141,7 @@ test.describe('@FU-104 C-SCHNELLEINGABE-FREMDAENDERUNG-STILL: Änderung genau di
     await test.info().attach('fu104-hinweis-beendet', { body: await page.screenshot(), contentType: 'image/png' });
 
     // Ollis „1“ ist nicht gespeichert worden: nach dem Neuladen steht Toms 3:1
-    await page.reload();
+    await neuLaden(page);
     await page.waitForLoadState('networkidle');
     if ((page.viewportSize()?.width ?? 0) <= 768) {
       await expect(page.getByTestId(`final-goals-${HF1}-home`)).toHaveText('3');
