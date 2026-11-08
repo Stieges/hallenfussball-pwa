@@ -18,11 +18,14 @@ import { FinalStageSchedule } from '../FinalStageSchedule';
 import { teamSlot } from '../../../core/models/matchSlot';
 import { testUuid } from '../../../test/testIds';
 import { createMockTournament } from '../../../test/factories';
+import { GroupStageSchedule } from '../GroupStageSchedule';
+import { matchOf, viewOf } from './scheduleViewFixture';
 import { buildMonitorView } from '../../../features/monitor-display/monitorView';
 import type { ScheduledMatch } from '../../../core/generators';
 import type { ResultFigures } from '../matchResult';
 import type { MatchView } from '../../../core/view';
 import { palette } from '../../../design-tokens/colors/palette';
+import { cssVars } from '../../../design-tokens';
 
 const NORD = { id: 'team-nord', name: 'FC Nord' };
 const SUED = { id: 'team-sued', name: 'SV Süd' };
@@ -70,12 +73,6 @@ describe('@ZM-158 @ZM-161 Läuft gerade: kleiner Kasten in Teamfarbe', () => {
     expect(screen.queryByRole('button', { name: /Leibchen/ })).toBeNull();
   });
 
-  it('@ZM-158 Gegenbeispiel Gruppenspiel: ein beendetes Gruppenspiel zeigt die Zahl wie bisher (der Kasten gehört zu laufendem und nächstem Spiel, im Finale auch beendet)', () => {
-    render(<MatchCard matchId="g1" homeTeam={NORD} awayTeam={SUED} status="finished" result={{ ...RESULT, winner: 'a' }} />);
-    expect(screen.queryByTestId('match-box-g1-home')).toBeNull();
-    expect(screen.getByTestId('match-goals-g1-home')).toHaveTextContent('1');
-  });
-
   it('@ZM-158 Gegenbeispiel: ohne Kästen (Spielliste) steht die Zahl wie bisher, ohne Kasten, Form und Zeichen', () => {
     laeuft(undefined);
     expect(screen.queryByTestId('match-box-m2-home')).toBeNull();
@@ -107,35 +104,58 @@ describe('@ZM-158 @ZM-195 Als Nächstes: Kästen mit „0“ statt Strich', () =
 });
 
 describe('@ZM-158 @ZM-156 beendetes Finale am Handy: kleiner Kasten mit Ring, Pokal und fettem Sieger', () => {
+  // Szenario: FC Nord trägt Rot, SG Mitte gelbe Leibchen über blauen Trikots
   const FINALE = { id: 'finale', matchNumber: 15, time: '15:50', field: 1, homeTeam: 'FC Nord', awayTeam: 'SG Mitte' } as ScheduledMatch;
   const ERGEBNIS = (a: number, b: number, extra: Partial<ResultFigures> = {}): ResultFigures => ({ goalsA: a, goalsB: b, penaltyA: undefined, penaltyB: undefined, decision: null, winner: a > b ? 'a' : 'b', ...extra });
-  const kaesten: MatchView['boxes'] = { home: rot, away: weste };
+  const weisteGelbUeberBlau: MatchView['boxes']['away'] = { fill: { kind: 'vest', center: GELB, stripes: BLAU }, bib: true };
+  const kaesten: MatchView['boxes'] = { home: rot, away: weisteGelbUeberBlau };
+  const rgb = (hex: string): string => `rgb(${parseInt(hex.slice(1, 3), 16)}, ${parseInt(hex.slice(3, 5), 16)}, ${parseInt(hex.slice(5, 7), 16)})`;
 
-  const finale = (result: ResultFigures, over: { kasten?: MatchView['boxes']; finished?: boolean } = {}) =>
+  const finale = (result: ResultFigures, over: { kasten?: MatchView['boxes'] | null; finished?: boolean } = {}) =>
     render(
       <FinalStageMobileCard
         match={FINALE} label="Finale" homeName="FC Nord" awayName="SG Mitte" homePending={false} awayPending={false} result={result}
         isRunning={false} isFinished={over.finished ?? true} canEditScore={false} showReferees={false} showFields={false} editingSchedule={false}
         displayedRef={undefined} displayedField={undefined} hasPendingRef={false} hasPendingField={false} refereeOptions={[]} fieldOptions={[]}
-        kasten={over.kasten === undefined && 'kasten' in over ? undefined : (over.kasten ?? kaesten)}
+        kasten={over.kasten === null ? undefined : (over.kasten ?? kaesten)}
       />,
     );
 
-  it('@ZM-158 2:1 für FC Nord nach regulärer Zeit: FC Nord rot mit Ring und Pokal, fett; SG Mitte als Weste mit Zeichen oben links, gedämpft, ohne Ring', () => {
+  it('@ZM-158 2:1 für FC Nord nach regulärer Zeit: FC Nord rot mit Ring und Pokal, fett; SG Mitte als Weste Gelb über Blau mit Zeichen oben links, ohne Ring, kein Strafstoßergebnis', () => {
     finale(ERGEBNIS(2, 1));
     const nord = screen.getByTestId('final-box-finale-home');
     expect(nord).toHaveAttribute('data-outcome', 'winner');
+    expect(nord).toHaveAttribute('data-fill', 'solid');
+    expect(nord).toHaveAttribute('data-color', ROT);
     expect(nord.style.outlineStyle).toBe('solid');
     expect(screen.getByTestId('final-box-finale-home-cup')).toBeInTheDocument();
     expect(screen.getByTestId('final-name-finale-home')).toHaveAttribute('data-winner', 'true');
     const mitte = screen.getByTestId('final-box-finale-away');
-    expect(mitte).toHaveAttribute('data-outcome', 'loser');
     expect(mitte).toHaveAttribute('data-fill', 'vest');
-    expect(mitte.querySelectorAll('[data-teil]')).toHaveLength(3);
+    expect(mitte.style.outlineStyle).toBe('');
     expect(screen.getByTestId('final-box-finale-away-bib')).toBeInTheDocument();
     expect(screen.queryByTestId('final-box-finale-away-cup')).toBeNull();
-    expect(mitte.style.outlineStyle).toBe('');
-    expect(screen.queryByTestId('final-penalty-finale-home')).toBeNull(); // kein Strafstoßergebnis
+    expect(screen.queryByTestId('final-penalty-finale-home')).toBeNull();
+    expect(screen.queryByTestId('final-overtime-finale-home')).toBeNull();
+  });
+
+  it('@ZM-158 @ZM-161 die Weste ist Gelb über Blau: Grundfarbe Gelb, alle drei Teile Blau (nicht die Farbe des Gegners, nicht Rot)', () => {
+    finale(ERGEBNIS(2, 1));
+    const mitte = screen.getByTestId('final-box-finale-away');
+    expect(mitte.getAttribute('data-stripes')).toBe(BLAU);
+    expect(mitte.getAttribute('data-color')).toBe(GELB);
+    const teile = Array.from(mitte.querySelectorAll<HTMLElement>('[data-teil]'));
+    expect(teile).toHaveLength(3);
+    for (const teil of teile) {
+      expect(teil.style.backgroundColor).not.toBe(rgb(ROT));
+    }
+    // Verlierer gedämpft: Teile und Grund sind zum Hintergrund gemischt, aber der Farbton bleibt (blau dominiert in den Teilen, gelb im Grund)
+    const [r, g, b] = (teile[0].style.backgroundColor.match(/\d+/g) ?? []).map(Number) as [number, number, number];
+    expect(b).toBeGreaterThan(r);
+    expect(b).toBeGreaterThan(g * 0.9);
+    const [gr, gg, gb] = (mitte.style.backgroundColor.match(/\d+/g) ?? []).map(Number) as [number, number, number];
+    expect(gr).toBeGreaterThan(gb);
+    expect(gg).toBeGreaterThan(gb);
   });
 
   it('@ZM-158 2:2, Strafstoßschießen 4:3 für FC Nord: das Strafstoßergebnis steht klein neben dem Kasten („2 (4)“ und „2 (3)“)', () => {
@@ -143,12 +163,24 @@ describe('@ZM-158 @ZM-156 beendetes Finale am Handy: kleiner Kasten mit Ring, Po
     expect(screen.getByTestId('final-penalty-finale-home')).toHaveTextContent('(4)');
     expect(screen.getByTestId('final-penalty-finale-away')).toHaveTextContent('(3)');
     expect(screen.getByTestId('final-box-finale-home')).toHaveAttribute('data-outcome', 'winner');
+    expect(screen.getByTestId('final-box-finale-home')).toHaveTextContent('2');
+    expect(screen.getByTestId('final-box-finale-away')).toHaveTextContent('2');
   });
 
-  it('@ZM-158 3:2 nach Verlängerung: der Hinweis „n. V.“ steht beim beendeten Finale, ohne Strafstoßergebnis', () => {
+  it('@ZM-158 3:2 nach Verlängerung: beim Stand von FC Nord steht klein „n. V.“, nicht beim Verlierer, kein Strafstoßergebnis', () => {
     finale(ERGEBNIS(3, 2, { decision: 'overtime' }));
-    expect(screen.getByTestId('final-decision-finale')).toBeInTheDocument();
+    const nv = screen.getByTestId('final-overtime-finale-home');
+    expect(nv).toHaveTextContent('n. V.');
+    expect(screen.getByTestId('final-goals-finale-home')).toContainElement(screen.getByTestId('final-box-finale-home'));
+    expect(nv.parentElement).toBe(screen.getByTestId('final-goals-finale-home').parentElement);
+    expect(nv.style.fontSize).toBe(cssVars.fontSizes.xs); // klein: kleiner als der Strafstoßwert („md“)
+    expect(screen.queryByTestId('final-overtime-finale-away')).toBeNull();
     expect(screen.queryByTestId('final-penalty-finale-home')).toBeNull();
+  });
+
+  it('@ZM-158 Gegenbeispiel: nach regulärer Zeit steht kein „n. V.“', () => {
+    finale(ERGEBNIS(2, 1));
+    expect(document.body.textContent).not.toContain('n. V.');
   });
 
   it('@ZM-158 der zugängliche Name nennt Sieger/Pokal und Leibchen', () => {
@@ -164,7 +196,7 @@ describe('@ZM-158 @ZM-156 beendetes Finale am Handy: kleiner Kasten mit Ring, Po
   });
 
   it('@ZM-158 Gegenbeispiel: ohne Kästen (Kindermodus, Verwaltung) steht die Zahl wie bisher', () => {
-    finale(ERGEBNIS(2, 1), { kasten: undefined });
+    finale(ERGEBNIS(2, 1), { kasten: null });
     expect(screen.queryByTestId('final-box-finale-home')).toBeNull();
     expect(screen.getByTestId('final-goals-finale-home')).toHaveTextContent('2');
   });
@@ -181,7 +213,7 @@ describe('@ZM-158 @ZM-156 Finalrunde der Zuschauer-Seite: die Ansicht reicht die
   };
 
   function zeige(status: 'finished' | 'scheduled') {
-    const teams = [{ id: ZWEI, name: 'FC Nord', colors: { primary: ROT } }, { id: DREI, name: 'SG Mitte', colors: { primary: BLAU } }];
+    const teams = [{ id: ZWEI, name: 'FC Nord', colors: { primary: ROT } }, { id: DREI, name: 'SG Mitte', colors: { primary: BLAU } }]; // SG Mitte trägt Blau, das Leibchen Gelb
     const match = {
       id: FINALE_ID, matchNumber: 15, round: 9, field: 1, phase: 'final' as const, isFinal: true, finalType: 'final' as const, label: 'Finale',
       slotA: teamSlot(ZWEI), slotB: teamSlot(DREI), matchStatus: status, scheduledTime: start,
@@ -192,8 +224,16 @@ describe('@ZM-158 @ZM-156 Finalrunde der Zuschauer-Seite: die Ansicht reicht die
     return render(<FinalStageSchedule matches={[geplant]} tournament={{ teams, view: buildMonitorView(turnier) }} />);
   }
 
-  it('@ZM-158 beendet: Sieger-Kasten mit Ring und Pokal, Verlierer als Weste mit Zeichen', () => {
+  it('@ZM-158 beendet: Sieger-Kasten mit Ring und Pokal, Verlierer als Weste Gelb über Blau (Trikotfarbe des Teams) mit Zeichen', () => {
     zeige('finished');
+    expect(screen.getByTestId(`final-box-${FINALE_ID}-home`)).toHaveAttribute('data-color', ROT);
+    expect(screen.getByTestId(`final-box-${FINALE_ID}-away`)).toHaveAttribute('data-color', GELB);
+    expect(screen.getByTestId(`final-box-${FINALE_ID}-away`)).toHaveAttribute('data-stripes', BLAU);
+    // gezeichnet: die Teile tragen Blau (der Verlierer ist gedämpft, der Blauanteil überwiegt trotzdem)
+    for (const teil of screen.getByTestId(`final-box-${FINALE_ID}-away`).querySelectorAll<HTMLElement>('[data-teil]')) {
+      const [r, , b] = (teil.style.backgroundColor.match(/\d+/g) ?? []).map(Number);
+      expect(b).toBeGreaterThan(r ?? 0);
+    }
     expect(screen.getByTestId(`final-box-${FINALE_ID}-home`)).toHaveAttribute('data-outcome', 'winner');
     expect(screen.getByTestId(`final-box-${FINALE_ID}-home-cup`)).toBeInTheDocument();
     expect(screen.getByTestId(`final-box-${FINALE_ID}-away`)).toHaveAttribute('data-fill', 'vest');
@@ -203,5 +243,28 @@ describe('@ZM-158 @ZM-156 Finalrunde der Zuschauer-Seite: die Ansicht reicht die
   it('@ZM-158 Gegenbeispiel: ein noch nicht angepfiffenes Finale zeigt die Zahl wie bisher, ohne Kasten', () => {
     zeige('scheduled');
     expect(screen.queryByTestId(`final-box-${FINALE_ID}-home`)).toBeNull();
+  });
+});
+
+describe('@ZM-160 Karte eines beendeten Gruppenspiels im Spielplan der Zuschauer-Seite', () => {
+  const SPIEL_7 = testUuid(107);
+  const NORD = testUuid(11);
+  const SUED = testUuid(12);
+  const WEISS = '#FFFFFF';
+
+  // @ZM-160: „Jede Spielanzeige zeigt den Stand in Kästen in der getragenen Farbe“ – auch die Karte von Spiel 7 im Spielplan. Heute zeigt nur das laufende und das
+  // nächste Spiel den Kasten, ein beendetes Gruppenspiel die nackte Zahl (Entscheidung Mockup 08.11.: Spielliste bleibt wie heute). Rot, bis Befund C-ZUSCHAUER-KARTEN-OHNE-KASTEN entschieden ist.
+  it.fails('C-ZUSCHAUER-KARTEN-OHNE-KASTEN @ZM-160 die Karte von Spiel 7 (beendet, 1:0) zeigt die Torzahl von FC Nord im roten und die von SV Süd im weißen Kasten', () => {
+    const teams = [{ id: NORD, name: 'FC Nord', colors: { primary: ROT } }, { id: SUED, name: 'SV Süd', colors: { primary: WEISS } }];
+    const start = new Date('2026-11-14T14:20:00');
+    const spiel: ScheduledMatch = {
+      id: SPIEL_7, matchNumber: 7, field: 1, phase: 'groupStage', group: 'A', isFinal: false, startTime: start, endTime: start,
+      duration: 10, time: '14:20', homeTeam: 'FC Nord', awayTeam: 'SV Süd', originalTeamA: NORD, originalTeamB: SUED,
+      slotA: teamSlot(NORD), slotB: teamSlot(SUED), label: 'Spiel 7',
+    };
+    const view = viewOf([matchOf(spiel, { matchStatus: 'finished', scoreA: 1, scoreB: 0, decidedBy: 'regular' })], teams);
+    render(<GroupStageSchedule matches={[spiel]} hasGroups tournament={{ teams, view }} />);
+    expect(screen.getByTestId(`match-box-${SPIEL_7}-home`)).toHaveAttribute('data-color', ROT);
+    expect(screen.getByTestId(`match-box-${SPIEL_7}-away`)).toHaveAttribute('data-color', WEISS);
   });
 });

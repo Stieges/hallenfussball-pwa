@@ -61,6 +61,11 @@ describe('@ZM-161 Spiel läuft: der Kasten mit Leibchen zeigt das Trainingsleibc
     expect(gast()).toHaveAttribute('data-color', GELB);
     expect(gast()).toHaveAttribute('data-stripes', ROT);
     expect(teile(gast())).toHaveLength(3);
+    // gezeichnet: alle drei Teile in der Trikotfarbe Rot, der Grund in der Leibchenfarbe Gelb
+    for (const teil of teile(gast())) {
+      expect((teil as HTMLElement).style.backgroundColor).toBe('rgb(198, 40, 40)');
+    }
+    expect(gast().style.backgroundColor).toBe('rgb(250, 204, 21)');
     expect(screen.getByTestId('live-box-away-bib')).toBeInTheDocument();
     expect(heim()).toHaveAttribute('data-fill', 'solid');
     expect(teile(heim())).toHaveLength(0);

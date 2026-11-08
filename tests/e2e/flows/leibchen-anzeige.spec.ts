@@ -258,11 +258,12 @@ test.describe('Leibchen-Anzeige Zuschauer-Seite 390', () => {
     await bild(page, 'z-vor');
   });
 
-  test('@ZM-158 Gegenbeispiel Gruppenspiel: ein beendetes Gruppenspiel zeigt die Zahl wie bisher, ohne Kasten', async ({ page }) => {
+  // @ZM-160: „Jede Spielanzeige zeigt den Stand in Kästen“ – auch die Karte eines beendeten Gruppenspiels im Spielplan der Zuschauer-Seite. Heute zeigt sie die nackte Zahl
+  // (Entscheidung Mockup 08.11.: Spielliste bleibt wie heute). Rot, bis der Befund C-ZUSCHAUER-KARTEN-OHNE-KASTEN entschieden ist.
+  test.fail('C-ZUSCHAUER-KARTEN-OHNE-KASTEN @ZM-160 die Karte eines beendeten Gruppenspiels zeigt die Torzahlen in Kästen in Teamfarbe', async ({ page }) => {
     await oeffneZuschauer(page, 'beendet');
     const karteSpiel2 = page.locator('.mobile-view [data-match-card]').first();
-    await expect(karteSpiel2.getByTestId(/^match-box-/)).toHaveCount(0);
-    await expect(karteSpiel2.getByTestId(/^match-goals-.*-home$/)).toContainText('1');
+    await expect(karteSpiel2.getByTestId(/^match-box-.*-home$/)).toBeVisible({ timeout: 3000 });
   });
 
   // Das beendete Finale (Ring, Pokal, Weste am Handy) prüft `ZM-158-karte-kasten.test.tsx` bis in die Finalrunde der Zuschauer-Seite: die Saat der App regeneriert

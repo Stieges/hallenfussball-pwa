@@ -21,7 +21,7 @@ function flaeche(punkte: readonly VestPoint[]): number {
 }
 
 describe('@ZM-161 vestPieces: drei Teile in der Trikotfarbe', () => {
-  it.each(['large', 'small'] as const)('%s: links, rechts und Hals – alle liegen im Kasten (0 bis 100 %)', (size) => {
+  it.each(['large', 'small', 'cockpit'] as const)('%s: links, rechts und Hals – alle liegen im Kasten (0 bis 100 %)', (size) => {
     const teile = vestPieces(size);
     expect(teile).toHaveLength(3);
     for (const teil of teile) {
@@ -32,7 +32,7 @@ describe('@ZM-161 vestPieces: drei Teile in der Trikotfarbe', () => {
     }
   });
 
-  it.each(['large', 'small'] as const)('%s: gerade Seiten – links bis zur Seitenkante, rechts gespiegelt, am Träger bis zur äußeren Kante', (size) => {
+  it.each(['large', 'small', 'cockpit'] as const)('%s: gerade Seiten – links bis zur Seitenkante, rechts gespiegelt, am Träger bis zur äußeren Kante', (size) => {
     const [links, rechts] = vestPieces(size);
     const { edge, strap } = V[size];
     expect(Math.min(...x(links))).toBe(0);
@@ -46,7 +46,7 @@ describe('@ZM-161 vestPieces: drei Teile in der Trikotfarbe', () => {
     expect(flaeche(links)).toBeCloseTo(flaeche(rechts), 5);
   });
 
-  it.each(['large', 'small'] as const)('%s: der Hals ist symmetrisch zur Mitte, liegt oben und nie tiefer als seine Tiefe', (size) => {
+  it.each(['large', 'small', 'cockpit'] as const)('%s: der Hals ist symmetrisch zur Mitte, liegt oben und nie tiefer als seine Tiefe', (size) => {
     const hals = vestPieces(size)[2];
     const { neckHalf, neckDepth } = V[size];
     expect(Math.min(...x(hals))).toBeCloseTo(neckHalf, 5);
@@ -66,6 +66,11 @@ describe('@ZM-161 vestPieces: drei Teile in der Trikotfarbe', () => {
     const summe = vestPieces('large').reduce((s, teil) => s + flaeche(teil), 0);
     expect(summe).toBeGreaterThan(40);
     expect(summe).toBeLessThan(55);
+  });
+
+  it('@ZM-161 Cockpit-Kasten: flacher Hals (höchstens ein Drittel der großen Form), damit die Ziffer ganz auf der Leibchenfarbe steht', () => {
+    expect(V.cockpit.neckDepth).toBeLessThanOrEqual(V.large.neckDepth / 3);
+    expect(Math.max(...y(vestPieces('cockpit')[2]))).toBeCloseTo(V.cockpit.neckDepth, 5);
   });
 
   it('kleine Kästen: schmalere Seitenkante, flacherer Hals, breitere Halsöffnung enger', () => {

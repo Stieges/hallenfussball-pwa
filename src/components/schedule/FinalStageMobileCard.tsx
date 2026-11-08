@@ -10,6 +10,7 @@ import { type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
 import { useTheme } from '../../hooks/useTheme';
+import { overHex } from '../../design-tokens/displayColor';
 import { ScoreBox } from '../ui/molecules/ScoreBox';
 import { pairFrameStrength } from '../ui/molecules/scoreBoxStyle';
 import type { ScheduledMatch } from '../../core/generators';
@@ -94,6 +95,7 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
   const { t } = useTranslation('tournament');
   const { colors } = useTheme();
   const decided = result?.winner !== undefined && result.winner !== null;
+  // Kopfzeile wie bisher (@OB-064); mit Kasten steht „n. V.“ zusätzlich klein beim Stand des Siegers (@ZM-158) – der doppelte Zustand ist Befund C-ENDE-DOPPELT
   const note = isFinished
     ? result?.decision === 'penalty' ? t('matchResult.finishedPenalty') : result?.decision === 'overtime' ? t('matchResult.finishedOvertime') : undefined
     : undefined;
@@ -105,8 +107,9 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
     resolveAuthor: changeAuthorOf ? () => changeAuthorOf(match.id) : undefined,
   });
 
-  // Gleiche Rahmenbreite beider Kästen; Hintergrund hinter dem Kasten ist die Fläche der Karte (`colors.background`)
-  const rahmen = kasten === undefined ? undefined : pairFrameStrength({ fill: kasten.home.fill }, { fill: kasten.away.fill }, colors.background);
+  // Hintergrund hinter dem Kasten = die sichtbare Farbe der Karte (Seite, beim laufenden Spiel mit der roten Zeilentönung); gleiche Rahmenbreite beider Kästen
+  const hintergrund = isRunning ? overHex(colors.statusLiveRowBg, colors.background) : colors.background;
+  const rahmen = kasten === undefined ? undefined : pairFrameStrength({ fill: kasten.home.fill }, { fill: kasten.away.fill }, hintergrund);
 
   const renderRow = (side: 'a' | 'b', name: string, pending: boolean) => {
     const isWinner = decided && result?.winner === side;
@@ -149,7 +152,7 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
                   score={goals ?? 0}
                   fill={(side === 'a' ? kasten.home : kasten.away).fill}
                   size="compact"
-                  background={colors.background}
+                  background={hintergrund}
                   textColor={colors.textPrimary}
                   bib={(side === 'a' ? kasten.home : kasten.away).bib}
                   outcome={isFinished && decided ? (isWinner ? 'winner' : 'loser') : undefined}
@@ -160,6 +163,11 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
                 />
               )}
             </span>
+            {kasten !== undefined && isFinished && isWinner && result?.decision === 'overtime' && (
+              <span style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary }} data-testid={`final-overtime-${match.id}-${rowKey}`}>
+                {t('matchResult.overtimeShort')}
+              </span>
+            )}
             {penalty !== undefined && (
               <span style={{ fontSize: cssVars.fontSizes.md, color: cssVars.colors.textSecondary }} data-testid={`final-penalty-${match.id}-${rowKey}`}>
                 ({penalty})
