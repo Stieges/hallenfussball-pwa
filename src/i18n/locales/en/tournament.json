@@ -1195,7 +1195,20 @@
       "loserOfMatch": "Loser match {{n}}",
       "undecided": "to be decided"
     },
-    "finalTable": "Final standings"
+    "finalTable": "Final standings",
+    "overtimeWord": "Extra time",
+    "sectionCeremony": "Awards ceremony",
+    "tiebreakHint": "{{label}}: {{criteria}}",
+    "ceremony": {
+      "scorers": "Top scorers",
+      "rank": "Rank",
+      "club": "Club",
+      "alsoLine": "Also: {{parts}}",
+      "noNumber_one": "{{count}} goal without shirt number",
+      "noNumber_other": "{{count}} goals without shirt number",
+      "ownGoals_one": "{{count}} own goal",
+      "ownGoals_other": "{{count}} own goals"
+    }
   },
   "rights": {
     "leadOnlyHint": "Only the tournament management can change this",

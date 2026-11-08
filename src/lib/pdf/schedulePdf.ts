@@ -145,7 +145,7 @@ export async function buildSchedulePdf(source: SchedulePdfInput): Promise<Schedu
   );
   // Titel und Sprache der Datei (@DR-039); die Sprache setzt `openDocument`
   doc.setDocumentProperties({ title: model.meta.title });
-  const sectionNames: Record<PageSection, string> = { matches: groupStageName, tables: t.sectionTables, finals: t.sectionFinals, ranking: t.finalRanking };
+  const sectionNames: Record<PageSection, string> = { matches: groupStageName, tables: t.sectionTables, finals: t.sectionFinals, ranking: t.finalRanking, ceremony: t.sectionCeremony };
   const shortHead: ShortHeadText = { titleLines: shortHeadTitle, qr: qr?.modules, qrUrl: qr?.url };
   model.pages.forEach((page, index) => {
     if (index > 0) {

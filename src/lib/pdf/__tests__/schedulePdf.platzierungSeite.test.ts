@@ -105,17 +105,28 @@ describe('@DR-009 Abschlusstabelle bei Jeder gegen jeden in einer Gruppe ohne Fi
     return tournament.teams.map((team, i) => ({ place: count - i, team })).sort((a, b) => a.place - b.place);
   }
 
-  it('nach dem Abschluss: „Abschlusstabelle“ mit allen Teams in Endstand-Reihenfolge, kein Block „Platzierung“', async () => {
+  it('nach dem Abschluss: „Abschlusstabelle“ mit allen Teams in Endstand-Reihenfolge, kein Block „Platzierung“ unter der Tabelle (die Platzliste steht auf der Siegerehrung, @DR-052)', async () => {
     const { tournament, schedule } = jederGegenJeden(5);
     const { pages } = await kopfPdf({ edition: 'final', closed: true, closedAt: new Date('2026-11-14T16:40:00'), ranking: ranking(5) }, tournament, schedule);
     const texte = pages.flatMap(p => p.texts.map(t => t.str.trim()));
+    const seite = pages.find(p => p.texts.some(t => ohneNummer(t.str) === 'Abschlusstabelle'));
+
+    expect(heading(pages, 'Abschlusstabelle')).toBeDefined();
+    expect(texte.some(t => t.startsWith('Die Platzierung steht'))).toBe(false);
+    // „Platzierung“ steht nur auf der eigenen Seite „Siegerehrung“, nie auf der Seite der Abschlusstabelle
+    expect(seite?.texts.some(t => ohneNummer(t.str) === 'Platzierung')).toBe(false);
+    expect(pages.filter(p => p.texts.some(t => t.str.trim().endsWith('· Siegerehrung')))).toHaveLength(1);
+    const tabelle = (seite?.texts ?? []).filter(t => /^Team [A-E]$/.test(t.str.trim()) && t.y > (heading(pages, 'Abschlusstabelle')?.y ?? 0));
+    expect(tabelle.map(t => t.str.trim())).toEqual(['Team E', 'Team D', 'Team C', 'Team B', 'Team A']);
+  });
+
+  it('@DR-009 im Spielplan (nicht im Endstand-PDF) entfällt nach dem Abschluss der Block „Platzierung“ ganz, die Tabelle heißt „Abschlusstabelle“', async () => {
+    const { tournament, schedule } = jederGegenJeden(5);
+    const { pages } = await kopfPdf({ edition: 'plan', closed: true, ranking: ranking(5) }, tournament, schedule);
 
     expect(heading(pages, 'Abschlusstabelle')).toBeDefined();
     expect(heading(pages, 'Platzierung')).toBeUndefined();
-    expect(texte.some(t => t.startsWith('Die Platzierung steht'))).toBe(false);
-    const seite = pages.find(p => p.texts.some(t => ohneNummer(t.str) === 'Abschlusstabelle'));
-    const tabelle = (seite?.texts ?? []).filter(t => /^Team [A-E]$/.test(t.str.trim()) && t.y > (heading(pages, 'Abschlusstabelle')?.y ?? 0));
-    expect(tabelle.map(t => t.str.trim())).toEqual(['Team E', 'Team D', 'Team C', 'Team B', 'Team A']);
+    expect(pages.flatMap(p => p.texts).some(t => t.str.trim().endsWith('· Siegerehrung'))).toBe(false);
   });
 
   it('die Spalte „Pl“ trägt den gespeicherten Platz, bei geteilten Plätzen 1., 2., 2., 4.', async () => {
