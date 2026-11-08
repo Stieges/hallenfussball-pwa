@@ -70,6 +70,7 @@ export function MatchCockpitCategory({
                 !canChangeRules &&
                 (newSettings.timePenaltyDurationSeconds !== gespeichert.timePenaltyDurationSeconds ||
                     newSettings.penaltyShootersPerTeam !== gespeichert.penaltyShootersPerTeam ||
+                    newSettings.penaltyEndsOnGoal !== gespeichert.penaltyEndsOnGoal ||
                     newSettings.clockMode !== gespeichert.clockMode ||
                     newSettings.foulLimit !== gespeichert.foulLimit ||
                     newSettings.finalPhaseMinutes !== gespeichert.finalPhaseMinutes)

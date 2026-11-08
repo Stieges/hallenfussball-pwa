@@ -437,6 +437,8 @@ export interface Tournament {
   hideRankingsForPublic: boolean;
   /** Torschützen für die Öffentlichkeit (`config.publicScorers`, Server; R3-4: Text im Abschluss-Dialog). Nur gelesen, nie aus der App geschrieben. */
   publicScorers?: boolean;
+  /** Live-Stand für Zuschauer (`config.publicLiveScore`, Server; @ZM-194: aus = keine Zeitstrafe auf Monitor und Zuschauer-Seite). Nur gelesen, nie aus der App geschrieben; ohne Angabe gilt „an“. */
+  publicLiveScore?: boolean;
   resultMode: ResultMode;
 
   // Point System
@@ -1023,6 +1025,8 @@ export interface RuntimeMatchEvent {
     delta?: number;
     /** Draht-Format: Strafdauer in Sekunden, wird zu `penaltyDuration` normalisiert */
     durationSeconds?: number;
+    /** Zeitstrafe: Regel „endet bei Gegentor“ beim Eintrag (@W2A-013); ohne Angabe gilt „an“. */
+    endsOnGoal?: boolean;
   };
   scoreAfter: {
     home: number;

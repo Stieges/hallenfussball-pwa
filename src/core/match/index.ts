@@ -15,7 +15,10 @@ export {
   type ReduceResult,
 } from './reduceMatch';
 export { toServerState, type ServerMatchState } from './serverState';
-export { activePenalties, elapsedAt, penaltyRemainingMs } from './penalties';
+export {
+  activePenalties, elapsedAt, ergaenzenTeams, penaltyRemainingMs, penaltyStatuses, resolvePenalties, runningPenalties,
+  type PenaltyGoal, type PenaltyStatus,
+} from './penalties';
 export { redCardSuspensions, type SperrHinweis, type SuspensionMatchRef } from './suspensions';
 export { shootoutWinner } from './handlers/shootout';
 export { continueBlockReason, type ContinueBlockReason } from './handlers/reopen';

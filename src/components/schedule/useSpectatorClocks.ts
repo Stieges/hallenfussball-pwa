@@ -5,7 +5,7 @@
  * (`NowSourceContext`, B-15): der Feinstatus der Ansicht ist in Serverzeit verankert.
  *
  * Mit `matches` (Ereignisse und `live_state` der Spiele, etwa aus der öffentlichen Antwort) trägt die Uhr auch die laufenden
- * Zeitstrafen beim Team (@ZM-184) – nie, wenn die Ansicht keine Ergebnisse zeigt (Kindermodus, @ZM-183).
+ * Zeitstrafen beim Team (@ZM-184) – nie, wenn die Ansicht keine Ergebnisse zeigt (Kindermodus, @ZM-183) oder der Live-Stand aus ist (@ZM-194).
  */
 import { useCallback, useMemo } from 'react';
 import { hatZeitstrafen, laufendeZeitstrafen, spectatorClockForMatch, type SpectatorClock, type TournamentView } from '../../core/view';
@@ -25,7 +25,8 @@ export function useSpectatorClocks(
     const match = view?.byId.get(matchId);
     const clock = match === undefined ? null : spectatorClockForMatch(match, elapsedOf(matchId), nowMs);
     const raw = byId.get(matchId);
-    if (clock === null || raw === undefined || view?.rules.results !== true) {
+    // @ZM-183, @ZM-194: ohne Ergebnisse (Kindermodus) oder ohne Live-Stand liefert die Ansicht keine Zeitstrafe -- das Strafende wäre ohne Tore nicht ableitbar
+    if (clock === null || raw === undefined || view?.rules.results !== true || !view.rules.liveScore) {
       return clock;
     }
     const zeitstrafen = laufendeZeitstrafen({

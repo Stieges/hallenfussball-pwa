@@ -36,7 +36,10 @@ export function applyGoal(state: MatchState, event: EngineEvent, ctx: MatchConte
       ...state.scores,
       [scoringTeam]: { ...previous, [phaseKey]: previous[phaseKey] + 1 },
     },
-    goals: [...state.goals, { id: event.id, scoringTeamId: scoringTeam, phase: phaseKey, seq: state.nextSeq }],
+    goals: [
+      ...state.goals,
+      { id: event.id, scoringTeamId: scoringTeam, phase: phaseKey, atMs: event.clockMs ?? elapsedAt(state.clock, event.at), seq: state.nextSeq },
+    ],
     nextSeq: state.nextSeq + 1,
     lastScoreEventId: event.id,
   };
@@ -104,6 +107,7 @@ export function applyTimePenalty(state: MatchState, event: EngineEvent): MatchSt
     ...(event.payload.playerNumber !== undefined ? { playerNumber: event.payload.playerNumber as number } : {}),
     startMs: event.clockMs ?? elapsedAt(state.clock, event.at),
     durationMs: durationSeconds * 1000,
+    ...(typeof event.payload.endsOnGoal === 'boolean' ? { endsOnGoal: event.payload.endsOnGoal } : {}),
   };
   return { ...state, penalties: [...state.penalties, record] };
 }
