@@ -14,7 +14,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ManagementTab } from '../ManagementTab';
-import type { Tournament } from '../../../types/tournament';
+import { DEFAULT_MATCH_COCKPIT_SETTINGS, type Tournament } from '../../../types/tournament';
 import type { GeneratedSchedule } from '../../../core/generators';
 import type { LiveMatch as CoreLiveMatch } from '../../../core/models/LiveMatch';
 import { testTeamSlot, looseVs } from '../../../test/matchSlotFixtures';
@@ -88,7 +88,7 @@ interface Aufbau {
 }
 
 /** Engine-Spiel mit Anpfiff, Turnier und Plan um dieses Spiel herum. */
-async function aufbauen(): Promise<Aufbau> {
+async function aufbauen(einstellungen?: Partial<Tournament>): Promise<Aufbau> {
   const spiel = await einrichtenEngineSpiel();
   const matchId = spiel.matchId;
   const tournament = {
@@ -98,6 +98,7 @@ async function aufbauen(): Promise<Aufbau> {
     teams: [HOME, AWAY],
     matches: [{ id: matchId, ...looseVs(HOME.id, AWAY.id), round: 1, field: 1, matchNumber: 1 }],
     groupPhaseGameDuration: 20,
+    ...einstellungen,
   } as unknown as Tournament;
   const schedule = {
     tournament: { id: 'tournament-1', title: 'Test-Turnier' },
@@ -168,8 +169,19 @@ describe('ManagementTab → LiveCockpit: Ereignis-Darstellung über den Engine-W
 
     renderTab(aufbau);
 
-    expect(screen.getByTestId('team-fouls-home')).toHaveTextContent(/Foul 2/);
-    expect(screen.getByTestId('team-fouls-away')).toHaveTextContent(/Foul 1/);
+    expect(screen.getByTestId('team-fouls-home')).toHaveTextContent(/Foul · 2/);
+    expect(screen.getByTestId('team-fouls-away')).toHaveTextContent(/Foul · 1/);
+  });
+
+  it('@SL-099 Gegenbeispiel: ein gespeichertes Turnier mit Foul-Grenze 5 zeigt „Foul 2/5“ (die Grenze bleibt erhalten)', async () => {
+    const aufbau = await aufbauen({ matchCockpitSettings: { ...DEFAULT_MATCH_COCKPIT_SETTINGS, foulLimit: 5 } });
+    await ereignis(aufbau.spiel, (cmd, ctx, id) => cmd.foul(id, ctx, 'leitung', HOME.id));
+    await ereignis(aufbau.spiel, (cmd, ctx, id) => cmd.foul(id, ctx, 'leitung', HOME.id));
+    ansichtUebergeben(aufbau);
+
+    renderTab(aufbau);
+
+    expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 2/5');
   });
 
   it('Ereignis-Log nennt beide Mannschaften richtig, nicht zweimal den Gast', async () => {

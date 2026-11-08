@@ -23,7 +23,7 @@ function getFutureDate(): string {
  * Create test tournament with dynamic future date
  * Must be called fresh each time to get current date
  */
-function createTestTournament() {
+function createTestTournament(einstellungen?: Record<string, unknown>) {
   const futureDate = getFutureDate();
   return {
     id: 'e2e-test-tournament',
@@ -54,6 +54,8 @@ function createTestTournament() {
     startDate: futureDate,
     startTime: '10:00',
     location: { name: 'Test-Halle' },
+    // Spielregeln, die ein Test selbst braucht (Testdaten); ohne Angabe gelten die Vorgaben eines neuen Turniers
+    ...(einstellungen ? { matchCockpitSettings: einstellungen } : {}),
     // Team-IDs als UUID (TeamIdSchema seit A-01)
     teams: [
       { id: '00000000-0000-4000-8000-0000000000e1', name: 'FC Test A' },
@@ -135,22 +137,6 @@ test.describe('Cockpit-Tafel', () => {
     expect(await hoehe()).toBe(laeuft);
   });
 
-  test('N1 die Foul-Grenze „5. Foul in dieser Halbzeit“ steht in der Meldezeile vollständig, ohne „…“, und die Tafel wächst nicht', async ({ page }) => {
-    await page.getByTestId('match-start-button').click();
-    await expect(page.getByTestId('scoreboard-state')).toContainText('Live');
-    const hoehe = async () => Math.round((await page.getByTestId('scoreboard').boundingBox())!.height);
-    const vorher = await hoehe();
-    for (let i = 0; i < 5; i += 1) { await page.getByTestId('foul-button-home').click(); }
-    const zeile = page.getByTestId('notice-line');
-    await expect(zeile).toContainText('5. Foul in dieser Halbzeit');
-    const abgeschnitten = await zeile.evaluate((el) => {
-      const text = el.querySelector('span:last-of-type') ?? el;
-      return { ellipse: getComputedStyle(text as HTMLElement).textOverflow === 'ellipsis' && text.scrollWidth > (text as HTMLElement).clientWidth, hoch: el.scrollHeight > el.clientHeight + 1 };
-    });
-    expect(abgeschnitten).toEqual({ ellipse: false, hoch: false });
-    expect(await hoehe()).toBe(vorher);
-  });
-
   test('@SL-064 @OB-021 nichts liegt fest über Uhr, Stand oder Bedienelementen: keine schwebenden Hinweise', async ({ page }) => {
     await page.getByTestId('match-start-button').click();
     await expect(page.getByTestId('scoreboard-state')).toContainText('Live');
@@ -215,5 +201,41 @@ test.describe('Cockpit-Tafel', () => {
     await expect(page.getByTestId('scoreboard-state')).toContainText('Ende');
     await expect(page.getByTestId('scoreboard-quittung')).toHaveText(/^Abgepfiffen · \d+:\d+ gespeichert$/);
     await expect(page.getByTestId('scoreboard-clock')).not.toContainText('Anstoß');
+  });
+});
+
+/** @SL-034: die Meldung zur Foul-Grenze gibt es nur mit eingeschalteter Grenze; die Vorgabe eines neuen Turniers ist aus (@SL-101), das Testturnier setzt 5 selbst. */
+test.describe('Cockpit-Tafel: Foul-Grenze 5 eingeschaltet', () => {
+  test.beforeEach(async ({ page, seedIndexedDB }, testInfo) => {
+    test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
+    await seedIndexedDB({ tournaments: [createTestTournament({ foulLimit: 5 })] });
+    await expect(page.getByText('E2E Test Turnier')).toBeVisible({ timeout: 15000 });
+    await page.getByText('E2E Test Turnier').click();
+    await page.getByText('Live').first().click({ force: true });
+    await expect(page.getByTestId('scoreboard')).toBeVisible({ timeout: 10000 });
+  });
+
+  test.afterEach(async ({ page }) => {
+    try {
+      await page.evaluate(() => { localStorage.removeItem('tournaments'); });
+    } catch {
+      // Ignore cleanup errors (e.g., when test was skipped and page is about:blank)
+    }
+  });
+
+  test('N1 die Foul-Grenze „5. Foul in dieser Halbzeit“ steht in der Meldezeile vollständig, ohne „…“, und die Tafel wächst nicht', async ({ page }) => {
+    await page.getByTestId('match-start-button').click();
+    await expect(page.getByTestId('scoreboard-state')).toContainText('Live');
+    const hoehe = async () => Math.round((await page.getByTestId('scoreboard').boundingBox())!.height);
+    const vorher = await hoehe();
+    for (let i = 0; i < 5; i += 1) { await page.getByTestId('foul-button-home').click(); }
+    const zeile = page.getByTestId('notice-line');
+    await expect(zeile).toContainText('5. Foul in dieser Halbzeit');
+    const abgeschnitten = await zeile.evaluate((el) => {
+      const text = el.querySelector('span:last-of-type') ?? el;
+      return { ellipse: getComputedStyle(text as HTMLElement).textOverflow === 'ellipsis' && text.scrollWidth > (text as HTMLElement).clientWidth, hoch: el.scrollHeight > el.clientHeight + 1 };
+    });
+    expect(abgeschnitten).toEqual({ ellipse: false, hoch: false });
+    expect(await hoehe()).toBe(vorher);
   });
 });

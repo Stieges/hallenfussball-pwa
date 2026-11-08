@@ -14,9 +14,9 @@ export const FARBEN = ['#FFD700', '#1E56D9', '#2E8B57', '#C0392B'];
 const PAARE: Array<[number, number]> = [[0, 1], [2, 3], [0, 2], [1, 3], [0, 3], [1, 2]];
 export const BILDER = process.env.LT23_BILDER ?? '';
 
-export interface CupOptionen { namen?: readonly string[]; farben?: readonly string[]; minuten?: number; perioden?: number; pause?: number; felder?: number }
+export interface CupOptionen { namen?: readonly string[]; farben?: readonly string[]; minuten?: number; perioden?: number; pause?: number; felder?: number; einstellungen?: Record<string, unknown> }
 
-export function cup({ namen = NAMEN, farben = FARBEN, minuten = 12, perioden = 2, pause = 1, felder = 1 }: CupOptionen = {}) {
+export function cup({ namen = NAMEN, farben = FARBEN, minuten = 12, perioden = 2, pause = 1, felder = 1, einstellungen }: CupOptionen = {}) {
   const date = new Date(Date.now() + 86_400_000).toISOString().split('T')[0];
   return {
     id: ID, status: 'published', publishedAt: new Date().toISOString(), sport: 'football', sportId: 'football-indoor',
@@ -26,6 +26,8 @@ export function cup({ namen = NAMEN, farben = FARBEN, minuten = 12, perioden = 2
     hideScoresForPublic: false, hideRankingsForPublic: false, resultMode: 'goals', pointSystem: { win: 3, draw: 1, loss: 0 },
     title: 'Cockpit-Cup Laptop', ageClass: 'U12', date, timeSlot: '10:00 - 14:00', startDate: date, startTime: '10:00',
     location: { name: 'Test-Halle' },
+    // Spielregeln, die ein Test selbst braucht (Testdaten); ohne Angabe gelten die Vorgaben eines neuen Turniers.
+    ...(einstellungen ? { matchCockpitSettings: einstellungen } : {}),
     teams: TEAMS.map((id, i) => ({ id, name: namen[i], group: 'A', colors: { primary: farben[i] } })),
     matches: PAARE.map(([a, b], i) => ({
       id: `00000000-0000-4000-8000-0000000009${i + 10}`, matchNumber: i + 1, round: i + 1, field: 1, group: 'A', phase: 'groupStage',

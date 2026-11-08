@@ -9,6 +9,7 @@ import { matchOrigins } from '../models/matchOrigin';
 import { effectiveHostTeamIds } from '../models/hostTeams';
 import { defaultPlacementLogic } from '../standings/placementDefaults';
 import { DEFAULT_PLACEMENTS_TO_PLAY_OUT } from '../standings/playOutPlaces';
+import { DEFAULT_MATCH_COCKPIT_SETTINGS, type MatchCockpitSettings } from '../../types/tournament';
 
 /**
  * @W1-020 (B-04b Fixrunde 1): Sichtbarkeit NACH dem Festlegen -- es gibt die
@@ -25,6 +26,19 @@ export function visibilityAfterPublish(
 
 export class TournamentCreationService {
     constructor(private readonly repository: ITournamentRepository) { }
+
+    /**
+     * Ein neues Turnier (erster Aufruf des Assistenten): wie `createDraft()`, aber mit ausdrücklich gespeicherten
+     * Spielregel-Vorgaben (@SL-002 Uhr-Art „immer durchlaufend“, @SL-101 Foul-Grenze aus, @W2A-035, @W2A-037).
+     * Grund: Geräte mit älterer App-Version lesen sonst bei fehlendem Wert ihre eigene (alte) Vorgabe und zeigen
+     * dasselbe Turnier anders. Bestehende Turniere fasst das nicht an: `createDraft(data)` ergänzt nichts.
+     */
+    createNewTournament(): Tournament {
+        // Nur diese zwei Regeln: alle anderen bleiben „nicht angefasst“ (@W1-004: der Schnellstart schreibt keine weiteren
+        // Regelwerte, der Server rechnet mit seinen Vorgaben). Die Leser ergänzen fehlende Felder aus den Vorgaben.
+        const { clockMode, foulLimit } = DEFAULT_MATCH_COCKPIT_SETTINGS;
+        return this.createDraft({ matchCockpitSettings: { clockMode, foulLimit } as MatchCockpitSettings });
+    }
 
     /**
      * Creates a new draft tournament with default values or merges with provided data

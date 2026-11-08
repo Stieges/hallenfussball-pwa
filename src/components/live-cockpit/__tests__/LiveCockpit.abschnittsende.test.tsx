@@ -150,7 +150,7 @@ describe('LiveCockpit: Fouls über die Halbzeit (G11, B-08b Punkt 3)', () => {
   // Ersetzt die Aussage „kein Reset“ (G11): @SL-036 verlangt, dass der Zähler gegen die Grenze im zweiten Abschnitt bei 0 beginnt (Plan Cockpit v2 A5)
   it('@SL-036 Halbzeit: der Zähler gegen die Grenze beginnt im zweiten Abschnitt bei 0, die Fouls bleiben im Spiel', async () => {
     const user = userEvent.setup();
-    render(<Harness turnier={ZWEI_ABSCHNITTE} />);
+    render(<Harness turnier={ZWEI_ABSCHNITTE} einstellungen={{ foulLimit: 5 }} />); // Testdaten: Grenze 5 (Vorgabe eines neuen Turniers ist aus, @SL-101)
     await anpfiff(user);
     await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
     await user.click(screen.getByTestId('foul-button-home'));

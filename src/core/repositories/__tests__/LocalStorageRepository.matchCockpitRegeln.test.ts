@@ -49,14 +49,14 @@ describe('LocalStorageRepository — Spielregeln „Spiel leiten“ (Fixrunde A1
     const turnier = await new LocalStorageRepository().get('t1');
 
     expect(turnier?.matchCockpitSettings?.penaltyShootersPerTeam).toBe(5);
-    expect(turnier?.matchCockpitSettings?.clockMode).toBe('durchlaufend-letzte-minute-angehalten');
+    expect(turnier?.matchCockpitSettings?.clockMode).toBe('immer-durchlaufend');
     expect(turnier?.matchCockpitSettings?.enabledCards).toEqual({
       yellow: true,
       yellowRed: true,
       red: true,
       timePenalty: true,
     });
-    expect(turnier?.matchCockpitSettings?.foulLimit).toBe(5);
+    expect(turnier?.matchCockpitSettings?.foulLimit).toBeNull();
     expect(turnier?.matchCockpitSettings?.penaltyEndsOnGoal).toBe(true);
     expect(turnier?.matchCockpitSettings?.shortHandedSeconds).toBe(120);
   });
@@ -89,13 +89,24 @@ describe('LocalStorageRepository — Spielregeln „Spiel leiten“ (Fixrunde A1
     expect(turnier?.matchCockpitSettings?.shortHandedSeconds).toBe(60);
   });
 
+  it('@SL-002 @SL-101 Gegenbeispiel: ein bestehendes Turnier mit gespeicherter Foul-Grenze 5 und „letzte Minute angehalten“ behält beide Werte', async () => {
+    gespeichert = [
+      { ...ALTES_TURNIER, matchCockpitSettings: { clockMode: 'durchlaufend-letzte-minute-angehalten', foulLimit: 5 } },
+    ];
+
+    const turnier = await new LocalStorageRepository().get('t1');
+
+    expect(turnier?.matchCockpitSettings?.clockMode).toBe('durchlaufend-letzte-minute-angehalten');
+    expect(turnier?.matchCockpitSettings?.foulLimit).toBe(5);
+  });
+
   it('Gast-Turnier (kein Konto, Gast-Sicht) bekommt die Vorgaben', async () => {
     gespeichert = [ALTES_TURNIER];
 
     const turnier = await new LocalStorageRepository({ viewer: 'guest' }).get('t1');
 
-    expect(turnier?.matchCockpitSettings?.clockMode).toBe('durchlaufend-letzte-minute-angehalten');
-    expect(turnier?.matchCockpitSettings?.foulLimit).toBe(5);
+    expect(turnier?.matchCockpitSettings?.clockMode).toBe('immer-durchlaufend');
+    expect(turnier?.matchCockpitSettings?.foulLimit).toBeNull();
   });
 
   it('JSON-Restore: ein roh gespeichertes Turnier ohne Regelfelder liest mit den Vorgaben', async () => {
@@ -105,9 +116,9 @@ describe('LocalStorageRepository — Spielregeln „Spiel leiten“ (Fixrunde A1
     await repo.save(wiederhergestellt);
     const turnier = await repo.get('t1');
 
-    expect(turnier?.matchCockpitSettings?.clockMode).toBe('durchlaufend-letzte-minute-angehalten');
+    expect(turnier?.matchCockpitSettings?.clockMode).toBe('immer-durchlaufend');
     expect(turnier?.matchCockpitSettings?.enabledCards.timePenalty).toBe(true);
-    expect(turnier?.matchCockpitSettings?.foulLimit).toBe(5);
+    expect(turnier?.matchCockpitSettings?.foulLimit).toBeNull();
   });
 
   it('ohne Cockpit-Konfiguration bleibt das Turnier ohne Einstellungen', async () => {

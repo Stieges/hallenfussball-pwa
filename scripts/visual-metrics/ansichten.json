@@ -694,12 +694,25 @@
     },
     {
       "id": "admin-match-cockpit-regeln",
-      "titel": "Admin Center: Match Cockpit, Regeln Uhr-Art und Schlussphase (B-08e)",
+      "titel": "Admin Center: Match Cockpit, Regeln Uhr-Art (Vorgabe „immer durchlaufend“) und Foul-Grenze (Vorgabe aus) (B-08e, @SL-101)",
       "gruppen": [
         "pflicht"
       ],
       "app": "/#/tournament/hallencup-messlauf/admin/match-cockpit",
-      "erwarte": "[data-testid=\"settings-final-phase-minutes\"]",
+      "erwarte": "[data-testid=\"settings-foul-limit-enabled\"]",
+      "profil": "app"
+    },
+    {
+      "id": "admin-match-cockpit-foul-grenze",
+      "titel": "Admin Center: Match Cockpit, Foul-Grenze eingeschaltet mit Zahlenfeld (@SL-101, @W2A-037)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/admin/match-cockpit",
+      "klick": [
+        "[data-testid=\"settings-foul-limit-enabled\"]"
+      ],
+      "erwarte": "[data-testid=\"settings-foul-limit\"]",
       "profil": "app"
     },
     {

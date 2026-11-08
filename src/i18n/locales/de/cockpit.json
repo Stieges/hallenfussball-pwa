@@ -395,7 +395,12 @@
     "finalPhaseDesc": "Die Uhr steht in dieser Zeit am Ende des letzten Abschnitts still – 1 bis 5 Minuten, gilt ab dem nächsten Anpfiff",
     "finalPhaseRange": "Gültig sind 1 bis {{max}} Minuten – der Wert wurde nicht übernommen",
     "finalPhaseRangeOne": "Gültig ist 1 Minute – der Wert wurde nicht übernommen",
-    "finalPhaseTooShort": "Ein Abschnitt ist kürzer als eine Minute, eine angehaltene Schlussphase ist nicht möglich"
+    "finalPhaseTooShort": "Ein Abschnitt ist kürzer als eine Minute, eine angehaltene Schlussphase ist nicht möglich",
+    "foulLimit": "Foul-Grenze",
+    "foulLimitEnable": "Foul-Grenze einschalten",
+    "foulLimitValue": "Grenze: Foul je Halbzeit",
+    "foulLimitDesc": "Ausgeschaltet zählt das Cockpit die Fouls trotzdem und zeigt nur die Zahl. Eingeschaltet meldet es ab dem eingestellten Foul je Halbzeit (vorgeschlagen: das 5.).",
+    "foulLimitInvalid": "Gültig ist eine ganze Zahl von {{min}} bis {{max}} – der Wert wurde nicht übernommen"
   },
   "editScore": {
     "title": "Ergebnis korrigieren",

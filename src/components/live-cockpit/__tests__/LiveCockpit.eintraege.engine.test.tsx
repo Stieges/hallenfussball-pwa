@@ -149,7 +149,7 @@ describe('LiveCockpit – Karten: Spielzeit des ersten Tipps, Nummer, zweite Gel
 
   it('@SL-023 Gelb-Rot für #5 von SV Süd erfasst YELLOW_RED_CARD, nicht RED_CARD', async () => {
     const user = userEvent.setup();
-    render(<Harness />); await starte(user);
+    render(<Harness einstellungen={{ foulLimit: 5 }} />); await starte(user); // Testdaten: Grenze 5 (Vorgabe aus, @SL-101)
     await karte(user, 'away', 'Gelb-Rot', '5');
     await waitFor(() => expect(typen('YELLOW_RED_CARD')).toHaveLength(1));
     expect(typen('RED_CARD')).toHaveLength(0);

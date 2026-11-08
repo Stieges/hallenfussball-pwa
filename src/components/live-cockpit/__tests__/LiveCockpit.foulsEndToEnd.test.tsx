@@ -13,7 +13,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, act, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { Tournament } from '../../../types/tournament';
+import { DEFAULT_MATCH_COCKPIT_SETTINGS, type Tournament } from '../../../types/tournament';
 import { looseVs } from '../../../test/matchSlotFixtures';
 import { LocalMatchStore, ClockSync, MatchEngine, MatchCommands } from '../../../core/match/client';
 import { serverRules } from '../../../core/match';
@@ -90,7 +90,9 @@ async function makeRunningEngine() {
 }
 
 // Referenzstabile Props (neue `[]`/`vi.fn()` je Render wuerden Effekte im Cockpit neu ausloesen).
+// Testdaten: Grenze 5 setzt der Test selbst -- die Vorgabe eines neuen Turniers ist ausgeschaltet (@SL-101).
 const STABLE_PROPS = {
+  cockpitSettings: { ...DEFAULT_MATCH_COCKPIT_SETTINGS, foulLimit: 5 },
   fieldName: 'Feld 1', tournamentName: 'Test-Turnier', tournamentId: tournament.id, upcomingMatches: [], kannSteuern: true,
   onStart: vi.fn(), onPause: vi.fn(), onResume: vi.fn(), onFinish: vi.fn(), onGoal: vi.fn(),
   onUndoLastEvent: vi.fn(), onManualEditResult: vi.fn(), onAdjustTime: vi.fn(),

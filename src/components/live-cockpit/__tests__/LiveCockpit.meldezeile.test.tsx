@@ -54,8 +54,12 @@ function makeMatch(overrides: Record<string, unknown> = {}) {
   };
 }
 
+/** Testdaten: Grenze 5 setzt der Test selbst -- die Vorgabe eines neuen Turniers ist ausgeschaltet (@SL-101). */
+const GRENZE_5 = { ...DEFAULT_MATCH_COCKPIT_SETTINGS, foulLimit: 5 };
+
 function baseProps(match: unknown, handlers: Partial<LiveCockpitProps> = {}): LiveCockpitProps {
   return {
+    cockpitSettings: GRENZE_5, // Testdaten: Grenze 5 (Vorgabe eines neuen Turniers ist aus, @SL-101)
     fieldName: 'Feld 1', tournamentName: 'Test-Turnier', tournamentId: 'tour-1',
     currentMatch: match as never, upcomingMatches: [], kannSteuern: true,
     onStart: vi.fn(), onPause: vi.fn(), onResume: vi.fn(), onFinish: vi.fn(), onGoal: vi.fn(),

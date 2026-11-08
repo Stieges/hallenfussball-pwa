@@ -4,7 +4,7 @@ import { RULEBOOK_MAX_LENGTH } from '../../../constants/rulebook';
 import { MatchSlotSchema, SlotSourceSchema } from './MatchSlotSchema';
 import { CLOCK_MODES, FINAL_PHASE_MINUTES_MAX, FINAL_PHASE_MINUTES_MIN } from '../../match/clockDisplay';
 import { MatchKitSchema } from '../kit';
-import { OPENING_MODES } from '../../../types/tournament';
+import { FOUL_LIMIT_MAX, FOUL_LIMIT_MIN, OPENING_MODES } from '../../../types/tournament';
 import { parseStandingDecisions, StandingDecisionSchema } from './StandingDecisionSchema';
 import { PlacementsToPlayOutSchema } from '../../standings/playOutPlaces';
 import { FORFEIT_ABSENT_VALUES, ForfeitScoreSchema } from '../forfeit';
@@ -113,7 +113,7 @@ export const MatchSchema = z.object({
 /** Spielregeln „Spiel leiten“ (@SL-002, @SL-024, @SL-101, @W2A-013, @W2A-017, @W2A-035, @W2A-037, @W2A-040). */
 const MatchCockpitRulesSchema = z.looseObject({
     clockMode: z.enum(CLOCK_MODES).optional(),
-    foulLimit: z.number().int().min(1).nullable().optional(),
+    foulLimit: z.number().int().min(FOUL_LIMIT_MIN).max(FOUL_LIMIT_MAX).nullable().optional(),
     enabledCards: z.looseObject({
         yellow: z.boolean().optional(),
         yellowRed: z.boolean().optional(),
