@@ -23,7 +23,8 @@ export interface SperrVerwalter {
   request(name: string, options: { ifAvailable?: boolean; signal?: AbortSignal }, fn: (lock: unknown) => Promise<void>): Promise<unknown>;
 }
 
-export function erzeugeGeraeteSperre(verwalter: SperrVerwalter | null): GeraeteSperre {
+/** `name`: die Ton-Sperre `hallenton` (Standard) oder die Melde-Sperre des Lebenszeichens (`hallenton-melden`, H3b-3). */
+export function erzeugeGeraeteSperre(verwalter: SperrVerwalter | null, name: string = SPERRE_NAME): GeraeteSperre {
   return {
     anfordern(melde) {
       if (verwalter === null) {
@@ -42,7 +43,7 @@ export function erzeugeGeraeteSperre(verwalter: SperrVerwalter | null): GeraeteS
         }
         await gehalten;
       };
-      void verwalter.request(SPERRE_NAME, { ifAvailable: true }, async (lock) => {
+      void verwalter.request(name, { ifAvailable: true }, async (lock) => {
         if (lock) {
           await halten();
           return;
@@ -51,7 +52,7 @@ export function erzeugeGeraeteSperre(verwalter: SperrVerwalter | null): GeraeteS
           return;
         }
         melde('belegt');
-        void verwalter.request(SPERRE_NAME, { signal: abbruch.signal }, halten).catch(() => undefined);
+        void verwalter.request(name, { signal: abbruch.signal }, halten).catch(() => undefined);
       }).catch(() => undefined);
       return () => {
         vorbei = true;
@@ -63,7 +64,7 @@ export function erzeugeGeraeteSperre(verwalter: SperrVerwalter | null): GeraeteS
 }
 
 /** Sperre des Browsers; ohne Web Locks der Rückfall oben. */
-export function erzeugeBrowserSperre(): GeraeteSperre {
+export function erzeugeBrowserSperre(name: string = SPERRE_NAME): GeraeteSperre {
   const locks = typeof navigator !== 'undefined' && 'locks' in navigator ? (navigator.locks as SperrVerwalter | undefined) : undefined;
-  return erzeugeGeraeteSperre(locks ?? null);
+  return erzeugeGeraeteSperre(locks ?? null, name);
 }

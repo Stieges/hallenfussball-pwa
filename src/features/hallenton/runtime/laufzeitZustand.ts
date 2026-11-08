@@ -11,7 +11,7 @@ import { istAngepfiffen } from './feldStandSpiele';
 import type { HallTonSpieler, SpielerZustand, TonArt, TonWahl } from './hallTonSpieler';
 import type { FeldStandQuelle } from './feldStand';
 import type { GeraeteSperre } from './geraeteSperre';
-import type { KanalSpeicher, LautsprecherKanal } from './lautsprecherKanal';
+import { MELDUNG_ERNEUERN_MS, type KanalSpeicher, type LautsprecherKanal } from './lautsprecherKanal';
 import type { TaktQuelle } from './taktQuelle';
 import type { UhrProbe } from '../../../core/hallenton';
 
@@ -54,8 +54,15 @@ export interface HallLautsprecherLaufzeit {
    * weder die Sperre noch das Recht zu tönen.
    */
   ladeToeneZumAnhoeren(): Promise<void>;
-  /** Tonwahl des Turniers (Abpfiff aus `matchCockpitSettings.soundId`, Halbzeit/eigene Töne aus `hall_sound_status`). */
+  /**
+   * Tonwahl des Turniers (Abpfiff aus `matchCockpitSettings.soundId`, Halbzeit/eigene Töne aus `hall_sound_status`). Eine
+   * gleiche Wahl ändert nichts; eine neue lädt der tönende Tab erst, wenn kein Ton bevorsteht oder klingt (k-neu-2, H3b-3).
+   */
   setzeTonWahl(wahl: Record<TonArt, TonWahl>): void;
+  /** Nach jedem Takt des tönenden Tabs (Worker, 250 ms) – für das Lebenszeichen (H3b-3). */
+  beimTakt(fn: () => void): () => void;
+  /** Still abschalten (Turnierende aus dem Lebenszeichen, H3b-3): wie Gast und Turnierende, Rolle `still`. */
+  stillAbschalten(): void;
 }
 
 export interface LaufzeitDeps {
@@ -75,6 +82,8 @@ export interface LaufzeitDeps {
   gedaechtnisSpeicher?: KanalSpeicher | null;
   /** Einmal, sobald dieser Tab aktiviert ist (Tonwahl lesen, k-neu-3). */
   beimAktivieren?: () => void;
+  /** Tonwahl des Turniers lesen (k4-neu-2: „Anhören“ vor der Aktivierung spielt die Hupe des Turniers). */
+  leseTonWahl?: () => Promise<Record<TonArt, TonWahl>>;
 }
 
 /** „Bereit“ für die anderen Tabs (Regel 3) und das Reload-Tor: die Halle hört den Ton (auch „Hupe 1“ als Rückfall, @HT-028). */
@@ -138,4 +147,25 @@ export function nurFreieEnden(ton: GeplanterTon, staende: readonly FeldStand[], 
 export function warnFelderAus(warnungen: readonly { feldId: string }[], staende: readonly FeldStand[], gescheitert: boolean): Set<string> {
   const angepfiffen = (feldId: string): boolean => istAngepfiffen(staende.find((s) => s.feldId === feldId)?.state.status);
   return new Set(warnungen.filter((w) => gescheitert || angepfiffen(w.feldId)).map((w) => w.feldId));
+}
+
+/**
+ * Lautsprecher-Felder an die Tabs melden (Regel 3, Reload-Tor): bei jeder Änderung, sonst höchstens einmal je Sekunde erneuert
+ * (W-neu-1). Das Alter misst die Uhr des Kanals (k3-neu-1); ein negatives Alter (Uhr zurückgesprungen) erneuert ebenfalls
+ * (k4-neu-1), sonst veraltete die Meldung für die Lesenden. Rückgabe: der gemeldete Inhalt (für den nächsten Vergleich).
+ */
+export function meldeFelderAnTabs(
+  kanal: Pick<LautsprecherKanal, 'melden' | 'eigenesAlter'>,
+  turnierId: string,
+  felder: readonly number[],
+  zustandJeFeld: Readonly<Record<string, FeldZustand>>,
+  zuletzt: string | null,
+): string {
+  const liste = felder.map((feld) => ({ feld, bereit: BEREIT.has(zustandJeFeld[feldKennung(feld)]) }));
+  const text = JSON.stringify(liste);
+  const alter = kanal.eigenesAlter();
+  if (zuletzt !== text || alter === null || alter < 0 || alter >= MELDUNG_ERNEUERN_MS) {
+    kanal.melden({ turnierId, felder: liste });
+  }
+  return text;
 }
