@@ -17,6 +17,8 @@ import type { StoredFinalStandingsResult } from '../../../core/repositories/stor
 vi.mock('../../../lib/supabase', () => ({ isSupabaseConfigured: true, supabase: {} }));
 const read = vi.hoisted(() => vi.fn<(client: unknown, id: string) => Promise<StoredFinalStandingsResult>>());
 vi.mock('../../../core/repositories/storedFinalStandingsRead', () => ({ readStoredFinalStandings: read }));
+// „Als PDF“ über dem Endstand fragt das Recht (@DR-048 Z. 3); hier ohne Anmeldung: Helfer-Sicht ohne Knopf
+vi.mock('../../auth/hooks/useCan', () => ({ useCan: () => false }));
 await initRealDeI18n();
 
 import { generateFullSchedule } from '../../../core/generators';

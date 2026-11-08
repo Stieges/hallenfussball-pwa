@@ -5,6 +5,7 @@
  */
 import { useState, type CSSProperties, type ReactElement } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { borderWidths, cssVars, fontSizesMd3 } from '../design-tokens';
 import { BottomNavigation, BottomSheet, BottomSheetItem, Icons } from '../components/ui';
 import type { BottomNavTab } from '../components/ui';
@@ -112,6 +113,7 @@ const adminButtonStyle: CSSProperties = {
 
 export function ManagementHeader(p: ManagementHeaderProps): ReactElement {
   const navigate = useNavigate();
+  const { t } = useTranslation('tournament');
   const { tournament, isMobile, activeTab, isSettingsDirty, onTabChange } = p;
   return (
     <>
@@ -126,9 +128,15 @@ export function ManagementHeader(p: ManagementHeaderProps): ReactElement {
           </div>
         </div>
         <div style={headerActionsStyle} data-testid="management-header-actions">
-        <button onClick={() => { void navigate(`/tournament/${tournament.id}/admin`); }} style={adminButtonStyle} title="Admin Center öffnen">
-          <span>⚙️</span>
-          {!isMobile && <span>Admin Center</span>}
+        {/* @OB-082: am Handy steht am Zahnrad das Wort „Verwaltung“, nicht nur ein Symbol */}
+        <button
+          onClick={() => { void navigate(`/tournament/${tournament.id}/admin`); }}
+          style={adminButtonStyle}
+          title={t('management.adminCenterTitle')}
+          data-testid="management-admin-entry"
+        >
+          <span aria-hidden="true">⚙️</span>
+          <span>{isMobile ? t('management.adminEntry') : t('management.adminCenter')}</span>
         </button>
         {/* A-08f3e3 (M-1): wartende/nicht übernommene Einträge; im Live-Tab zeigt sie das Cockpit selbst */}
         {activeTab !== 'management' && <EngineOutboxHeaderStatus tournament={tournament} />}

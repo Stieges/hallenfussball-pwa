@@ -23,7 +23,8 @@ export const PreviewPdfButton = ({ tournament, schedule }: PreviewPdfButtonProps
       <Button variant="secondary" onClick={() => setOpen(true)} data-testid="preview-export-pdf">
         {t('pdfExport.open')}
       </Button>
-      <PDFExportDialog isOpen={open} onClose={() => setOpen(false)} tournament={tournament} schedule={schedule} standings={schedule.initialStandings} />
+      <PDFExportDialog isOpen={open} onClose={() => setOpen(false)} tournament={tournament} schedule={schedule} standings={schedule.initialStandings}
+        canCreateNotice canCreateFinal={false} />
     </>
   );
 };

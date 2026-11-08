@@ -750,7 +750,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
         {viewMode === 'groups' && renderGroupsView()}
         {viewMode === 'ranking' && renderRankingView()}
         {viewMode === 'final' && (
-          <FinalStandingsPanel tournament={tournament} />
+          <FinalStandingsPanel tournament={tournament} schedule={schedule} standings={currentStandings} />
         )}
       </Card>
     </div>
