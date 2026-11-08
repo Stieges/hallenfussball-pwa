@@ -60,7 +60,7 @@ export const PDFExportDialog = ({ isOpen, onClose, tournament, schedule, standin
   });
   // Grafiken dieses Geräts (@W3-030): bei jedem Speichern frisch aus dem Gerätespeicher gelesen (usePdfExport); ohne Eintrag geht es ohne Logo weiter (@DR-024)
   const loadGraphics = useCallback(() => tournamentGraphicsStore.load(tournament.id), [tournament.id]);
-  const finalData = final.kind === 'ready' ? { ranking: final.ranking, closedAt: final.closedAt } : undefined;
+  const finalData = final.kind === 'ready' ? { ranking: final.ranking, scorers: final.scorers, closedAt: final.closedAt } : undefined;
   const { state, now, select, save, saveAnyway, reset } = usePdfExport({ tournament, schedule, standings, audience, online: isOnline, loadGraphics, final: finalData });
 
   // Beim Öffnen beginnt jeder Dialog bei der Wahl, mit frischem Stand (ein während des Bauens geschlossener Lauf ist verworfen)

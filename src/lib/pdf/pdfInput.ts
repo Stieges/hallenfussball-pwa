@@ -7,6 +7,7 @@
 import i18next from 'i18next';
 import jsPDF from 'jspdf';
 import type { GeneratedSchedule } from '../../core/generators';
+import type { ScorerRow } from '../../core/standings/finalStandings/types';
 import type { Standing, Tournament } from '../../types/tournament';
 import { getLocationName } from '../../utils/locationHelpers';
 import type { LogoImage } from '../images/logoBytes';
@@ -32,7 +33,7 @@ export interface PdfInput {
   tournament: Tournament;
   schedule: GeneratedSchedule;
   /** Zustand: Tabellenstand, gespeicherter Endstand, Abschluss. */
-  state: { standings: Standing[] | undefined; ranking: RankEntry[]; closed: boolean | undefined; closedAt: Date | undefined };
+  state: { standings: Standing[] | undefined; ranking: RankEntry[]; scorers: ScorerRow[]; closed: boolean | undefined; closedAt: Date | undefined };
   edition: 'plan' | 'blank' | 'final';
   audience: PdfAudience;
   now: Date;
@@ -59,7 +60,7 @@ export function toPdfInput({ schedule, standings, options }: SchedulePdfInput): 
   return {
     tournament: options.tournament,
     schedule,
-    state: { standings, ranking: options.ranking ?? [], closed: options.closed, closedAt: options.closedAt },
+    state: { standings, ranking: options.ranking ?? [], scorers: options.scorers ?? [], closed: options.closed, closedAt: options.closedAt },
     edition: options.edition ?? 'plan',
     audience: options.audience ?? 'organizer',
     now: options.now ?? new Date(),

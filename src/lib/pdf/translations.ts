@@ -90,6 +90,14 @@ export interface PdfTexts {
   noDate: string;
   /** Titel der Gruppentabelle nach dem Abschluss bei Jeder gegen jeden in einer Gruppe ohne Finalrunde (@DR-009). */
   finalTable: string;
+  /** Wort der Zusatzzeile in der Finalrunde des Endstands („Verlängerung 1 : 0“, @DR-054); „Strafstoßschießen“ steht in `shootout`. */
+  overtimeWord: string;
+  /** Untertitel des Kurzkopfs der Seite „Siegerehrung“ (@DR-052). */
+  sectionCeremony: string;
+  /** Zeile „Wertung: Punkte · Tordifferenz · Tore“ unter den Tabellen des Endstands (@DR-051); `criteria` ist die fertige Aufzählung. */
+  tiebreakHint: (criteria: string) => string;
+  /** Torschützenliste auf der Seite „Siegerehrung“ (@DR-052): Überschrift, Spaltenköpfe, Fußnote „Außerdem: 2 Tore ohne Rückennummer · 1 Eigentor“. */
+  ceremony: { scorers: string; rank: string; club: string; also: (noNumber: number, ownGoals: number) => string };
   /** Beschriftung unter dem Zuschauer-QR (@DR-010): mit sichtbaren Ergebnissen „Live-Ergebnisse“, sonst „Spielplan aufs Handy“. */
   qrCaption: { results: string; plan: string };
   /** Hinweis, wenn eine Kopfgrafik nicht verwendet werden konnte (@DR-023). */
@@ -272,6 +280,20 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
     fontFallbackNote: s('fontFallbackNote'),
     noDate: s('noDate'),
     finalTable: s('finalTable'),
+    overtimeWord: s('overtimeWord'),
+    sectionCeremony: s('sectionCeremony'),
+    tiebreakHint: criteria => translate('pdf.tiebreakHint', { label: s('rules.label.tiebreak'), criteria }),
+    ceremony: {
+      scorers: s('ceremony.scorers'),
+      rank: s('ceremony.rank'),
+      club: s('ceremony.club'),
+      also: (noNumber, ownGoals) => translate('pdf.ceremony.alsoLine', {
+        parts: [
+          ...(noNumber > 0 ? [translate('pdf.ceremony.noNumber', { count: noNumber })] : []),
+          ...(ownGoals > 0 ? [translate('pdf.ceremony.ownGoals', { count: ownGoals })] : []),
+        ].join(s('rules.join')),
+      }),
+    },
     qrCaption: { results: s('qrCaption.results'), plan: s('qrCaption.plan') },
     logoUnusable: side => s(side === 'left' ? 'logoUnusableLeft' : 'logoUnusableRight'),
     origin: {

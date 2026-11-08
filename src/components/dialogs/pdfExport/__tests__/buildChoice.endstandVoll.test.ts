@@ -74,8 +74,10 @@ describe('@DR-011 @DR-009 (a) eine Gruppe ohne Finalrunde: die Abschlusstabelle 
       const texte = await lese(nikolaus(), choice, nikoRanking, audience);
       const start = texte.indexOf('Abschlusstabelle');
       expect(start, 'Überschrift „Abschlusstabelle“').toBeGreaterThan(-1);
+      // Die Tabelle steht vor der Seite „Siegerehrung“ (@DR-052), die dieselben Plätze noch einmal als Liste nennt
       const reihenfolge = texte.slice(start).filter((s) => NIKOLAUS_NAMEN.includes(s));
-      expect(reihenfolge).toEqual(NIKOLAUS_NAMEN);
+      expect(reihenfolge.slice(0, NIKOLAUS_NAMEN.length)).toEqual(NIKOLAUS_NAMEN);
+      expect(reihenfolge.slice(NIKOLAUS_NAMEN.length)).toEqual(choice === 'final' ? NIKOLAUS_NAMEN : []);
       for (const team of NIKOLAUS_NAMEN) {
         const zeile = tabellenZeile(texte, team, start);
         expect(zeile[1], `${team}: Spiele`).toBe('5');
@@ -109,7 +111,7 @@ const cupRanking: RankEntry[] = ['FC Nord', 'TSV West', 'SC Ost', 'SV Süd', 'DJ
 
 describe('@DR-011 @DR-009 (b) 2 Gruppen + Finalrunde: Gruppentabellen und Finalrunde sind gefüllt', () => {
   for (const [name, choice, audience] of [['Endstand-PDF', 'final', 'organizer'], ['Spielplan nach dem Abschluss', 'schedule', 'organizer'], ['Endstand-PDF der Zuschauer-Seite', 'final', 'viewer']] as const) {
-    it(`${name}: Gruppe A und B mit je 4 Teams und Werten; Finalrunde mit Teamnamen, Ergebnissen, „Strafstoßschießen“ und „nach Verlängerung“`, async () => {
+    it(`${name}: Gruppe A und B mit je 4 Teams und Werten; Finalrunde mit Teamnamen, Ergebnissen, „Strafstoßschießen“ und „Verlängerung“ (Spielplan: „nach Verlängerung“)`, async () => {
       const texte = await lese(hallencupVoll(), choice, cupRanking, audience);
       for (const [gruppe, namen] of [['Gruppe A', ['FC Nord', 'SV Süd', 'DJK Berg', 'TuS Tal']], ['Gruppe B', ['TSV West', 'SV Hof', 'SC Ost', 'FC Mitte']]] as const) {
         const start = texte.indexOf(gruppe);
@@ -120,11 +122,13 @@ describe('@DR-011 @DR-009 (b) 2 Gruppen + Finalrunde: Gruppentabellen und Finalr
           expect(zeile[5], `${gruppe} ${n}: Tore`).toMatch(/^\d+:\d+$/);
         }
       }
-      const finalrunde = texte.slice(texte.indexOf('HALBFINALE')).join(' ');
-      expect(finalrunde).toContain('FC Nord 1 : 1 4 : 3 Strafstoßschießen SC Ost');
+      // Endstand (@DR-054): Raster mit Rundennamen in Normalschrift und Zusatzzeile „Wort Zahl“; Spielplan: Zebra, Versalien, Zahl vor dem Wort
+      const endstand = choice === 'final';
+      const finalrunde = texte.slice(texte.indexOf(endstand ? 'Halbfinale' : 'HALBFINALE')).join(' ');
+      expect(finalrunde).toContain(endstand ? 'FC Nord 1 : 1 Strafstoßschießen 4 : 3 SC Ost' : 'FC Nord 1 : 1 4 : 3 Strafstoßschießen SC Ost');
       expect(finalrunde).toContain('TSV West 2 : 0 SV Süd');
       expect(finalrunde).toContain('SC Ost 3 : 1 SV Süd');
-      expect(finalrunde).toContain('FC Nord 1 : 1 1 : 0 nach Verlängerung TSV West');
+      expect(finalrunde).toContain(endstand ? 'FC Nord 1 : 1 Verlängerung 1 : 0 TSV West' : 'FC Nord 1 : 1 1 : 0 nach Verlängerung TSV West');
       expect(finalrunde, 'keine offene Herkunft mehr').not.toMatch(/Gruppe [AB] .*Gruppe [AB]|Sieger Spiel|Verlierer Spiel/);
       if (choice === 'final') { expect(texte.join(' ')).toContain(ABSCHLUSS); }
     });

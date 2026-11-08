@@ -1195,7 +1195,20 @@
       "loserOfMatch": "Verlierer Spiel {{n}}",
       "undecided": "noch offen"
     },
-    "finalTable": "Abschlusstabelle"
+    "finalTable": "Abschlusstabelle",
+    "overtimeWord": "Verlängerung",
+    "sectionCeremony": "Siegerehrung",
+    "tiebreakHint": "{{label}}: {{criteria}}",
+    "ceremony": {
+      "scorers": "Torschützen",
+      "rank": "Rang",
+      "club": "Verein",
+      "alsoLine": "Außerdem: {{parts}}",
+      "noNumber_one": "{{count}} Tor ohne Rückennummer",
+      "noNumber_other": "{{count}} Tore ohne Rückennummer",
+      "ownGoals_one": "{{count}} Eigentor",
+      "ownGoals_other": "{{count}} Eigentore"
+    }
   },
   "rights": {
     "leadOnlyHint": "Ändern nur durch die Turnierleitung",

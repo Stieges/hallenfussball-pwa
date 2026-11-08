@@ -17,6 +17,8 @@ import type { StatefulMatch } from '../tournamentState';
 import { printSheetHead } from '../../../design-tokens/print-sheet';
 import { roundEndTime } from './endTime';
 import { modelEnv, refereeWidthOf } from './env';
+import { ceremonyParts } from './ceremonyModel';
+import { finalsGridParts } from './finalsGridModel';
 import { finalsParts } from './finalsModel';
 import { buildHeader, type HeaderInput } from './headerModel';
 import type { TextMeasure } from './measure';
@@ -24,7 +26,7 @@ import type { RowSource } from './matchRows';
 import { planRows, type RowsPlan } from './pagePlan';
 import { rankingParts } from './rankingModel';
 import { flowSections, type FlowPage } from './sectionFlow';
-import { shootoutPlaceable, tableParts } from './tablesModel';
+import { shootoutPlaceable, tableParts, wertungHintPlaceable } from './tablesModel';
 import { ascent, descent } from './text';
 import type { ColumnKey, HeaderBlock, LinkArea, PageModel, ScheduleModel, ScheduleModelSource } from './types';
 
@@ -152,17 +154,24 @@ export function buildScheduleModel(source: ScheduleModelSource, measure: TextMea
   const singleGroup = new Set(schedule.teams.map(team => team.group).filter(Boolean)).size <= 1;
   const finalTable = env.includeStandings && placement === 'final' && !hasFinalRound && singleGroup;
   const tables = env.includeStandings && schedule.teams.length > 0 ? tableParts(env, finalTable ? input.state.ranking : undefined) : [];
+  // Endstand (@DR-051): unter den Tabellen steht die Wertung in ihrer Reihenfolge
+  if (tables.length > 0 && edition === 'final') {
+    tables.push(wertungHintPlaceable(env));
+  }
   // Strafstoßschießen um Platz 1 unter der Tabelle (@DR-036): Jeder gegen jeden in einer Gruppe, nur wenn die Regel eingestellt ist
   if (tables.length > 0 && singleGroup && !hasFinalRound && placement !== 'final' && rules.placementsToPlayOut.includes(1)) {
     tables.push(shootoutPlaceable(env));
   }
-  const finals = finalsParts(env);
+  // Endstand nach dem Abschluss (@DR-052, @DR-054): Finalrunde als Raster auf eigener Seite, Platzliste und Torschützen auf der Siegerehrung
+  const endstand = edition === 'final' && placement === 'final' && env.tablesVisible;
+  const finals = endstand ? finalsGridParts(env) : finalsParts(env);
   const flowed = flowSections(
     matchPages,
     {
       tables,
       ...(finals ? { finals } : {}),
-      ...(finalTable || !env.tablesVisible ? {} : { ranking: rankingParts(env, placement, input.state.ranking, hasFinalRound) }),
+      ...(endstand ? { finalsOwnPage: true, ceremony: ceremonyParts(env, input.state.ranking, input.state.scorers) } : {}),
+      ...(endstand || finalTable || !env.tablesVisible ? {} : { ranking: rankingParts(env, placement, input.state.ranking, hasFinalRound) }),
     },
     { top: continuationTop(geo), bottom: geo.bottom }
   );
