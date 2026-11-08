@@ -7,22 +7,18 @@ import type { MatchContext, MatchState } from '../match';
 /** Abpfiff-Ton am Spielende, kürzerer Halbzeit-Ton an jedem Abschnittsende und vor der Verlängerung (@HT-003, @HT-031). */
 export type HallTonArt = 'abpfiff' | 'halbzeit';
 
-/**
- * Regel 2: Woher der sicher bekannte Stand kommt. Leitet das Gerät das Feld selbst, gilt das eigene Cockpit; sonst der Stand
- * am Server mit dem Alter der letzten Antwort (im Gleichtakt mit dem Monitor).
- */
-export type StandQuelle =
-  | { art: 'eigenesCockpit' }
-  | { art: 'server'; antwortAlterMs: number };
-
 /** Eingabe je Feld, für das dieses Gerät Hallen-Lautsprecher ist. */
 export interface FeldStand {
   feldId: string;
   /** Das Spiel, das gerade auf dem Feld steht. */
   ctx: MatchContext;
-  /** Engine-Stand des Spiels aus der `quelle`. */
+  /**
+   * Engine-Stand des Spiels am Server. Regel 2 („Hupe und Anzeige sagen dasselbe“, 07.11.): immer der Stand am Server wie am
+   * Monitor, auch wenn dieses Gerät das Feld selbst leitet.
+   */
   state: MatchState;
-  quelle: StandQuelle;
+  /** Alter der letzten Antwort des Servers für dieses Feld (ms); `Infinity` = noch keine (@HT-011). */
+  antwortAlterMs: number;
   /** Serverzeit, zu der dieser Stand auf dem Gerät bekannt wurde (5-s-Grenze, @HT-013). */
   bekanntSeit: number;
 }
@@ -42,10 +38,9 @@ export interface GeplanterTon {
   /** Die Enden des Tons mit ihrem Zeitpunkt; erledigt wird beim Abspielen nur, was schon eingetreten ist. */
   enden: readonly { schluessel: string; feldId: string; at: number }[];
   /**
-   * Nur nach Stand am Server (@HT-011): Der Ton darf nur erklingen, wenn die letzte Antwort des Servers nicht vor diesem
-   * Zeitpunkt liegt (3 s vor dem Ton). `null`, wenn ein Feld des Tons nach eigenem Cockpit tönt.
+   * @HT-011: Der Ton darf nur erklingen, wenn die letzte Antwort des Servers nicht vor diesem Zeitpunkt liegt (5 s vor dem Ton).
    */
-  antwortNoetigAb: number | null;
+  antwortNoetigAb: number;
 }
 
 /** Warnung je Feld (@HT-011, @HT-033 Zeile 4): ohne frische Antwort kein Ton nach altem Stand. */

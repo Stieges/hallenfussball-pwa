@@ -227,7 +227,7 @@ beobachtet, bevor Daniel entscheidet, ob sie zur Pflicht werden (Ruling im Progr
 
 - **Wann:** bei jedem Pull Request gegen `main` und bei jedem Push auf `main` — dieselben
   Trigger wie `ci.yml`.
-- **Was:** startet einen echten lokalen Supabase-Stack im Runner (`supabase/setup-cli@v1`,
+- **Was:** startet einen echten lokalen Supabase-Stack im Runner (Action `.github/actions/setup-supabase-cli`: Cache, `supabase/setup-cli@v1`, sonst npm;
   Version 2.117.0 — dieselbe wie lokal, siehe „Voraussetzungen" oben), spielt Schema + Seed über
   denselben Befehl wie lokal ein (`npm run test:env:reset`) und lässt dann `npm run
   test:e2e:cloud` laufen (Playwright nur für `cloud-setup`/`cloud-desktop`/`cloud-mobile`, nur

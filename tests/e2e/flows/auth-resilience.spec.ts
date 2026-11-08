@@ -27,14 +27,21 @@ async function navigateToLogin(page: Page): Promise<void> {
 
   const loginEmail = page.locator('[data-testid="login-email-input"]');
 
+  const mobileAuthButton = page.locator('[data-testid="auth-mobile-button"]');
+  const desktopLoginButton = page.locator('[data-testid="auth-login-button"]');
+
+  // Erst warten, bis die Startseite einen der drei Einstiege zeigt. `isVisible()` wartet nie (ein `timeout` wird ignoriert,
+  // es antwortet sofort): ohne dieses Warten sah ein noch nicht gezeichneter Knopf aus wie „nicht vorhanden“ und der
+  // Weg zum Anmelden wurde still übersprungen.
+  await expect(loginEmail.or(mobileAuthButton).or(desktopLoginButton).first()).toBeVisible({ timeout: 10000 });
+
   // Check if already on login screen
-  if (await loginEmail.isVisible({ timeout: 1000 }).catch(() => false)) {
+  if (await loginEmail.isVisible()) {
     return;
   }
 
   // Mobile flow: Click user icon to open bottom sheet
-  const mobileAuthButton = page.locator('[data-testid="auth-mobile-button"]');
-  if (await mobileAuthButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+  if (await mobileAuthButton.isVisible()) {
     // Use force:true because offline badge may overlap in CI (no Supabase configured)
     await mobileAuthButton.click({ force: true });
 
@@ -48,8 +55,7 @@ async function navigateToLogin(page: Page): Promise<void> {
   }
 
   // Desktop flow: Click "Anmelden" button directly
-  const desktopLoginButton = page.locator('[data-testid="auth-login-button"]');
-  if (await desktopLoginButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+  if (await desktopLoginButton.isVisible()) {
     // Use force:true because offline badge may overlap in CI (no Supabase configured)
     await desktopLoginButton.click({ force: true });
     await expect(loginEmail).toBeVisible({ timeout: 5000 });

@@ -1,8 +1,9 @@
 /**
  * Lautsprecher-Felder dieses Geräts über die Tabs teilen (H3b-2b, @HT-033 Zeile 8, Regel 3): Der Tab, der tönt, meldet seine
- * Felder je mit dem Kennzeichen „bereit“ in `localStorage` (`hallenton:felder`) und stößt die anderen Tabs über
- * `BroadcastChannel('hallenton')` an. H3b-3 liest das für Regel 3 im Cockpit (`bereiteLautsprecherFeldIds`), das Reload-Tor
- * für alle Tabs (`lautsprecherReloadTor.ts`).
+ * Felder je mit dem Kennzeichen „bereit“ und der Serverzeit der letzten Antwort (`antwortAt`, H3b-4) in `localStorage`
+ * (`hallenton:felder`) und stößt die anderen Tabs über `BroadcastChannel('hallenton')` an. Das Cockpit liest das für Regel 3
+ * (`hallTontFeldIds` in `cockpitTon.ts`: bereit und Antwort ≤ 5 s alt), das Reload-Tor für alle Tabs nur „bereit“
+ * (`bereiteLautsprecherFeldIds`, `lautsprecherReloadTor.ts`).
  *
  * Fail-safe (Ruling W-neu-1): Eine Meldung ohne Erneuerung gilt nach 2 s als nicht bereit (Neuladen, Schließen, Absturz),
  * dann tönt das Cockpit wieder. Der Halter der Sperre erneuert sie im Takt höchstens einmal je Sekunde; `pagehide` nimmt die
@@ -27,6 +28,11 @@ export interface KanalSpeicher extends Speicher {
 export interface LautsprecherFeldMeldung {
   feld: number;
   bereit: boolean;
+  /**
+   * Serverzeit der letzten Antwort des Servers für dieses Feld (K3 aus H3b-3); `null` = keine. Fehlt der Wert (ältere Meldung),
+   * gilt das wie `null`: das Cockpit tönt.
+   */
+  antwortAt?: number | null;
 }
 
 export interface LautsprecherMeldung {
@@ -81,8 +87,12 @@ function alsMeldung(roh: unknown): LautsprecherMeldung | null {
   if (typeof m.turnierId !== 'string' || typeof m.tabId !== 'string' || typeof m.at !== 'number' || felder === null) {
     return null;
   }
-  const gueltig = felder.every((f: unknown) => !!f && typeof f === 'object'
-    && Number.isInteger((f as LautsprecherFeldMeldung).feld) && typeof (f as LautsprecherFeldMeldung).bereit === 'boolean');
+  const gueltig = felder.every((f: unknown) => {
+    const feld = f as LautsprecherFeldMeldung;
+    const antwortAt = !!f && typeof f === 'object' ? feld.antwortAt : undefined;
+    return !!f && typeof f === 'object' && Number.isInteger(feld.feld) && typeof feld.bereit === 'boolean'
+      && (antwortAt === undefined || antwortAt === null || Number.isFinite(antwortAt));
+  });
   return gueltig ? { turnierId: m.turnierId, felder, tabId: m.tabId, at: m.at } : null;
 }
 

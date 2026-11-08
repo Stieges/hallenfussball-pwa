@@ -7,10 +7,11 @@
  *   gibt er die Sperre frei (k-neu-4). Erst mit der Sperre entstehen Worker-Takt und Feldstand.
  * - Takt (250 ms aus dem Worker): `bestaetigen` → Uhrsprung → synchron `staende()` und `planeHallToene` mit dem Gedächtnis →
  *   Freigabe. Die Netzrunde `feldStand.aktualisieren(serverNow, letzterPlan.abfrageTaktMs)` wird nur angestoßen, nie
- *   abgewartet; läuft sie noch, startet keine zweite (K1: der Stand der eigenen Engine gilt in jedem Takt).
+ *   abgewartet; läuft sie noch, startet keine zweite (das Alter der Antwort wächst in jedem Takt weiter).
  *   `hallTonGespielt` erst nach dem tatsächlichen Beginn; das Gedächtnis teilen die Tabs je Turnier (W2).
- * - Freigabe je Feld (@HT-011 ↔ @HT-029): frisch heißt, die Antwort **dieses Felds** (`quelle.antwortAlterMs`) liegt nicht
- *   vor `at − 3 s`; ein Feld nach eigenem Cockpit ist immer frei; ein Ton für mehrere Felder ist frei, wenn eines frei ist.
+ * - Regel 2 („Hupe und Anzeige sagen dasselbe“, 07.11.): nur der Stand am Server, auch wenn das Gerät das Feld selbst leitet.
+ *   Freigabe je Feld (@HT-011 ↔ @HT-029): frisch heißt, die Antwort **dieses Felds** (`antwortAlterMs`) liegt nicht vor
+ *   `at − 5 s`; ein Ton für mehrere Felder ist frei, wenn eines frei ist.
  * - Uhrsprung (`uhrsprungMs`): erst bestätigen (mit der Zeit vor dem Sprung), dann alles noch nicht Begonnene abbrechen,
  *   `sync()`, danach neu planen (@HT-010, W1).
  * - Zustand je Feld: `slept` (bis „Ton aktivieren“, @HT-037), `not_activated` (@HT-012/013), `background` (Takt setzt länger
@@ -18,23 +19,25 @@
  *   Planers; im Ruhezustand nur nach einem gescheiterten Versuch, Ruling N-2), `custom_sound_failed`, sonst `ready`.
  * - Verfügbarkeit: `nichtVerfuegbar` (Gast) und `turnierBeendet` schalten still ab, ohne Ausnahme.
  * - Lautsprecher-Felder über die Tabs (`lautsprecherKanal.ts`) mit „bereit“ = `ready` oder `custom_sound_failed` (die Halle
- *   hört dann „Hupe 1“, @HT-028); der Halter erneuert die Meldung höchstens einmal je Sekunde (W-neu-1).
+ *   hört dann „Hupe 1“, @HT-028) und der Serverzeit der letzten Antwort je Feld (K3); der Halter erneuert die Meldung
+ *   höchstens einmal je Sekunde (W-neu-1), auch wenn die Uhr zurücksprang (k4-neu-1: negatives Alter).
+ * - H3b-3: `beimTakt` für das Lebenszeichen, `stillAbschalten` (Turnierende), Tonwahl-Wechsel erst in Ruhe (`tonWahlWechsel.ts`).
  */
 import {
   LEERES_GEDAECHTNIS, hallTonGespielt, planeHallToene,
   type FeldStand, type GeplanterTon, type PlanErgebnis, type TonGedaechtnis,
 } from '../../../core/hallenton';
-import { feldKennung } from './aktuellesSpielJeFeld';
 import type { FeldStandQuelle } from './feldStand';
+import type { LautsprecherFeldMeldung } from './lautsprecherKanal';
 import { teileGedaechtnis, vereineGedaechtnis } from './geteiltesGedaechtnis';
-import { MELDUNG_ERNEUERN_MS } from './lautsprecherKanal';
 import { erzeugeUhrsprungWache } from './uhrsprungWache';
 import type { TaktQuelle } from './taktQuelle';
 import {
-  BEREIT, feldZustaende, geraeteZustandAus, naechsterTonAus, nurFreieEnden, tonFrei, warnFelderAus,
+  antwortAtVon, feldZustaende, meldeFelderAnTabs, geraeteZustandAus, naechsterTonAus, nurFreieEnden, tonFrei, warnFelderAus,
   type HallLautsprecherLaufzeit, type LaufzeitDeps, type LaufzeitRolle, type LaufzeitSnapshot,
 } from './laufzeitZustand';
 import { VORBELEGUNG } from './tonWahl';
+import { erzeugeTonWahlHalter } from './tonWahlWechsel';
 import { erzeugeTonSteuerung, type TonSteuerung } from './tonSteuerung';
 
 export type { FeldZustand, HallLautsprecherLaufzeit, LaufzeitDeps, LaufzeitRolle, LaufzeitSnapshot, NaechsterTon } from './laufzeitZustand';
@@ -57,14 +60,15 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
   let runde: Promise<void> | null = null;
   let sperreAngefordert = false;
   let aktiviert = false;
-  let tonWahl = deps.tonWahl ?? VORBELEGUNG;
+  const wahl = erzeugeTonWahlHalter({ spieler, start: deps.tonWahl ?? VORBELEGUNG, lesen: deps.leseTonWahl, geladen: () => melden() });
+  const taktZuhoerer = new Set<() => void>();
   const speicher = deps.gedaechtnisSpeicher ?? null;
   const wache = erzeugeUhrsprungWache(deps.uhrProbe, uhr);
   let geschlafen = deps.wurdeVerworfen;
   let ausgesetzt = false;
   let taktFehler = false;
   let warAngehalten = false;
-  let gemeldet: { text: string } | null = null;
+  let gemeldet: readonly LautsprecherFeldMeldung[] | null = null;
   let snapshot: LaufzeitSnapshot = baue();
 
   function baue(): LaufzeitSnapshot {
@@ -86,15 +90,8 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
         fn();
       }
     }
-    if (rolle !== 'toent') {
-      return;
-    }
-    const felder = deps.felder.map((feld) => ({ feld, bereit: BEREIT.has(snapshot.zustandJeFeld[feldKennung(feld)]) }));
-    const text = JSON.stringify(felder);
-    const alter = deps.kanal.eigenesAlter(); // k3-neu-1: Uhr des Kanals, ein Abgleich der Serveruhr verschiebt nichts
-    if (gemeldet?.text !== text || alter === null || alter >= MELDUNG_ERNEUERN_MS) {
-      gemeldet = { text };
-      deps.kanal.melden({ turnierId: deps.turnierId, felder });
+    if (rolle === 'toent') {
+      gemeldet = meldeFelderAnTabs(deps.kanal, deps.turnierId, deps.felder, snapshot.zustandJeFeld, (id) => antwortAtVon(id, staende, staendeUm), staendeUm, gemeldet);
     }
   }
 
@@ -102,6 +99,7 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
 
   function bestaetigen(now: number): void {
     for (const { ton, at } of toene?.bestaetigen(now) ?? []) {
+      wahl.begonnen(at);
       gedaechtnis = hallTonGespielt(gedaechtnis, nurFreieEnden(ton, staende, staendeUm), at);
       teileGedaechtnis(speicher, deps.turnierId, gedaechtnis, at);
     }
@@ -131,7 +129,7 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
     melden();
   }
 
-  /** Synchron in jedem Takt: aktueller Stand (eigene Engine sofort, Server mit Antwort-Alter) → Plan → Ton-Steuerung. */
+  /** Synchron in jedem Takt: Stand am Server mit Antwort-Alter → Plan → Ton-Steuerung. */
   function planeJetzt(quelle: FeldStandQuelle, jetzt: number): void {
     const verfuegbar = quelle.verfuegbarkeit();
     if (verfuegbar === 'nichtVerfuegbar' || verfuegbar === 'turnierBeendet') {
@@ -169,7 +167,11 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
       planeJetzt(quelle, now);
     }
     toene?.pruefen(now, frei);
+    wahl.imTakt(toene?.naechster() ?? null, now);
     melden();
+    for (const fn of [...taktZuhoerer]) {
+      fn();
+    }
   }
 
   function beginne(): void {
@@ -243,7 +245,7 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
       spielerAb = spieler.onZustand(beiSpielerZustand);
       if (spieler.zustand() !== 'not_activated') {
         wirdAktiviert(); // in diesem Tab schon aktiviert (z. B. vorige Laufzeit)
-        void spieler.laden(tonWahl).then(melden, melden);
+        void spieler.laden(wahl.wahl()).then(melden, melden);
       }
       pruefeSperre();
       melden();
@@ -265,7 +267,7 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
       wirdAktiviert();
       let ok = await freigabe;
       if (!ok) {
-        await spieler.laden(tonWahl);
+        await spieler.laden(wahl.wahl());
         ok = spieler.zustand() !== 'not_activated';
       }
       if (ok) {
@@ -275,11 +277,20 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
       melden();
       return ok;
     },
-    ladeToeneZumAnhoeren: () => spieler.laden(tonWahl).then(() => undefined),
-    setzeTonWahl(wahl) {
-      tonWahl = wahl;
-      if (aktiviert) {
-        void spieler.laden(wahl).then(melden, melden);
+    ladeToeneZumAnhoeren: () => wahl.zumAnhoeren(() => aktiviert),
+    setzeTonWahl(neu) {
+      const lage = !aktiviert ? 'nichtAktiviert' : rolle === 'toent' ? 'toent' : 'aktiviert';
+      wahl.setzen(neu, lage, toene?.naechster() ?? null, uhr.serverNow());
+    },
+    beimTakt(fn) {
+      taktZuhoerer.add(fn);
+      return () => {
+        taktZuhoerer.delete(fn);
+      };
+    },
+    stillAbschalten() {
+      if (rolle !== 'aus' && rolle !== 'still') {
+        abschalten('still');
       }
     },
     angehaltenBestaetigen() {

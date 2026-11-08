@@ -1,6 +1,6 @@
 /**
  * Spielplan des Feldstands aus der lokalen Turnierkopie (H3b-2b, Befund 6a): gilt nur, solange der Server keinen geliefert hat
- * (Start ohne Netz), damit ein selbst geleitetes Feld nach dem eigenen Cockpit tönen kann (@HT-033 Zeile 11). Gleiche Felder
+ * (Start ohne Netz), damit die Felder ihr Spiel kennen und „keine Verbindung“ warnen (@HT-033 Zeile 11, H3b-4). Gleiche Felder
  * wie `planSpielAus` (Spalten des Servers), `MatchContext` wie `buildValidMatches`: Team-IDs klein, beide gesetzt, verschieden.
  */
 import { matchSideTeamId } from '../../../core/models/matchSlot';

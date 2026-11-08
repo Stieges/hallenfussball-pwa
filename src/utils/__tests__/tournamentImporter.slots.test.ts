@@ -11,6 +11,8 @@ import type { Match, Team } from '../../types/tournament';
 const fileOf = (matches: unknown[]): string =>
   JSON.stringify({
     title: 'Import',
+    date: '2026-11-28',
+    startTime: '09:00',
     teams: [
       { id: 't1', name: 'Team Alpha', group: 'A' },
       { id: 't2', name: 'Team Beta', group: 'A' },

@@ -1,12 +1,11 @@
 /**
- * H3b-2a Feldstand: Quelle je Feld nach Regel 2 (@HT-033 Zeilen 1, 3, 10, 11), Gegenbeispiele (Spiel wechselt, Antwort
+ * H3b-2a Feldstand: immer der Stand am Server nach Regel 2 (H3b-4, @HT-033 Zeilen 1, 2, 3, 10, 11), Gegenbeispiele (Spiel wechselt, Antwort
  * hängt, nicht angepfiffen, Gast, Turnierende) und die Abfrage selbst (Filter wie `makeFetchConfirmed`, Seiten, Wasserstand).
  * Werte aus `docs/anforderungen/2026-10-15_hallenton.md`: Laptop = Rechner der Turnierleitung, Handy = Toms Handy.
  */
-import { describe, expect, it, vi } from 'vitest';
-import { feldEndeOf } from '../../../../core/hallenton';
+import { describe, expect, it } from 'vitest';
 import {
-  ABSCHNITT_MS, CTX_11, CTX_12, ENDE_A2, T0, anpfiff, ev, stateAus, zweiterAbschnitt,
+  ABSCHNITT_MS, CTX_11, CTX_12, ENDE_A2, T0, anpfiff, ev, zweiterAbschnitt,
 } from '../../../../core/hallenton/__tests__/hallentonFixtures';
 import { ABFRAGE_ABBRUCH_MS } from '../feldStandAbfragen';
 import { HALTEN_NACH_WECHSEL_MS } from '../feldStand';
@@ -19,68 +18,56 @@ function lageImZweitenAbschnitt(start: number, log = zweiterAbschnitt()): Lage {
   return lage;
 }
 
-describe('@HT-033 Die vier Regeln entscheiden jede Kombination – Quelle des Stands (Regel 2)', () => {
+describe('@HT-033 Die vier Regeln entscheiden jede Kombination – immer der Stand am Server (Regel 2)', () => {
   it('@HT-033 Zeile 1: Handy leitet, Laptop ist Lautsprecher → Stand am Server, Ton im Gleichtakt mit dem Monitor', async () => {
     const lage = lageImZweitenAbschnitt(ENDE_A2 - 10_000);
-    const eigeneSicht = vi.spyOn(lage.eigene, 'get');
     const { gespielt } = await probe(lage, ENDE_A2 + 5000, [], 300);
-    expect(lage.stand()?.quelle).toEqual({ art: 'server', antwortAlterMs: expect.any(Number) as number });
+    expect(lage.stand()?.antwortAlterMs).toBeLessThanOrEqual(1000);
     expect(gespielt.map((t) => t.art)).toEqual(['abpfiff']);
     expect(Math.abs(gespielt[0].at - ENDE_A2)).toBeLessThanOrEqual(1000);
-    // fremdes Feld: die eigene Engine wird nicht gefragt; gelesen wird nur Spielplan und Ereignisse
-    expect(eigeneSicht).not.toHaveBeenCalled();
+    // gelesen wird nur Spielplan und Ereignisse
     expect(new Set(lage.sb.abfragen.map((a) => a.tabelle))).toEqual(new Set(['rpc:is_real_account', 'tournaments', 'matches', 'match_events']));
   });
 
-  it('@HT-033 Zeile 3: Handy ohne Netz hält an → der Laptop nimmt den Stand am Server (ohne Pause), nie den eines anderen Geräts', async () => {
+  it('@HT-033 Zeile 2: Laptop leitet mit Netz und hält an → einmal, nach dem Stand am Server wie der Monitor (Ende nach dem Weiterlaufen)', async () => {
+    // die Einträge des Laptops kommen wie die jedes leitenden Geräts über den Server
+    const lage = lageImZweitenAbschnitt(ENDE_A2 - 15_000);
+    const halt = ENDE_A2 - 10_000;
+    const weiter = halt + 5000;
+    const { gespielt } = await probe(lage, ENDE_A2 + 12_000, [
+      { um: halt, tu: () => lage.sende(CTX_11, [ev('PAUSE', halt, 2, null)]) },
+      { um: weiter, tu: () => lage.sende(CTX_11, [ev('RESUME', weiter, 2, null)]) },
+    ], 300);
+    expect(gespielt.map((t) => t.art)).toEqual(['abpfiff']);
+    expect(Math.abs(gespielt[0].at - (ENDE_A2 + 5000))).toBeLessThanOrEqual(1000);
+  });
+
+  it('@HT-033 Zeile 3: Handy ohne Netz hält an → der Laptop nimmt den Stand am Server (ohne Pause)', async () => {
     const lage = lageImZweitenAbschnitt(ENDE_A2 - 12_000);
-    // derselbe Browser kennt Toms Pause (z. B. lesend geöffnetes Cockpit), leitet Feld 1 aber nicht
-    lage.eigene.set(CTX_11.matchId, stateAus([...zweiterAbschnitt(), ev('PAUSE', ENDE_A2 - 10_000, 2, null)]));
     lage.vor(3000);
     await lage.runde();
-    expect(lage.stand()?.quelle.art).toBe('server');
     expect(lage.stand()?.state.status).toBe('running');
   });
 
-  it('@HT-033 Zeile 10: Wechsel Handy → Laptop im Spiel → Quelle wird das eigene Cockpit, bekanntSeit und Schlüssel des Endes bleiben, genau ein Ton', async () => {
-    // dieselben Ereignisse (gleiche IDs) am Server und in der Engine des Laptops, der die Leitung übernimmt
-    const log = zweiterAbschnitt();
-    const lage = lageImZweitenAbschnitt(ENDE_A2 - 20_000, log);
+  it('@HT-033 Zeile 10: Wechsel Handy → Laptop im Spiel → weiter genau ein Ton (die Einträge des Laptops kommen über den Server)', async () => {
+    const lage = lageImZweitenAbschnitt(ENDE_A2 - 20_000);
     const wechsel = ENDE_A2 - 8000;
-    const beobachtet: { vorher?: number; nachher?: number; quelle?: string; schluesselServer?: string; schluesselEigen?: string } = {};
+    const beobachtet: { vorher?: number; nachher?: number } = {};
     const { gespielt } = await probe(lage, ENDE_A2 + 6000, [
-      {
-        um: wechsel, tu: () => {
-          const server = lage.stand();
-          beobachtet.vorher = server?.bekanntSeit;
-          beobachtet.schluesselServer = server ? feldEndeOf(server.state, server.ctx, wechsel)?.schluessel : undefined;
-          lage.leite.add(1);
-          lage.eigene.set(CTX_11.matchId, stateAus(log));
-          const eigen = lage.stand();
-          beobachtet.nachher = eigen?.bekanntSeit;
-          beobachtet.quelle = eigen?.quelle.art;
-          beobachtet.schluesselEigen = eigen ? feldEndeOf(eigen.state, eigen.ctx, wechsel)?.schluessel : undefined;
-        },
-      },
+      { um: wechsel, tu: () => { beobachtet.vorher = lage.stand()?.bekanntSeit; } },
+      { um: wechsel + 2000, tu: () => { beobachtet.nachher = lage.stand()?.bekanntSeit; } },
     ], 50);
-    expect(beobachtet.quelle).toBe('eigenesCockpit');
     expect(beobachtet.nachher).toBe(beobachtet.vorher);
-    expect(beobachtet.schluesselEigen).toBeDefined();
-    expect(beobachtet.schluesselEigen).toBe(beobachtet.schluesselServer);
     expect(gespielt.map((t) => t.art)).toEqual(['abpfiff']);
   });
 
-  it('@HT-033 Zeile 11: Laptop ohne Netz leitet selbst → Ton einmal nach eigenem Stand, keine Warnung „keine Verbindung“', async () => {
+  it('@HT-033 Zeile 11: Laptop leitet ohne Netz → kein Hallenton nach unsicherem Stand, Warnung „keine Verbindung“', async () => {
     const lage = new Lage({ start: ENDE_A2 - 30_000 });
     await lage.runde(); // Spielplan bekannt: Spiel 11 noch nicht angepfiffen
-    lage.sb.netz = 'fehler';
-    lage.leite.add(1);
-    lage.eigene.set(CTX_11.matchId, stateAus(zweiterAbschnitt())); // Anpfiff und zweiter Abschnitt nur auf dem Laptop
+    lage.sb.netz = 'fehler'; // Anpfiff und zweiter Abschnitt nur auf dem Laptop, der Server kennt sie nicht
     const { gespielt, plaene } = await probe(lage, ENDE_A2 + 6000, [], 300);
-    expect(lage.stand()?.quelle).toEqual({ art: 'eigenesCockpit' });
-    expect(gespielt.map((t) => t.art)).toEqual(['abpfiff']);
-    expect(Math.abs(gespielt[0].at - ENDE_A2)).toBeLessThanOrEqual(1000);
-    expect(plaene.flatMap((p) => p.warnungen)).toEqual([]);
+    expect(gespielt).toEqual([]);
+    expect(plaene[plaene.length - 1].warnungen).toEqual([{ feldId: 'field-1', grund: 'keineVerbindung' }]);
   });
 });
 

@@ -3,7 +3,7 @@
  * aus den Kern-Fixtures), Supabase-Doppel mit echten Filtern, von Hand vorgerückte Serverzeit. `probe` spielt den späteren
  * Einbau nach: alle 250 ms `aktualisieren` und planen (`planeHallToene`), geplante Töne erklingen genau zu `at`.
  */
-import type { EngineEvent, MatchContext, MatchState } from '../../../../core/match';
+import type { EngineEvent, MatchContext } from '../../../../core/match';
 import { LEERES_GEDAECHTNIS, hallTonGespielt, planeHallToene, type GeplanterTon, type HallTonArt, type PlanErgebnis } from '../../../../core/hallenton';
 import { CTX_11, CTX_12, T0 } from '../../../../core/hallenton/__tests__/hallentonFixtures';
 import { FalscherSupabase } from '../../../../test/hallenton/falscherSupabase';
@@ -40,9 +40,6 @@ export class Lage {
   readonly sb = new FalscherSupabase();
   readonly uhr: ManuelleUhr;
   readonly fs: FeldStandQuelle;
-  /** Felder, die dieses Gerät leitet; Stand der eigenen Engine je Spiel. */
-  readonly leite = new Set<number>();
-  readonly eigene = new Map<string, MatchState>();
   felder: number[];
   private seq = 100;
 
@@ -56,8 +53,6 @@ export class Lage {
       serverNow: () => this.uhr.jetzt(),
       turnierId: TID,
       lautsprecherFelder: () => this.felder,
-      leiteIchFeld: (feld) => this.leite.has(feld),
-      eigeneSicht: (matchId) => this.eigene.get(matchId) ?? null,
       lokalerSpielplan,
       zeitgeber: this.uhr.gruppe('haupt'),
     });

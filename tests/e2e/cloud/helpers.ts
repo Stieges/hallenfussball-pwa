@@ -481,11 +481,32 @@ export async function logoutOtherDevicesViaUi(page: Page): Promise<void> {
 }
 
 /**
+ * Wartet, bis die App ihren Gerätespeicher (IndexedDB `hallenfussball`, Speicher `cache`) selbst angelegt hat.
+ * `goto` + `networkidle` genügen dafür nicht: die App öffnet den Speicher erst nach dem Start im Browser, ohne Netzwerkverkehr
+ * (C-GASTTURNIER-SEED-ZU-FRUEH, einmal rot als „IndexedDB nicht zu öffnen“ in abmelden-geraete.cloud.spec.ts). Die Prüfung legt
+ * nie selbst etwas an: ein Öffnen ohne die Datenbank bricht im Upgrade ab und hinterlässt nichts.
+ */
+export async function warteAufGeraetespeicherDerApp(page: Page): Promise<void> {
+  await expect.poll(() => page.evaluate(() => new Promise<boolean>((resolve) => {
+    const request = indexedDB.open('hallenfussball', 1);
+    request.onupgradeneeded = () => { request.transaction?.abort(); };
+    request.onerror = () => { resolve(false); };
+    request.onsuccess = () => {
+      const db = request.result;
+      const vorhanden = db.objectStoreNames.contains('cache');
+      db.close();
+      resolve(vorhanden);
+    };
+  })), { message: 'Gerätespeicher der App (IndexedDB hallenfussball/cache) wurde nicht angelegt', timeout: 15_000 }).toBe(true);
+}
+
+/**
  * Legt im Gastmodus ein lokales Turnier an (IndexedDB `hallenfussball/cache`, Schlüssel
- * `tournaments`, wie die Offline-Suite) und lädt neu. Die Seite muss vorher einmal geladen sein
- * (die Datenbank entsteht beim Start). Rückgabe: die Turnier-ID.
+ * `tournaments`, wie die Offline-Suite) und lädt neu. Die Seite muss vorher geladen sein; auf den Gerätespeicher der App wartet
+ * die Funktion selbst. Rückgabe: die Turnier-ID.
  */
 export async function seedGuestTournament(page: Page, title: string): Promise<string> {
+  await warteAufGeraetespeicherDerApp(page);
   const id = await page.evaluate(async (tournamentTitle) => {
     // Entwurf mit den Standardwerten der App selbst (Vite-Dev-Server liefert die Quelle aus).
     const modulePath = '/src/core/services/TournamentCreationService.ts';

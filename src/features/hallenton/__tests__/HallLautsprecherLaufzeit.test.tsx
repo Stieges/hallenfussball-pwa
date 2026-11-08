@@ -22,7 +22,7 @@ const engineKontext = vi.hoisted(() => {
     je[accountId] ??= {
       accountId,
       clock: { serverNow: () => Date.now(), sync: () => Promise.resolve(true) },
-      engine: { view: () => null },
+      engine: { view: () => null, subscribe: () => () => undefined },
     };
     return je[accountId];
   };
@@ -38,6 +38,9 @@ vi.mock('../../../hooks/useWakeLock', () => ({
 const turnier = vi.hoisted((): { wert: unknown } => ({ wert: null }));
 const repos = vi.hoisted(() => ({ tournamentRepository: { get: () => Promise.resolve(turnier.wert) } }));
 vi.mock('../../../core/contexts/RepositoryContext', () => ({ useRepositories: () => repos }));
+// Fixrunde 1 (W2): Hallenton liest die Turnierkopie nur lokal; das Doppel zählt die Lesevorgänge
+const lokal = vi.hoisted(() => ({ aufrufe: 0 }));
+vi.mock('../lokalesTurnier', () => ({ ladeTurnierLokal: () => { lokal.aufrufe += 1; return Promise.resolve(turnier.wert); } }));
 vi.mock('../../match-engine/useMatchEngineContext', () => ({
   useMatchEngineContextOptional: () => engineKontext(konto.accountId),
 }));

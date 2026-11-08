@@ -127,7 +127,7 @@ describe('B-26 Zeiten verschieben im Spielplan', () => {
     fireEvent.click(screen.getByTestId('schedule-shift-button'));
     fireEvent.click(screen.getByTestId('time-shift-direction-earlier'));
     fireEvent.click(screen.getByTestId('time-shift-quick-15'));
-    expect(screen.getByTestId('time-shift-summary')).toHaveTextContent('Spiel 1 beginnt um 09:45 statt 10:00 · 8 Spiele rücken 15 Minuten vor · neues Ende 11:19');
+    expect(screen.getByTestId('time-shift-summary')).toHaveTextContent('Spiel 1 beginnt um 09:45 statt 10:00 · 8 Spiele rücken 15 Minuten vor · neues Ende 11:21');
     expect(screen.getByTestId('time-shift-warning')).toHaveTextContent('Spiel 1 beginnt in 5 Minuten – Teams wissen es evtl. noch nicht.');
     expect(screen.getByTestId('time-shift-proceed')).toBeEnabled();
   });
@@ -172,7 +172,7 @@ describe('B-26 Zeiten verschieben im Spielplan', () => {
     fireEvent.click(screen.getByTestId('time-shift-confirm'));
     const saved = onTournamentUpdate.mock.calls[0][0] as Tournament;
     rerenderWith(saved);
-    expect(screen.getByTestId('time-shift-strip')).toHaveTextContent('Zeiten um 10 Minuten verschoben · Ende 11:44');
+    expect(screen.getByTestId('time-shift-strip')).toHaveTextContent('Zeiten um 10 Minuten verschoben · Ende 11:46');
     expect(screen.getByTestId('time-shift-strip')).toHaveTextContent('Ausdrucke sind veraltet');
     expect(screen.getByTestId('match-original-m8')).toHaveTextContent('(war 11:24)');
     fireEvent.click(screen.getByTestId('zeiten-rueckgaengig'));

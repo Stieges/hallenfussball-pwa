@@ -2,7 +2,8 @@
  * H3b-2b Integrationstest „Laufzeit“: echte Laufzeit, echter Feldstand gegen das Supabase-Doppel (Sammelabfrage im 1-s-Takt),
  * echter Takt-Adapter und Spieler. Die Abfragen liegen im 1-s-Raster mit Versatz 50, 300 und 950 ms gegen das Ende (wie
  * `laufImTakt`). Genau ein Ton zur richtigen Zeit für: Ende von selbst (@HT-004), Ende von Hand 0,5 s vor Ablauf (@HT-008),
- * Korrektur über die Grenze (@HT-051), zwei Felder gleichzeitig (@HT-032); dazu die unlesbare Zeile auf einem Feld.
+ * Korrektur über die Grenze (@HT-051), zwei Felder gleichzeitig (@HT-032), Laptop leitet mit Netz (@HT-033 Zeile 2); dazu die
+ * unlesbare Zeile auf einem Feld und Zeile 11. Seit H3b-4 gibt es keine Quelle „eigenes Cockpit“: alles kommt vom Server.
  * Ein Eintrag am Handy ist nach 200 ms am Server.
  */
 import { describe, expect, it } from 'vitest';
@@ -67,6 +68,16 @@ describe('Integrationstest Laufzeit – 1-s-Raster mit Versatz', () => {
       expect(tab.toene()[0].at - ankunft).toBeLessThanOrEqual(1300);
     });
 
+    it(`@HT-033 Zeile 2 Versatz ${versatzMs} ms: Laptop leitet mit Netz, hält 10 s vor dem Ende 4 s an → genau ein Ton zum Ende am Server`, async () => {
+      // Regel 2 (H3b-4): auch die Einträge des Laptops zählen erst, wenn sie am Server sind – wie am Monitor
+      const halt = ENDE_A2 - 10_000;
+      const tab = await lautsprecher(ENDE_A2 - 20_000 + versatzMs);
+      await tab.starte();
+      await tab.vor(30_000, [amServer(tab, CTX_11, ev('PAUSE', halt, 2, null)), amServer(tab, CTX_11, ev('RESUME', halt + 4000, 2, null))]);
+      expect(tab.toene().map((t) => t.art)).toEqual(['abpfiff']);
+      expect(Math.abs(tab.toene()[0].at - (ENDE_A2 + 4000))).toBeLessThanOrEqual(1000);
+    });
+
     it(`@HT-032 Versatz ${versatzMs} ms: zwei Felder enden 0,5 s nacheinander → ein Abpfiff-Ton`, async () => {
       const tab = await lautsprecher(ENDE_A2 - 20_000 + versatzMs, [1, 2]);
       tab.lage?.sende(CTX_12, zweiterAbschnitt(T0 + 500));
@@ -92,6 +103,22 @@ describe('Integrationstest Laufzeit – 1-s-Raster mit Versatz', () => {
     const tab = await lautsprecher(ENDE_A2 - 40_000);
     await tab.starte();
     await tab.vor(45_000, [{ um: ENDE_A2 - 30_000, tu: () => { if (tab.lage) { tab.lage.sb.netz = 'fehler'; } } }]);
+    expect(tab.toene()).toEqual([]);
+    expect(tab.laufzeit.getSnapshot().zustandJeFeld['field-1']).toBe('keineVerbindung');
+  });
+});
+
+describe('Integrationstest Laufzeit – @HT-033 Zeile 11 mit echtem Feldstand (H3b-4)', () => {
+  it('@HT-033 Zeile 11: Laptop leitet ohne Netz (Anpfiff nur am Laptop) → kein Hallenton nach unsicherem Stand, „keine Verbindung“', async () => {
+    const tab = new Tab({ start: ENDE_A2 - 40_000, feldStand: 'echt' });
+    const lage = tab.lage;
+    if (!lage) {
+      throw new Error('Feldstand fehlt');
+    }
+    await tab.starte();
+    await tab.vor(2000);
+    lage.sb.netz = 'fehler'; // der Server kennt Spiel 11 nur als geplant; den Abschnitt leitet der Laptop ohne Netz
+    await tab.vor(48_000);
     expect(tab.toene()).toEqual([]);
     expect(tab.laufzeit.getSnapshot().zustandJeFeld['field-1']).toBe('keineVerbindung');
   });

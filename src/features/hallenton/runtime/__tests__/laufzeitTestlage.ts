@@ -6,7 +6,7 @@
  * Ein Ton „erklingt“, wenn seine Quelle gestartet und nicht vor dem Start gestoppt wurde; seine Serverzeit folgt aus der
  * Audiozeit. Abpfiff-Ton = „Hupe 2“ (2 s), Halbzeit-Ton = „Hupe 3“ (1 s).
  */
-import type { FeldStand, HallTonArt, StandQuelle } from '../../../../core/hallenton';
+import type { FeldStand, HallTonArt } from '../../../../core/hallenton';
 import type { EngineEvent, MatchContext } from '../../../../core/match';
 import { CTX_11, server, stand, stateAus } from '../../../../core/hallenton/__tests__/hallentonFixtures';
 import { FalscherAudioKontext, tonDaten } from '../../../../test/hallenton/falscherAudioKontext';
@@ -16,7 +16,7 @@ import { ManuelleUhr } from '../../../../test/hallenton/manuelleUhr';
 import type { FeldStandQuelle, FeldStandVerfuegbarkeit } from '../feldStand';
 import { erzeugeGeraeteSperre } from '../geraeteSperre';
 import { erzeugeHallLautsprecherLaufzeit, type HallLautsprecherLaufzeit } from '../HallLautsprecherLaufzeit';
-import { erzeugeHallTonSpieler, type HallTonSpieler, type Speicher } from '../hallTonSpieler';
+import { erzeugeHallTonSpieler, type HallTonSpieler, type Speicher, type TonWahl } from '../hallTonSpieler';
 import { erzeugeLautsprecherKanal, type LautsprecherKanal } from '../lautsprecherKanal';
 import { flush, Lage } from './feldStandTestlage';
 
@@ -25,8 +25,11 @@ const ART_JE_DAUER: Record<number, HallTonArt> = { 2: 'abpfiff', 1: 'halbzeit' }
 
 export type Stufe = { ab: number; log: EngineEvent[] };
 
-/** Stand eines Felds je Zeit aus Stufen am Server; ein Ereignis um `ab` ist 300 ms später am Rechner bekannt. */
-export function feldAus(stufen: Stufe[], ctx: MatchContext = CTX_11, feldId = 'field-1', quelle: StandQuelle | ((jetzt: number) => StandQuelle) = server(200)) {
+/**
+ * Stand eines Felds je Zeit aus Stufen am Server; ein Ereignis um `ab` ist 300 ms später am Rechner bekannt. `alter` ist das
+ * Alter der letzten Antwort (fest oder je Zeit).
+ */
+export function feldAus(stufen: Stufe[], ctx: MatchContext = CTX_11, feldId = 'field-1', alter: number | ((jetzt: number) => number) = server(200)) {
   const states = stufen.map((s) => ({ ab: s.ab, state: stateAus(s.log, ctx) }));
   return (jetzt: number): FeldStand => {
     let aktuell = states[0];
@@ -35,7 +38,7 @@ export function feldAus(stufen: Stufe[], ctx: MatchContext = CTX_11, feldId = 'f
         aktuell = s;
       }
     }
-    return stand(aktuell.state, ctx, typeof quelle === 'function' ? quelle(jetzt) : quelle, aktuell.ab + 300, feldId);
+    return stand(aktuell.state, ctx, typeof alter === 'function' ? alter(jetzt) : alter, aktuell.ab + 300, feldId);
   };
 }
 
@@ -88,6 +91,10 @@ export interface TabOptionen {
   serverVersatz?: () => number;
   /** Wirkung von `uhr.sync()` (z. B. Versatz zurücksetzen). */
   beiSync?: () => void;
+  /** Versatz der Geräteuhr des Kanals (H3b-3, k4-neu-1: Uhr springt zurück). */
+  kanalVersatz?: () => number;
+  /** Tonwahl lesen (H3b-3, k4-neu-2: „Anhören“ vor der Aktivierung). */
+  leseTonWahl?: () => Promise<Record<'abpfiff' | 'halbzeit', TonWahl>>;
 }
 
 export class Tab {
@@ -118,7 +125,10 @@ export class Tab {
       ladeDaten: (url) => Promise.resolve(tonDaten(DAUER[url] ?? 255)),
       speicher: o.speicher ?? null,
     });
-    this.kanal = erzeugeLautsprecherKanal({ speicher: this.geraet.speicher, kanal: this.geraet.kanal(), tabId: `tab${name}`, jetzt: () => this.uhr.jetzt() });
+    const kanalVersatz = o.kanalVersatz ?? (() => 0);
+    this.kanal = erzeugeLautsprecherKanal({
+      speicher: this.geraet.speicher, kanal: this.geraet.kanal(), tabId: `tab${name}`, jetzt: () => this.uhr.jetzt() + kanalVersatz(),
+    });
     this.ffs = new FalscherFeldStand(this.uhr);
     const felder = o.felder ?? [1];
     this.lage = o.feldStand === 'echt' ? new Lage({ felder, uhr: this.uhr }) : null;
@@ -139,6 +149,7 @@ export class Tab {
       wurdeVerworfen: o.wurdeVerworfen ?? false,
       tonWahl: { abpfiff: 'horn-2', halbzeit: 'horn-3' },
       gedaechtnisSpeicher: this.geraet.speicher,
+      leseTonWahl: o.leseTonWahl,
     });
   }
 

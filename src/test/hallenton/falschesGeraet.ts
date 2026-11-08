@@ -26,53 +26,65 @@ interface Wartend {
 }
 
 export class FalscherSperrVerwalter implements SperrVerwalter {
-  private halter: object | null = null;
-  private readonly schlange: Wartend[] = [];
+  /** Je Sperren-Name (H3b-3: Ton-Sperre `hallenton` und Melde-Sperre `hallenton-melden` sind getrennt). */
+  private readonly halter = new Map<string, object>();
+  private readonly schlangen = new Map<string, Wartend[]>();
   anfragen = 0;
 
-  request(_name: string, options: { ifAvailable?: boolean; signal?: AbortSignal }, fn: (lock: unknown) => Promise<void>): Promise<unknown> {
+  request(name: string, options: { ifAvailable?: boolean; signal?: AbortSignal }, fn: (lock: unknown) => Promise<void>): Promise<unknown> {
     this.anfragen += 1;
     if (options.ifAvailable) {
-      return this.halter ? fn(null) : this.gewaehren(fn);
+      return this.halter.has(name) ? fn(null) : this.gewaehren(name, fn);
     }
     return new Promise((resolve, reject) => {
       const wartend: Wartend = { fn, resolve };
+      const schlange = this.schlange(name);
       options.signal?.addEventListener('abort', () => {
-        const i = this.schlange.indexOf(wartend);
+        const i = schlange.indexOf(wartend);
         if (i >= 0) {
-          this.schlange.splice(i, 1);
+          schlange.splice(i, 1);
           reject(new DOMException('Aborted', 'AbortError'));
         }
       });
-      if (this.halter) {
-        this.schlange.push(wartend);
+      if (this.halter.has(name)) {
+        schlange.push(wartend);
       } else {
-        resolve(this.gewaehren(fn));
+        resolve(this.gewaehren(name, fn));
       }
     });
   }
 
-  gehalten(): boolean {
-    return this.halter !== null;
+  gehalten(name = 'hallenton'): boolean {
+    return this.halter.has(name);
   }
 
-  private gewaehren(fn: (lock: unknown) => Promise<void>): Promise<void> {
+  private schlange(name: string): Wartend[] {
+    let liste = this.schlangen.get(name);
+    if (!liste) {
+      liste = [];
+      this.schlangen.set(name, liste);
+    }
+    return liste;
+  }
+
+  private gewaehren(name: string, fn: (lock: unknown) => Promise<void>): Promise<void> {
     const lock = {};
-    this.halter = lock;
+    this.halter.set(name, lock);
     return fn(lock).finally(() => {
-      if (this.halter === lock) {
-        this.halter = null;
-        const naechster = this.schlange.shift();
+      if (this.halter.get(name) === lock) {
+        this.halter.delete(name);
+        const naechster = this.schlange(name).shift();
         if (naechster) {
-          naechster.resolve(this.gewaehren(naechster.fn));
+          naechster.resolve(this.gewaehren(name, naechster.fn));
         }
       }
     });
   }
 }
 
-export class FalschesGeraet {
-  readonly speicher = new FalscherSpeicher();
+export class FalschesGeraet<S extends KanalSpeicher = FalscherSpeicher> {
+  /** Standard: ein eigener Speicher; H3b-3 kann den `localStorage` der Testumgebung einsetzen (Regel 3 im Cockpit-Hook). */
+  constructor(readonly speicher: S = new FalscherSpeicher() as unknown as S) {}
   readonly sperren = new FalscherSperrVerwalter();
   private readonly kanaele = new Set<{ zuhoerer: Set<() => void>; offen: boolean }>();
   nachrichten = 0;

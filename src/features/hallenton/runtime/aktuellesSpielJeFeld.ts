@@ -18,7 +18,7 @@ export interface FeldSpiel {
   startTime?: Date;
   scoreA?: number;
   scoreB?: number;
-  /** Stand des Spiels aus der Quelle (Server oder eigenes Cockpit); fehlt = noch nicht angepfiffen. */
+  /** Status des Spiels laut Spielplan; fehlt = noch nicht angepfiffen. */
   status?: FeldSpielStatus;
 }
 

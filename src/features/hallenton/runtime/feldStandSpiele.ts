@@ -1,6 +1,6 @@
 /**
  * Kleine reine Helfer des Feldstands (H3b-2a): Spielplan-Zeile → Spiel des Felds, `MatchContext` wie `buildValidMatches`,
- * Status aus dem Engine-Stand, ein Fingerabdruck des Stands (ändert er sich, ändert sich `bekanntSeit`, @HT-051) und die
+ * „angepfiffen“, ein Fingerabdruck des Stands (ändert er sich, ändert sich `bekanntSeit`, @HT-051) und die
  * Wahl des aktuellen Spiels je Feld mit Halten.
  */
 import type { MatchContext, MatchState } from '../../../core/match';
@@ -58,29 +58,9 @@ export function planSpielAus(zeile: SpielplanZeile, datum: string): PlanSpiel {
   };
 }
 
-/** Status für die Wahl des aktuellen Spiels aus dem eigenen Engine-Stand (Pause, Strafstoßschießen: noch auf dem Feld). */
-export function feldSpielStatusAus(state: MatchState): FeldSpielStatus {
-  switch (state.status) {
-    case 'scheduled':
-      return 'NOT_STARTED';
-    case 'running':
-      return 'RUNNING';
-    case 'finished':
-    case 'skipped':
-      return 'FINISHED';
-    default:
-      return 'PAUSED';
-  }
-}
-
 /** Angepfiffen im Sinne des Takts: die Uhr läuft oder ist angehalten (@HT-005, @HT-007). */
 export function istAngepfiffen(status: MatchState['status'] | FeldSpielStatus | undefined): boolean {
   return status === 'running' || status === 'paused' || status === 'RUNNING' || status === 'PAUSED';
-}
-
-/** Rollenwechsel (Befund 6b): Die eigene Engine hinkt, solange ihr ein Eintrag fehlt, den der Server schon angenommen hat. */
-export function engineHinkt(eigen: MatchState, server: MatchState | undefined): boolean {
-  return server !== undefined && Object.keys(server.accepted).some((id) => !Object.hasOwn(eigen.accepted, id));
 }
 
 /** Ändert sich, sobald der Stand ein Ereignis mehr kennt, eines zurückgenommen ist oder der Zustand wechselt. */
