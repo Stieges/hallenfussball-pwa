@@ -55,8 +55,8 @@ check S "tournaments_guard_lifecycle = Fassung 20261113_003 + nur gathering_id i
 check S "public_view.public_payload = Fassung 20261117_104 + nur der Block gathering_code" "9a606911268600767bd20c5ad7e6f66d" \
   "$(q "SELECT md5(regexp_replace(prosrc, E'      -- 20261119_001 \\\\(@VA-013, @VA-014\\\\)[^\n]*\n      ''gathering_code''[^\n]*\n[^\n]*END,\n', ''))
           FROM pg_proc WHERE oid = 'public_view.public_payload(uuid,bigint,text,text)'::regprocedure;")"
-check S "public_view: weiter 12 Funktionen im Sicherheitskern, keine neue (public-read-core-unchanged zieht nur die md5 nach)" \
-  "12|7544746eff25aabcb93314c5c159b56a" \
+check S "public_view: weiter 12 Funktionen im Sicherheitskern, keine neue (public-read-core-unchanged zieht nur die md5 nach; Stand mit 20261124_001, vorher 7544746eff25aabcb93314c5c159b56a)" \
+  "12|e1c9a897fac994492caffa7151912c61" \
   "$(q "SELECT count(*) || '|' || md5(string_agg(pg_get_functiondef(p.oid), E'\n' ORDER BY n.nspname, p.proname, pg_get_function_identity_arguments(p.oid)))
           FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
          WHERE n.nspname = 'public_view' OR p.oid IN (to_regprocedure('public.public_tournament(text,bigint)'),

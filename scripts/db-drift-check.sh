@@ -239,6 +239,12 @@ pending_assertions_for() {
     20261122_001_gathering_screens.sql)
       echo "gathering-screens-table-no-client-rights gathering-screens-rpcs gathering-screens-guards"
       ;;
+    # C-ZEITSTRAFE-GEGENTOR-FEHLT: nur CREATE OR REPLACE public_view.match_events (ends_on_goal der Zeitstrafe); die md5 des
+    # Sicherheitskerns (public-read-core-unchanged) ist auf die neue Fassung gezogen. Den Rumpf beweist
+    # scripts/public-payload-check.sh (Kategorie P, Gegenprobe G18/G19)
+    20261124_001_zeitstrafe_endet_bei_gegentor.sql)
+      echo "public-read-core-unchanged"
+      ;;
     *)
       return 1
       ;;

@@ -11,6 +11,7 @@ import { CSSProperties, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
 import { Input, Button } from '../ui';
+import { CheckboxField } from '../ui/molecules/CheckboxField';
 import { useRulesLocked } from './RulesLockContext';
 import type {
   MatchCockpitSettings,
@@ -234,6 +235,15 @@ export function MatchCockpitSettingsPanel({
             ))}
           </select>
         </SettingRow>
+        {/* @W2A-080: Regel „Zeitstrafe endet bei Gegentor“, vorbelegt an; gilt für Zeitstrafen ab ihrem Eintrag (@W2A-079) */}
+        <CheckboxField
+          checked={settings.penaltyEndsOnGoal}
+          onChange={(checked) => updateSetting('penaltyEndsOnGoal', checked)}
+          disabled={rulesLocked}
+          label={t('settings.penaltyEndsOnGoal')}
+          hint={t('settings.penaltyEndsOnGoalDesc')}
+          data-testid="settings-penalty-ends-on-goal"
+        />
         {rulesLocked && (
           <p style={{ margin: 0, fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary }}>
             {t('settings.rulesOnlyByLead')}

@@ -41,7 +41,7 @@ export interface TeamColumnInput {
   sperrHinweise: readonly SperrHinweis[];
   zeitstrafeSekunden: number;
   unterzahl: { restMs: number } | null; // B-10b2; bis dahin null
-  darfErgaenzen: boolean; // B-10b2; bis dahin false
+  darfErgaenzen: boolean; // @SL-030: aus `view.ergaenzenTeamIds` (Gegentor); Unterzahl nach Rot folgt (B-10b2)
   kartenArten: EnabledCards;
   kasten: SideBox;
 }

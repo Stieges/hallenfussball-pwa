@@ -62,7 +62,8 @@ export function LiveSlide({ slide, tournament, view, theme, style, pinnedMatchId
             timerElapsedSeconds: runningMatch.timerElapsedSeconds, steht: shown.status === 'paused',
           }}
           // @ZM-182/@ZM-192: laufende Zeitstrafen aus den öffentlichen Ereignissen (ohne „Ereignisse je Spiel“ liefert der Server keine)
-          zeitstrafenQuelle={{ events: runningMatch.events, liveState: runningMatch.liveState }}
+          // @ZM-194: ist der Live-Stand aus, fehlen die Tore -- dann zeigt der Monitor keine Zeitstrafe (der Kreis würde ein Tor verraten)
+          zeitstrafenQuelle={view.rules.liveScore ? { events: runningMatch.events, liveState: runningMatch.liveState } : undefined}
         />
       </div>
     );

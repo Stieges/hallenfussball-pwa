@@ -469,6 +469,7 @@ interface TournamentConfig {
   hideScoresForPublic?: boolean;
   hideRankingsForPublic?: boolean;
   publicScorers?: boolean;
+  publicLiveScore?: boolean;
   resultMode?: string;
 
   // Finals legacy
@@ -645,6 +646,7 @@ export function mapTournamentFromSupabase(
     hideScoresForPublic: config.hideScoresForPublic ?? false,
     hideRankingsForPublic: config.hideRankingsForPublic ?? false,
     ...(typeof config.publicScorers === 'boolean' ? { publicScorers: config.publicScorers } : {}),
+    ...(typeof config.publicLiveScore === 'boolean' ? { publicLiveScore: config.publicLiveScore } : {}),
     resultMode: (config.resultMode ?? 'goals') as Tournament['resultMode'],
     pointSystem,
     title: row.title,
