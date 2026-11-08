@@ -398,7 +398,7 @@
     "foulLimitEnable": "Foul-Grenze einschalten",
     "foulLimitValue": "Grenze: Foul je Halbzeit",
     "foulLimitDesc": "Ausgeschaltet zählt das Cockpit die Fouls trotzdem und zeigt nur die Zahl. Eingeschaltet meldet es ab dem eingestellten Foul je Halbzeit (vorgeschlagen: das 5.).",
-    "foulLimitInvalid": "Gültig ist eine ganze Zahl ab 1 – der Wert wurde nicht übernommen"
+    "foulLimitInvalid": "Gültig ist eine ganze Zahl von {{min}} bis {{max}} – der Wert wurde nicht übernommen"
   },
   "editScore": {
     "title": "Ergebnis korrigieren",

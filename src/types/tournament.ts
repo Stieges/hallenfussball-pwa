@@ -690,6 +690,9 @@ export interface MatchCockpitSettings {
 
 /** Vorschlag beim Einschalten der Foul-Grenze: das 5. Foul je Halbzeit (@SL-101, @W2A-037). */
 export const FOUL_LIMIT_SUGGESTION = 5;
+/** Gültiger Bereich der Foul-Grenze (ganze Zahl), Zod-Schema und Oberfläche prüfen dasselbe. */
+export const FOUL_LIMIT_MIN = 1;
+export const FOUL_LIMIT_MAX = 99;
 
 /**
  * Default values for MatchCockpitSettings
@@ -774,7 +777,7 @@ export function completeMatchCockpitSettings(value: unknown): MatchCockpitSettin
     ...vorgabe,
     ...gespeichert,
     clockMode: validOr(gespeichert.clockMode, (v) => CLOCK_MODES.some((mode) => mode === v), vorgabe.clockMode),
-    foulLimit: gespeichert.foulLimit === null ? null : validOr(gespeichert.foulLimit, (v) => isIntInRange(v, 1), vorgabe.foulLimit),
+    foulLimit: gespeichert.foulLimit === null ? null : validOr(gespeichert.foulLimit, (v) => isIntInRange(v, FOUL_LIMIT_MIN, FOUL_LIMIT_MAX), vorgabe.foulLimit),
     enabledCards: completeEnabledCards(gespeichert.enabledCards),
     penaltyEndsOnGoal: validOr(gespeichert.penaltyEndsOnGoal, isBoolean, vorgabe.penaltyEndsOnGoal),
     shortHandedSeconds: validOr(gespeichert.shortHandedSeconds, (v) => isIntInRange(v, 0), vorgabe.shortHandedSeconds),

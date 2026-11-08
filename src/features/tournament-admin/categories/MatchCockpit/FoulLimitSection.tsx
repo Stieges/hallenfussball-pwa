@@ -2,13 +2,15 @@
  * FoulLimitSection: Regel „Foul-Grenze“ im Match-Cockpit-Bereich des Admin Centers (@SL-101, @W2A-037).
  * Ein neues Turnier hat die Grenze ausgeschaltet (kumulierte Fouls kennt nur BFV Teil 2, Futsal); das Cockpit zählt
  * Fouls trotzdem und zeigt nur die Zahl (@SL-102). Einschalten schlägt das 5. Foul je Halbzeit vor, jede ganze Zahl
- * ab 1 ist wählbar. Nur die Turnierleitung ändert die Regel (`locked`, @W2A-030).
+ * von 1 bis 99 ist wählbar. Nur die Turnierleitung ändert die Regel (`locked`, @W2A-030).
  */
 import type { CSSProperties } from 'react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, touchTargets } from '../../../../design-tokens';
-import { FOUL_LIMIT_SUGGESTION } from '../../../../types/tournament';
+import { cssVars } from '../../../../design-tokens';
+import { Input } from '../../../../components/ui';
+import { ToggleSwitch } from '../../../../components/ui/atoms';
+import { FOUL_LIMIT_MAX, FOUL_LIMIT_MIN, FOUL_LIMIT_SUGGESTION } from '../../../../types/tournament';
 
 export interface FoulLimitSectionProps {
   /** Gespeicherte Grenze; `null` = ausgeschaltet. */
@@ -33,69 +35,54 @@ const rowStyle: CSSProperties = {
   flexWrap: 'wrap',
 };
 const textStyle: CSSProperties = { fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, margin: 0 };
-const checkboxStyle: CSSProperties = { width: touchTargets.minimum, height: touchTargets.minimum };
-const inputStyle: CSSProperties = {
-  width: touchTargets.primary,
-  height: touchTargets.primary,
-  textAlign: 'center',
-  fontSize: cssVars.fontSizes.lg,
-  color: cssVars.colors.textPrimary,
-  backgroundColor: cssVars.colors.surface,
-  border: `1px solid ${cssVars.colors.borderControl}`,
-  borderRadius: cssVars.borderRadius.md,
-};
-const lockedStyle: CSSProperties = { opacity: 0.5, cursor: 'not-allowed' };
-const hintStyle: CSSProperties = { ...textStyle, color: cssVars.colors.error };
+const descStyle: CSSProperties = { ...textStyle, marginTop: cssVars.spacing.sm };
+const fieldStyle: CSSProperties = { marginTop: cssVars.spacing.md, maxWidth: `calc(${cssVars.spacing.xxl} * 8)` };
 
-const isValidLimit = (text: string): boolean => /^\d+$/.test(text.trim()) && Number(text) >= 1;
+/** Ganze Zahl von 1 bis 99; alles andere (leer, 0, 2.5, -1, 100) wird nicht übernommen. */
+const isValidLimit = (text: string): boolean => {
+  const zahl = Number(text);
+  return /^\d+$/.test(text.trim()) && zahl >= FOUL_LIMIT_MIN && zahl <= FOUL_LIMIT_MAX;
+};
 
 export function FoulLimitSection({ value, locked, onChange }: FoulLimitSectionProps) {
   const { t } = useTranslation('cockpit');
   // Eingabetext; `null` = unverändert, dann gilt der gespeicherte Wert.
   const [entwurf, setEntwurf] = useState<string | null>(null);
-  const zeigeHinweis = entwurf !== null && !isValidLimit(entwurf);
+  const ungueltig = entwurf !== null && !isValidLimit(entwurf);
 
   return (
     <section style={sectionStyle}>
       <h3 style={titleStyle}>{t('settings.foulLimit')}</h3>
       <div style={rowStyle}>
-        <label htmlFor="settings-foul-limit-enabled" style={textStyle}>{t('settings.foulLimitEnable')}</label>
-        <input
-          id="settings-foul-limit-enabled"
+        <p style={textStyle}>{t('settings.foulLimitEnable')}</p>
+        <ToggleSwitch
           data-testid="settings-foul-limit-enabled"
-          type="checkbox"
-          role="switch"
           checked={value !== null}
           disabled={locked}
-          style={checkboxStyle}
-          onChange={(e) => { onChange(e.target.checked ? FOUL_LIMIT_SUGGESTION : null); }}
+          label={t('settings.foulLimitEnable')}
+          onChange={(an) => { onChange(an ? FOUL_LIMIT_SUGGESTION : null); }}
         />
       </div>
       {value !== null && (
-        <>
-          <div style={{ ...rowStyle, marginTop: cssVars.spacing.md }}>
-            <label htmlFor="settings-foul-limit" style={textStyle}>{t('settings.foulLimitValue')}</label>
-            <input
-              id="settings-foul-limit"
-              data-testid="settings-foul-limit"
-              type="number"
-              inputMode="numeric"
-              value={entwurf ?? String(value)}
-              disabled={locked}
-              aria-invalid={zeigeHinweis}
-              style={locked ? { ...inputStyle, ...lockedStyle } : inputStyle}
-              onChange={(e) => {
-                const text = e.target.value;
-                setEntwurf(text);
-                if (isValidLimit(text)) { onChange(Number(text)); }
-              }}
-              onBlur={() => { setEntwurf(null); }}
-            />
-          </div>
-          {zeigeHinweis && <p style={hintStyle} role="alert" data-testid="settings-foul-limit-range">{t('settings.foulLimitInvalid')}</p>}
-        </>
+        <Input
+          data-testid="settings-foul-limit"
+          label={t('settings.foulLimitValue')}
+          type="number"
+          min={FOUL_LIMIT_MIN}
+          max={FOUL_LIMIT_MAX}
+          value={entwurf ?? String(value)}
+          disabled={locked}
+          style={fieldStyle}
+          errorMessage={ungueltig ? t('settings.foulLimitInvalid', { min: FOUL_LIMIT_MIN, max: FOUL_LIMIT_MAX }) : undefined}
+          onChange={(text) => {
+            setEntwurf(text);
+            if (isValidLimit(text)) { onChange(Number(text)); }
+          }}
+          onBlur={() => { setEntwurf(null); }}
+        />
       )}
-      <p style={textStyle}>{t('settings.foulLimitDesc')}</p>
+      <p style={descStyle}>{t('settings.foulLimitDesc')}</p>
+      {locked && <p style={descStyle}>{t('settings.rulesOnlyByLead')}</p>}
     </section>
   );
 }

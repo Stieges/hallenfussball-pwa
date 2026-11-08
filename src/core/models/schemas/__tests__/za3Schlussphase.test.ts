@@ -99,6 +99,14 @@ describe('H3 ungültige Einzelwerte fallen auf die Vorgabe zurück (wie der SQL-
     expect(ergaenzt[feld]).toEqual((DEFAULT_MATCH_COCKPIT_SETTINGS as unknown as Record<string, unknown>)[feld]);
   });
 
+  it.each([0, 100, -1, 2.5, '5', undefined])('@W2A-037 foulLimit %s (ungültig oder fehlend) → null, die Grenze ist aus', (wert) => {
+    expect(completeMatchCockpitSettings({ foulLimit: wert })?.foulLimit).toBeNull();
+  });
+
+  it.each([1, 5, 99])('@W2A-037 Gegenbeispiel: gespeichertes foulLimit %s bleibt', (wert) => {
+    expect(completeMatchCockpitSettings({ foulLimit: wert })?.foulLimit).toBe(wert);
+  });
+
   it('eine einzelne ungültige Kartenart fällt zurück, die gültigen bleiben', () => {
     const ergaenzt = completeMatchCockpitSettings({ enabledCards: { yellow: false, red: 'nein' } });
     expect(ergaenzt?.enabledCards).toEqual({ yellow: false, yellowRed: true, red: true, timePenalty: true });

@@ -398,7 +398,7 @@
     "foulLimitEnable": "Switch foul limit on",
     "foulLimitValue": "Limit: foul per half",
     "foulLimitDesc": "When off, the cockpit still counts fouls and shows only the number. When on, it warns from the set foul per half (suggested: the 5th).",
-    "foulLimitInvalid": "A whole number from 1 is valid – the value was not applied"
+    "foulLimitInvalid": "A whole number from {{min}} to {{max}} is valid – the value was not applied"
   },
   "editScore": {
     "title": "Correct Score",

@@ -240,13 +240,17 @@ describe('@SL-101 / @W2A-037 – Foul-Grenze als Turnierregel', () => {
     );
   });
 
-  it('@W2A-037: eine andere Grenze ist einstellbar', () => {
+  it('@W2A-037: eine andere Grenze ist einstellbar, das Feld nimmt 1 bis 99', () => {
     const onTournamentUpdate = zeige(turnierMit({ foulLimit: 5 }));
     expect(grenzeFeld()).toHaveValue(5);
-    fireEvent.change(grenzeFeld(), { target: { value: '3' } });
-    expect(onTournamentUpdate).toHaveBeenLastCalledWith(
-      expect.objectContaining({ matchCockpitSettings: expect.objectContaining({ foulLimit: 3 }) }),
-    );
+    expect(grenzeFeld()).toHaveAttribute('min', '1');
+    expect(grenzeFeld()).toHaveAttribute('max', '99');
+    for (const wert of [3, 1, 99]) {
+      fireEvent.change(grenzeFeld(), { target: { value: String(wert) } });
+      expect(onTournamentUpdate).toHaveBeenLastCalledWith(
+        expect.objectContaining({ matchCockpitSettings: expect.objectContaining({ foulLimit: wert }) }),
+      );
+    }
   });
 
   it('@SL-101 Gegenbeispiel: ein bestehendes Turnier mit gespeicherter Grenze 5 zeigt sie eingeschaltet auf 5', () => {
@@ -263,16 +267,17 @@ describe('@SL-101 / @W2A-037 – Foul-Grenze als Turnierregel', () => {
     );
   });
 
-  it.each([['0'], ['-1'], ['2.5'], ['']])('@W2A-037 Gegenbeispiel: „%s“ wird nicht übernommen, die App sagt es', (eingabe) => {
+  it.each([['0'], ['-1'], ['2.5'], ['100'], ['']])('@W2A-037 Gegenbeispiel: „%s“ wird nicht übernommen, die App nennt 1 bis 99', (eingabe) => {
     const onTournamentUpdate = zeige(turnierMit({ foulLimit: 5 }));
     fireEvent.change(grenzeFeld(), { target: { value: eingabe } });
     expect(onTournamentUpdate).not.toHaveBeenCalled();
-    expect(screen.getByTestId('settings-foul-limit-range')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('1 bis 99');
   });
 
-  it('@W2A-030 Erweiterung: Helfer sieht die Foul-Grenze gesperrt, eine Änderung wird nicht gespeichert', () => {
+  it('@W2A-030 Erweiterung: Helfer sieht die Foul-Grenze gesperrt mit dem Hinweis, eine Änderung wird nicht gespeichert', () => {
     const onTournamentUpdate = zeige(neuesTurnier(), 'collaborator');
     expect(grenzeSchalter()).toBeDisabled();
+    expect(screen.getAllByText('Regeln ändert nur die Turnierleitung').length).toBeGreaterThan(0);
     fireEvent.click(grenzeSchalter());
     expect(onTournamentUpdate).not.toHaveBeenCalled();
   });
