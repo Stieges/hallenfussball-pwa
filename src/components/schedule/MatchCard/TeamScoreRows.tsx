@@ -102,7 +102,8 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
   const bibTeams = kasten === undefined ? [] : [kasten.home.bib ? homeTeam.name : null, kasten.away.bib ? awayTeam.name : null].filter((name) => name !== null);
   const spokenWithBib = bibTeams.length === 0 ? spokenResult : `${spokenResult}. ${bibTeams.map((name) => t('matchCard.bibSpoken', { team: name })).join(', ')}`;
 
-  // „nach Verlängerung“ klein beim Stand des Siegers, rechtsbündig in einer eigenen Rasterzeile unter seinem Kasten (wie die Finalkarte, @ZM-158, @OB-064)
+  // „nach Verlängerung“ klein beim Stand des Siegers, rechtsbündig in einer eigenen Rasterzeile unter seinem Kasten (wie die Finalkarte, @ZM-158, @OB-064);
+  // der Rasterabstand der Kästen (spacing.md) wird nach oben aufgehoben (Höhe der Zeile und Hinweis dicht unter dem Kasten, etwa spacing.xs), damit der Zusatz am Kasten des Siegers hängt und nicht mittig zwischen beiden schwebt
   const noteSide: Side | null = kasten !== undefined && ende !== undefined && status === 'finished' && result?.decision === 'overtime' && decided ? result.winner : null;
   const rowOf = (side: Side): number => (side === 'a' ? 1 : noteSide === 'a' ? 3 : 2);
 
@@ -186,7 +187,7 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
           </span>
         )}
         {noteSide === side && (
-          <span style={{ gridColumn: '1 / -1', gridRow: row + 1, textAlign: 'right', fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary }} data-testid={`match-overtime-${matchId}-${seite}`}>
+          <span style={{ gridColumn: '1 / -1', gridRow: row + 1, textAlign: 'right', fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary, marginTop: `calc(-1 * ${cssVars.spacing.md})` }} data-testid={`match-overtime-${matchId}-${seite}`}>
             {t('matchResult.afterOvertime')}
           </span>
         )}

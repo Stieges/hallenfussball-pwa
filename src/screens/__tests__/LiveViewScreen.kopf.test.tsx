@@ -243,6 +243,8 @@ describe('@ZM-141 @ZM-158 @OB-064 Zuletzt beendet: Kasten mit Ring beim Sieger, 
     // Lage: eigene Rasterzeile direkt unter der Zeile des Siegers (Heim = Zeile 1), über die ganze Breite rechtsbündig – der Name steht allein in seiner Zelle
     expect(note.style.gridRow).toMatch(/^2( \/ auto)?$/);
     expect(note.style.textAlign).toBe('right');
+    // hängt am Kasten des Siegers: der Rasterabstand (spacing.md) nach oben ist aufgehoben (Token, kein fester Wert)
+    expect(note.style.marginTop).toContain('--spacing-md');
     const name = within(kopf()).getByTestId(`match-name-kopf-${id}-home`);
     expect(note.contains(name) || name.closest('[style*="grid-column: 1"]')?.contains(note)).toBe(false);
     // die Zeile des Gastes rutscht eine Zeile nach unten

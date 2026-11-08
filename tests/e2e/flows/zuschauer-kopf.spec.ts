@@ -160,7 +160,8 @@ test.describe('@ZM-141 Kopfblock oben, ohne zu scrollen (360×640)', () => {
       const heim = r(`[data-testid="match-box-kopf-${id}-home"]`);
       const gast = r(`[data-testid="match-box-kopf-${id}-away"]`);
       const name = r(`[data-testid="match-name-kopf-${id}-home"]`);
-      return { noteTop: note.top, noteBottom: note.bottom, noteRight: note.right, heimBottom: heim.bottom, heimRight: heim.right, gastTop: gast.top, nameBottom: name.bottom, seite: document.documentElement.scrollWidth };
+      const xs = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--spacing-xs'));
+      return { xs, noteTop: note.top, noteBottom: note.bottom, noteRight: note.right, heimBottom: heim.bottom, heimRight: heim.right, gastTop: gast.top, nameBottom: name.bottom, seite: document.documentElement.scrollWidth };
     }, HALBFINALE_1);
     // unter dem Kasten des Siegers und über dem des Gastes, rechtsbündig mit dem Kasten (Ring und Rahmen bis 6 px); steht nicht beim Namen
     expect(m.noteTop).toBeGreaterThanOrEqual(m.heimBottom - 1);
@@ -168,6 +169,12 @@ test.describe('@ZM-141 Kopfblock oben, ohne zu scrollen (360×640)', () => {
     expect(Math.abs(m.noteRight - m.heimRight)).toBeLessThanOrEqual(6);
     expect(m.noteTop).toBeGreaterThanOrEqual(m.nameBottom - 1);
     expect(m.seite).toBeLessThanOrEqual(HANDY.width);
+    // wie in der Finalkarte: der Zusatz hängt am Kasten des Siegers (spacing.xs + Zeilenluft), nicht mittig zwischen den Kästen
+    const oben = m.noteTop - m.heimBottom;
+    const unten = m.gastTop - m.noteBottom;
+    expect(m.xs).toBeGreaterThan(0);
+    expect(oben).toBeLessThanOrEqual(m.xs + 6);
+    expect(oben * 2).toBeLessThan(unten);
   });
 
   test('@ZM-141 alles beendet, Turnier nicht abgeschlossen: das zuletzt beendete Spiel mit Ergebnis 3:1', async ({ page }) => {
