@@ -86,8 +86,9 @@ describe('@W2A-016 Zeitstrafendauer aus der Regel des Spiels', () => {
     zu(60_000);
     expect(screen.getByTestId('penalty-button-away')).toHaveTextContent('Zeitstrafe 1 Min');
     expect(await zeitstrafe(user)).toBe(60);
-    // Und eine andere Dauer bietet die Spielsteuerung nicht an: die App schickt keine Dauer mit
-    expect(eintraegeImLog().find((e) => e.type === 'TIME_PENALTY')?.payload).not.toHaveProperty('durationSeconds');
+    // Und eine andere Dauer bietet die Spielsteuerung nicht an: der Eintrag trägt genau die Dauer der Regel (1 Minute), die
+    // Monitor und Zuschauer-Seite für die Restzeit brauchen (@ZM-182, @ZM-184), nie die Vorgabe 120 s
+    expect(eintraegeImLog().find((e) => e.type === 'TIME_PENALTY')?.payload).toMatchObject({ durationSeconds: 60 });
   });
 
   it('Gegenbeispiel @W2A-016: ohne Einstellung gilt 2 Minuten (120 s)', async () => {

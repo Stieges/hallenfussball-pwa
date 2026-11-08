@@ -210,6 +210,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
           status={status}
           onScoreClick={handleCircleClick}
           disabled={disabled}
+          zeitstrafen={clock?.zeitstrafen}
         />
 
         {/* Chevron indicator for matches with events (shows expandability) */}

@@ -13,6 +13,8 @@ import { Fragment, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { TeamAvatar } from '../../ui/TeamAvatar';
+import { ZeitstrafeHinweis } from '../../ui/molecules/ZeitstrafeHinweis';
+import type { OeffentlicheZeitstrafen } from '../../../core/view';
 import type { ResultFigures } from '../matchResult';
 import type { MatchCardStatus } from './MatchCardScore';
 import type { Team } from './MatchCard';
@@ -26,6 +28,8 @@ export interface TeamScoreRowsProps {
   status: MatchCardStatus;
   onScoreClick: () => void;
   disabled?: boolean;
+  /** Laufende Zeitstrafen (Uhr der Karte, @ZM-184): „Zeitstrafe #5 · 1:23“ unter dem Namen des Teams */
+  zeitstrafen?: OeffentlicheZeitstrafen;
 }
 
 type Side = 'a' | 'b';
@@ -55,7 +59,7 @@ const goalsStyle: CSSProperties = {
   fontFamily: 'inherit',
 };
 
-export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam, awayTeam, result, status, onScoreClick, disabled = false }) => {
+export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam, awayTeam, result, status, onScoreClick, disabled = false, zeitstrafen }) => {
   const { t } = useTranslation('tournament');
   const decided = result?.winner !== undefined && result.winner !== null;
 
@@ -82,13 +86,16 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
       minWidth: 0,
     };
     const first = side === 'a';
+    const seite = first ? 'home' : 'away';
     // Feste Zelle je Element: ohne Strafstoß-Spalte würde die automatische Platzierung die nächste Zeile in die freie Zelle ziehen
     const row = first ? 1 : 2;
     return (
       <Fragment key={side}>
         <div style={{ ...teamStyle, gridColumn: 1, gridRow: row }}>
           <TeamAvatar team={team} size="sm" />
-          <span style={nameStyle} data-winner={isWinner ? 'true' : undefined} data-testid={`match-name-${matchId}-${side === 'a' ? 'home' : 'away'}`}>{team.name}</span>
+          <ZeitstrafeHinweis liste={zeitstrafen?.[seite]} testId={`match-time-penalty-${matchId}-${seite}`}>
+            <span style={nameStyle} data-winner={isWinner ? 'true' : undefined} data-testid={`match-name-${matchId}-${seite}`}>{team.name}</span>
+          </ZeitstrafeHinweis>
         </div>
         <button
           type="button"

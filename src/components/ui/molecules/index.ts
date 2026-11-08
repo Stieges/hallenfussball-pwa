@@ -71,3 +71,5 @@ export type { GraphicUploadFieldProps } from './GraphicUploadField';
 // G2 Spur A (@SL-193): Auswahl beschrifteter Aktionen, fachfrei
 export { ActionSheet } from './ActionSheet';
 export type { ActionSheetProps, ActionSheetItem } from './ActionSheet';
+export { ZeitstrafeHinweis } from './ZeitstrafeHinweis';
+export type { ZeitstrafeHinweisProps } from './ZeitstrafeHinweis';

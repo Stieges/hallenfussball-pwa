@@ -23,6 +23,7 @@ import { LiveScoreGrid } from './LiveScoreGrid';
 import { LiveFinalScore, type LiveFinalScoreProps } from './LiveFinalScore';
 import { LiveHeader } from './LiveHeader';
 import { badgeOfLiveMatch } from './liveBadge';
+import { useLaufendeZeitstrafen, type ZeitstrafenQuelle } from './useLaufendeZeitstrafen';
 import type { MatchBadgeModel, MatchView } from '../../core/view';
 
 export { NoMatchDisplay } from './NoMatchDisplay';
@@ -52,6 +53,8 @@ export interface LiveMatchDisplayProps {
   badge?: MatchBadgeModel;
   /** Uhr aus der Ansicht des Spiels (R5 PR 2: Feinstatus in Serverzeit, Abschnitt, Pause, Verlängerung); ohne Angabe die Zeitfelder */
   uhr?: MatchTimerUhrQuelle;
+  /** Öffentliche Ereignisse und Feinstatus für laufende Zeitstrafen (@ZM-182, @ZM-192); im Kindermodus nie (@ZM-183) */
+  zeitstrafenQuelle?: ZeitstrafenQuelle;
 }
 
 /** Fläche als eine Farbe: bei der Weste die Mitte (die Ziffer steht darauf, @ZM-156). */
@@ -82,11 +85,13 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   finalRound = false,
   badge,
   uhr,
+  zeitstrafenQuelle,
 }) => {
   const { t } = useTranslation('monitor');
   const { themeColors } = useMonitorTheme(theme);
   const isRunning = match.status === 'RUNNING';
   const isPaused = match.status === 'PAUSED';
+  const zeitstrafen = useLaufendeZeitstrafen(hideScore ? undefined : zeitstrafenQuelle, match.homeTeam.id, match.awayTeam.id);
 
   // Bis 3.2 (ScoreBox am Monitor) trägt die Weste ihre Mitte als Fläche
   const shown = boxes ?? standardBoxes();
@@ -153,6 +158,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
           frames={frames}
           finalScore={finalScore}
           finalRound={finalRound}
+          zeitstrafen={zeitstrafen}
         />
 
         {/* Unterer Bereich: feste Höhe in jedem Zustand (B-44a2); H2: nach dem Abpfiff keine Uhr, nur das Endergebnis */}
