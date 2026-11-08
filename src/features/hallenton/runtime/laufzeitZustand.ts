@@ -13,6 +13,7 @@ import type { FeldStandQuelle } from './feldStand';
 import type { GeraeteSperre } from './geraeteSperre';
 import { MELDUNG_ERNEUERN_MS, type KanalSpeicher, type LautsprecherFeldMeldung, type LautsprecherKanal } from './lautsprecherKanal';
 import type { TaktQuelle } from './taktQuelle';
+import type { TorWahl } from './torhymnenSteuerung';
 import type { UhrProbe } from '../../../core/hallenton';
 
 export type FeldZustand = HallSpeakerState | 'keineVerbindung';
@@ -50,8 +51,8 @@ export interface HallLautsprecherLaufzeit {
   tonAktivieren(): Promise<boolean>;
   angehaltenBestaetigen(): void;
   /**
-   * „Anhören“ (@HT-023, W2-neu-1): die Töne mit der aktuellen Tonwahl laden, ohne den Tab zu aktivieren – er bekommt dadurch
-   * weder die Sperre noch das Recht zu tönen.
+   * „Anhören“ (@HT-023, W2-neu-1): die Töne mit der aktuellen Tonwahl laden (auch die Torhymnen), ohne den Tab zu aktivieren –
+   * er bekommt dadurch weder die Sperre noch das Recht zu tönen.
    */
   ladeToeneZumAnhoeren(): Promise<void>;
   /**
@@ -59,6 +60,8 @@ export interface HallLautsprecherLaufzeit {
    * gleiche Wahl ändert nichts; eine neue lädt der tönende Tab erst, wenn kein Ton bevorsteht oder klingt (k-neu-2, H3b-3).
    */
   setzeTonWahl(wahl: Record<TonArt, TonWahl>): void;
+  /** „Ton bei Tor“ je Feld und Torhymnen aus `hall_sound_status` (@HT-024); ein aktivierter Tab lädt eine neue Liste sofort. */
+  setzeTorWahl(wahl: TorWahl): void;
   /** Nach jedem Takt des tönenden Tabs (Worker, 250 ms) – für das Lebenszeichen (H3b-3). */
   beimTakt(fn: () => void): () => void;
   /** Still abschalten (Turnierende aus dem Lebenszeichen, H3b-3): wie Gast und Turnierende, Rolle `still`. */
@@ -84,6 +87,9 @@ export interface LaufzeitDeps {
   beimAktivieren?: () => void;
   /** Tonwahl des Turniers lesen (k4-neu-2: „Anhören“ vor der Aktivierung spielt die Hupe des Turniers). */
   leseTonWahl?: () => Promise<Record<TonArt, TonWahl>>;
+  /** Zuletzt bekannte Wahl für „Ton bei Tor“ und Torhymnen (H3c); nach `leseTonWahl` gelesen. */
+  leseTorWahl?: () => TorWahl;
+  torWahl?: TorWahl;
 }
 
 /** „Bereit“ für die anderen Tabs (Regel 3) und das Reload-Tor: die Halle hört den Ton (auch „Hupe 1“ als Rückfall, @HT-028). */

@@ -10,6 +10,8 @@ import { render, screen } from '@testing-library/react';
 import { MatchTimer } from '../MatchTimer';
 import de from '../../../i18n/locales/de/monitor.json';
 
+// Die Schlussphase gibt es nur bei „durchlaufend, letzte Minute angehalten“; die Vorgabe eines neuen Turniers ist „immer durchlaufend“ (@SL-002),
+// diese Tests setzen die Uhr-Art deshalb selbst.
 // i18n ist in Tests ein Durchreicher (Schlüssel). Die deutschen Texte prüft der letzte Block gegen die JSON.
 
 const nowIso = () => new Date().toISOString();
@@ -30,14 +32,14 @@ describe('@ZM-137 Uhr-Hervorhebung und Hinweise', () => {
   });
 
   it('angehaltene Schlussphase: Hervorhebung und „angehalten“ über der Uhr, kein Hinweis „Uhr hält bei Unterbrechung“', () => {
-    render(<MatchTimer elapsedSeconds={300} durationSeconds={360} status="PAUSED" timerElapsedSeconds={300} />);
+    render(<MatchTimer elapsedSeconds={300} durationSeconds={360} status="PAUSED" timerElapsedSeconds={300} clockMode="durchlaufend-letzte-minute-angehalten" />);
     expect(screen.getByTestId('monitor-clock')).toHaveAttribute('data-phase', 'schlussphaseAngehalten');
     expect(screen.getByTestId('clock-label')).toHaveTextContent('liveMatch.clock.stopped');
     expect(screen.queryByText(/liveMatch\.clock\.holdsOnInterruption/)).toBeNull();
   });
 
   it('laufende Schlussphase: Hervorhebung ohne zusätzlichen Text, über der Uhr „Restzeit“, nicht „angehalten“', () => {
-    render(<MatchTimer elapsedSeconds={300} durationSeconds={360} status="RUNNING" timerStartTime={nowIso()} timerElapsedSeconds={300} />);
+    render(<MatchTimer elapsedSeconds={300} durationSeconds={360} status="RUNNING" timerStartTime={nowIso()} timerElapsedSeconds={300} clockMode="durchlaufend-letzte-minute-angehalten" />);
     expect(screen.getByTestId('monitor-clock')).toHaveAttribute('data-phase', 'schlussphaseAngehalten');
     expect(screen.getByTestId('clock-label')).toHaveTextContent('liveMatch.clock.remaining');
     expect(screen.queryByText('liveMatch.clock.stopped')).toBeNull();
@@ -112,7 +114,7 @@ describe('H1 Hinweis lesbar, M2 neutrale Hervorhebung, M3 abgelaufen nicht Rot',
   });
 
   it('@ZM-137 Hervorhebung in eigener Farbe (Violett der Schlussphase), keine Teamfarbe, kein Gelb, kein Rot', () => {
-    render(<MatchTimer elapsedSeconds={300} durationSeconds={360} status="PAUSED" timerElapsedSeconds={300} />);
+    render(<MatchTimer elapsedSeconds={300} durationSeconds={360} status="PAUSED" timerElapsedSeconds={300} clockMode="durchlaufend-letzte-minute-angehalten" />);
     const ziffern = screen.getByTestId('monitor-clock').querySelector<HTMLElement>('[data-monitor="uhr"]');
     expect(ziffern?.style.color).toBe('var(--color-scoreboard-final-phase)');
     expect(screen.getByTestId('monitor-clock')).not.toHaveStyle({ backgroundColor: '#FDE047' });

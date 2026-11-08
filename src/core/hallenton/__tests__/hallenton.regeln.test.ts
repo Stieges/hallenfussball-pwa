@@ -5,6 +5,8 @@
  * Regel 2 seit 07.11. („Hupe und Anzeige sagen dasselbe“): Der Lautsprecher plant immer nach dem Stand am Server wie der
  * Monitor, auch wenn der Laptop das Feld selbst leitet. Wer leitet, ändert am Stand nichts – die Ereignisse des leitenden
  * Geräts kommen über den Server an.
+ * `bekanntSeit` über den Wechsel (Zeilen 10, 12) ist hier Eingabe und wird deshalb im Feldstand geprüft, der es bildet
+ * (`feldStand.quelle.test.ts`, Zeilen 10 und 12; Nachschärfung H3c, N-1 aus H3b-4) – hier zählen Ton und Zeitpunkt.
  */
 import { describe, expect, it } from 'vitest';
 import { phaseViewOf } from '../../match/client/phaseView';
@@ -119,7 +121,6 @@ describe('@HT-033 Die vier Regeln entscheiden jede Kombination aus leitendem Ger
     const { gespielt } = lauf(felder, ENDE_A2 - 5000, ENDE_A2 + 6000);
     expect(gespielt).toHaveLength(1);
     expect(Math.abs(gespielt[0].at - cockpitGrenze)).toBeLessThanOrEqual(1000);
-    expect(felder(wechsel - 100)[0].bekanntSeit).toBe(felder(wechsel + 100)[0].bekanntSeit); // derselbe Stand, kein neues Ende
     expect(cockpitTonSchweigt('feld-1', ['feld-1'])).toBe(true); // der Laptop ist Lautsprecher
   });
 
@@ -148,7 +149,6 @@ describe('@HT-033 Die vier Regeln entscheiden jede Kombination aus leitendem Ger
     const { gespielt } = lauf(felder, ENDE_A2 - 5000, ENDE_A2 + 6000);
     expect(gespielt).toHaveLength(1);
     expect(Math.abs(gespielt[0].at - cockpitGrenze)).toBeLessThanOrEqual(1000);
-    expect(felder(wechsel - 100)[0].bekanntSeit).toBe(felder(wechsel + 100)[0].bekanntSeit);
   });
 
   for (const versatzMs of TAKT_VERSAETZE) {

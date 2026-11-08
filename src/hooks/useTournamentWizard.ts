@@ -146,7 +146,7 @@ export function useTournamentWizard(
   const [step, setStep] = useState(initialStep);
   // Use Service to create default draft if no existing tournament
   const [formData, setFormData] = useState<Partial<Tournament>>(
-    existingTournament ?? creationService.createDraft()
+    existingTournament ?? creationService.createNewTournament()
   );
   const [visitedSteps, setVisitedSteps] = useState<Set<number>>(initialVisitedSteps);
   const [stepErrors, setStepErrors] = useState<Record<number, string[]>>({});

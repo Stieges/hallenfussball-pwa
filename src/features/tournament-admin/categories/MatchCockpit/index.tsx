@@ -14,6 +14,7 @@ import { RulesLockProvider } from '../../../../components/match-settings/RulesLo
 import type { Tournament, MatchCockpitSettings } from '../../../../types/tournament';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../../../types/tournament';
 import { MatchRulesSection } from './MatchRulesSection';
+import { FoulLimitSection } from './FoulLimitSection';
 import { sectionSecondsOf } from './sectionSeconds';
 import { ForfeitScoreField } from '../../../../components/match-settings/ForfeitScoreField';
 import { changeForfeitScore, effectiveForfeitScore, forfeitScoreLocked } from '../../../../core/models/forfeit';
@@ -71,6 +72,7 @@ export function MatchCockpitCategory({
                     newSettings.penaltyShootersPerTeam !== gespeichert.penaltyShootersPerTeam ||
                     newSettings.penaltyEndsOnGoal !== gespeichert.penaltyEndsOnGoal ||
                     newSettings.clockMode !== gespeichert.clockMode ||
+                    newSettings.foulLimit !== gespeichert.foulLimit ||
                     newSettings.finalPhaseMinutes !== gespeichert.finalPhaseMinutes)
             ) {
                 return;
@@ -114,6 +116,11 @@ export function MatchCockpitCategory({
                     finalPhaseMinutes={cockpitSettings.finalPhaseMinutes}
                     sectionSeconds={sectionSecondsOf(tournament)}
                     onFinalPhaseChange={(finalPhaseMinutes) => handleCockpitSettingsChange({ ...cockpitSettings, finalPhaseMinutes })}
+                />
+                <FoulLimitSection
+                    value={cockpitSettings.foulLimit}
+                    locked={!canChangeRules}
+                    onChange={(foulLimit) => handleCockpitSettingsChange({ ...cockpitSettings, foulLimit })}
                 />
                 <ForfeitScoreField
                     value={effectiveForfeitScore(tournament)}

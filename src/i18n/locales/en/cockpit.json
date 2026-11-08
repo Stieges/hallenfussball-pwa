@@ -395,7 +395,12 @@
     "finalPhaseDesc": "The clock stands still for this time at the end of the last section – 1 to 5 minutes, applies from the next kick-off",
     "finalPhaseRange": "Valid are 1 to {{max}} minutes – the value was not accepted",
     "finalPhaseRangeOne": "Valid is 1 minute – the value was not accepted",
-    "finalPhaseTooShort": "A section is shorter than one minute, a stopped final phase is not possible"
+    "finalPhaseTooShort": "A section is shorter than one minute, a stopped final phase is not possible",
+    "foulLimit": "Foul limit",
+    "foulLimitEnable": "Switch foul limit on",
+    "foulLimitValue": "Limit: foul per half",
+    "foulLimitDesc": "When off, the cockpit still counts fouls and shows only the number. When on, it warns from the set foul per half (suggested: the 5th).",
+    "foulLimitInvalid": "A whole number from {{min}} to {{max}} is valid – the value was not applied"
   },
   "editScore": {
     "title": "Correct Score",

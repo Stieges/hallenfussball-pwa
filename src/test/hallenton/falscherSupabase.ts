@@ -29,6 +29,10 @@ export class FalscherSupabase {
   readonly haengendeRpcs = new Set<string>();
   readonly abfragen: Abfrage[] = [];
   rpcAufrufe = 0;
+  /** Öffentliche Adressen im Speicher (H3c: Torhymnen, eigener Ton), wie `storage.from(bucket).getPublicUrl(pfad)`. */
+  readonly storage = {
+    from: (bucket: string) => ({ getPublicUrl: (pfad: string) => ({ data: { publicUrl: `https://halle.test/${bucket}/${pfad}` } }) }),
+  };
 
   get client(): FeldStandClient {
     return this as unknown as FeldStandClient;

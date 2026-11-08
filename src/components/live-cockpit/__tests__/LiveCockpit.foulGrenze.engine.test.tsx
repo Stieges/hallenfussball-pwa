@@ -12,6 +12,9 @@ import { Harness } from './engineHarness';
 import { anpfiff } from './engineHarnessSupport';
 import { T0 } from './enginePhaseFixture';
 
+/** Testdaten: Grenze 5 setzt der Test selbst -- die Vorgabe eines neuen Turniers ist ausgeschaltet (@SL-101). */
+const GRENZE_5 = { foulLimit: 5 };
+
 vi.unmock('i18next');
 vi.unmock('react-i18next');
 await initRealDeI18n();
@@ -52,7 +55,7 @@ async function fouls(user: ReturnType<typeof userEvent.setup>, n: number, erwart
 describe('LiveCockpit – Foul-Zähler je Halbzeit (Engine)', () => {
   it('@SL-099 SV Süd 4 Fouls im ersten, 2 im zweiten Abschnitt, ein weiteres Foul → „Foul 3/5“, nach dem Abpfiff 7 Fouls im ganzen Spiel', async () => {
     const user = userEvent.setup();
-    render(<Harness turnier={ZWEI_ABSCHNITTE} />);
+    render(<Harness turnier={ZWEI_ABSCHNITTE} einstellungen={GRENZE_5} />);
     await anpfiff(user);
     await waitFor(() => expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('Live'));
     await fouls(user, 4, 4);
@@ -76,7 +79,7 @@ describe('LiveCockpit – Foul-Zähler je Halbzeit (Engine)', () => {
 
   it('@SL-036 Gegenbeispiel: die 4 Fouls des ersten Abschnitts stehen nach dem Anpfiff des zweiten weiter in der Liste und zählen im Spiel', async () => {
     const user = userEvent.setup();
-    render(<Harness turnier={ZWEI_ABSCHNITTE} />);
+    render(<Harness turnier={ZWEI_ABSCHNITTE} einstellungen={GRENZE_5} />);
     await anpfiff(user);
     await waitFor(() => expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('Live'));
     await fouls(user, 4, 4);
@@ -92,7 +95,7 @@ describe('LiveCockpit – Foul-Zähler je Halbzeit (Engine)', () => {
 
   it('@SL-099 Gegenbeispiel: im ersten Abschnitt zählt jedes Foul sofort mit (4 Fouls → „Foul 4/5“)', async () => {
     const user = userEvent.setup();
-    render(<Harness turnier={ZWEI_ABSCHNITTE} />);
+    render(<Harness turnier={ZWEI_ABSCHNITTE} einstellungen={GRENZE_5} />);
     await anpfiff(user);
     await waitFor(() => expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('Live'));
     await fouls(user, 4, 4);

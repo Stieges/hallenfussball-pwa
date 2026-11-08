@@ -4,7 +4,8 @@
  * Kanal auf einem gefälschten Gerät. Der Feldstand ist entweder echt (Supabase-Doppel, `Lage` aus H3b-2a) oder gefälscht
  * (`FalscherFeldStand`: Stand je Feld als Funktion der Zeit, für genaue Lagen der Freigabe).
  * Ein Ton „erklingt“, wenn seine Quelle gestartet und nicht vor dem Start gestoppt wurde; seine Serverzeit folgt aus der
- * Audiozeit. Abpfiff-Ton = „Hupe 2“ (2 s), Halbzeit-Ton = „Hupe 3“ (1 s).
+ * Audiozeit. Abpfiff-Ton = „Hupe 2“ (2 s), Halbzeit-Ton = „Hupe 3“ (1 s). Torhymnen (H3c): „Hymne A“ 8 s, „Hymne B“ 7 s,
+ * „Hymne C“ 6 s, eine lange mit 14 s; eine nicht ladbare Adresse (`HYMNE.kaputt`).
  */
 import type { FeldStand, HallTonArt } from '../../../../core/hallenton';
 import type { EngineEvent, MatchContext } from '../../../../core/match';
@@ -18,10 +19,21 @@ import { erzeugeGeraeteSperre } from '../geraeteSperre';
 import { erzeugeHallLautsprecherLaufzeit, type HallLautsprecherLaufzeit } from '../HallLautsprecherLaufzeit';
 import { erzeugeHallTonSpieler, type HallTonSpieler, type Speicher, type TonWahl } from '../hallTonSpieler';
 import { erzeugeLautsprecherKanal, type LautsprecherKanal } from '../lautsprecherKanal';
+import type { TorWahl } from '../torhymnenSteuerung';
 import { flush, Lage } from './feldStandTestlage';
 
-const DAUER: Record<string, number> = { '/sounds/horn-1.mp3': 3, '/sounds/horn-2.mp3': 2, '/sounds/horn-3.mp3': 1 };
+/** Öffentliche Adressen der Torhymnen im Test. */
+export const HYMNE = {
+  a: 'https://halle.test/hallenton-sounds/hymne-a.mp3',
+  b: 'https://halle.test/hallenton-sounds/hymne-b.wav',
+  c: 'https://halle.test/hallenton-sounds/hymne-c.m4a',
+  lang: 'https://halle.test/hallenton-sounds/hymne-lang.mp3',
+  kaputt: 'https://halle.test/hallenton-sounds/hymne-kaputt.mp3',
+} as const;
+export const HYMNEN_DAUER_SEK: Record<string, number> = { [HYMNE.a]: 8, [HYMNE.b]: 7, [HYMNE.c]: 6, [HYMNE.lang]: 14 };
+const DAUER: Record<string, number> = { '/sounds/horn-1.mp3': 3, '/sounds/horn-2.mp3': 2, '/sounds/horn-3.mp3': 1, ...HYMNEN_DAUER_SEK };
 const ART_JE_DAUER: Record<number, HallTonArt> = { 2: 'abpfiff', 1: 'halbzeit' };
+const HYMNEN_DAUERN = new Set(Object.values(HYMNEN_DAUER_SEK));
 
 export type Stufe = { ab: number; log: EngineEvent[] };
 
@@ -95,6 +107,8 @@ export interface TabOptionen {
   kanalVersatz?: () => number;
   /** Tonwahl lesen (H3b-3, k4-neu-2: „Anhören“ vor der Aktivierung). */
   leseTonWahl?: () => Promise<Record<'abpfiff' | 'halbzeit', TonWahl>>;
+  /** „Ton bei Tor“ und Torhymnen beim Start (H3c). */
+  torWahl?: TorWahl;
 }
 
 export class Tab {
@@ -109,6 +123,9 @@ export class Tab {
   readonly lage: Lage | null;
   /** Probe der Geräteuhr (`Date.now`, `performance.now`) für den Uhrsprung. */
   wandVersatz = 0;
+  /** Adressen, deren Abruf gerade scheitert (z. B. WLAN-Aussetzer), und alle Abrufe (H3c Fixrunde 1). */
+  readonly nichtLadbar = new Set<string>();
+  readonly geholt: string[] = [];
   syncAufrufe = 0;
   feldStandErzeugt = 0;
   private readonly t0: number;
@@ -122,7 +139,10 @@ export class Tab {
     Object.defineProperty(this.kontext, 'currentTime', { get: () => (this.uhr.jetzt() - this.t0) / 1000 });
     this.spieler = erzeugeHallTonSpieler({
       erzeugeKontext: () => this.kontext,
-      ladeDaten: (url) => Promise.resolve(tonDaten(DAUER[url] ?? 255)),
+      ladeDaten: (url) => {
+        this.geholt.push(url);
+        return this.nichtLadbar.has(url) ? Promise.reject(new TypeError('Failed to fetch')) : Promise.resolve(tonDaten(DAUER[url] ?? 255));
+      },
       speicher: o.speicher ?? null,
     });
     const kanalVersatz = o.kanalVersatz ?? (() => 0);
@@ -150,6 +170,7 @@ export class Tab {
       tonWahl: { abpfiff: 'horn-2', halbzeit: 'horn-3' },
       gedaechtnisSpeicher: this.geraet.speicher,
       leseTonWahl: o.leseTonWahl,
+      torWahl: o.torWahl,
     });
   }
 
@@ -178,13 +199,34 @@ export class Tab {
     }
   }
 
-  /** Erklungene Töne mit Serverzeit (ms) und Art; ein vor dem Start abgebrochener Ton erklingt nicht. */
+  /** Erklungene End-Töne mit Serverzeit (ms) und Art; ein vor dem Start abgebrochener Ton erklingt nicht (ohne Torhymnen). */
   toene(): Array<{ at: number; art: HallTonArt; gain: number }> {
     return this.kontext.quellen.flatMap((quelle, i) => {
+      if (HYMNEN_DAUERN.has(quelle.buffer?.duration ?? -1)) {
+        return [];
+      }
       const start = quelle.starts[0];
       const erklungen = start !== undefined && quelle.stops.every((stop) => stop === undefined || stop > start);
       const art = ART_JE_DAUER[quelle.buffer?.duration ?? 0] ?? 'abpfiff';
       return erklungen ? [{ at: Math.round(this.t0 + start * 1000), art, gain: this.kontext.gains[i]?.gain.value ?? 0 }] : [];
+    });
+  }
+
+  /**
+   * Gespielte Torhymnen (H3c): welche (`HYMNE`-Schlüssel), Beginn und tatsächliches Ende in Serverzeit (ms) – das Ende ist die
+   * zuletzt gesetzte Stoppzeit (Web Audio: der letzte Aufruf gilt) oder das Dateiende, was früher ist –, Lautstärke.
+   */
+  hymnen(): Array<{ hymne: string; at: number; bis: number; gain: number }> {
+    const name = (dauer: number): string => Object.entries(HYMNE).find(([, url]) => HYMNEN_DAUER_SEK[url] === dauer)?.[0] ?? '?';
+    return this.kontext.quellen.flatMap((quelle, i) => {
+      const dauer = quelle.buffer?.duration ?? -1;
+      const start = quelle.starts[0];
+      if (!HYMNEN_DAUERN.has(dauer) || start === undefined) {
+        return [];
+      }
+      const stop = quelle.stops.length > 0 ? quelle.stops[quelle.stops.length - 1] ?? start + dauer : start + dauer;
+      const bis = Math.min(start + dauer, stop);
+      return [{ hymne: name(dauer), at: Math.round(this.t0 + start * 1000), bis: Math.round(this.t0 + bis * 1000), gain: this.kontext.gains[i]?.gain.value ?? 0 }];
     });
   }
 

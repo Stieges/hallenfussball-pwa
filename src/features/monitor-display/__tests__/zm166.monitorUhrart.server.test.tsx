@@ -94,12 +94,18 @@ describe('@ZM-166 @ZM-137 Uhr-Art des Turniers am Monitor (Server-Antwort displa
     expect(await balkenTon(turnier({ clockMode: 'durchlaufend-letzte-minute-angehalten', finalPhaseMinutes: 3 }), 'mit', 210)).toBe('gruen');
   });
 
-  it('Vorgabe unverändert: ohne gespeicherte Einstellung „durchlaufend, letzte Minute angehalten“ – 0:30 violett, 1:30 grün', async () => {
-    expect(await balkenTon(turnier(), 'mit', 30)).toBe('violett');
+  it('@SL-002 Vorgabe: ohne gespeicherte Einstellung „immer durchlaufend“ – auch bei 0:30 bleibt der Balken grün', async () => {
+    expect(await balkenTon(turnier(), 'mit', 30)).toBe('gruen');
     expect(await balkenTon(turnier(), 'mit', 90)).toBe('gruen');
   });
 
-  it('Gegenprobe Fassung 20261118_007 (Uhr fehlt in der Antwort): „immer durchlaufend“ zeigt fälschlich violett', async () => {
-    expect(await balkenTon(turnier({ clockMode: 'immer-durchlaufend', finalPhaseMinutes: 1 }), 'ohne', 30)).toBe('violett');
+  it('@SL-002 Gegenbeispiel: ein bestehendes Turnier mit gespeicherter Uhr-Art „letzte Minute angehalten“ behält die Schlussphase – 0:30 violett, 1:30 grün', async () => {
+    const bestehend = turnier({ clockMode: 'durchlaufend-letzte-minute-angehalten', finalPhaseMinutes: 1 });
+    expect(await balkenTon(bestehend, 'mit', 30)).toBe('violett');
+    expect(await balkenTon(bestehend, 'mit', 90)).toBe('gruen');
+  });
+
+  it('Gegenprobe Fassung 20261118_007 (Uhr fehlt in der Antwort): „letzte Minute angehalten“ zeigt fälschlich grün (Vorgabe der App)', async () => {
+    expect(await balkenTon(turnier({ clockMode: 'durchlaufend-letzte-minute-angehalten', finalPhaseMinutes: 1 }), 'ohne', 30)).toBe('gruen');
   });
 });

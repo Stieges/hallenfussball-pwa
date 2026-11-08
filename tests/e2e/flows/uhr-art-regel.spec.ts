@@ -1,7 +1,8 @@
 /**
  * B-08e (T2-UI): Regel-Feld „Uhr-Art“ und „Länge der angehaltenen Schlussphase“ im Admin Center
  * (Match Cockpit). Szenarien `2026-09-27_wizard-regelinhalte.md`: @W2A-035 (Uhr-Art wählbar), @W2A-040
- * (Schlussphase 1 bis 5 Minuten, vorbelegt 1, ungültig → Bereich genannt, nicht übernommen).
+ * (Schlussphase 1 bis 5 Minuten, vorbelegt 1, ungültig → Bereich genannt, nicht übernommen), @SL-002 (Vorgabe „immer durchlaufend“),
+ * @SL-101/@W2A-037 (Foul-Grenze vorbelegt aus, Einschalten schlägt 5 vor). Die Schlussphasen-Tests setzen die Uhr-Art selbst.
  * Gastmodus = Eigentümer; die Sperre für Helfer (@W2A-030) braucht ein Cloud-Mitglied und ist im
  * Verhaltenstest `B08e-uhr-art-regel.test.tsx` belegt, nicht hier (E2E läuft nur offline, nie gegen die Produktion).
  * Bilder (nur mit `B08E_BILDER=<Ordner>`): 1280×720 und 360×640.
@@ -13,7 +14,7 @@ import { neuLaden } from '../helpers/neuLaden';
 const ID = 'e2e-uhr-art-cup';
 const TEAMS = ['e1', 'e2', 'e3', 'e4'].map((n) => `00000000-0000-4000-8000-0000000000${n}`);
 
-function cup() {
+function cup(einstellungen?: Record<string, unknown>) {
   const date = new Date(Date.now() + 86_400_000).toISOString().split('T')[0];
   return {
     id: ID, status: 'published', publishedAt: new Date().toISOString(), sport: 'football', sportId: 'football-indoor',
@@ -23,6 +24,7 @@ function cup() {
     hideScoresForPublic: false, hideRankingsForPublic: false, resultMode: 'goals', pointSystem: { win: 3, draw: 1, loss: 0 },
     title: 'Uhr-Art-Cup', ageClass: 'U12', date, timeSlot: '10:00 - 14:00', startDate: date, startTime: '10:00',
     location: { name: 'Test-Halle' },
+    ...(einstellungen ? { matchCockpitSettings: einstellungen } : {}),
     teams: TEAMS.map((id, i) => ({ id, name: `FC Test ${'ABCD'[i]}`, group: 'A' })),
     matches: [{
       id: '00000000-0000-4000-8000-000000000910', matchNumber: 1, round: 1, field: 1, group: 'A', phase: 'groupStage',
@@ -44,7 +46,8 @@ async function oeffneRegeln(page: Page): Promise<void> {
 test.describe('B-08e Regel Uhr-Art und Schlussphase (Admin Center)', () => {
   test.beforeEach(async ({ seedIndexedDB }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Safe-Area-Emulation (wie live-cockpit.spec.ts)');
-    await seedIndexedDB({ tournaments: [cup()] });
+    // Testdaten: die Schlussphase gibt es nur bei „letzte Minute angehalten“; die Vorgabe eines neuen Turniers ist „immer durchlaufend“
+    await seedIndexedDB({ tournaments: [cup({ clockMode: 'durchlaufend-letzte-minute-angehalten' })] });
   });
 
   test('@W2A-040 Vorgabe 1 Minute; 3 Minuten gewählt bleiben nach dem Neuladen', async ({ page }) => {
@@ -94,6 +97,42 @@ test.describe('B-08e Regel Uhr-Art und Schlussphase (Admin Center)', () => {
   });
 });
 
+test.describe('Vorgaben eines neuen Turniers (@SL-002, @SL-101, @W2A-035, @W2A-037)', () => {
+  test.beforeEach(async ({ seedIndexedDB }, testInfo) => {
+    test.skip(testInfo.project.name.includes('iPhone'), 'Safe-Area-Emulation (wie live-cockpit.spec.ts)');
+    await seedIndexedDB({ tournaments: [cup()] });
+  });
+
+  test('@SL-002 @W2A-035 Uhr-Art „immer durchlaufend“, keine Schlussphase; „letzte Minute angehalten“ ist wählbar und zeigt die Länge 1', async ({ page }) => {
+    await oeffneRegeln(page);
+    await expect(page.getByTestId('settings-clock-mode')).toHaveValue('immer-durchlaufend');
+    await expect(feld(page)).toHaveCount(0);
+    await page.getByTestId('settings-clock-mode').selectOption('durchlaufend-letzte-minute-angehalten');
+    await expect(feld(page)).toHaveValue('1');
+    await neuLaden(page);
+    await expect(page.getByTestId('settings-clock-mode')).toHaveValue('durchlaufend-letzte-minute-angehalten');
+  });
+
+  test('@SL-101 @W2A-037 Foul-Grenze ausgeschaltet; Einschalten schlägt 5 vor, 3 bleibt nach dem Neuladen, Ausschalten ebenso', async ({ page }) => {
+    await oeffneRegeln(page);
+    const schalter = page.getByTestId('settings-foul-limit-enabled');
+    const grenze = page.getByTestId('settings-foul-limit');
+    await expect(schalter).not.toBeChecked();
+    await expect(grenze).toHaveCount(0);
+    await schalter.click();
+    await expect(schalter).toBeChecked();
+    await expect(grenze).toHaveValue('5');
+    await grenze.fill('3');
+    await grenze.blur();
+    await neuLaden(page);
+    await expect(page.getByTestId('settings-foul-limit')).toHaveValue('3');
+    await page.getByTestId('settings-foul-limit-enabled').click();
+    await expect(page.getByTestId('settings-foul-limit-enabled')).not.toBeChecked();
+    await neuLaden(page);
+    await expect(page.getByTestId('settings-foul-limit-enabled')).not.toBeChecked();
+  });
+});
+
 // Bilder für Daniel (nur mit B08E_BILDER=<Ordner>): Vorgabe, gültiger Wert, ungültiger Wert, andere Uhr-Art.
 for (const [breite, hoehe] of [[1280, 720], [360, 640]] as const) {
   test.describe(`B-08e Bilder ${breite}x${hoehe}`, () => {
@@ -101,7 +140,7 @@ for (const [breite, hoehe] of [[1280, 720], [360, 640]] as const) {
     test.skip(!process.env.B08E_BILDER, 'Bilder nur mit B08E_BILDER');
 
     test.beforeEach(async ({ seedIndexedDB }) => {
-      await seedIndexedDB({ tournaments: [cup()] });
+      await seedIndexedDB({ tournaments: [cup({ clockMode: 'durchlaufend-letzte-minute-angehalten' })] });
     });
 
     test('Regel-Feld in vier Zuständen', async ({ page }) => {

@@ -11,6 +11,7 @@ import { CSSProperties, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
 import { Input, Button } from '../ui';
+import { ToggleSwitch } from '../ui/atoms';
 import { CheckboxField } from '../ui/molecules/CheckboxField';
 import { useRulesLocked } from './RulesLockContext';
 import type {
@@ -23,13 +24,6 @@ import { storeCustomSound, deleteCustomSound, MAX_SOUND_FILE_SIZE } from '../../
 // =============================================================================
 // UI Constants
 // =============================================================================
-
-// Toggle dimensions (shared with SettingItem.tsx for consistency)
-const TOGGLE_WIDTH = 52;
-const TOGGLE_HEIGHT = 28;
-const TOGGLE_THUMB_SIZE = 24;
-const TOGGLE_THUMB_SPACING = 2;
-const TOGGLE_THUMB_ON_POSITION = TOGGLE_WIDTH - TOGGLE_THUMB_SIZE - TOGGLE_THUMB_SPACING;
 
 // Form element dimensions
 const SELECT_MIN_WIDTH = 180;
@@ -383,7 +377,7 @@ export function MatchCockpitSettingsPanel({
         <h3 style={styles.sectionTitle}>{t('settings.feedback')}</h3>
 
         <SettingRow label={t('settings.vibration')} description={t('settings.vibrationDesc')}>
-          <Toggle
+          <ToggleSwitch
             checked={settings.hapticEnabled}
             onChange={(v) => updateSetting('hapticEnabled', v)}
             label={t('settings.enableVibration')}
@@ -413,37 +407,6 @@ function SettingRow({ label, description, children }: SettingRowProps): React.Re
       </div>
       <div style={styles.rowControl}>{children}</div>
     </div>
-  );
-}
-
-interface ToggleProps {
-  checked: boolean;
-  onChange: (value: boolean) => void;
-  disabled?: boolean;
-  /** Accessible label for screen readers */
-  label?: string;
-}
-
-function Toggle({ checked, onChange, disabled, label }: ToggleProps): React.ReactNode {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      onClick={() => !disabled && onChange(!checked)}
-      style={{ ...styles.toggle, ...(disabled ? styles.toggleDisabled : {}) }}
-      disabled={disabled}
-    >
-      <span style={{ ...styles.toggleTrack, ...(checked ? styles.toggleOn : styles.toggleOff) }}>
-        <span
-          style={{
-            ...styles.toggleThumb,
-            ...(checked ? styles.toggleThumbOn : styles.toggleThumbOff),
-          }}
-        />
-      </span>
-    </button>
   );
 }
 
@@ -527,52 +490,6 @@ const styles: Record<string, CSSProperties> = {
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'right 8px center',
     backgroundSize: '16px',
-  },
-
-  // Toggle
-  // Tippfläche mindestens 44 hoch (@OB-022); die sichtbare Spur (toggleTrack) bleibt so klein wie bisher
-  toggle: {
-    display: 'flex',
-    alignItems: 'center',
-    width: `${TOGGLE_WIDTH}px`,
-    height: cssVars.touchTargets.minimum,
-    background: 'transparent',
-    border: 'none',
-    cursor: 'pointer',
-    padding: 0,
-  },
-  toggleTrack: {
-    position: 'relative',
-    width: `${TOGGLE_WIDTH}px`,
-    height: `${TOGGLE_HEIGHT}px`,
-    borderRadius: cssVars.borderRadius.full,
-    transition: 'background-color 0.2s ease',
-  },
-  toggleOff: {
-    background: cssVars.colors.surfaceLight,
-  },
-  toggleOn: {
-    background: cssVars.colors.primary,
-  },
-  toggleDisabled: {
-    cursor: 'not-allowed',
-    opacity: 0.5,
-  },
-  toggleThumb: {
-    position: 'absolute',
-    top: `${TOGGLE_THUMB_SPACING}px`,
-    width: `${TOGGLE_THUMB_SIZE}px`,
-    height: `${TOGGLE_THUMB_SIZE}px`,
-    borderRadius: cssVars.borderRadius.full,
-    background: cssVars.colors.textPrimary,
-    transition: 'left 0.2s ease',
-    boxShadow: cssVars.shadows.sm,
-  },
-  toggleThumbOff: {
-    left: `${TOGGLE_THUMB_SPACING}px`,
-  },
-  toggleThumbOn: {
-    left: `${TOGGLE_THUMB_ON_POSITION}px`,
   },
 
   // Slider

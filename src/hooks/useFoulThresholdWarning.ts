@@ -4,7 +4,7 @@
  * Zeitstrafen-Eintrag ist), mit der Nummer des Fouls, Heim/Auswaerts getrennt. Ein Spiel, das schon
  * mit Fouls ueber der Grenze geoeffnet wird, meldet nichts: nur ein neues Foul meldet. Wird ein Foul
  * zurueckgenommen oder wechselt das Spiel (`matchId`), merkt sich der Hook den niedrigeren Stand und meldet das naechste wieder.
- * Die Grenze kommt aus den Turnierregeln (`foulLimit`, Vorgabe 5; `null` = ausgeschaltet, keine Meldung, @SL-102); gezaehlt wird je Halbzeit (@SL-099).
+ * Die Grenze kommt aus den Turnierregeln (`foulLimit`, Vorgabe ausgeschaltet; `null` = ausgeschaltet, keine Meldung, @SL-102); gezaehlt wird je Halbzeit (@SL-099).
  */
 import { useEffect, useRef } from 'react';
 

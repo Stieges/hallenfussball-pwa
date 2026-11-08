@@ -1,6 +1,6 @@
 /**
  * MatchRulesSection (B-08e): Regel „Uhr-Art“ im Match-Cockpit-Bereich des Admin Centers. Nur die Turnierleitung
- * ändert sie (`locked`, @W2A-030); die Vorgabe „durchlaufend, letzte Minute angehalten“ kommt aus den Turnierdaten.
+ * ändert sie (`locked`, @W2A-030); die Vorgabe „immer durchlaufend“ gilt für neue Turniere, gespeicherte Werte bleiben.
  * Gilt ab dem nächsten Anpfiff. Bei „durchlaufend, letzte Minute angehalten“ stellt sie außerdem die Länge der
  * angehaltenen Schlussphase ein (1 bis 5 Minuten, @W2A-040). Szenarien: @SL-002, @W2A-035, @W2A-040.
  */

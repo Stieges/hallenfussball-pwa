@@ -27,6 +27,7 @@ function cup(namen: readonly string[] = NAMEN) {
     hideScoresForPublic: false, hideRankingsForPublic: false, resultMode: 'goals', pointSystem: { win: 3, draw: 1, loss: 0 },
     title: 'Cockpit-Cup Spalten', ageClass: 'U12', date, timeSlot: '10:00 - 14:00', startDate: date, startTime: '10:00',
     location: { name: 'Test-Halle' },
+    matchCockpitSettings: { foulLimit: 5 }, // Testdaten: der Zähler „Foul n/5“ braucht die Grenze, die Vorgabe eines neuen Turniers ist aus (@SL-101)
     teams: TEAMS.map((id, i) => ({ id, name: namen[i], group: 'A', colors: { primary: FARBEN[i] } })),
     matches: PAARE.map(([a, b], i) => ({
       id: `00000000-0000-4000-8000-0000000009${i + 10}`, matchNumber: i + 1, round: i + 1, field: 1, group: 'A', phase: 'groupStage',

@@ -8,6 +8,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   hallFieldLeadHeartbeat,
+  hallGoalAnthemsSet,
   hallOutputHeard,
   hallSoundSettingsSet,
   hallSoundStatus,
@@ -85,6 +86,11 @@ describe('hallSpeakerRelease (hall_speaker_release)', () => {
 
 describe('hallSpeakerHeartbeat (hall_speaker_heartbeat)', () => {
   const args = { p_tournament_id: TID, p_device_id: RECHNER, p_fields: [1], p_state: 'ready' };
+
+  it('@HT-046 nach dem Turnierende antwortet das Lebenszeichen 55000 (seit 20261123_001) → turnier_beendet', async () => {
+    const { client } = clientWith({ data: null, error: { code: '55000', message: 'TOURNAMENT_FINISHED: Turnier ist abgeschlossen (hallenton, Turnier x).' } });
+    expect(await hallSpeakerHeartbeat(client, args)).toEqual({ ok: false, grund: 'turnier_beendet' });
+  });
 
   it('@HT-047 ein starkes Anzeichen geht als p_output_changed mit dem Lebenszeichen an den Server', async () => {
     const { client, rpc } = clientWith({ data: { status: 'ok', serverNow: JETZT, fields: [{ field: 1, status: 'ok', test: null, lead: null }] }, error: null });
@@ -225,6 +231,31 @@ describe('hallSoundSettingsSet (hall_sound_settings_set)', () => {
   });
 });
 
+describe('hallGoalAnthemsSet (hall_goal_anthems_set)', () => {
+  const args = { p_tournament_id: TID, p_paths: [`${TID}/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa.mp3`] };
+
+  it('@HT-024 Olli setzt die Torhymnen: sendet Turnier und Liste, liefert „saved“', async () => {
+    const { client, rpc } = clientWith({ data: { status: 'saved' }, error: null });
+    expect(await hallGoalAnthemsSet(client, args)).toEqual({ ok: true, status: 'saved' });
+    expect(rpc).toHaveBeenCalledWith('hall_goal_anthems_set', args);
+  });
+
+  it('Gegenbeispiel: mehr als 5, doppelt oder falscher Pfad (22023) → ungueltig', async () => {
+    const { client } = clientWith({ data: null, error: { code: '22023', message: 'hallenton: goal anthems invalid' } });
+    expect(await hallGoalAnthemsSet(client, args)).toEqual({ ok: false, grund: 'ungueltig' });
+  });
+
+  it('@HT-046 nach dem Turnierende (55000) → turnier_beendet; @HT-022 Helfer Tom (42501) → kein_recht', async () => {
+    expect(await hallGoalAnthemsSet(clientWith({ data: null, error: { code: '55000', message: 'TOURNAMENT_FINISHED' } }).client, args)).toEqual({ ok: false, grund: 'turnier_beendet' });
+    expect(await hallGoalAnthemsSet(clientWith({ data: null, error: { code: '42501', message: 'hallenton: not allowed' } }).client, args)).toEqual({ ok: false, grund: 'kein_recht' });
+  });
+
+  it('Gegenbeispiel: unbekannte Antwort → antwort_unbekannt; ohne Client → netz', async () => {
+    expect(await hallGoalAnthemsSet(clientWith({ data: { status: 'gespeichert' }, error: null }).client, args)).toEqual({ ok: false, grund: 'antwort_unbekannt' });
+    expect(await hallGoalAnthemsSet(null, args)).toEqual({ ok: false, grund: 'netz' });
+  });
+});
+
 describe('hallSoundStatus (hall_sound_status)', () => {
   const voll = {
     serverNow: JETZT,
@@ -243,8 +274,23 @@ describe('hallSoundStatus (hall_sound_status)', () => {
 
   it('@HT-039 Turnierleitung: volle Sicht mit Gerätename, Zustand, Alter, Hinweis, Testton, Leitung und Tonwahl', async () => {
     const { client, rpc } = clientWith({ data: voll, error: null });
-    expect(await hallSoundStatus(client, { p_tournament_id: TID, p_device_id: RECHNER })).toEqual({ ok: true, sicht: 'voll', ...voll });
+    // H3c: eine Antwort ohne goalAnthemPaths (Server vor 20261123_001) gilt mit der leeren Liste
+    expect(await hallSoundStatus(client, { p_tournament_id: TID, p_device_id: RECHNER })).toEqual({
+      ok: true, sicht: 'voll', ...voll, settings: { ...voll.settings, goalAnthemPaths: [] },
+    });
     expect(rpc).toHaveBeenCalledWith('hall_sound_status', { p_tournament_id: TID, p_device_id: RECHNER });
+  });
+
+  it('@HT-024 volle Sicht mit „Ton bei Tor“ für Feld 1 und den Torhymnen A, B, C in ihrer Reihenfolge', async () => {
+    const hymnen = [`${TID}/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa.mp3`, `${TID}/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb.wav`, `${TID}/cccccccc-cccc-4ccc-8ccc-cccccccccccc.m4a`];
+    const data = { ...voll, settings: { ...voll.settings, goalToneFields: [1], goalAnthemPaths: hymnen } };
+    const antwort = await hallSoundStatus(clientWith({ data, error: null }).client, { p_tournament_id: TID });
+    expect(antwort.ok && antwort.sicht === 'voll' ? antwort.settings : null).toEqual({ ...voll.settings, goalToneFields: [1], goalAnthemPaths: hymnen });
+  });
+
+  it('Gegenbeispiel: goalAnthemPaths ist keine Liste von Pfaden → antwort_unbekannt', async () => {
+    const data = { ...voll, settings: { ...voll.settings, goalAnthemPaths: [1, 2] } };
+    expect(await hallSoundStatus(clientWith({ data, error: null }).client, { p_tournament_id: TID })).toEqual({ ok: false, grund: 'antwort_unbekannt' });
   });
 
   it('@HT-050 Helfer Tom: schmale Sicht ohne Gerätename, Testton und Tonwahl', async () => {
