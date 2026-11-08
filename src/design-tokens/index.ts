@@ -116,6 +116,7 @@ export {
   displaySpacing,
   displayTransitions,
   displayLayout,
+  scoreDigitFontSize,
   displayNoMatch,
   displayEffects,
   displayMonitor,

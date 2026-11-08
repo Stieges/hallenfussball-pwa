@@ -452,6 +452,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
               fieldOptions={fieldOptions}
               onRefereeChange={onRefereeChange}
               onFieldChange={onFieldChange}
+              kasten={sides.view?.rules.results === true && matchView !== undefined && (status === 'running' || isFinished) ? matchView.boxes : undefined}
               extraAction={<>
                 <MatchForfeitAction matchId={match.id} viewStatus={matchView?.status} forfeit={inlineForfeit} />
                 {editingSchedule && <SwapWithButton matchId={match.id} locked={status === 'running' || isFinished} />}

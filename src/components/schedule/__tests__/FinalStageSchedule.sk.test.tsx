@@ -313,14 +313,14 @@ function beendet(ausgang: Cache) {
 }
 
 describe('@OB-064 Finalrunde: Karte (Handy) und Tabelle (Desktop)', () => {
-  it('Z.1 Karte: 2 / 2, (4) bei FC Nord, (3) bei SG Mitte, „beendet nach Strafstoßschießen“, FC Nord fett', () => {
+  it('Z.1 Karte: 2 / 2, daneben (4) bei FC Nord und (3) bei SG Mitte, nichts in der Kopfzeile, FC Nord fett', () => {
     const { container } = beendet(AUSGANG.strafstoss);
     const karte = within(mobile(container));
     expect(screen.getByTestId(`final-goals-${HF1}-home`).textContent).toBe('2');
     expect(screen.getByTestId(`final-goals-${HF1}-away`).textContent).toBe('2');
     expect(screen.getByTestId(`final-penalty-${HF1}-home`).textContent).toBe('(4)');
     expect(screen.getByTestId(`final-penalty-${HF1}-away`).textContent).toBe('(3)');
-    expect(screen.getByTestId(`final-decision-${HF1}`).textContent).toBe('beendet nach Strafstoßschießen');
+    expect(screen.queryByTestId(`final-decision-${HF1}`)).toBeNull(); // beim Stand statt in der Kopfzeile
     expect(karte.getByText('FC Nord').getAttribute('data-winner')).toBe('true');
     expect(karte.getByText('SG Mitte').getAttribute('data-winner')).toBeNull();
     // Gewicht aus dem Zeilenstil: Sieger fett, Verlierer nicht
@@ -333,11 +333,13 @@ describe('@OB-064 Finalrunde: Karte (Handy) und Tabelle (Desktop)', () => {
     expect(container.querySelector('.match-score-cell-finished')?.textContent).toContain('2:2 (4:3 i. E.)');
   });
 
-  it('Z.2 Karte: 3 / 2 und „beendet nach Verlängerung“, Tabelle „3:2 n. V.“', () => {
+  it('Z.2 Karte: 3 / 2 und beim Stand von FC Nord klein „nach Verlängerung“, Tabelle „3:2 n. V.“', () => {
     const { container } = beendet(AUSGANG.verlaengerung);
     expect(screen.getByTestId(`final-goals-${HF1}-home`).textContent).toBe('3');
     expect(screen.getByTestId(`final-goals-${HF1}-away`).textContent).toBe('2');
-    expect(screen.getByTestId(`final-decision-${HF1}`).textContent).toBe('beendet nach Verlängerung');
+    expect(screen.getByTestId(`final-overtime-${HF1}-home`).textContent).toBe('nach Verlängerung'); // ausgeschrieben, nie „n. V.“ auf der Karte
+    expect(screen.queryByTestId(`final-overtime-${HF1}-away`)).toBeNull();
+    expect(screen.queryByTestId(`final-decision-${HF1}`)).toBeNull();
     expect(screen.queryByTestId(`final-penalty-${HF1}-home`)).toBeNull();
     expect(container.querySelector('.match-score-cell-finished')?.textContent).toContain('3:2 n. V.');
   });

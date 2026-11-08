@@ -21,7 +21,7 @@ import { cssVars } from '../../../design-tokens'
 import type { MatchCardStatus } from './MatchCardScore';
 import { MatchCardHeader } from './MatchCardHeader';
 import { TeamScoreRows } from './TeamScoreRows';
-import type { MatchBadgeModel, SpectatorClock, ViewMatchStatus } from '../../../core/view';
+import type { MatchBadgeModel, MatchView, SpectatorClock, ViewMatchStatus } from '../../../core/view';
 import { MatchClock } from '../../ui/molecules/MatchClock';
 import type { ResultFigures } from '../matchResult';
 import type { TeamLogo, TeamColors } from '../../../types/tournament';
@@ -78,6 +78,8 @@ export interface MatchCardProps {
   disabled?: boolean;
   /** Whether the match has events (goals, cards, etc.) - shows chevron indicator */
   hasEvents?: boolean;
+  /** Kästen der Ansicht für das laufende und das nächste Spiel (@ZM-158, @ZM-161); sonst steht die Zahl ohne Kasten */
+  kasten?: MatchView['boxes'];
 }
 
 // ---------------------------------------------------------------------------
@@ -105,6 +107,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
   expandContent,
   disabled = false,
   hasEvents = false,
+  kasten,
 }) => {
   const { t } = useTranslation('tournament');
   const [isHovered, setIsHovered] = useState(false);
@@ -211,6 +214,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
           onScoreClick={handleCircleClick}
           disabled={disabled}
           zeitstrafen={clock?.zeitstrafen}
+          kasten={kasten}
         />
 
         {/* Chevron indicator for matches with events (shows expandability) */}

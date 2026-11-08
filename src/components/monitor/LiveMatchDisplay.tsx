@@ -9,15 +9,16 @@
  * - Footer (8%):  Referee info
  */
 
-import { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, displayFontSizes, displayLayout, getBlockFrames } from '../../design-tokens';
+import { cssVars, displayFontSizes, displayLayout } from '../../design-tokens';
 import type { MonitorTheme } from '../../types/monitor';
 import { DEFAULT_SPECTATOR_DISPLAY } from '../../core/models/spectatorDisplay';
-import { resolveBoxColors, type BoxFill } from '../../core/models/scoreBoxColors';
+import { resolveBoxColors } from '../../core/models/scoreBoxColors';
 import { LiveMatch } from '../../hooks/useLiveMatches';
 import { useMonitorTheme } from '../../hooks';
 import { MatchTimer, type MatchTimerUhrQuelle } from './MatchTimer';
+import { KickoffClock } from './KickoffClock';
 import type { ClockMode } from '../../core/match/clockDisplay';
 import { LiveScoreGrid } from './LiveScoreGrid';
 import { LiveFinalScore, type LiveFinalScoreProps } from './LiveFinalScore';
@@ -55,11 +56,8 @@ export interface LiveMatchDisplayProps {
   uhr?: MatchTimerUhrQuelle;
   /** Öffentliche Ereignisse und Feinstatus für laufende Zeitstrafen (@ZM-182, @ZM-192); im Kindermodus nie (@ZM-183) */
   zeitstrafenQuelle?: ZeitstrafenQuelle;
-}
-
-/** Fläche als eine Farbe: bei der Weste die Mitte (die Ziffer steht darauf, @ZM-156). */
-function flatColorOf(fill: BoxFill): string {
-  return fill.kind === 'solid' ? fill.color : fill.center;
+  /** Vor dem Anpfiff (@ZM-195, Folie „Nächstes Spiel“): die Anstoßzeit steht an der Stelle der Uhr, die Kästen zeigen „0 : 0“ in Größe und Lage wie im Spiel */
+  kickoff?: { time: string; notes?: ReactNode };
 }
 
 /** Ohne Ansicht (z. B. Vorschau): keine Seite trägt eine Farbe, also Standardfarben Heim/Gast (@ZM-159 Fall A). */
@@ -86,6 +84,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   badge,
   uhr,
   zeitstrafenQuelle,
+  kickoff,
 }) => {
   const { t } = useTranslation('monitor');
   const { themeColors } = useMonitorTheme(theme);
@@ -93,13 +92,10 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   const isPaused = match.status === 'PAUSED';
   const zeitstrafen = useLaufendeZeitstrafen(hideScore ? undefined : zeitstrafenQuelle, match.homeTeam.id, match.awayTeam.id);
 
-  // Bis 3.2 (ScoreBox am Monitor) trägt die Weste ihre Mitte als Fläche
+  // Kästen der Ansicht (Weste = Trainingsleibchen, @ZM-161); ohne Ansicht die Standardfarben
   const shown = boxes ?? standardBoxes();
-  const homeColor = flatColorOf(shown.home.fill);
-  const awayColor = flatColorOf(shown.away.fill);
 
   const layout = displayLayout.scoreArea;
-  const frames = getBlockFrames(homeColor, awayColor, themeColors.background, themeColors.text);
 
   const containerStyle: CSSProperties = {
     display: 'flex',
@@ -153,9 +149,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
           theme={theme}
           themeColors={themeColors}
           hideScore={hideScore}
-          homeColor={homeColor}
-          awayColor={awayColor}
-          frames={frames}
+          boxes={shown}
           finalScore={finalScore}
           finalRound={finalRound}
           zeitstrafen={zeitstrafen}
@@ -164,6 +158,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
         {/* Unterer Bereich: feste Höhe in jedem Zustand (B-44a2); H2: nach dem Abpfiff keine Uhr, nur das Endergebnis */}
         <div style={timerAreaStyle} data-testid="live-lower">
           {match.status === 'FINISHED' && <LiveFinalScore color={themeColors.text} accent={themeColors.progressBar} finalScore={hideScore ? undefined : finalScore} names={{ home: match.homeTeam.name, away: match.awayTeam.name }} />}
+          {match.status === 'NOT_STARTED' && kickoff && <KickoffClock time={kickoff.time} size={size} theme={theme} notes={kickoff.notes} />}
           {(isRunning || isPaused) && (
             <MatchTimer
               elapsedSeconds={match.elapsedSeconds}

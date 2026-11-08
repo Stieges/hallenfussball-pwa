@@ -3,14 +3,17 @@
  *
  * - Ziffern-Kontrast wird auf der WIRKSAMEN Fläche bestimmt (bei der Weste die Mitte, beim Verlierer die gedämpfte Farbe),
  *   immer ≥ 4,5 : 1 (@ZM-156, @ZM-160); schwarz oder weiß, je nachdem, was mehr Kontrast gibt.
- * - Rahmen: hebt sich Mitte ODER Streifen (gedämpft, wie gezeigt) mit weniger als 3 : 1 vom Hintergrund ab, ist er kräftig (@ZM-140, @ZM-161).
+ * - Rahmen: hebt sich Mitte ODER Trikotfarbe (gedämpft, wie gezeigt) mit weniger als 3 : 1 vom Hintergrund ab, ist er kräftig (@ZM-140, @ZM-161).
+ * - Weste = Trainingsleibchen (@ZM-161, Form E1, `VestPieces`): Grund in der Leibchenfarbe, die Trikotfarbe als eigene kleine Teile darauf,
+ *   der Rahmen als eigene Schicht darüber (er liegt auch über den Teilen).
  * - Die Kastengröße hängt nie vom Zustand ab: Rahmen innen (border-box), Ring als outline, Ecken absolut außerhalb (@ZM-151, @ZM-160).
  */
 import type { CSSProperties } from 'react';
 import { BOX_BLACK, BOX_WHITE, type BoxFill } from '../../../core/models/scoreBoxColors';
-import { borderWidths, cssVars, displayLayout, displayList } from '../../../design-tokens';
+import { borderWidths, cssVars, displayLayout, displayList, scoreDigitFontSize } from '../../../design-tokens';
 import { getContrastRatio } from '../../../design-tokens/display';
 import { getBlockFrame, mixHex, type BlockFrame, type BlockFrameWidths } from '../../../design-tokens/displayColor';
+import type { VestSize } from './vestShape';
 
 export type ScoreBoxSize = 'display' | 'row' | 'compact' | 'cockpit';
 export type ScoreBoxOutcome = 'winner' | 'loser';
@@ -21,11 +24,8 @@ const L = displayLayout.scoreArea;
 /** Dämpfung des Verlierers als Zahl; abgeleitet aus dem Token `loserDimShare` („30%“), kein zweiter Wert (B4). */
 export const LOSER_DIM_SHARE = parseFloat(L.loserDimShare) / 100;
 
-/** Anteil (0 bis 1) als Prozentzahl ohne Gleitkomma-Reste (0,14 → 14, nicht 14,000000000000002). */
-const percent = (share: number): number => Math.round(share * 100 * 1000) / 1000;
-
 /** Farben, wie sie auf dem Kasten erscheinen: beim Verlierer um `LOSER_DIM_SHARE` zum Hintergrund hin gemischt. */
-function shownColors(fill: BoxFill, outcome: ScoreBoxOutcome | undefined, background: string): { center: string; stripes: string } {
+export function shownColorsOf(fill: BoxFill, outcome: ScoreBoxOutcome | undefined, background: string): { center: string; stripes: string } {
   const dim = (color: string): string => (outcome === 'loser' ? mixHex(color, background, LOSER_DIM_SHARE) : color);
   return fill.kind === 'vest'
     ? { center: dim(fill.center), stripes: dim(fill.stripes) }
@@ -34,7 +34,7 @@ function shownColors(fill: BoxFill, outcome: ScoreBoxOutcome | undefined, backgr
 
 /** Farbe, auf der die Ziffer steht (Mitte der Weste), mit Dämpfung des Verlierers. */
 export function effectiveDigitBackground(fill: BoxFill, outcome: ScoreBoxOutcome | undefined, background: string): string {
-  return shownColors(fill, outcome, background).center;
+  return shownColorsOf(fill, outcome, background).center;
 }
 
 /** Ziffernfarbe mit dem höheren Kontrast zur wirksamen Fläche (mindestens 4,5 : 1). */
@@ -45,7 +45,7 @@ export function digitColor(fill: BoxFill, outcome: ScoreBoxOutcome | undefined, 
 
 /** Schwächerer der gezeigten Farben (Mitte oder Streifen) gegenüber dem Hintergrund. */
 function weakestColor(fill: BoxFill, outcome: ScoreBoxOutcome | undefined, background: string): string {
-  const { center, stripes } = shownColors(fill, outcome, background);
+  const { center, stripes } = shownColorsOf(fill, outcome, background);
   return getContrastRatio(stripes, background) < getContrastRatio(center, background) ? stripes : center;
 }
 
@@ -65,12 +65,6 @@ interface SizeLayout {
   digitFontSize: string;
 }
 
-/**
- * Ziffernhöhe im Monitor-Kasten (Controller-Zusatz zu H3, gleiche Regel wie `monitor/scoreDigitSize.ts`): höchstens 60 % der
- * Kastenhöhe und 50 % der Kastenbreite; `ui/` darf nicht aus `components/monitor` importieren.
- */
-const DIGIT_HEIGHT_MAX_OF_BOX = 0.6;
-const DIGIT_WIDTH_MAX_OF_BOX = 0.5;
 /** Zeilen-Kasten (Monitor-Folienzeile): Maße in em der Zeilenschrift `displayList.fontSizes.team` (Feinschliff in Aufgabe 3.2). */
 const ROW_BOX_WIDTH_EM = 2.4;
 const ROW_BOX_HEIGHT_EM = 1.8;
@@ -88,7 +82,7 @@ const LAYOUTS: Record<ScoreBoxSize, SizeLayout> = {
     frame: { subtle: L.frameWidthSubtle, strong: L.frameWidthStrong },
     ringWidth: L.frameWidthStrong,
     ringOffset: L.frameWidthSubtle,
-    digitFontSize: `min(${DIGIT_HEIGHT_MAX_OF_BOX * 100}cqh, ${DIGIT_WIDTH_MAX_OF_BOX * 100}cqw)`,
+    digitFontSize: scoreDigitFontSize(),
   },
   row: {
     width: `${ROW_BOX_WIDTH_EM}em`,
@@ -164,18 +158,8 @@ export interface BoxStyleInput {
 /** Wurzel des Kastens: feste Maße, Fläche (Farbe oder Weste), Rahmen, Ring nur beim Sieger. */
 export function boxStyle({ fill, size, background, textColor, outcome, ringColor, frameStrength }: BoxStyleInput): CSSProperties {
   const layout = LAYOUTS[size];
-  const colors = shownColors(fill, outcome, background);
+  const colors = shownColorsOf(fill, outcome, background);
   const frame = frameOf(fill, outcome, background, textColor, size, frameStrength);
-  const stripe = percent(L.vestStripeShare);
-  const surface: CSSProperties = {
-    backgroundColor: colors.center,
-    ...(fill.kind === 'vest'
-      ? {
-          backgroundImage: `linear-gradient(90deg, ${colors.stripes} ${stripe}%, ${colors.center} ${stripe}%, ${colors.center} ${100 - stripe}%, ${colors.stripes} ${100 - stripe}%)`,
-          backgroundOrigin: 'border-box' as const,
-        }
-      : {}),
-  };
   return {
     position: 'relative',
     display: size === 'display' || size === 'cockpit' ? 'block' : 'inline-block',
@@ -186,10 +170,12 @@ export function boxStyle({ fill, size, background, textColor, outcome, ringColor
     fontSize: layout.fontSize,
     borderRadius: layout.radius,
     borderStyle: 'solid',
-    borderWidth: frame.width,
+    // Bei der Weste zeichnet die Rahmenschicht über den Teilen den Rahmen (`vestFrameStyle`, innen, gleiche Breite): kein eigener Rand,
+    // damit die Teile bis an den Kastenrand reichen und nichts über die Kasten-Box hinausragt (Überlauf-Messung)
+    borderWidth: fill.kind === 'vest' ? 0 : frame.width,
     borderColor: frame.color,
     color: digitColor(fill, outcome, background),
-    ...surface,
+    backgroundColor: colors.center,
     ...(outcome === 'winner'
       ? { outlineStyle: 'solid', outlineWidth: layout.ringWidth, outlineColor: ringColor, outlineOffset: layout.ringOffset }
       : {}),
@@ -197,20 +183,25 @@ export function boxStyle({ fill, size, background, textColor, outcome, ringColor
 }
 
 /** Fläche, die die Ziffer mittig trägt; am Monitor der Container für die Ziffernhöhe (cqh/cqw). */
-export function digitAreaStyle(size: ScoreBoxSize): CSSProperties {
+export function digitAreaStyle(size: ScoreBoxSize, vest = false): CSSProperties {
   return {
     position: 'absolute',
     inset: 0,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    containerType: size === 'display' ? 'size' : undefined,
+    // Weste: auch die kleinen Kästen messen die Breite (cqw), damit zwei Ziffern auf dem Leibchen bleiben
+    containerType: size === 'display' ? 'size' : vest ? 'inline-size' : undefined,
   };
 }
 
-export function digitsStyle(size: ScoreBoxSize): CSSProperties {
+/**
+ * Schrift der Ziffern. Zweistellig auf der Weste (@ZM-161): höchstens `digitsFontShare` der Kastenbreite, damit beide Ziffern ganz auf der
+ * Leibchenfarbe stehen (die Seitenteile in der Trikotfarbe bleiben frei); einstellig und ohne Weste unverändert.
+ */
+export function digitsStyle(size: ScoreBoxSize, narrow = false): CSSProperties {
   return {
-    fontSize: LAYOUTS[size].digitFontSize,
+    fontSize: narrow ? `min(${LAYOUTS[size].digitFontSize}, ${L.vest.digitsFontShare * 100}cqw)` : LAYOUTS[size].digitFontSize,
     fontWeight: cssVars.fontWeights.extrabold,
     fontVariantNumeric: 'tabular-nums',
     lineHeight: 1,
@@ -218,12 +209,31 @@ export function digitsStyle(size: ScoreBoxSize): CSSProperties {
   };
 }
 
-/** Pokal (oben rechts) und Leibchen-Zeichen (oben links): absolut außerhalb der Ziffernfläche, Farben aus den Props. */
+/** Geometrie der Weste: kleine Kästen (Handy, Zeile) schmaler mit flacherem Hals, der Cockpit-Kasten mit flachem Hals (Ziffer), die übrigen die große Form. */
+export function vestSizeOf(size: ScoreBoxSize): VestSize {
+  return size === 'compact' || size === 'row' ? 'small' : size === 'cockpit' ? 'cockpit' : 'large';
+}
+
+/** Schicht der Weste: füllt den Kasten, rundet wie der Kasten und schneidet die Teile an der Rundung ab. */
+export function vestLayerStyle(): CSSProperties {
+  return { position: 'absolute', inset: 0, borderRadius: 'inherit', overflow: 'hidden', pointerEvents: 'none' };
+}
+
+/** Rahmen der Weste als oberste Teilschicht: liegt über den Teilen wie bei den einfarbigen Kästen (Mockup `.box.weste::before`). */
+export function vestFrameStyle(frame: BlockFrame): CSSProperties {
+  return { position: 'absolute', inset: 0, borderRadius: 'inherit', boxShadow: `inset 0 0 0 ${frame.width} ${frame.color}`, pointerEvents: 'none' };
+}
+
+/**
+ * Pokal (oben rechts, über der Ecke) und Leibchen-Zeichen (oben links): absolut außerhalb der Ziffernfläche, Farben aus den Props.
+ * Am Monitor steht das Leibchen-Zeichen innen in der Ecke (@ZM-157, Abstand `bibInset` wie der Zeitstrafen-Kreis unten links), sonst über der Ecke.
+ */
 export function markStyle(kind: ScoreBoxMark, size: ScoreBoxSize, colors: { background: string; textColor: string; ringColor: string }): CSSProperties {
   const display = size === 'display';
   const diameter = display ? L.monitorCup : kind === 'cup' ? cssVars.iconSizes.md : cssVars.iconSizes.sm;
-  const top = display ? `calc(-1 * ${diameter} / ${CORNER_TOP_DIVISOR})` : `calc(-1 * ${kind === 'cup' ? cssVars.spacing.md : cssVars.spacing.sm})`;
-  const side = display ? `calc(-1 * ${diameter} / ${CORNER_SIDE_DIVISOR})` : top;
+  const inside = display && kind === 'bib';
+  const top = inside ? L.bibInset : display ? `calc(-1 * ${diameter} / ${CORNER_TOP_DIVISOR})` : `calc(-1 * ${kind === 'cup' ? cssVars.spacing.md : cssVars.spacing.sm})`;
+  const side = inside ? L.bibInset : display ? `calc(-1 * ${diameter} / ${CORNER_SIDE_DIVISOR})` : top;
   return {
     position: 'absolute',
     top,
@@ -244,9 +254,16 @@ export function markStyle(kind: ScoreBoxMark, size: ScoreBoxSize, colors: { back
   };
 }
 
-/** Fläche eines Kastens als Hintergrund (Farbe oder Weste mit Streifen); für Köpfe, die dieselbe Farbe tragen (Cockpit-Team-Kopf, @SL-176). */
+/** Anteil (0 bis 1) als Prozentzahl ohne Gleitkomma-Reste (0,14 → 14, nicht 14,000000000000002). */
+const percent = (share: number): number => Math.round(share * 100 * 1000) / 1000;
+
+/**
+ * Fläche eines FLACHEN Kopfes oder Streifens (Cockpit-Team-Kopf, Zeitstrafen-Karte, @SL-176): bei der Weste Streifen in der Trikotfarbe an den
+ * Rändern (`vestStripeShare`). Die Form des Trainingsleibchens (`VestPieces`) trägt in diesen flachen Elementen nicht (Bilder im Pull Request): Name und
+ * „Heim“/„Gast“ gerieten auf Hals und Seitenteile, der Name verlöre fast die Hälfte der Breite. Der Ergebniskasten zeichnet die Form.
+ */
 export function fillSurface(fill: BoxFill): CSSProperties {
-  const colors = shownColors(fill, undefined, BOX_BLACK);
+  const colors = shownColorsOf(fill, undefined, BOX_BLACK);
   const stripe = percent(L.vestStripeShare);
   return {
     backgroundColor: colors.center,
