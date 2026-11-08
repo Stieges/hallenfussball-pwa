@@ -5,12 +5,67 @@ import { join, resolve } from 'node:path'
 
 export const TEST_DATEI = /\.(test|spec)\.(ts|tsx|mjs|js)$/
 // Aufrufname nicht nach '.', Wortzeichen oder '$' (sonst zaehlt `/x/.test('...')`), Modifikatoren inkl. describe/step.
-const AUFRUF = /(?<![.\w$])(x?)(it|test|describe)((?:\.(?:each|skip|only|todo|concurrent|fails|fail|fixme|sequential|step|for|describe))*)\s*(?=[(`])/g
+const AUFRUF = /(?<![.\w$])(x?)(it|test|describe)((?:\.(?:each|skip|only|todo|concurrent|fails|fail|fixme|sequential|step|for|describe))*)\s*(?=[(`<])/g
 
-/** Entfernt Kommentare; Strings und Template-Literale bleiben unveraendert erhalten. */
+/** Index hinter dem passenden `>` eines Typ-Arguments ab `<` bei start (`=>` schliesst nicht); -1 wenn keins. */
+function typArgumentEnde(src, start) {
+  let tiefe = 0
+  for (let i = start; i < src.length; i++) {
+    const c = src[i]
+    if (c === "'" || c === '"' || c === '`') i = stringEnde(src, i) - 1
+    else if (c === '<') tiefe++
+    else if (c === '>' && src[i - 1] !== '=') {
+      tiefe--
+      if (tiefe === 0) return i + 1
+    }
+  }
+  return -1
+}
+
+/**
+ * Zeichen vor einem `/`, nach denen ein Regex-Literal beginnt (nach `)`, `}`, Namen, Zahlen ist es eine Division).
+ * `=>` (Pfeilfunktion) zaehlt, ein einzelnes `>` nicht (JSX-Text `<b>/pfad</b>`).
+ * Bekannte Restluecken (bewusst nicht geloest, Heuristik ohne Parser): Postfix `!`/`++`/`--` direkt vor einer Division
+ * (`a! / 2 // it(..)`) gilt als Regex-Beginn; ein Regex nach `)` (`if (x) /re/.test(y)`) gilt als Division und kann
+ * Anfuehrungszeichen darin als String lesen.
+ */
+const VOR_REGEX = /(?:[(,=:[!&|?{;+\-*%~^]|=>|(?:^|[^\w$.])(?:return|typeof|case|in|of|void|delete|throw|else|do|await|yield))$/
+
+/** Die letzten Zeichen vor der Stelle (ohne Leerraum am Ende), hoechstens 24: linear statt den ganzen Text zu kopieren. */
+function davorEnde(out) {
+  const kurz = out.slice(-64).trimEnd()
+  if (kurz === '' && out.length > 64) return out.trimEnd().slice(-24)
+  return kurz.slice(-24)
+}
+
+/** Index hinter einem Regex-Literal, das bei start (dem `/`) beginnt; -1 wenn dort keins steht (kein schliessendes `/` in der Zeile). */
+function regexEnde(src, start, d) {
+  if (d !== '' && !VOR_REGEX.test(d)) return -1
+  let i = start + 1
+  let klasse = false
+  while (i < src.length && src[i] !== '\n') {
+    const c = src[i]
+    if (c === '\\') i++
+    else if (c === '[') klasse = true
+    else if (c === ']') klasse = false
+    else if (c === '/' && !klasse) {
+      i++
+      while (i < src.length && /[a-z]/.test(src[i])) i++
+      return i
+    }
+    i++
+  }
+  return -1
+}
+
+/**
+ * Entfernt Kommentare; Strings und Template-Literale bleiben unveraendert erhalten. Regex-Literale werden durch
+ * gleich lange Platzhalter ersetzt: ein `"`, `'` oder Backtick darin darf keinen String eroeffnen (sonst kippt alles danach).
+ */
 export function ohneKommentare(src) {
   let out = ''
   let i = 0
+  let reEnde
   while (i < src.length) {
     const c = src[i]
     const n = src[i + 1]
@@ -26,6 +81,9 @@ export function ohneKommentare(src) {
       const ende = stringEnde(src, i)
       out += src.slice(i, ende)
       i = ende
+    } else if (c === '/' && (reEnde = regexEnde(src, i, davorEnde(out))) > 0) {
+      out += '/' + 'r'.repeat(reEnde - i - 2) + '/'
+      i = reEnde
     } else {
       out += c
       i++
@@ -187,7 +245,17 @@ export function testTexte(quelltext) {
   // `const s = "it('X-001')"` ist kein Test.
   while ((m = AUFRUF.exec(maske)) !== null) {
     const mods = m[3]
-    aufrufe.push({ start: m.index, ab: AUFRUF.lastIndex, mods, x: m[1] === 'x', behaelter: m[2] === 'describe' || mods.includes('.describe'), schritt: mods.includes('.step'), titel: mods.includes('.each') || mods.includes('.for') || erstesStringLiteral(src, AUFRUF.lastIndex) !== '' })
+    let ab = AUFRUF.lastIndex
+    if (maske[ab] === '<') {
+      // Typ-Argument nur bei each/for (`it.each<[string, number]>(...)`); sonst ist `it < 3` ein Vergleich.
+      const ende = mods.includes('.each') || mods.includes('.for') ? typArgumentEnde(maske, ab) : -1
+      if (ende < 0) continue
+      ab = ende
+      while (ab < maske.length && /\s/.test(maske[ab])) ab++
+      if (maske[ab] !== '(' && maske[ab] !== '`') continue
+      AUFRUF.lastIndex = ab
+    }
+    aufrufe.push({ start: m.index, ab, mods, x: m[1] === 'x', behaelter: m[2] === 'describe' || mods.includes('.describe'), schritt: mods.includes('.step'), titel: mods.includes('.each') || mods.includes('.for') || erstesStringLiteral(src, ab) !== '' })
   }
   const texte = []
   const uebersprungen = [] // [von, bis) Bereiche, deren Inhalt nicht regulaer ist
