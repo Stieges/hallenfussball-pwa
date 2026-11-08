@@ -58,6 +58,8 @@ export interface ScoreBoxProps {
   testId: string;
   /** Seite des Spiels (`data-position`), z. B. für Messungen und Tests am Monitor */
   position?: 'home' | 'away';
+  /** `img` (Vorgabe): das Bild mit Namen; `group` am Monitor, wo Zeichen (Zeitstrafen-Kreise) über dem Kasten liegen und selbst zugänglich bleiben */
+  role?: 'img' | 'group';
   /** Kennung des Pokals, wenn sie von `${testId}-cup` abweichen soll (Monitor: `live-cup-home`) */
   cupTestId?: string;
 }
@@ -85,13 +87,14 @@ export function ScoreBox({
   ariaLabel,
   testId,
   position,
+  role = 'img',
   cupTestId,
 }: ScoreBoxProps): ReactElement {
   const marks = { background, textColor, ringColor };
   const frame = frameOf(fill, outcome, background, textColor, size, frameStrength);
   return (
     <span
-      role="img"
+      role={role}
       aria-label={ariaLabel}
       style={boxStyle({ fill, size, background, textColor, outcome, ringColor, frameStrength })}
       data-testid={testId}
@@ -105,7 +108,7 @@ export function ScoreBox({
       data-frame-width={frame.width}
     >
       {fill.kind === 'vest' && (
-        <span style={vestLayerStyle(frame.width)} aria-hidden="true" data-testid={`${testId}-vest`}>
+        <span style={vestLayerStyle()} aria-hidden="true" data-testid={`${testId}-vest`}>
           <VestPieces size={vestSizeOf(size)} color={shownColorsOf(fill, outcome, background).stripes} />
           <span style={vestFrameStyle(frame)} data-testid={`${testId}-vest-frame`} />
         </span>

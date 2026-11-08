@@ -176,9 +176,10 @@ export function boxStyle({ fill, size, background, textColor, outcome, ringColor
     fontSize: layout.fontSize,
     borderRadius: layout.radius,
     borderStyle: 'solid',
-    borderWidth: frame.width,
-    // Bei der Weste zeichnet die Rahmenschicht über den Teilen den Rahmen (`vestFrameStyle`); der eigene Rand hält nur den Platz frei
-    borderColor: fill.kind === 'vest' ? 'transparent' : frame.color,
+    // Bei der Weste zeichnet die Rahmenschicht über den Teilen den Rahmen (`vestFrameStyle`, innen, gleiche Breite): kein eigener Rand,
+    // damit die Teile bis an den Kastenrand reichen und nichts über die Kasten-Box hinausragt (Überlauf-Messung)
+    borderWidth: fill.kind === 'vest' ? 0 : frame.width,
+    borderColor: frame.color,
     color: digitColor(fill, outcome, background),
     backgroundColor: colors.center,
     ...(outcome === 'winner'
@@ -219,9 +220,9 @@ export function vestSizeOf(size: ScoreBoxSize): VestSize {
   return size === 'compact' || size === 'row' ? 'small' : 'large';
 }
 
-/** Schicht der Weste: reicht bis unter den Rand, rundet wie der Kasten und schneidet die Teile an der Rundung ab. */
-export function vestLayerStyle(frameWidth: string): CSSProperties {
-  return { position: 'absolute', inset: `calc(-1 * ${frameWidth})`, borderRadius: 'inherit', overflow: 'hidden', pointerEvents: 'none' };
+/** Schicht der Weste: füllt den Kasten, rundet wie der Kasten und schneidet die Teile an der Rundung ab. */
+export function vestLayerStyle(): CSSProperties {
+  return { position: 'absolute', inset: 0, borderRadius: 'inherit', overflow: 'hidden', pointerEvents: 'none' };
 }
 
 /** Rahmen der Weste als oberste Teilschicht: liegt über den Teilen wie bei den einfarbigen Kästen (Mockup `.box.weste::before`). */

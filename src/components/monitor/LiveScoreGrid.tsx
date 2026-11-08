@@ -132,6 +132,7 @@ export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, boxe
           ariaLabel={ariaLabel}
           testId={home ? 'live-box-home' : 'live-box-away'}
           position={home ? 'home' : 'away'}
+          role="group"
           cupTestId={`live-cup-${home ? 'home' : 'away'}`}
         />
         {zeitstrafen && match.status !== 'FINISHED' && (

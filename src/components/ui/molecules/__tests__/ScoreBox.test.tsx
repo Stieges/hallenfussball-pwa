@@ -132,11 +132,11 @@ describe('ScoreBox Weste = Trainingsleibchen (@ZM-161)', () => {
     expect(hoehe(klein)).toBe(displayLayout.scoreArea.vest.small.neckDepth);
   });
 
-  it('@ZM-161 der Rahmen liegt als oberste Schicht über den Teilen, der eigene Rand der Weste ist durchsichtig (kein doppelter Rahmen)', () => {
+  it('@ZM-161 der Rahmen liegt als oberste Schicht über den Teilen, die Weste hat keinen eigenen Rand (kein doppelter Rahmen, kein Überstand)', () => {
     const el = draw({ fill: vest(GELB, ROT), size: 'display', background: DUNKEL, textColor: TEXT_HELL });
-    expect(el.style.borderColor).toBe('transparent');
+    expect(parseFloat(el.style.borderWidth)).toBe(0);
     const rahmen = screen.getByTestId('box-vest-frame');
-    expect(rahmen.style.boxShadow).toContain(el.style.borderWidth);
+    expect(rahmen.style.boxShadow).toContain(el.getAttribute('data-frame-width'));
     const schicht = screen.getByTestId('box-vest');
     expect(schicht.lastElementChild).toBe(rahmen);
     expect(schicht.style.overflow).toBe('hidden');
