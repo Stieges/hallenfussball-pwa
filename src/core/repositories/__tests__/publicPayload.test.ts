@@ -75,6 +75,12 @@ describe('parsePublicPayload (B-14)', () => {
     expect(match.events?.[1].payload.durationSeconds).toBe(120);
   });
 
+  it('@ZM-194 der Schalter „Live-Stand“ (config.publicLiveScore) kommt am Turnier an; ohne Angabe fehlt er (gilt als an)', () => {
+    expect(full(parsePublicPayload(voll([spiel7()], { publicLiveScore: false }))).tournament.publicLiveScore).toBe(false);
+    expect(full(parsePublicPayload(voll([spiel7()], { publicLiveScore: true }))).tournament.publicLiveScore).toBe(true);
+    expect(full(parsePublicPayload(voll([spiel7()]))).tournament.publicLiveScore).toBeUndefined();
+  });
+
   // Die Positivliste der config-Schlüssel gilt am Server (scripts/public-payload-check.sh, Kategorie P); hier die Zeilen.
   it('@ZM-098 Ereignisse ohne Urheber: unbekannte Felder (actor, user_id, payload) fallen beim Prüfen weg (.strip)', () => {
     const mitUrheber = { ...tor9, actor: 'helper', user_id: 'u-tom', device_id: 'd-1', payload: { reason: 'intern' } };
@@ -158,6 +164,14 @@ describe('toPublicRuntimeEvents (B-14)', () => {
   it('@ZM-182 @ZM-184 die Zeitstrafe trägt Spieluhr (ms), Nummer und Dauer der Antwort – Grundlage der Restzeit', () => {
     const [ev] = toPublicRuntimeEvents(S7, [{ ...strafe5, type: 'TIME_PENALTY', clock_ms: 200_400 }], { sideA: NORD, sideB: SUED, goalsA: 1, goalsB: 0 });
     expect([ev.clockMs, ev.timestampSeconds, ev.payload.playerNumber, ev.payload.durationSeconds]).toEqual([200_400, 200, 5, 120]);
+  });
+
+  it('@W2A-013 @W2A-015 die Regel „endet bei Gegentor“ der Strafe (ends_on_goal) kommt als payload.endsOnGoal an; ohne Angabe fehlt sie (Vorgabe „an“)', () => {
+    const sides = { sideA: NORD, sideB: SUED, goalsA: 1, goalsB: 0 };
+    const [aus] = toPublicRuntimeEvents(S7, [{ ...strafe5, type: 'TIME_PENALTY' as const, ends_on_goal: false }], sides);
+    const [an] = toPublicRuntimeEvents(S7, [{ ...strafe5, type: 'TIME_PENALTY' as const, ends_on_goal: true }], sides);
+    const [ohne] = toPublicRuntimeEvents(S7, [{ ...strafe5, type: 'TIME_PENALTY' as const }], sides);
+    expect([aus.payload.endsOnGoal, an.payload.endsOnGoal, 'endsOnGoal' in ohne.payload]).toEqual([false, true, false]);
   });
 
   it('Gegenbeispiel: ohne Spieluhr (null) gibt es keine erfundene Spieluhr in ms', () => {

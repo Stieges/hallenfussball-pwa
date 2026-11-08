@@ -161,3 +161,37 @@ describe('@ZM-192 Der Zeitstrafen-Kreis folgt dem Spielverlauf, ohne Kästen, St
     expect(alleKreise()).toHaveLength(0);
   });
 });
+
+describe('@ZM-192 Tor beendet die Strafe: am Monitor verschwindet der Kreis mit dem Gegentor', () => {
+  const tor = (punktet: string, clockMs: number): RuntimeMatchEvent => ({
+    id: `tor-${clockMs}`, type: 'GOAL', timestampSeconds: Math.floor(clockMs / 1000), clockMs, payload: { teamId: punktet }, scoreAfter: { home: 2, away: 0 },
+  });
+
+  it('@ZM-192 FC Nord erzielt 30 Sekunden nach der Strafe ein Tor und die Strafe endet dadurch: der Kreis ist weg', () => {
+    zeige({ events: [NR5, tor('team-nord', START_5 + 30_000)], liveState: uhr(START_5 + 40_000) });
+    expect(alleKreise()).toHaveLength(0);
+  });
+
+  it('@ZM-192 Gegenbeispiel: vor dem Tor steht der Kreis noch', () => {
+    zeige({ events: [NR5, tor('team-nord', START_5 + 30_000)], liveState: uhr(START_5 + 20_000) });
+    expect(kreise('away')).toHaveLength(1);
+  });
+
+  it('@W2A-015 Regel „endet bei Gegentor“ aus (im Eintrag der Strafe): der Kreis bleibt nach dem Tor', () => {
+    const aus = { ...NR5, payload: { ...NR5.payload, endsOnGoal: false } };
+    zeige({ events: [aus, tor('team-nord', START_5 + 30_000)], liveState: uhr(START_5 + 40_000) });
+    expect(kreise('away')).toHaveLength(1);
+  });
+});
+
+describe('@ZM-194 Ist der Live-Stand für Zuschauer aus, zeigt der Monitor keine Zeitstrafe', () => {
+  it('@ZM-194 Live-Stand aus und Ereignisse an: SV Süd hat eine laufende Strafe, an keinem Kasten ein Kreis', () => {
+    zeige({ events: [NR5], liveState: uhr(START_5 + 30_000) }, { publicLiveScore: false });
+    expect(alleKreise()).toHaveLength(0);
+  });
+
+  it('@ZM-194 gleiche Lage mit Live-Stand an: der Kreis steht', () => {
+    zeige({ events: [NR5], liveState: uhr(START_5 + 30_000) }, { publicLiveScore: true });
+    expect(kreise('away')).toHaveLength(1);
+  });
+});

@@ -8,15 +8,21 @@
  * - @ZM-184: auf der Zuschauer-Seite beim Gastteam „Zeitstrafe #5 · m:ss“, die Restzeit zählt herunter.
  * - @ZM-183: „Ereignisse je Spiel“ aus bzw. Kindermodus → an keinem Kasten ein Kreis, kein Hinweis; wieder an → Kreis zurück.
  * - Der Eintrag trägt die Dauer der Regel (`durationSeconds` 120): Grundlage der Restzeit ohne öffentliche Spielregel.
+ * - Zeitstrafe endet beim Gegentor (Befund C-ZEITSTRAFE-GEGENTOR-FEHLT): der Eintrag trägt auch die Regel (`endsOnGoal`), die
+ *   öffentliche Antwort gibt sie als `ends_on_goal` weiter (Migration 20261124_001).
+ *   @ZM-194: Live-Stand aus → weder Kreis noch Hinweis (die Tore fehlen, das Strafende wäre nicht ableitbar).
+ *   @ZM-192 / @W2A-013 / @SL-030: Tor für das Heimteam → der Kreis verschwindet am Monitor, der Hinweis auf der Zuschauer-Seite
+ *   auch, das Cockpit zeigt „darf sich ergänzen“. @SL-044: Tor zurückgenommen → der Kreis läuft mit der Restzeit weiter.
  * Frist wie monitor-sofort (F6): CI 2 s, lokal 1 s – für das Erscheinen nach dem Eintrag; Schalter wirken über die nächste
  * Abfrage (großzügiger Takt).
  */
 import type { BrowserContext, Page } from '@playwright/test';
 import { test, expect } from './fixtures';
 import { engineCupTarget, expectEngineMatchRunningUi, expectSeededEngineMatch, fetchEngineRows, newRoleContext, openCockpit } from './engineHelpers';
+import { getLocalServiceRoleClient } from './helpers';
 import { serviceRest } from './restAsRole';
 import { E2E_MONZEITSTRAFE_MONITOR_ID, E2E_MONZEITSTRAFE_SHARE_CODE, engineCupIds } from './testData';
-import { wartePicker } from '../helpers/cockpitNeu';
+import { schliesseTorAuswahl, wartePicker } from '../helpers/cockpitNeu';
 
 /** F6: CI prüft 2 s, lokal 1 s (Sofort-Kanal); +500 ms Puffer wie monitor-sofort. */
 const FRIST_MS = (process.env.CI ? 2_000 : 1_000) + 500;
@@ -43,6 +49,21 @@ async function zuschauerSeite(context: BrowserContext): Promise<Page> {
   // Die sichtbare Spielkarte ist ein Artikel; weitere [data-match-card]-Knoten der Seite sind verborgen
   await expect(page.getByRole('article').first()).toBeVisible({ timeout: 15_000 });
   return page;
+}
+
+interface OeffentlichesEreignis { type: string; team_id: string; clock_ms?: number; number?: number; duration_seconds?: number; ends_on_goal?: boolean }
+
+/** Die Ereignisse des Spiels, wie der Server sie Zuschauern ausliefert (`public_tournament`, ohne Anmeldung, nur der öffentliche Schlüssel). */
+async function oeffentlicheEreignisse(matchId: string): Promise<OeffentlichesEreignis[]> {
+  const { url, anonKey } = getLocalServiceRoleClient();
+  const res = await fetch(`${url}/rest/v1/rpc/public_tournament`, {
+    method: 'POST',
+    headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ share_code: E2E_MONZEITSTRAFE_SHARE_CODE, since_version: null }),
+  });
+  expect(res.status).toBe(200);
+  const antwort = await res.json() as { matches?: Array<{ id: string; events?: OeffentlichesEreignis[] }> };
+  return antwort.matches?.find((m) => m.id === matchId)?.events ?? [];
 }
 
 const sekunden = (text: string | null): number => {
@@ -91,6 +112,8 @@ test.describe('Zeitstrafe am Monitor und auf der Zuschauer-Seite (echte Server-A
       // Der Eintrag trägt die Dauer der Regel (2 Minuten): Monitor und Zuschauer rechnen damit
       const strafen = (await fetchEngineRows(ids.matchId)).filter((row) => row.type === 'TIME_PENALTY');
       expect(strafen.map((row) => [row.payload.playerNumber, row.payload.durationSeconds])).toEqual([[5, 120]]);
+      // Und die Regel „endet bei Gegentor“ (Vorgabe an) steht im Eintrag; die öffentliche Antwort gibt sie weiter
+      expect(strafen.map((row) => row.payload.endsOnGoal)).toEqual([true]);
 
       // Der Ring nimmt mit der Spielzeit ab, die Restzeit auf der Zuschauer-Seite zählt herunter
       const anteilVorher = Number(await kreisGast.getAttribute('data-anteil'));
@@ -123,6 +146,32 @@ test.describe('Zeitstrafe am Monitor und auf der Zuschauer-Seite (echte Server-A
       await patchConfig(ids.tournamentId, { hideScoresForPublic: false });
       await expect(kreisGast).toHaveCount(1, { timeout: SCHALTER_MS });
       await expect(hinweisGast).toHaveText(/^Zeitstrafe #5 · \d:\d{2}$/, { timeout: SCHALTER_MS });
+
+      // @ZM-194: Live-Stand aus (Ereignisse an) → die Tore fehlen in der Antwort: weder Kreis noch Hinweis; das Cockpit zeigt die Strafe weiter
+      await patchConfig(ids.tournamentId, { publicLiveScore: false });
+      await expect(monitor.locator('[data-zeitstrafe]')).toHaveCount(0, { timeout: SCHALTER_MS });
+      await expect(hinweisGast).toHaveCount(0, { timeout: SCHALTER_MS });
+      await expect(olli.page.getByTestId('strafen-spalte').or(olli.page.getByTestId('scoreboard')).getByText(/#5/).first()).toBeVisible();
+      await patchConfig(ids.tournamentId, { publicLiveScore: true });
+      await expect(kreisGast).toHaveCount(1, { timeout: SCHALTER_MS });
+
+      // @ZM-192 @W2A-013 @SL-030: Olli trägt ein Tor für das Heimteam ein → der Kreis verschwindet, der Hinweis auch
+      await olli.page.getByTestId('goal-button-home').click();
+      await schliesseTorAuswahl(olli.page);
+      await expect(kreisGast).toHaveCount(0, { timeout: FRIST_MS });
+      await expect(hinweisGast).toHaveCount(0, { timeout: SCHALTER_MS });
+      // Das Cockpit zeigt, dass sich das Gastteam ergänzen darf
+      await expect(olli.page.getByTestId('team-ergaenzen-away')).toHaveText('darf sich ergänzen');
+      // @ZM-180: die ECHTE Server-Antwort trägt Strafe (mit Regel) und Tor – nicht Testdaten im Client
+      const ereignisse = await oeffentlicheEreignisse(ids.matchId);
+      expect(ereignisse.map((e) => [e.type, e.team_id === ids.homeTeamId ? 'home' : 'away'])).toEqual([['TIME_PENALTY', 'away'], ['GOAL', 'home']]);
+      expect(ereignisse[0]).toMatchObject({ duration_seconds: 120, ends_on_goal: true, number: 5 });
+      expect(ereignisse[1].clock_ms).toBeGreaterThan(ereignisse[0].clock_ms ?? 0);
+
+      // @SL-044: Tor zurückgenommen → die Strafe läuft mit ihrer Restzeit weiter: Kreis zurück, Hinweis im Cockpit weg
+      await olli.page.getByTestId('match-undo-button').click();
+      await expect(kreisGast).toHaveCount(1, { timeout: FRIST_MS });
+      await expect(olli.page.getByTestId('team-ergaenzen-away')).toHaveCount(0);
     } finally {
       await olli.context.close();
       await halle.close();

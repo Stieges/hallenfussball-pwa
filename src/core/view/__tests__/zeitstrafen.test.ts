@@ -32,6 +32,17 @@ function strafe(teamId: string, nummer: number | undefined, clockMs: number, dau
   };
 }
 
+/** Tor (Eigentor schon dem Gegner gutgeschrieben, wie `toPublicRuntimeEvents` es liefert): `punktet` ist das Team, das den Punkt bekommt. */
+function tor(punktet: string, clockMs: number, id = `tor-${(laufend += 1)}`): RuntimeMatchEvent {
+  return { id, type: 'GOAL', timestampSeconds: Math.floor(clockMs / 1000), clockMs, payload: { teamId: punktet }, scoreAfter: { home: 1, away: 0 } };
+}
+
+/** Strafe mit der Regel „endet bei Gegentor“ im Eintrag (`ends_on_goal` der öffentlichen Antwort). */
+function strafeMitRegel(teamId: string, nummer: number, clockMs: number, endetBeiGegentor: boolean): RuntimeMatchEvent {
+  const e = strafe(teamId, nummer, clockMs);
+  return { ...e, payload: { ...e.payload, endsOnGoal: endetBeiGegentor } };
+}
+
 function gelb(teamId: string, nummer: number, clockMs: number): RuntimeMatchEvent {
   return { id: 'gelb', type: 'YELLOW_CARD', timestampSeconds: clockMs / 1000, clockMs, payload: { teamId, playerNumber: nummer, cardType: 'YELLOW' }, scoreAfter: { home: 1, away: 0 } };
 }
@@ -184,5 +195,70 @@ describe('@ZM-184 Auf der Zuschauer-Seite steht eine laufende Zeitstrafe mit Res
   it('@ZM-184 die Restzeit steht in ganzen Sekunden wie im Cockpit (abgerundet, m:ss)', () => {
     const z = rechne([strafe(SUED, 5, START_5)], uhr(START_5 + 37_400));
     expect(zeitstrafeRestText(z.away[0])).toBe('1:22');
+  });
+});
+
+describe('@ZM-192 Tor beendet die Strafe: der Kreis verschwindet mit dem Tor (Befund C-ZEITSTRAFE-GEGENTOR-FEHLT)', () => {
+  const nr5 = strafe(SUED, 5, START_5);
+  const nach = (ms: number) => uhr(START_5 + ms);
+
+  it('@ZM-192 FC Nord erzielt 30 Sekunden nach der Strafe ein Tor: kein Kreis mehr bei SV Süd', () => {
+    const z = rechne([nr5, tor(NORD, START_5 + 30_000)], nach(31_000));
+    expect(z.away).toEqual([]);
+  });
+
+  it('@ZM-192 vor dem Tor läuft der Kreis noch (Ereignisse nach der Uhr gelten nicht)', () => {
+    const z = rechne([nr5, tor(NORD, START_5 + 30_000)], nach(29_000));
+    expect(nummern(z.away)).toEqual([5]);
+  });
+
+  it('@W2A-014 / @SL-095 zwei Strafen bei SV Süd, ein Gegentor: nur der Kreis mit der kürzesten Restzeit verschwindet', () => {
+    const nr8 = strafe(SUED, 8, START_5 + 30_000);
+    const z = rechne([nr5, nr8, tor(NORD, START_5 + 60_000)], nach(61_000));
+    expect(nummern(z.away)).toEqual([8]);
+    expect(z.away[0].restMs).toBe(89_000);
+  });
+
+  it('@SL-092 ein Eigentor von SV Süd (Punkt für FC Nord) beendet die Strafe von SV Süd', () => {
+    expect(rechne([nr5, tor(NORD, START_5 + 30_000)], nach(40_000)).away).toEqual([]);
+  });
+
+  it('@W2A-015 Regel aus im Eintrag: das Gegentor ändert nichts, der Kreis läuft bis zum Ende der Dauer', () => {
+    const aus = strafeMitRegel(SUED, 5, START_5, false);
+    const z = rechne([aus, tor(NORD, START_5 + 30_000)], nach(60_000));
+    expect(nummern(z.away)).toEqual([5]);
+    expect(z.away[0].restMs).toBe(60_000);
+    expect(rechne([aus, tor(NORD, START_5 + 30_000)], nach(120_000)).away).toEqual([]);
+  });
+
+  it('@W2A-013 Regel an im Eintrag beendet die Strafe wie ohne Angabe', () => {
+    const an = strafeMitRegel(SUED, 5, START_5, true);
+    expect(rechne([an, tor(NORD, START_5 + 30_000)], nach(40_000)).away).toEqual([]);
+  });
+
+  it('@SL-094 / @W2A-018 beide Teams mit laufender Strafe: das Tor beendet keinen Kreis', () => {
+    const nord3 = strafe(NORD, 3, START_5 - 10_000);
+    const z = rechne([nord3, nr5, tor(NORD, START_5 + 30_000)], nach(40_000));
+    expect(nummern(z.home)).toEqual([3]);
+    expect(nummern(z.away)).toEqual([5]);
+  });
+
+  it('@SL-200 ein Tor in derselben Sekunde wie der Strafbeginn beendet den Kreis nicht, ein Tor danach schon', () => {
+    expect(nummern(rechne([nr5, tor(NORD, START_5)], nach(10_000)).away)).toEqual([5]);
+    expect(rechne([nr5, tor(NORD, START_5), tor(NORD, START_5 + 1_000)], nach(10_000)).away).toEqual([]);
+  });
+
+  it('ein Tor des bestraften Teams selbst beendet seinen Kreis nicht', () => {
+    expect(nummern(rechne([nr5, tor(SUED, START_5 + 30_000)], nach(40_000)).away)).toEqual([5]);
+  });
+
+  it('@SL-044 ein zurückgenommenes Tor fehlt in den öffentlichen Ereignissen: der Kreis läuft mit der Restzeit weiter', () => {
+    const z = rechne([nr5], nach(50_000));
+    expect(z.away[0].restMs).toBe(70_000);
+  });
+
+  it('@ZM-180 Folge: Gegentor im Ereignisverlauf + angehaltene Uhr ändert nichts am Ende (Uhr steht, Kreis weg)', () => {
+    const z = rechne([nr5, tor(NORD, START_5 + 30_000)], uhr(START_5 + 40_000, 'paused'));
+    expect(z.away).toEqual([]);
   });
 });

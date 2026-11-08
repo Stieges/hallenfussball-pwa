@@ -10,7 +10,7 @@
  */
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Tournament } from '../types/tournament';
+import { DEFAULT_MATCH_COCKPIT_SETTINGS, type Tournament } from '../types/tournament';
 import type { LiveMatch } from '../core/models/LiveMatch';
 import { MatchCommands, MatchCommandRejectedError, type CommandResult } from '../core/match/client';
 import type { MatchContext } from '../core/match';
@@ -45,6 +45,7 @@ export function useEngineCommandWiring(
   const { t } = useTranslation('cockpit');
   const { showWarning, showError } = useToast();
   const actor = useActorRole(tournament.id);
+  const penaltyEndsOnGoal = tournament.matchCockpitSettings?.penaltyEndsOnGoal ?? DEFAULT_MATCH_COCKPIT_SETTINGS.penaltyEndsOnGoal;
 
   const ctxByExternalId = useMemo(() => {
     const map = new Map<string, MatchContext>();
@@ -209,8 +210,9 @@ export function useEngineCommandWiring(
 
   const handleTimePenalty = useCallback(
     (matchId: string, teamId: string, options?: { playerNumber?: number; durationSeconds?: number; clockMs?: number; section?: number }) =>
-      runSimpleCommand(matchId, (cmd, ctx) => cmd.timePenalty(matchId, ctx, actor, teamId.toLowerCase(), options)),
-    [runSimpleCommand, actor],
+      // @W2A-013: die Regel „endet bei Gegentor“ gilt ab dem Eintrag der Strafe und steht im Eintrag
+      runSimpleCommand(matchId, (cmd, ctx) => cmd.timePenalty(matchId, ctx, actor, teamId.toLowerCase(), { ...options, endsOnGoal: penaltyEndsOnGoal })),
+    [runSimpleCommand, actor, penaltyEndsOnGoal],
   );
 
   const handleSubstitution = useCallback(

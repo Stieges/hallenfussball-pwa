@@ -8,6 +8,10 @@
  */
 import type { ClockState, MatchState, PenaltyRecord } from './types';
 
+const MS_PER_SECOND = 1000;
+/** Mindestdauer des Hinweises „darf sich ergänzen“ nach einem Gegentor (Spielzeit, @SL-030). */
+export const ERGAENZEN_HINWEIS_MIN_MS = 10_000;
+
 /** Spielzeit zum Wanduhr-Zeitpunkt `at`: bei laufender Uhr `elapsedMs + (at − anchorAt)`, sonst `elapsedMs`. */
 export function elapsedAt(clock: ClockState, at: number): number {
   if (!clock.running) {
@@ -21,9 +25,109 @@ export function penaltyRemainingMs(penalty: PenaltyRecord, elapsedMs: number): n
   return Math.max(0, penalty.durationMs - Math.max(0, elapsedMs - penalty.startMs));
 }
 
-/** Laufende Strafen bei Spielzeit `elapsedMs`: nicht zurückgenommen und Rest > 0, in Log-Reihenfolge. */
+/** Ein Tor für die Ableitung: wer gepunktet hat (Eigentor: der Gegner) und bei welcher Spielzeit. */
+export interface PenaltyGoal {
+  id: string;
+  scoringTeamId: string;
+  atMs: number;
+}
+
+/** Stand einer Strafe: Rest bei der betrachteten Spielzeit und das Tor, das sie beendet hat (sonst `null`). */
+export interface PenaltyStatus {
+  penalty: PenaltyRecord;
+  remainingMs: number;
+  endedByGoal: PenaltyGoal | null;
+}
+
+function remainingAtGoal(penalty: PenaltyRecord, goal: PenaltyGoal): number {
+  return penaltyRemainingMs(penalty, goal.atMs);
+}
+
+/**
+ * Das Ende einer Zeitstrafe durch ein Gegentor -- EINE Ableitung für Cockpit, Neuladen, andere Geräte, Monitor und
+ * Zuschauer (@W2A-013, @W2A-014, @W2A-015, @W2A-018, @SL-030, @SL-044, @SL-092, @SL-094, @SL-095, @SL-200).
+ *
+ * Aus den wirksamen Strafen und Toren (Zurückgenommenes hat der Aufrufer schon entfernt; deshalb läuft eine Strafe nach
+ * der Rücknahme des Tores mit ihrer Restzeit weiter, @SL-044) entsteht je Strafe, ob ein Tor sie beendet hat:
+ * - Ein Tor beendet nur Strafen des Teams, das es kassiert hat (ein Eigentor zählt für den Gegner, also gegen den Schützen).
+ * - Nur Tore NACH der Sekunde des Strafbeginns zählen (@SL-200), solange die Strafe noch lief.
+ * - Hat auch das Team, das trifft, eine laufende Strafe (gleiche Unterzahl), beendet das Tor nichts (@W2A-018, @SL-094).
+ * - Bei mehreren Strafen endet nur die mit der kürzesten Restzeit; bei Gleichstand die zuerst eingetragene (@W2A-014).
+ * - Eine Strafe mit `endsOnGoal === false` (Regel aus) endet nie durch ein Tor (@W2A-015); ohne Angabe gilt „an“.
+ * Tore nach `elapsedMs` bleiben außen vor.
+ */
+export function resolvePenalties(
+  penalties: readonly PenaltyRecord[],
+  goals: readonly PenaltyGoal[],
+  elapsedMs: number,
+): PenaltyStatus[] {
+  const endedBy = new Map<string, PenaltyGoal>();
+  const inOrder = goals
+    .map((goal, index) => ({ goal, index }))
+    .filter(({ goal }) => goal.atMs <= elapsedMs)
+    .sort((a, b) => a.goal.atMs - b.goal.atMs || a.index - b.index);
+  for (const { goal } of inOrder) {
+    const running = (penalty: PenaltyRecord): boolean =>
+      !endedBy.has(penalty.id) && penalty.startMs <= goal.atMs && remainingAtGoal(penalty, goal) > 0;
+    if (penalties.some((penalty) => penalty.teamId === goal.scoringTeamId && running(penalty))) {
+      continue;
+    }
+    const candidates = penalties.filter(
+      (penalty) =>
+        penalty.teamId !== goal.scoringTeamId &&
+        penalty.endsOnGoal !== false &&
+        running(penalty) &&
+        Math.floor(goal.atMs / MS_PER_SECOND) > Math.floor(penalty.startMs / MS_PER_SECOND),
+    );
+    let first: PenaltyRecord | undefined;
+    for (const candidate of candidates) {
+      if (first === undefined || remainingAtGoal(candidate, goal) < remainingAtGoal(first, goal)) {
+        first = candidate;
+      }
+    }
+    if (first !== undefined) {
+      endedBy.set(first.id, goal);
+    }
+  }
+  return penalties.map((penalty) => {
+    const endedByGoal = endedBy.get(penalty.id) ?? null;
+    return { penalty, endedByGoal, remainingMs: endedByGoal === null ? penaltyRemainingMs(penalty, elapsedMs) : 0 };
+  });
+}
+
+/** Laufende Strafen: Rest > 0 und nicht durch ein Tor beendet, in Log-Reihenfolge. */
+export function runningPenalties(statuses: readonly PenaltyStatus[]): PenaltyStatus[] {
+  return statuses.filter((status) => status.remainingMs > 0);
+}
+
+/**
+ * Teams, die sich nach einem Gegentor ergänzen dürfen (@SL-030, @SL-092): solange die Strafe ohne das Tor noch gelaufen
+ * wäre, mindestens `ERGAENZEN_HINWEIS_MIN_MS` nach dem Tor. Rein abgeleitet; ein zurückgenommenes Tor nimmt den Hinweis mit.
+ */
+export function ergaenzenTeams(statuses: readonly PenaltyStatus[], elapsedMs: number): string[] {
+  const teams = new Set<string>();
+  for (const { penalty, endedByGoal } of statuses) {
+    if (endedByGoal === null) {
+      continue;
+    }
+    const bis = Math.max(penalty.startMs + penalty.durationMs, endedByGoal.atMs + ERGAENZEN_HINWEIS_MIN_MS);
+    if (elapsedMs < bis) {
+      teams.add(penalty.teamId);
+    }
+  }
+  return [...teams];
+}
+
+/** Aus dem Engine-Zustand: wirksame (nicht zurückgenommene) Strafen und Tore -> Stand aller Strafen bei `elapsedMs`. */
+export function penaltyStatuses(state: MatchState, elapsedMs: number): PenaltyStatus[] {
+  const penalties = state.penalties.filter((penalty) => !state.retracted.includes(penalty.id));
+  const goals = state.goals
+    .filter((goal) => !state.retracted.includes(goal.id))
+    .map((goal) => ({ id: goal.id, scoringTeamId: goal.scoringTeamId, atMs: goal.atMs }));
+  return resolvePenalties(penalties, goals, elapsedMs);
+}
+
+/** Laufende Strafen bei Spielzeit `elapsedMs`: nicht zurückgenommen, nicht durch ein Gegentor beendet, Rest > 0, in Log-Reihenfolge. */
 export function activePenalties(state: MatchState, elapsedMs: number): PenaltyRecord[] {
-  return state.penalties.filter(
-    (penalty) => !state.retracted.includes(penalty.id) && penaltyRemainingMs(penalty, elapsedMs) > 0,
-  );
+  return runningPenalties(penaltyStatuses(state, elapsedMs)).map((status) => status.penalty);
 }

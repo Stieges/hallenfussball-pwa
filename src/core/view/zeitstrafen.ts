@@ -8,8 +8,8 @@
  * Verlängerung hinein. Nach dem Abpfiff und im Strafstoßschießen gibt es keine (@ZM-192). Kein React.
  */
 import { z } from 'zod';
-import { penaltyRemainingMs } from '../match/penalties';
-import { MatchStatusSchema, PhaseSchema } from '../match/types';
+import { resolvePenalties, runningPenalties, type PenaltyGoal } from '../match/penalties';
+import { MatchStatusSchema, PhaseSchema, type PenaltyRecord } from '../match/types';
 import { PENALTY_SECONDS_DEFAULT } from '../match/client/serverRules';
 import type { RuntimeMatchEvent } from '../../types/tournament';
 
@@ -72,17 +72,35 @@ export function laufendeZeitstrafen(eingabe: ZeitstrafenEingabe): OeffentlicheZe
   const laeuft = anker !== null;
   const gespieltMs = uhr.elapsedMs + (anker === null ? 0 : Math.max(0, eingabe.nowMs - anker));
   const ergebnis: OeffentlicheZeitstrafen = { home: [], away: [], steht: !laeuft };
+  const seiteOf = (teamId: string | undefined): 'home' | 'away' | undefined =>
+    teamId === undefined ? undefined : teamId === eingabe.homeId ? 'home' : teamId === eingabe.awayId ? 'away' : undefined;
+  const strafen: PenaltyRecord[] = [];
+  const tore: PenaltyGoal[] = [];
   for (const event of eingabe.events ?? []) {
     const teamId = event.payload.teamId;
-    const seite = teamId === eingabe.homeId ? 'home' : teamId === eingabe.awayId ? 'away' : undefined;
-    if (event.type !== 'TIME_PENALTY' || teamId === undefined || seite === undefined) {
+    const atMs = event.clockMs ?? event.timestampSeconds * MS_PER_SECOND;
+    if (teamId === undefined || seiteOf(teamId) === undefined) {
       continue;
     }
-    const dauerMs = dauerMsOf(event);
-    const startMs = event.clockMs ?? event.timestampSeconds * MS_PER_SECOND;
-    const restMs = penaltyRemainingMs({ id: event.id, teamId, startMs, durationMs: dauerMs }, gespieltMs);
-    if (restMs > 0) {
-      ergebnis[seite].push({ id: event.id, nummer: event.payload.playerNumber ?? null, restMs, dauerMs, anteil: Math.min(1, restMs / dauerMs) });
+    if (event.type === 'GOAL') {
+      // Eigentore sind hier schon dem Gegner gutgeschrieben (`toPublicRuntimeEvents`): `teamId` = wer punktet
+      tore.push({ id: event.id, scoringTeamId: teamId, atMs });
+    } else if (event.type === 'TIME_PENALTY') {
+      strafen.push({
+        id: event.id, teamId, startMs: atMs, durationMs: dauerMsOf(event),
+        ...(typeof event.payload.endsOnGoal === 'boolean' ? { endsOnGoal: event.payload.endsOnGoal } : {}),
+      });
+    }
+  }
+  // Das Ende durch ein Gegentor rechnet derselbe Kern wie das Cockpit (@ZM-192: der Kreis verschwindet mit dem Tor)
+  for (const { penalty, remainingMs } of runningPenalties(resolvePenalties(strafen, tore, gespieltMs))) {
+    const seite = seiteOf(penalty.teamId);
+    const nummer = eingabe.events?.find((event) => event.id === penalty.id)?.payload.playerNumber ?? null;
+    if (seite !== undefined) {
+      ergebnis[seite].push({
+        id: penalty.id, nummer, restMs: remainingMs, dauerMs: penalty.durationMs,
+        anteil: Math.min(1, remainingMs / penalty.durationMs),
+      });
     }
   }
   return ergebnis;

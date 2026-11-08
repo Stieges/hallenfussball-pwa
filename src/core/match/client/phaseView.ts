@@ -5,6 +5,8 @@
  */
 import {
   activePenalties,
+  ergaenzenTeams,
+  penaltyStatuses,
   continueBlockReason,
   elapsedAt,
   penaltyRemainingMs,
@@ -78,6 +80,8 @@ export interface PhaseView {
   /** Der spätere Eintrag, der die Untergrenze setzt, ist ein Tor (für den Hinweis im Korrektur-Dialog, B-08d). */
   earliestAdjustIsGoal: boolean;
   penalties: PhasePenalty[];
+  /** Teams, die sich nach einem Gegentor ergänzen dürfen (@SL-030, @SL-092); abgeleitet, leer nach dem Abpfiff. */
+  ergaenzenTeamIds: string[];
   shootout: PhaseShootout | null;
   clockAdjustments: PhaseClockAdjustment[];
   /** Entscheidungsart der K.-o.-Runde; im Gruppenspiel `null`. */
@@ -170,6 +174,7 @@ export function phaseViewOf(state: MatchState, ctx: MatchContext, serverNow: num
     earliestAdjustMs: earliestAdjustOf(state).ms,
     earliestAdjustIsGoal: earliestAdjustOf(state).isGoal,
     penalties: penaltiesOf(state, elapsedMs),
+    ergaenzenTeamIds: state.status === 'finished' ? [] : ergaenzenTeams(penaltyStatuses(state, elapsedMs), elapsedMs),
     shootout: shootoutOf(state, ctx),
     clockAdjustments: clockAdjustmentsOf(state),
     tiebreakMode: rules?.knockout ? state.tiebreakMode : null,

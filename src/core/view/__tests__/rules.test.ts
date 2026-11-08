@@ -56,6 +56,16 @@ describe('@ZM-102 @BM-032 Sichtbarkeitsmatrix viewRules (§ 2.4) vollständig', 
     expect(rules.results).toBe(true);
   });
 
+  it('@ZM-194 Live-Stand aus (publicLiveScore false): Zuschauer und Monitor haben keinen Live-Stand, Ergebnisse beendeter Spiele bleiben', () => {
+    const base = { hideScoresForPublic: false, hideRankingsForPublic: false };
+    for (const [audience, medium] of [['viewer', 'app'], ['screen', 'app']] as Array<[ViewAudience, ViewMedium]>) {
+      expect(viewRules({ ...base, publicLiveScore: false }, audience, medium)).toMatchObject({ liveScore: false, results: true });
+      expect(viewRules({ ...base, publicLiveScore: true }, audience, medium).liveScore).toBe(true);
+      expect(viewRules(base, audience, medium).liveScore).toBe(true);
+    }
+    expect(viewRules({ ...base, publicLiveScore: false }, 'organizer', 'app').liveScore).toBe(true);
+  });
+
   it('@BM-032 Gegenbeispiel (W4): „Nur Spielplan“ verbirgt die Gruppen-Herkunft nicht', () => {
     expect(viewRules({ hideScoresForPublic: false, hideRankingsForPublic: false }, 'viewer', 'print', 'planOnly').groupOrigin).toBe(true);
   });

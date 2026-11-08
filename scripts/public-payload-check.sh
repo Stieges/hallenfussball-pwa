@@ -52,6 +52,8 @@
 #     G15 Formpruefung ohne Bedingung "keine Zusatzschluessel" (in 20261118_007)   -> P rot (Review #413 M1)
 #     G16 Uhr-Block (U) fehlt (in 20261118_008, Fassung 007)                      -> P rot (@ZM-166, @ZM-137)
 #     G17 Uhr-Block laesst alle Cockpit-Einstellungen durch (in 20261118_008)      -> P rot (Datenschutz)
+#     G18 ends_on_goal fehlt (in 20261124_001)                                    -> P rot (@ZM-192)
+#     G19 ends_on_goal ohne Pruefung auf den Wahrheitswert (in 20261124_001)       -> P rot (Gegenbeispiel)
 #
 # Aendert NICHTS an der Produktionsdatenbank und nichts am lokalen Supabase-Stack -- eigene Wegwerf-Container und ein
 # eigenes Wegwerf-Netz, am Ende entfernt (trap). Harness-Hilfen liegen im Schema "harness".
@@ -77,12 +79,13 @@ ROLLBACK_FILE="$REPO_ROOT/supabase/rollbacks/20261117_104_public_payload_rollbac
 # Spaetere Migrationen, die public_view.config_for ersetzen (Proben laufen gegen den Stand MIT ihnen, in dieser Reihenfolge):
 #   20261118_007 basis = gespeicherter Fingerabdruck (C-PUBLIC-ENTSCHEIDUNG-BASIS-LEER);
 #   20261118_008 (U) Uhr-Art und Schlussphase aus matchCockpitSettings (C-MONITOR-UHRART-FEHLT) -- braucht 20261118_004
-#   (Kindermodus im Endstand, Fail-fast von 008), deshalb steht 004 davor.
+#   (Kindermodus im Endstand, Fail-fast von 008), deshalb steht 004 davor;
+#   20261124_001 public_view.match_events traegt ends_on_goal der Zeitstrafe (C-ZEITSTRAFE-GEGENTOR-FEHLT).
 # Fehlt eine Datei, laufen die Proben ohne sie (Gegenprobe: die zugehoerigen P-Pruefungen werden rot). Vor dem Rueckweg von
 # 20261117_104 werden sie in umgekehrter Reihenfolge ueber ihre Rueckwege zurueckgenommen.
 FOLLOWUP_FILES=()
 FOLLOWUP_ROLLBACKS=()
-for followup in 20261118_004_abschluss_nachzug 20261118_007_public_entscheidung_basis 20261118_008_monitor_endstand; do
+for followup in 20261118_004_abschluss_nachzug 20261118_007_public_entscheidung_basis 20261118_008_monitor_endstand 20261124_001_zeitstrafe_endet_bei_gegentor; do
   if [[ -f "$MIGRATIONS_DIR/$followup.sql" ]]; then
     FOLLOWUP_FILES+=("$MIGRATIONS_DIR/$followup.sql")
     FOLLOWUP_ROLLBACKS+=("$REPO_ROOT/supabase/rollbacks/${followup}_rollback.sql")
@@ -483,7 +486,7 @@ SQL
   ev AMEND "$(E s7-amend-yellow)" "{\"at\":3500,\"clockMs\":155000,\"targetId\":\"$(E s7-yellow-nord)\",\"payload\":{\"playerNumber\":14}}"
   ev GOAL "$(E s7-goal-sued)" "{\"at\":4000,\"clockMs\":170000,\"teamId\":\"$SV_SUED\",\"payload\":{\"playerNumber\":7}}"
   ev RETRACT "$(E s7-retract-sued)" "{\"at\":4500,\"clockMs\":175000,\"targetId\":\"$(E s7-goal-sued)\"}"
-  ev TIME_PENALTY "$(E s7-penalty-sued)" "{\"at\":5000,\"clockMs\":200000,\"teamId\":\"$SV_SUED\",\"payload\":{\"playerNumber\":5,\"durationSeconds\":120}}"
+  ev TIME_PENALTY "$(E s7-penalty-sued)" "{\"at\":5000,\"clockMs\":200000,\"teamId\":\"$SV_SUED\",\"payload\":{\"playerNumber\":5,\"durationSeconds\":120,\"endsOnGoal\":false}}"
   send "$U_TOM" "$S7"; need_accepted "Spiel 7 (Tom)" "accepted,accepted,accepted,accepted,accepted,accepted,accepted"
   ev MATCH_START "$(E s8-start)" '{"clockMs":null}'
   send "$U_OLLI" "$S8"; need_accepted "Spiel 8 Anpfiff" "accepted"
@@ -495,6 +498,11 @@ VALUES ('$S1', 1, 0, 2, 0, 'input_error', 'Tor falsch zugeordnet', '$U_MARIA');
 INSERT INTO public.match_events (id, match_id, type, team_id, payload, event_format, recorded_at, clock_ms, section, review_state,
                                  timestamp_seconds, score_home, score_away)
 VALUES ('$(E s8-review)', '$S8', 'GOAL', '$DJK_BERG', '{"playerNumber":66}', 1, now(), 60000, 1, 'pending', 60, 0, 1);
+-- Zeitstrafe mit unbrauchbarem Regel-Feld (kein Wahrheitswert) -- die Antwort laesst es weg (20261124_001).
+INSERT INTO public.match_events (id, match_id, type, team_id, payload, event_format, recorded_at, clock_ms, section,
+                                 timestamp_seconds, score_home, score_away)
+VALUES ('$(E s8-penalty-junk)', '$S8', 'TIME_PENALTY', '$DJK_BERG', '{"playerNumber":3,"durationSeconds":120,"endsOnGoal":"ja"}', 1, now(),
+        50000, 1, 50, 0, 0);
 -- Spiel 9 von 14:30 auf 14:40 verschoben (original_start schreibt erst B-26; bis dahin Harness).
 SQL
 }
@@ -537,9 +545,15 @@ run_probes() {
   check P "@ZM-001 Vorbelegung: Torschuetzen aus -> kein Schluessel scorers" "false" "$(jq 'has("scorers")' <<<"$full" 2>/dev/null)"
   check P "@ZM-001 Vorbelegung: Tabellen an -> Gleichstands-Entscheidung d1 da" "d1" \
     "$(jq -r '.tournament.config.standingDecisions[0].id // "fehlt"' <<<"$full" 2>/dev/null)"
-  check P "Ereignis-Form: nur id, type, team_id, section, clock_ms, number[, duration_seconds]" \
-    "clock_ms,id,number,section,team_id,type|clock_ms,id,number,section,team_id,type|clock_ms,duration_seconds,id,number,section,team_id,type" \
+  check P "Ereignis-Form: nur id, type, team_id, section, clock_ms, number[, duration_seconds][, ends_on_goal]" \
+    "clock_ms,id,number,section,team_id,type|clock_ms,id,number,section,team_id,type|clock_ms,duration_seconds,ends_on_goal,id,number,section,team_id,type" \
     "$(jq -r '[.events[]? | keys | join(",")] | join("|")' <<<"$m7" 2>/dev/null)"
+  # C-ZEITSTRAFE-GEGENTOR-FEHLT (20261124_001): die Regel "endet bei Gegentor" der Strafe geht als Wahrheitswert durch (@W2A-013,
+  # @W2A-015, @ZM-192); ein Wert, der keiner ist, faellt weg (Anzeige nimmt die Vorgabe "an").
+  check P "@ZM-192 Zeitstrafe SV Süd Nr. 5 traegt ends_on_goal=false (Regel beim Eintrag aus)" "false" \
+    "$(jq -r '[.events[]? | select(.type == "TIME_PENALTY")][0].ends_on_goal' <<<"$m7" 2>/dev/null)"
+  check P "@ZM-192 Gegenbeispiel: endsOnGoal kein Wahrheitswert -> Schluessel fehlt, Dauer bleibt" "false|120" \
+    "$(jq -r '[.events[]? | select(.type == "TIME_PENALTY")][0] | "\(has("ends_on_goal"))|\(.duration_seconds)"' <<<"$(match_of "$full" "$S8")" 2>/dev/null)"
   check P "@ZM-002 Tor FC Nord Nr. 9 in der 3. Minute (clock_ms 130000), Zeitstrafe SV Süd Nr. 5, 120 s" \
     "GOAL $FC_NORD 9 130000|TIME_PENALTY $SV_SUED 5 200000 120" \
     "$(jq -r '[.events[]? | select(.type != "YELLOW_CARD") | "\(.type) \(.team_id) \(.number) \(.clock_ms)\(if .duration_seconds then " \(.duration_seconds)" else "" end)"] | join("|")' <<<"$m7" 2>/dev/null)"
@@ -937,7 +951,14 @@ if [[ "$MODE" == "gegenprobe" ]]; then
   export G16_TO="  IF false THEN"
   export G17_FROM="       WHERE (s.key = 'clockMode' AND jsonb_typeof(s.value) = 'string')"
   export G17_TO="       WHERE true OR (s.key = 'clockMode' AND jsonb_typeof(s.value) = 'string')"
-  MUTS=(G1 G2 G3 G4 G5 G6 G7 G8 G9 G10 G11 G11B G12 G13 G14 G15 G16 G17)
+  # G18/G19 stehen nur in 20261124_001 (match_events): ends_on_goal fehlt bzw. ohne Pruefung auf den Wahrheitswert
+  export G18_FROM="           'ends_on_goal', CASE WHEN s.type = 'TIME_PENALTY' AND jsonb_typeof(s.payload -> 'endsOnGoal') = 'boolean'
+                                THEN s.payload -> 'endsOnGoal' END,
+"
+  export G18_TO=""
+  export G19_FROM=" AND jsonb_typeof(s.payload -> 'endsOnGoal') = 'boolean'"
+  export G19_TO=""
+  MUTS=(G1 G2 G3 G4 G5 G6 G7 G8 G9 G10 G11 G11B G12 G13 G14 G15 G16 G17 G18 G19)
   RED_TOTAL=0
   for mut in "${MUTS[@]}"; do
     start_container "$(tr 'A-Z' 'a-z' <<<"$mut")"

@@ -181,6 +181,8 @@ export interface PenaltyRecord {
   playerNumber?: number;
   startMs: number;
   durationMs: number;
+  /** Regel „endet bei Gegentor“ zum Zeitpunkt des Eintrags (@W2A-013); ohne Angabe gilt „an“ (ältere Einträge). */
+  endsOnGoal?: boolean;
 }
 
 export interface SubstitutionRecord {
@@ -233,6 +235,8 @@ export interface GoalRecord {
   id: string;
   scoringTeamId: string;
   phase: 'regular' | 'overtime';
+  /** Spieluhr (kumulativ, ms) beim Tor -- für das Ende einer Zeitstrafe durch Gegentor (@W2A-013). */
+  atMs: number;
   /** Log-Position bei Annahme (`state.nextSeq` vor dem Inkrement), für Ruling K9. */
   seq: number;
 }

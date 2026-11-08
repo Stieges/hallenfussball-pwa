@@ -176,6 +176,9 @@ function buildPayload(state: Pick<MatchState, 'details'>, event: EngineEvent, ct
       payload.penaltyDuration = durationSeconds;
       payload.durationSeconds = durationSeconds;
     }
+    if (typeof raw.endsOnGoal === 'boolean') {
+      payload.endsOnGoal = raw.endsOnGoal; // @W2A-013: Regel beim Eintrag der Strafe
+    }
   }
   if (isNumberArray(raw.playersIn)) {
     payload.playersIn = raw.playersIn;

@@ -81,9 +81,9 @@ describe('@ZM-184 Auf der Zuschauer-Seite steht eine laufende Zeitstrafe mit Res
 });
 
 describe('@ZM-184 Uhr der Karte aus der öffentlichen Antwort (useSpectatorClocks)', () => {
-  function spiel7(patch: Partial<Match>, hideScoresForPublic = false) {
+  function spiel7(patch: Partial<Match>, hideScoresForPublic = false, publicLiveScore?: boolean) {
     const match: Match = { id: 'match-7', matchNumber: 7, round: 1, field: 1, group: 'A', ...looseVs(NORD.id, SUED.id), scoreA: 1, scoreB: 0, matchStatus: 'running', ...patch };
-    const tournament = createMockTournament({ id: 'tour-1', teams: [{ ...NORD, group: 'A' }, { ...SUED, group: 'A' }], matches: [match], isPublic: true, shareCode: 'ABC123', hideScoresForPublic });
+    const tournament = createMockTournament({ id: 'tour-1', teams: [{ ...NORD, group: 'A' }, { ...SUED, group: 'A' }], matches: [match], isPublic: true, shareCode: 'ABC123', hideScoresForPublic, ...(publicLiveScore === undefined ? {} : { publicLiveScore }) });
     const view = buildTournamentView({ ...tournament, engineDetail: engineDetailFromMatches(tournament.matches, T0) }, { audience: 'viewer', medium: 'app', locale: 'de' });
     const { result } = renderHook(() => useSpectatorClocks(view, () => undefined, tournament.matches), {
       wrapper: ({ children }) => <NowSourceContext.Provider value={() => T0}>{children}</NowSourceContext.Provider>,
@@ -103,6 +103,22 @@ describe('@ZM-184 Uhr der Karte aus der öffentlichen Antwort (useSpectatorClock
 
   it('@ZM-184 Gegenbeispiel: ohne laufende Strafe trägt die Uhr keine Strafen', () => {
     const clock = spiel7({ events: [], liveState: uhr(START_5 + 37_000) });
+    expect(clock?.zeitstrafen).toBeUndefined();
+  });
+
+  it('@ZM-194 Live-Stand für Zuschauer aus (Ereignisse an): die Uhr der Karte trägt keine Strafe', () => {
+    const clock = spiel7({ events: [NR5], liveState: uhr(START_5 + 37_000) }, false, false);
+    expect(clock?.zeitstrafen).toBeUndefined();
+  });
+
+  it('@ZM-194 Gegenbeispiel: Live-Stand an, dieselbe Lage: die Strafe steht an der Uhr', () => {
+    const clock = spiel7({ events: [NR5], liveState: uhr(START_5 + 37_000) }, false, true);
+    expect(clock?.zeitstrafen?.away).toHaveLength(1);
+  });
+
+  it('@ZM-192 Gegentor beendet die Strafe: die Uhr der Karte trägt nach dem Tor von FC Nord keine Strafe mehr', () => {
+    const tor: RuntimeMatchEvent = { id: 'tor', type: 'GOAL', timestampSeconds: 230, clockMs: START_5 + 30_000, payload: { teamId: NORD.id }, scoreAfter: { home: 2, away: 0 } };
+    const clock = spiel7({ events: [NR5, tor], liveState: uhr(START_5 + 37_000) });
     expect(clock?.zeitstrafen).toBeUndefined();
   });
 });

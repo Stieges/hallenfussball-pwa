@@ -1238,12 +1238,14 @@ SELECT 'public-read-reshare-keeps-code',
 -- Mitgezogen fuer 20261119_001_gatherings.sql (A1 Veranstaltung): public_payload gibt gathering_code fuer Zuschauer heraus
 -- (vorher, Fassung 008: 764632d34bde5c11bfce47b6afbadb9f). Bis zum Einspielen von 20261119_001 laesst der Drift-Check die
 -- Zeile aus (Liste der noch nicht eingespielten Migrationen).
+-- Mitgezogen fuer 20261124_001_zeitstrafe_endet_bei_gegentor.sql (public_view.match_events traegt ends_on_goal der Zeitstrafe;
+-- vorher, Fassung 20261119_001: 7544746eff25aabcb93314c5c159b56a). Vor dem Einspielen live: "f" (Regime: erst einspielen, dann mergen).
 UNION ALL
 SELECT 'public-read-core-unchanged',
        coalesce((SELECT count(*) = 12
                         AND md5(string_agg(pg_get_functiondef(p.oid), E'\n'
                                            ORDER BY n.nspname, p.proname, pg_get_function_identity_arguments(p.oid)))
-                            = '7544746eff25aabcb93314c5c159b56a'
+                            = 'e1c9a897fac994492caffa7151912c61'
                    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
                   WHERE n.nspname = 'public_view'
                      OR p.oid IN (to_regprocedure('public.public_tournament(text,bigint)'),
