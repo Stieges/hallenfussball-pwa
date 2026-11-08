@@ -2,11 +2,16 @@
  * useCockpitClock (B-08b/c): die Uhr- und Abschnittsbefehle der Cockpit-Hülle an einer Stelle – Befehle
  * (`useEngineClockCommands`), Abschnittsende und Abpfiff von selbst (`useAutoSectionEnd`), Ton und Vibration
  * (`useWhistle`, einzige Quelle) und der Wiederanpfiff. Die Hülle verdrahtet nur noch das Ergebnis.
+ *
+ * Regel 3 Hallenton (H3b-3, @HT-009, @HT-033 Zeilen 2, 9, 10): Der Ton gilt nur, wenn `soundEnabled` und der Hallen-Lautsprecher
+ * dieses Geräts für das Feld nicht bereit ist (`cockpitTonSchweigtJetzt`, bei jedem Ton-Anlass neu gelesen; im Zweifel tönt das
+ * Cockpit). Die Vibration bleibt, ebenso der Ton des Abzeichens und die Testtöne im Cockpit (andere Wege).
  */
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useEngineClockCommands } from '../../../hooks/useEngineClockCommands';
 import { useMatchEngineContextOptional } from '../../../features/match-engine/useMatchEngineContext';
+import { cockpitTonSchweigtJetzt } from '../../../features/hallenton/cockpitTon';
 import type { MatchCockpitSettings } from '../../../types/tournament';
 import type { PhaseView } from '../../../core/match/client/phaseView';
 import type { LiveMatch } from '../types';
@@ -16,7 +21,7 @@ import type { NoticeKennung } from './useCockpitNotices';
 
 export interface CockpitClockArgs {
   tournamentId: string;
-  match: Pick<LiveMatch, 'id' | 'homeTeam' | 'awayTeam'> | null;
+  match: Pick<LiveMatch, 'id' | 'homeTeam' | 'awayTeam'> & Partial<Pick<LiveMatch, 'fieldId'>> | null;
   readOnly: boolean;
   settings: Pick<MatchCockpitSettings, 'soundEnabled' | 'hapticEnabled'>;
   playSound: () => void;
@@ -45,7 +50,13 @@ export function useCockpitClock(args: CockpitClockArgs): CockpitClock {
   const serverNow = useCallback(() => (engine ? engine.serverNow() : Date.now()), [engine]);
   const onError = useCallback((text: string) => { melde(2, text); }, [melde]);
   const commands = useEngineClockCommands({ tournamentId, match, onError });
-  const whistle = useWhistle({ soundEnabled: settings.soundEnabled, hapticEnabled: settings.hapticEnabled, play: playSound });
+  const feldId = match?.fieldId ?? null;
+  const tonAnlass = useCallback(() => {
+    if (!cockpitTonSchweigtJetzt(tournamentId, feldId)) {
+      playSound();
+    }
+  }, [tournamentId, feldId, playSound]);
+  const whistle = useWhistle({ soundEnabled: settings.soundEnabled, hapticEnabled: settings.hapticEnabled, play: tonAnlass });
 
   const onEnded = useCallback((ended: SectionEnded) => {
     whistle.pfeife(ended.eventId, ended.kind === 'match' ? 'spiel' : 'abschnitt');

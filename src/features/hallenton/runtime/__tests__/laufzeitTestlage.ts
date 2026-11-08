@@ -16,7 +16,7 @@ import { ManuelleUhr } from '../../../../test/hallenton/manuelleUhr';
 import type { FeldStandQuelle, FeldStandVerfuegbarkeit } from '../feldStand';
 import { erzeugeGeraeteSperre } from '../geraeteSperre';
 import { erzeugeHallLautsprecherLaufzeit, type HallLautsprecherLaufzeit } from '../HallLautsprecherLaufzeit';
-import { erzeugeHallTonSpieler, type HallTonSpieler, type Speicher } from '../hallTonSpieler';
+import { erzeugeHallTonSpieler, type HallTonSpieler, type Speicher, type TonWahl } from '../hallTonSpieler';
 import { erzeugeLautsprecherKanal, type LautsprecherKanal } from '../lautsprecherKanal';
 import { flush, Lage } from './feldStandTestlage';
 
@@ -88,6 +88,10 @@ export interface TabOptionen {
   serverVersatz?: () => number;
   /** Wirkung von `uhr.sync()` (z. B. Versatz zurücksetzen). */
   beiSync?: () => void;
+  /** Versatz der Geräteuhr des Kanals (H3b-3, k4-neu-1: Uhr springt zurück). */
+  kanalVersatz?: () => number;
+  /** Tonwahl lesen (H3b-3, k4-neu-2: „Anhören“ vor der Aktivierung). */
+  leseTonWahl?: () => Promise<Record<'abpfiff' | 'halbzeit', TonWahl>>;
 }
 
 export class Tab {
@@ -118,7 +122,10 @@ export class Tab {
       ladeDaten: (url) => Promise.resolve(tonDaten(DAUER[url] ?? 255)),
       speicher: o.speicher ?? null,
     });
-    this.kanal = erzeugeLautsprecherKanal({ speicher: this.geraet.speicher, kanal: this.geraet.kanal(), tabId: `tab${name}`, jetzt: () => this.uhr.jetzt() });
+    const kanalVersatz = o.kanalVersatz ?? (() => 0);
+    this.kanal = erzeugeLautsprecherKanal({
+      speicher: this.geraet.speicher, kanal: this.geraet.kanal(), tabId: `tab${name}`, jetzt: () => this.uhr.jetzt() + kanalVersatz(),
+    });
     this.ffs = new FalscherFeldStand(this.uhr);
     const felder = o.felder ?? [1];
     this.lage = o.feldStand === 'echt' ? new Lage({ felder, uhr: this.uhr }) : null;
@@ -139,6 +146,7 @@ export class Tab {
       wurdeVerworfen: o.wurdeVerworfen ?? false,
       tonWahl: { abpfiff: 'horn-2', halbzeit: 'horn-3' },
       gedaechtnisSpeicher: this.geraet.speicher,
+      leseTonWahl: o.leseTonWahl,
     });
   }
 

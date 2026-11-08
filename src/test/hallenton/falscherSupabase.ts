@@ -25,6 +25,8 @@ export class FalscherSupabase {
   fehlerCode: string | null = null;
   /** Tabellen, deren Abfragen scheitern, während das Netz sonst geht (z. B. nur `match_events`). */
   readonly tabellenFehler = new Set<string>();
+  /** Funktionen, deren Antwort nie kommt (H3b-3 Fixrunde 1: z. B. `hall_speaker_release` im schwachen WLAN). */
+  readonly haengendeRpcs = new Set<string>();
   readonly abfragen: Abfrage[] = [];
   rpcAufrufe = 0;
 
@@ -132,7 +134,7 @@ export class FalscherSupabase {
             resolve({ data: null, error: { code: this.fehlerCode, message: 'TOURNAMENT_FINISHED' } });
           } else if (this.netz === 'fehler' || this.tabellenFehler.has(abfrage.tabelle)) {
             reject(new TypeError('Failed to fetch'));
-          } else if (this.netz === 'haengt') {
+          } else if (this.netz === 'haengt' || this.haengendeRpcs.has(abfrage.tabelle.replace(/^rpc:/, ''))) {
             signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
           } else {
             resolve(antwort());
