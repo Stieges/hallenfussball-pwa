@@ -17,6 +17,7 @@ import { test, expect } from './fixtures';
 import { getLocalServiceRoleClient, gotoLogin, newFreshContext, safeCleanup } from './helpers';
 import { readCachedTournamentsInPage } from './deviceStore';
 import { E2E_DRAFT_CUP_ID, E2E_PUBLIC_CUP_ID, E2E_RELEASE_CUP_ID, E2E_RELEASE_CUP_TITLE, E2E_TEST_PASSWORD } from './testData';
+import { neuLaden } from '../helpers/neuLaden';
 
 const CUP = E2E_RELEASE_CUP_ID;
 /** Entwurf: hier bietet die Karte dem Eigentümer „Löschen“ an (ein festgelegtes Turnier ohne geladene Spiele nie, @LZ-003 F1). */
@@ -113,7 +114,7 @@ test.describe('CA-5 Startseite der Co-Admin', () => {
 
       // @HE-085: Betreiber trägt Maria ein → nach dem Neuladen Karte mit „Co-Admin“
       await enterCoAdmin(CUP, userId, before.owner_id);
-      await page.reload();
+      await neuLaden(page);
       await openSectionOfCard(page, card(CUP));
       const cupCard = page.locator(card(CUP));
       await expect(cupCard).toBeVisible({ timeout: 15000 });
@@ -140,7 +141,7 @@ test.describe('CA-5 Startseite der Co-Admin', () => {
       // @HE-087: Betreiber trägt aus → nach dem Neuladen nicht mehr da, auch nicht als lokale Kopie
       await removeCoAdmin(CUP, userId);
       await page.goto('/#/');
-      await page.reload();
+      await neuLaden(page);
       await expect(page.locator('[data-testid="section-draft"]')).toBeVisible({ timeout: 15000 });
       await expect(page.locator(card(CUP))).toHaveCount(0);
       // kein Abschnitt (Heute, Kommende Turniere) enthält die Karte mehr

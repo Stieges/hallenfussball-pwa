@@ -10,6 +10,7 @@ import type { Locator, Page } from '@playwright/test';
 import { test, expect } from '@playwright/test';
 // @ts-expect-error – .mjs ohne Typen; derselbe Lader wie bei `npm run visual:metrics --saat`
 import { installiereSaat, leseSaat } from '../../scripts/visual-metrics/saat/lader.mjs';
+import { neuLaden } from './helpers/neuLaden';
 
 const BILDER = process.env.RECHT_B_BILDER;
 const TURNIER = 'hallencup-messlauf';
@@ -151,7 +152,7 @@ test.describe('@RE-002 Einstellungen: Schalter „Fehlerberichte senden“', () 
     await bild(page, 'einstellungen-schalter-an-handy-360');
     await schalter.click();
     await expect(schalter).toHaveAttribute('aria-checked', 'false');
-    await page.reload();
+    await neuLaden(page);
     await expect(page.getByTestId('settings-error-reports-toggle')).toHaveAttribute('aria-checked', 'false');
     await page.getByTestId('settings-error-reports-toggle').scrollIntoViewIfNeeded();
     await bild(page, 'einstellungen-schalter-aus-handy-360');

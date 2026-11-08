@@ -8,6 +8,7 @@
  */
 import type { BrowserContext, Page } from '@playwright/test';
 import { test, expect, type TestOptions } from '../helpers/test-fixtures';
+import { neuLaden } from '../helpers/neuLaden';
 
 const TID = 'ms2-turnier';
 const ID = (n: number): string => `00000000-0000-4000-8000-0000000000c${n}`;
@@ -257,7 +258,7 @@ test.describe('Adressparameter ?rand= (R-MS-3)', () => {
     expect((await messe(page, 0, 0)).links).toBe(0);
     // dieselbe Adresse ohne Parameter, neu geladen
     await oeffne(page, 'custom-text');
-    await page.reload();
+    await neuLaden(page);
     await page.locator('[data-testid="monitor-slide"]').waitFor();
     expect((await messe(page, 0, 0)).links).toBe(102.4);
     const speicher = await page.evaluate(async () => {

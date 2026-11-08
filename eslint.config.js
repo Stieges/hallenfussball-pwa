@@ -25,6 +25,27 @@ const localRulesPlugin = {
   },
 };
 
+/**
+ * Supabase-spezifische Guardrails (no-restricted-syntax): blockt `as any`-Bypässe der typisierten Client-API
+ * (eingeführt nach PR #137 — Sanitizer-Bypass via untyped .from()). HP-5d ergänzt um
+ * localStorage/sessionStorage.setItem mit credential-artigen Keys. Als Konstante, weil der E2E-Block unten die Regel
+ * um eine Auswahl erweitert (ein späterer Block ersetzt die Optionen, statt sie zu ergänzen).
+ */
+const SUPABASE_RESTRICTED_SYNTAX = [
+  {
+    selector: "TSAsExpression[expression.name='supabase'][typeAnnotation.type='TSAnyKeyword']",
+    message: 'Avoid `supabase as any`. Use the typed client (Database generic) or extend the mapper layer.',
+  },
+  {
+    selector: "MemberExpression[object.type='TSAsExpression'][object.typeAnnotation.type='TSAnyKeyword'][property.name='from']",
+    message: 'Avoid `(x as any).from(...)`. Use the typed Supabase client to keep row types in sync.',
+  },
+  {
+    selector: "CallExpression[callee.object.name=/^(localStorage|sessionStorage)$/][callee.property.name='setItem'][arguments.0.type='Literal'][arguments.0.value=/token|jwt|password|secret|credential/i]",
+    message: 'Do not persist credential-like keys (token/jwt/password/secret/credential) to localStorage/sessionStorage. Use a secure transport (HttpOnly cookies / Supabase auth-helper) instead.',
+  },
+];
+
 export default tseslint.config(
   // Global ignores
   {
@@ -170,23 +191,8 @@ export default tseslint.config(
       '@typescript-eslint/no-useless-constructor': 'warn',
       '@typescript-eslint/consistent-type-definitions': 'off',
 
-      // Supabase-spezifische Guardrails: blockt `as any`-Bypässe der typisierten Client-API
-      // (eingeführt nach PR #137 — Sanitizer-Bypass via untyped .from()).
-      // HP-5d ergänzt um localStorage/sessionStorage.setItem mit credential-artigen Keys.
-      'no-restricted-syntax': ['error',
-        {
-          selector: "TSAsExpression[expression.name='supabase'][typeAnnotation.type='TSAnyKeyword']",
-          message: 'Avoid `supabase as any`. Use the typed client (Database generic) or extend the mapper layer.',
-        },
-        {
-          selector: "MemberExpression[object.type='TSAsExpression'][object.typeAnnotation.type='TSAnyKeyword'][property.name='from']",
-          message: 'Avoid `(x as any).from(...)`. Use the typed Supabase client to keep row types in sync.',
-        },
-        {
-          selector: "CallExpression[callee.object.name=/^(localStorage|sessionStorage)$/][callee.property.name='setItem'][arguments.0.type='Literal'][arguments.0.value=/token|jwt|password|secret|credential/i]",
-          message: 'Do not persist credential-like keys (token/jwt/password/secret/credential) to localStorage/sessionStorage. Use a secure transport (HttpOnly cookies / Supabase auth-helper) instead.',
-        },
-      ],
+      // Supabase-Guardrails: siehe SUPABASE_RESTRICTED_SYNTAX oben.
+      'no-restricted-syntax': ['error', ...SUPABASE_RESTRICTED_SYNTAX],
 
       // Layering-Guardrail (Clean-Architecture-Boundaries):
       // Spezifischere Overrides unten setzen Layer-Boundaries pro Folder
@@ -251,6 +257,16 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-return': 'off',
       '@typescript-eslint/restrict-template-expressions': 'off',
       'no-console': 'off',
+      // E2E: Neuladen nur über neuLaden (tests/e2e/helpers/neuLaden.ts). Ein direktes `<seite>.reload()` direkt nach dem
+      // Schließen eines Dialogs bricht ab (net::ERR_ABORTED), weil der Dialog seinen History-Eintrag per history.back()
+      // abräumt (useFocusTrap, @OB-012); neuLaden wartet, bis diese Navigation durch ist.
+      'no-restricted-syntax': ['error',
+        ...SUPABASE_RESTRICTED_SYNTAX,
+        {
+          selector: "CallExpression[callee.type='MemberExpression'][callee.property.name='reload'][callee.object.name!='location'][callee.object.property.name!='location']",
+          message: 'Kein direktes page.reload() in E2E-Tests: neuLaden(page) aus tests/e2e/helpers/neuLaden.ts verwenden (wartet, bis keine Navigation der App mehr ansteht).',
+        },
+      ],
     },
   },
 );
