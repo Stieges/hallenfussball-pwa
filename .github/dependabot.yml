@@ -34,7 +34,9 @@ updates:
   # GitHub Actions aktuell halten (die CI warnt vor auslaufendem Node 20 in
   # actions/checkout@v4 und supabase/setup-cli@v1).
   - package-ecosystem: "github-actions"
-    directory: "/"
+    directories:
+      - "/"
+      - "/.github/actions/setup-supabase-cli"
     schedule:
       interval: "weekly"
       day: "monday"
