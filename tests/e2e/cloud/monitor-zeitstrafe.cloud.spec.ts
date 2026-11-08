@@ -110,11 +110,14 @@ test.describe('Zeitstrafe am Monitor und auf der Zuschauer-Seite (echte Server-A
       await expect(monitor.locator('[data-zeitstrafe]')).toHaveCount(0, { timeout: SCHALTER_MS });
       await expect(hinweisGast).toHaveCount(0, { timeout: SCHALTER_MS });
 
-      // @ZM-183: Kindermodus (Ereignisse wieder an) → ebenfalls kein Kreis
-      await patchConfig(ids.tournamentId, { publicEvents: true, hideScoresForPublic: true });
-      await monitor.waitForTimeout(SCHALTER_MS / 2);
-      await expect(monitor.locator('[data-zeitstrafe]')).toHaveCount(0);
-      await expect(hinweisGast).toHaveCount(0);
+      // Ereignisse wieder an → der Kreis ist zurück (erst dann sagt „kein Kreis“ im Kindermodus etwas aus)
+      await patchConfig(ids.tournamentId, { publicEvents: true });
+      await expect(kreisGast).toHaveCount(1, { timeout: SCHALTER_MS });
+
+      // @ZM-183: Kindermodus (Ereignisse bleiben an) → der Kreis verschwindet wieder, kein Hinweis beim Team
+      await patchConfig(ids.tournamentId, { hideScoresForPublic: true });
+      await expect(monitor.locator('[data-zeitstrafe]')).toHaveCount(0, { timeout: SCHALTER_MS });
+      await expect(hinweisGast).toHaveCount(0, { timeout: SCHALTER_MS });
 
       // Gegenprobe: wieder normal → der Kreis ist zurück (der Schalter war die Ursache, die Strafe läuft noch)
       await patchConfig(ids.tournamentId, { hideScoresForPublic: false });
