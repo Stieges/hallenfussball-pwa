@@ -37,8 +37,10 @@ const marke = (page: Page) => page.getByTestId('scoreboard').getByText(/^#5 [01]
   .or(page.getByRole('listitem', { name: /, #5, Restzeit [01]:\d{2}$/ }));
 
 async function torFuerHeim(page: Page): Promise<void> {
-  // mindestens eine volle Sekunde nach dem Strafbeginn (@SL-200: dieselbe Sekunde zählt nicht)
-  await page.waitForTimeout(1_200);
+  // @SL-200: ein Tor in derselben Sekunde wie der Strafbeginn zählt nicht – also warten, bis die Uhranzeige weitergesprungen ist
+  const tafel = page.getByTestId('scoreboard');
+  const uhrVorher = await tafel.innerText();
+  await expect.poll(async () => tafel.innerText(), { timeout: 5_000 }).not.toBe(uhrVorher);
   await page.getByTestId('goal-button-home').click();
   await schliesseTorAuswahl(page);
 }

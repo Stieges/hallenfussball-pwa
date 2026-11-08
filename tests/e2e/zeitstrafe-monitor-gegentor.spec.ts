@@ -10,6 +10,8 @@ import { mkdirSync } from 'node:fs';
 import { test, expect } from '@playwright/test';
 
 const BILDER = process.env.ZSG_BILDER ?? '';
+// Der Prüfstand liegt nur am Dev-Server; der gebaute Stand der CI (CI_E2E_USE_PREVIEW) hat die Seite nicht (wie alle-tabellen-monitor.spec.ts)
+const imGebautenStand = !!process.env.CI_E2E_USE_PREVIEW;
 const kreise = '[data-testid="live-penalties-away"] [data-zeitstrafe]';
 
 async function zeige(page: import('@playwright/test').Page, szene: string, bild?: string): Promise<void> {
@@ -23,6 +25,8 @@ async function zeige(page: import('@playwright/test').Page, szene: string, bild?
 }
 
 test.describe('Zeitstrafe am Monitor endet beim Gegentor (@ZM-192, @W2A-015, @ZM-194)', () => {
+  test.skip(imGebautenStand, 'Prüfstand nur am Dev-Server (gehört nicht in den Build)');
+
   test.beforeEach(async ({ browserName: _b }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop', 'Monitor 1920×1080: ein Projekt genügt');
   });

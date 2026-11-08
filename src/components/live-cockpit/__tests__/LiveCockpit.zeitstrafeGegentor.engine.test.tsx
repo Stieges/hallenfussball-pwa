@@ -2,7 +2,7 @@
  * Zeitstrafe endet beim Gegentor im Cockpit, über die echte Engine (Befund C-ZEITSTRAFE-GEGENTOR-FEHLT).
  * Record Spiel leiten: @SL-030 (Gegentor beendet die Strafe, das Cockpit zeigt „darf sich ergänzen“), @SL-092 (Eigentor),
  * @SL-044 (Rücknahme des Tores: die Strafe läuft weiter), @SL-094 (gleiche Unterzahl: Tor beendet nichts), @SL-200 (Tor in
- * derselben Sekunde); Record Regelinhalte: @W2A-013, @W2A-015 (Regel aus: Strafe läuft weiter).
+ * derselben Sekunde), @SL-204 (Hinweis 10 Sekunden); @W2A-079 (Regel gilt ab Eintrag der Strafe); Record Regelinhalte: @W2A-013, @W2A-015 (Regel aus: Strafe läuft weiter).
  * FC Alpha (Heim) – SV Beta (Gast); die Strafe steht bei SV Beta.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -164,5 +164,58 @@ describe('@SL-200 Ein Tor in derselben Sekunde wie der Strafbeginn beendet die Z
     await torFuer(user, 'home', '7', 1);
     expect(anzahl()).toBe(1);
     expect(screen.queryByTestId('team-ergaenzen-away')).toBeNull();
+  });
+});
+
+describe('@SL-204 Der Hinweis „darf sich ergänzen“ steht nach dem Gegentor 10 Sekunden Spielzeit', () => {
+  it('@SL-204 Strafe seit 2:00, Tor bei 2:40: der Hinweis steht, bei 2:50 nicht mehr', async () => {
+    const user = userEvent.setup();
+    render(<Harness turnier={REGEL_AN} />);
+    await starte(user);
+    zu(120_000);
+    await strafeFuer(user, 'away', '5', 1);
+    zu(160_000);
+    await torFuer(user, 'home', '7', 1);
+    await waitFor(() => expect(screen.getByTestId('team-ergaenzen-away')).toBeInTheDocument());
+    zu(169_000);
+    await waitFor(() => expect(screen.getByTestId('team-ergaenzen-away')).toBeInTheDocument());
+    zu(171_000);
+    await waitFor(() => expect(screen.queryByTestId('team-ergaenzen-away')).toBeNull());
+  });
+
+  it('@SL-204 bekommt SV Beta vorher eine neue Zeitstrafe, verschwindet der Hinweis sofort', async () => {
+    const user = userEvent.setup();
+    render(<Harness turnier={REGEL_AN} />);
+    await starte(user);
+    zu(120_000);
+    await strafeFuer(user, 'away', '5', 1);
+    zu(160_000);
+    await torFuer(user, 'home', '7', 1);
+    await waitFor(() => expect(screen.getByTestId('team-ergaenzen-away')).toBeInTheDocument());
+    zu(163_000);
+    await strafeFuer(user, 'away', '8', 2);
+    await waitFor(() => expect(screen.queryByTestId('team-ergaenzen-away')).toBeNull());
+    expect(anzahl()).toBe(1);
+  });
+});
+
+describe('@W2A-079 Die Gegentor-Regel gilt für Zeitstrafen ab ihrem Eintrag', () => {
+  it('@W2A-079 Strafe seit 3:00 (Regel an), Regel bei 3:30 aus, Strafe bei 3:35, Tor bei 3:40: nur die ältere endet', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<Harness turnier={REGEL_AN} />);
+    await starte(user);
+    zu(180_000);
+    await strafeFuer(user, 'away', '5', 1);
+    zu(210_000);
+    rerender(<Harness turnier={REGEL_AUS} />);
+    zu(215_000);
+    await strafeFuer(user, 'away', '8', 2);
+    const strafen = eintraegeImLog().filter((e) => e.type === 'TIME_PENALTY');
+    expect(strafen.map((e) => e.payload.endsOnGoal)).toEqual([true, false]);
+    zu(220_000);
+    await torFuer(user, 'home', '7', 1);
+    await waitFor(() => expect(anzahl()).toBe(1));
+    expect(screen.getByTestId('strafen-spalte')).toHaveTextContent('#8');
+    expect(screen.getByTestId('strafen-spalte')).not.toHaveTextContent('#5');
   });
 });

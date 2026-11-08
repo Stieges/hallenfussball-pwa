@@ -261,4 +261,26 @@ describe('@ZM-192 Tor beendet die Strafe: der Kreis verschwindet mit dem Tor (Be
     const z = rechne([nr5, tor(NORD, START_5 + 30_000)], uhr(START_5 + 40_000, 'paused'));
     expect(z.away).toEqual([]);
   });
+
+  it('@SL-203 ungleiche Unterzahl: FC Nord hat zwei Kreise, SV Süd einen; ein Tor von SV Süd beendet den Kreis von FC Nord mit der kürzesten Restzeit', () => {
+    const nord3 = strafe(NORD, 3, START_5 - 10_000);
+    const nord4 = strafe(NORD, 4, START_5 + 5_000);
+    const z = rechne([nord3, nord4, nr5, tor(SUED, START_5 + 30_000)], nach(40_000));
+    expect(nummern(z.home)).toEqual([4]);
+    expect(nummern(z.away)).toEqual([5]);
+  });
+
+  it('@SL-203 Gegenbeispiel: danach ein weiteres Tor von SV Süd beendet nichts mehr (gleiche Unterzahl)', () => {
+    const nord3 = strafe(NORD, 3, START_5 - 10_000);
+    const nord4 = strafe(NORD, 4, START_5 + 5_000);
+    const z = rechne([nord3, nord4, nr5, tor(SUED, START_5 + 30_000), tor(SUED, START_5 + 45_000)], nach(50_000));
+    expect(nummern(z.home)).toEqual([4]);
+    expect(nummern(z.away)).toEqual([5]);
+  });
+
+  it('@SL-205 zwei Strafen mit gleicher Restzeit: der Kreis der zuerst eingetragenen verschwindet', () => {
+    const erste = strafe(SUED, 5, START_5);
+    const zweite = strafe(SUED, 8, START_5);
+    expect(nummern(rechne([erste, zweite, tor(NORD, START_5 + 30_000)], nach(40_000)).away)).toEqual([8]);
+  });
 });

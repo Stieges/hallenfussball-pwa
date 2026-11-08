@@ -11,6 +11,8 @@ export interface CheckboxFieldProps {
   label: string;
   /** Erklärung unter der Beschriftung, etwa wer die Angaben sieht */
   hint?: string;
+  /** Gesperrt (etwa Regel nur für die Turnierleitung): nicht anklickbar, Zeiger ohne Hand */
+  disabled?: boolean;
   'data-testid'?: string;
 }
 
@@ -45,14 +47,15 @@ const hintStyle: CSSProperties = {
   fontSize: cssVars.fontSizes.xs,
 };
 
-export function CheckboxField({ checked, onChange, label, hint, 'data-testid': testId }: CheckboxFieldProps) {
+export function CheckboxField({ checked, onChange, label, hint, disabled = false, 'data-testid': testId }: CheckboxFieldProps) {
   return (
-    <label style={rowStyle}>
+    <label style={disabled ? { ...rowStyle, cursor: 'default' } : rowStyle}>
       <input
         type="checkbox"
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
-        style={boxStyle}
+        disabled={disabled}
+        style={disabled ? { ...boxStyle, cursor: 'default' } : boxStyle}
         data-testid={testId}
       />
       <span>

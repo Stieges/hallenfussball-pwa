@@ -333,6 +333,8 @@
     "timePenalty": "Time penalty",
     "timePenaltyDuration": "Time penalty duration",
     "timePenaltyDurationDesc": "Game rule – applies from the next kick-off",
+    "penaltyEndsOnGoal": "Time penalty ends on a goal against",
+    "penaltyEndsOnGoalDesc": "Game rule – applies to time penalties from the moment they are entered; the team may then bring on a player",
     "penaltyShootout": "$t(sport:events.penaltyShootout)",
     "penaltyShooters": "Number of shooters",
     "penaltyShootersDesc": "Shooters per team in the penalty shootout",

@@ -174,7 +174,7 @@ export function phaseViewOf(state: MatchState, ctx: MatchContext, serverNow: num
     earliestAdjustMs: earliestAdjustOf(state).ms,
     earliestAdjustIsGoal: earliestAdjustOf(state).isGoal,
     penalties: penaltiesOf(state, elapsedMs),
-    ergaenzenTeamIds: state.status === 'finished' ? [] : ergaenzenTeams(penaltyStatuses(state, elapsedMs), elapsedMs),
+    ergaenzenTeamIds: ergaenzenOf(state, elapsedMs),
     shootout: shootoutOf(state, ctx),
     clockAdjustments: clockAdjustmentsOf(state),
     tiebreakMode: rules?.knockout ? state.tiebreakMode : null,
@@ -240,6 +240,14 @@ function earliestAdjustOf(state: MatchState, ohne: ReadonlySet<string> = NON_ENT
     return { ms: 0, isGoal: false };
   }
   return { ms: Math.max(0, latest.clockMs - sectionBasisOf(state)), isGoal: latest.type === 'GOAL' };
+}
+
+/** Teams mit Hinweis „darf sich ergänzen“ (@SL-204): nur im laufenden oder angehaltenen Abschnitt, nie in der Pause oder im Strafstoßschießen. */
+function ergaenzenOf(state: MatchState, elapsedMs: number): string[] {
+  if ((state.status !== 'running' && state.status !== 'paused') || state.phase === 'shootout') {
+    return [];
+  }
+  return ergaenzenTeams(penaltyStatuses(state, elapsedMs), elapsedMs, sectionBasisOf(state));
 }
 
 /** Laufende Strafen; bei beendetem Spiel keine (@SL-097). */
