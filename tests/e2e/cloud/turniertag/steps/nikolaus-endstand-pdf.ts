@@ -14,10 +14,11 @@ import { getRows, vorbedingung } from './shared';
 import { restAsRole, serviceRest } from '../../restAsRole';
 import { fetchUserIdByEmail } from '../../engineHelpers';
 import { E2E_USERS } from '../../testData';
+import { erwarteteFussnote, erwarteteZeilen, plaetzeImPdf, schuetzenImPdf, spielerOf, type GespeicherterSchuetze } from './endstandPdfLesen';
 import { handyKontext, NIKOLAUS, openNikolausPath } from './nikolaus-shared';
 import type { StepContext, TurniertagStep } from './types';
 
-interface GespeicherterEndstand { snapshot: { ranking: Array<{ place: number; teamName: string }> }; finished_at: string }
+interface GespeicherterEndstand { snapshot: { ranking: Array<{ place: number; teamName: string }>; scorers?: GespeicherterSchuetze[] }; finished_at: string }
 
 async function gespeichert(): Promise<GespeicherterEndstand> {
   const zeilen = await getRows<GespeicherterEndstand>(`tournament_final_standings?tournament_id=eq.${NIKOLAUS.tournamentId}&select=snapshot,finished_at`, 'gespeicherter Endstand');
@@ -64,11 +65,23 @@ async function speichernUndLesen(page: Page, tippe: (ziel: Locator) => Promise<v
   return { seiten: pages, datei: geladen.suggestedFilename() };
 }
 
-/** Plätze des Blocks „Platzierung“ bzw. der „Abschlusstabelle“ (Jeder gegen jeden, @DR-009): Teamnamen nach der Überschrift in Reihenfolge. */
-function plaetzeImPdf(seiten: string[][], namen: readonly string[]): string[] {
-  const text = seiten.flat();
-  const start = Math.max(text.lastIndexOf('Abschlusstabelle'), text.lastIndexOf('Platzierung'));
-  return start < 0 ? [] : text.slice(start + 1).filter((s) => namen.includes(s.trim())).map((s) => s.trim());
+/**
+ * Torschützenliste der Seite „Siegerehrung“ (@DR-052, @ET-045): je Spieler des gespeicherten Endstands die Zeile Rang (nur bei der ersten Zeile
+ * seiner Gruppe), Verein, „#Nr“, Tore – in der Reihenfolge des Endstands; darunter die Fußnote „Außerdem: …“ für Tore ohne Nummer und Eigentore.
+ * Ohne Spieler mit Nummer steht weder die Überschrift noch eine Fußnote.
+ */
+function pruefeTorschuetzen(seiten: string[][], gespeichert: GespeicherterEndstand['snapshot']): void {
+  const scorers = gespeichert.scorers ?? [];
+  const erwartet = erwarteteZeilen(scorers);
+  const gelesen = schuetzenImPdf(seiten, erwartet.length);
+  if (spielerOf(scorers).length === 0) {
+    expect(gelesen.ueberschrift, 'ohne Spieler mit Rückennummer keine Überschrift „Torschützen“').toBe(false);
+    return;
+  }
+  expect(gelesen.ueberschrift, 'Überschrift „Torschützen“ auf der Siegerehrung').toBe(true);
+  expect(gelesen.kopf, 'Spaltenköpfe Rang, Verein, Nr., Tore').toEqual(['Rang', 'Verein', 'Nr.', 'Tore']);
+  expect(gelesen.zeilen, 'Torschützenliste wie im gespeicherten Endstand').toEqual(erwartet);
+  expect(gelesen.fussnote, 'Fußnote zu Toren ohne Rückennummer und Eigentoren').toBe(erwarteteFussnote(scorers));
 }
 
 /**
@@ -88,10 +101,12 @@ function pruefeTabelleGefuellt(seiten: string[][], namen: readonly string[]): vo
   }
 }
 
-async function pruefeEndstandPdf(page: Page, seiten: string[][], datei: string): Promise<void> {
+/** `torschuetzen: false` für die Zuschauer-Seite: dort gilt der Schalter „Torschützen“ (Vorgabe aus), die Liste hängt vom Server ab. */
+async function pruefeEndstandPdf(page: Page, seiten: string[][], datei: string, torschuetzen = true): Promise<void> {
   const { snapshot, finished_at } = await gespeichert();
   const erwartet = [...snapshot.ranking].sort((a, b) => a.place - b.place).map((zeile) => zeile.teamName);
   pruefeTabelleGefuellt(seiten, erwartet);
+  if (torschuetzen) { pruefeTorschuetzen(seiten, snapshot); }
   const zeile = await abschlussZeile(page, finished_at);
   expect(seiten.length, 'PDF hat Seiten').toBeGreaterThan(0);
   for (const [i, seite] of seiten.entries()) {
@@ -200,7 +215,7 @@ async function zuschauerEndstand({ anonPage, asRole }: StepContext): Promise<voi
   await expect(anonPage.getByTestId('pdf-choice-final'), '„Endstand“ ist vorgewählt').toHaveAttribute('aria-checked', 'true', { timeout: 15_000 });
   const { seiten, datei } = await speichernUndLesen(anonPage, tippe, 'endstand-zuschauer');
   expect(anzahl()).toBe(2);
-  await pruefeEndstandPdf(anonPage, seiten, datei);
+  await pruefeEndstandPdf(anonPage, seiten, datei, false);
 
   const olli = await asRole('owner');
   await openNikolausPath(olli, '/schedule');

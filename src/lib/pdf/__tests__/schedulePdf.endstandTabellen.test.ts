@@ -90,7 +90,7 @@ describe('@DR-051 Tabellen im Endstand: Platz und Punkte am deutlichsten', () =>
     expect(toreFlaechen).toHaveLength(0);
   });
 
-  it('darunter steht einmal „Wertung: Punkte · Tordifferenz · Tore“ in 10,5 pt', async () => {
+  it('@DR-051 darunter steht einmal „Wertung: Punkte · Tordifferenz · Tore“ in 10,5 pt', async () => {
     const pages = await endstandPages(endstandHallencup({ placementLogic: [{ id: 'points', enabled: true }, { id: 'goalDifference', enabled: true }, { id: 'goalsFor', enabled: true }] }));
     const zeilen = pages.flatMap(p => p.texts).filter(t => trim(t).startsWith('Wertung:') && t.size < 11);
 
@@ -101,13 +101,13 @@ describe('@DR-051 Tabellen im Endstand: Platz und Punkte am deutlichsten', () =>
     expect(seite).toBe(pages.indexOf(tabellenSeite(pages)));
   });
 
-  it('die Wertungszeile nennt die Reihenfolge der Turnierregel, auch mit direktem Vergleich', async () => {
+  it('@DR-051 die Zeile „Wertung: …“ nennt die Kriterien in der Reihenfolge der Turnierregel, mit „direkter Vergleich“, wenn er gilt', async () => {
     const pages = await endstandPages(endstandHallencup({ placementLogic: [{ id: 'points', enabled: true }, { id: 'goalsFor', enabled: true }, { id: 'directComparison', enabled: true }, { id: 'goalDifference', enabled: false }] }));
 
     expect(pages.flatMap(p => p.texts).map(trim)).toContain('Wertung: Punkte · Tore · direkter Vergleich');
   });
 
-  it('Abschlusstabelle (Nikolausturnier, eine Gruppe): gleiche Hervorhebung, Wertungszeile darunter', async () => {
+  it('Abschlusstabelle (Nikolausturnier-Datensatz des Mockups, eine Gruppe, ohne Torschützen): gleiche Hervorhebung, Wertungszeile darunter', async () => {
     const pages = await endstandPages(endstandNikolaus());
     const page = tabellenSeite(pages);
 
@@ -115,6 +115,12 @@ describe('@DR-051 Tabellen im Endstand: Platz und Punkte am deutlichsten', () =>
     expect(inSpalte(page, 'pos').every(t => istFett(page, t))).toBe(true);
     expect(page.texts.map(trim).some(t => t.startsWith('Wertung:'))).toBe(true);
     expect(seiteMit(pages, 'Abschlusstabelle')).toBe(pages.indexOf(page));
+  });
+
+  it('@DR-051 gilt der direkte Vergleich nicht (ausgeschaltet), steht er nicht in der Zeile „Wertung: …“', async () => {
+    const pages = await endstandPages(endstandHallencup({ placementLogic: [{ id: 'points', enabled: true }, { id: 'directComparison', enabled: false }, { id: 'goalDifference', enabled: true }, { id: 'goalsFor', enabled: true }] }));
+
+    expect(pages.flatMap(p => p.texts).map(trim)).toContain('Wertung: Punkte · Tordifferenz · Tore');
   });
 
   it('Gegenbeispiel: im Spielplan (nicht Endstand) bleiben die Tabellen wie bisher, ohne Hinterlegung der Punkte und ohne Wertungszeile', async () => {

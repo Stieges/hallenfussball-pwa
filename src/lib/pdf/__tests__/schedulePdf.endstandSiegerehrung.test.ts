@@ -64,7 +64,7 @@ describe('@DR-052 Seite „Siegerehrung“: Plätze als schlichte Liste', () => 
     expect(Math.max(...seite.texts.filter(t => t.y < oben && t.y > 40).map(t => t.size))).toBeLessThanOrEqual(printType.h2 + TOL);
   });
 
-  it('Nikolausturnier (eine Gruppe, keine Finalrunde): Abschlusstabelle, danach die Siegerehrung mit allen 6 Plätzen, drei Seiten', async () => {
+  it('@DR-009 @DR-052 Nikolausturnier-Datensatz des Mockups (eine Gruppe, keine Finalrunde): Abschlusstabelle ohne Block „Platzierung“ darunter, danach die Siegerehrung mit allen 6 Plätzen, drei Seiten', async () => {
     const pages = await endstandPages(endstandNikolaus());
     const [seite] = siegerSeiten(pages);
 
@@ -72,7 +72,9 @@ describe('@DR-052 Seite „Siegerehrung“: Plätze als schlichte Liste', () => 
     expect(pages.at(-1)).toBe(seite);
     expect(titel(seite, 'Platzierung')).toBeDefined();
     expect(seite.texts.filter(t => /^\d\.$/.test(trim(t))).map(trim)).toEqual(['1.', '2.', '3.', '4.', '5.', '6.']);
-    expect(pages.some(p => p.texts.some(t => trim(t) === 'Abschlusstabelle'))).toBe(true);
+    const tabelle = pages.find(p => p.texts.some(t => trim(t) === 'Abschlusstabelle'));
+    expect(tabelle).toBeDefined();
+    expect(tabelle?.texts.some(t => trim(t) === 'Platzierung')).toBe(false);
   });
 
   it('Seitenzahlen laufen fortlaufend „Seite x von y“ über alle vier Seiten (@DR-002)', async () => {
@@ -132,7 +134,7 @@ describe('@DR-052 Torschützenliste: Rang | Verein | Nr. | Tore', () => {
     expect((erste?.y ?? 0) < flaechen[0].y).toBe(true);
   });
 
-  it('Fußnote „Außerdem: 2 Tore ohne Rückennummer · 1 Eigentor“ unter der Liste', async () => {
+  it('@DR-052 Fußnote „Außerdem: 2 Tore ohne Rückennummer · 1 Eigentor“ unter der Liste, wenn es solche Tore gibt', async () => {
     const [seite] = siegerSeiten(await endstandPages(endstandHallencup()));
     const note = seite.texts.find(t => trim(t).startsWith('Außerdem'));
     const letzte = Math.max(...seite.texts.filter(t => /^#\d+$/.test(trim(t))).map(t => t.y));
@@ -141,7 +143,7 @@ describe('@DR-052 Torschützenliste: Rang | Verein | Nr. | Tore', () => {
     expect((note?.y ?? 0) > letzte).toBe(true);
   });
 
-  it('Einzahl und Mehrzahl: „1 Tor ohne Rückennummer · 2 Eigentore“', async () => {
+  it('@DR-052 Fußnote in Einzahl und Mehrzahl: „1 Tor ohne Rückennummer · 2 Eigentore“', async () => {
     const fall = endstandHallencup({}, [
       ...HALLENCUP_SCHUETZEN.filter(r => r.kind === 'player'),
       { kind: 'noNumber', rank: null, teamId: HALLENCUP_ID.nord as TeamId, teamName: 'FC Nord', goals: 1 },
@@ -152,7 +154,7 @@ describe('@DR-052 Torschützenliste: Rang | Verein | Nr. | Tore', () => {
     expect(seite.texts.map(trim)).toContain('Außerdem: 1 Tor ohne Rückennummer · 2 Eigentore');
   });
 
-  it('ohne erfasste Torschützen: keine Liste und keine leere Überschrift (Nikolausturnier)', async () => {
+  it('@DR-052 ohne erfasste Torschützen: keine Liste und keine leere Überschrift (Nikolausturnier-Datensatz ohne Torschützen)', async () => {
     const [seite] = siegerSeiten(await endstandPages(endstandNikolaus()));
     const texte = seite.texts.map(trim);
 
@@ -179,6 +181,23 @@ describe('@DR-052 Torschützenliste: Rang | Verein | Nr. | Tore', () => {
     expect(seiten.slice(0, -1).some(p => p.texts.some(t => trim(t).startsWith('Außerdem')))).toBe(false);
     expect(seiten.at(-1)?.texts.some(t => trim(t).startsWith('Außerdem'))).toBe(true);
     expect(pages.map(p => p.texts.map(trim).find(t => /^Seite \d+ von \d+$/.test(t)))).toEqual(pages.map((_, i) => `Seite ${i + 1} von ${pages.length}`));
+  });
+
+  it('@DR-052 ohne Tore ohne Rückennummer und ohne Eigentore steht keine Fußnote', async () => {
+    const [seite] = siegerSeiten(await endstandPages(endstandHallencup({}, HALLENCUP_SCHUETZEN.filter(r => r.kind === 'player'))));
+
+    expect(seite.texts.some(t => trim(t).startsWith('Außerdem'))).toBe(false);
+  });
+
+  it('@DR-052 läuft eine Rang-Gruppe über den Seitenumbruch, beginnt die Folgeseite ohne Rang (Rang nur bei der ersten Zeile der Gruppe)', async () => {
+    // 60 Spieler mit gleich vielen Toren: eine einzige Gruppe „1.“ über mehrere Seiten
+    const gleich: ScorerRow[] = Array.from({ length: 60 }, (_, i) => ({ kind: 'player', rank: 1, teamId: HALLENCUP_ID.nord as TeamId, teamName: 'FC Nord', number: i + 1, goals: 2 }));
+    const seiten = siegerSeiten(await endstandPages(endstandHallencup({}, gleich)));
+    const raenge = (page: LayoutPage): string[] => page.texts.filter(t => trim(t) !== '' && t.x < 15 + printCeremony.scorerCols.rank && /^\d+\.$/.test(trim(t)) && t.size <= printCeremony.scorerPt + TOL && t.y > (page.texts.find(x => trim(x) === 'Rang')?.y ?? 0)).map(trim);
+
+    expect(seiten.length).toBeGreaterThan(1);
+    expect(raenge(seiten[0])).toEqual(['1.']);
+    expect(raenge(seiten[1])).toEqual([]);
   });
 
   it('Gegenbeispiel: der Spielplan (nicht der Endstand) hat keine Seite „Siegerehrung“', async () => {

@@ -120,6 +120,15 @@ describe('@DR-009 Abschlusstabelle bei Jeder gegen jeden in einer Gruppe ohne Fi
     expect(tabelle.map(t => t.str.trim())).toEqual(['Team E', 'Team D', 'Team C', 'Team B', 'Team A']);
   });
 
+  it('@DR-009 im Spielplan (nicht im Endstand-PDF) entfällt nach dem Abschluss der Block „Platzierung“ ganz, die Tabelle heißt „Abschlusstabelle“', async () => {
+    const { tournament, schedule } = jederGegenJeden(5);
+    const { pages } = await kopfPdf({ edition: 'plan', closed: true, ranking: ranking(5) }, tournament, schedule);
+
+    expect(heading(pages, 'Abschlusstabelle')).toBeDefined();
+    expect(heading(pages, 'Platzierung')).toBeUndefined();
+    expect(pages.flatMap(p => p.texts).some(t => t.str.trim().endsWith('· Siegerehrung'))).toBe(false);
+  });
+
   it('die Spalte „Pl“ trägt den gespeicherten Platz, bei geteilten Plätzen 1., 2., 2., 4.', async () => {
     const { tournament, schedule } = jederGegenJeden(4);
     const places = [1, 2, 2, 4];

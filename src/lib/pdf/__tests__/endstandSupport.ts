@@ -97,10 +97,21 @@ export function endstandHallencup(overrides: Partial<Tournament> = {}, scorers: 
 }
 
 const NIKOLAUS_NAMEN = ['DJK Kammer', 'TSV Waging rot', 'DJK Otting', 'TSV Petting', 'TSV 1921 Fridolfing', 'TSV Waging blau'];
+const nikoSchuetze = (rank: number, index: number, number: number, goals: number): ScorerRow =>
+  ({ kind: 'player', rank, teamId: testUuid(200 + index) as TeamId, teamName: NIKOLAUS_NAMEN[index], number, goals });
+/** Torschützen im Stil des E2E-Seeds: Spieler der Vereine, deren Namen auch in der Platzliste stehen (Gleichstand auf Rang 2, Sammelzeilen). */
+export const NIKOLAUS_SCHUETZEN: ScorerRow[] = [
+  nikoSchuetze(1, 0, 9, 4), nikoSchuetze(2, 1, 7, 3), nikoSchuetze(2, 2, 10, 3), nikoSchuetze(4, 1, 11, 2),
+  { kind: 'noNumber', rank: null, teamId: testUuid(200) as TeamId, teamName: NIKOLAUS_NAMEN[0], goals: 1 },
+  { kind: 'ownGoals', rank: null, teamId: testUuid(203) as TeamId, teamName: NIKOLAUS_NAMEN[3], goals: 1 },
+];
 const NIKOLAUS_WERTE: Array<[number, number, number, number, number]> = [[5, 0, 0, 7, 0], [4, 0, 1, 6, 1], [3, 0, 2, 6, 4], [2, 0, 3, 2, 4], [1, 0, 4, 2, 6], [0, 0, 5, 0, 8]];
 
-/** Das abgeschlossene Nikolausturnier: 6 Teams in einer Gruppe, keine Finalrunde, keine Torschützen. */
-export function endstandNikolaus(overrides: Partial<Tournament> = {}): EndstandFall {
+/**
+ * Das abgeschlossene Nikolausturnier des Mockups: 6 Teams in einer Gruppe, keine Finalrunde. Vorgabe: OHNE Torschützen (so zeigt es das Mockup);
+ * der Seed des Cloud-Durchstichs (N8) hat dagegen Tore mit Rückennummer – dafür `scorers` übergeben (`NIKOLAUS_SCHUETZEN`).
+ */
+export function endstandNikolaus(overrides: Partial<Tournament> = {}, scorers: ScorerRow[] = []): EndstandFall {
   const teams: Team[] = NIKOLAUS_NAMEN.map((name, i) => ({ id: testUuid(200 + i), name, group: undefined }));
   const tournament = hallencupTournament({
     title: 'Nikolausturnier', ageClass: 'F2-Junioren', date: '2026-11-28', teams, numberOfTeams: teams.length, groupSystem: 'roundRobin',
@@ -111,7 +122,7 @@ export function endstandNikolaus(overrides: Partial<Tournament> = {}): EndstandF
     schedule: generateFullSchedule(tournament, 'de'),
     standings: teams.map((team, i) => row(team, ...NIKOLAUS_WERTE[i])),
     ranking: teams.map((team, i) => ({ place: i + 1, team })),
-    scorers: [],
+    scorers,
   };
 }
 

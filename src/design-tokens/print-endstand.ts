@@ -54,8 +54,6 @@ export const printCeremony = {
   noteGap: 2,
   notePt: 10.5,
   noteLineHeight: 1.2,
-  /** Zeile mit zwei Zeilen Namen wächst um den Zeilenabstand; darüber und darunter bleibt dieses Polster, mm. */
-  rowPad: 0.8,
 } as const;
 
 /**
