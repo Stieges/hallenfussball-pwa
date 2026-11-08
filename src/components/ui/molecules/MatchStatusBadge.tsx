@@ -52,6 +52,10 @@ export function MatchStatusBadge({ model, size, tone, surface = 'app', testId }:
     };
     return <span style={style} data-testid={testId ?? 'match-kickoff'}>{model.time}</span>;
   }
+  if (model.kind === 'next') {
+    // Neutrale Fläche wie „Verlängerung“; das Wort trägt die Bedeutung (@ZM-195)
+    return <span style={badgeStyle('overtime', size, tone, surface)} data-testid={testId ?? 'match-status-badge'} data-state="next">{t('monitorTab.nextMatch')}</span>;
+  }
   const { state } = model;
   const live = state === 'live';
   return (

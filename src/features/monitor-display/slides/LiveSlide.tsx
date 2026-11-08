@@ -1,16 +1,13 @@
 import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, displayFontSizes, displaySpacing, monitorThemes } from '../../../design-tokens';
+import { displayFontSizes, displaySpacing, monitorThemes } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { TournamentView } from '../../../core/view';
 import type { MonitorSlide, MonitorTheme, PerformanceSettings } from '../../../types/monitor';
-import { TeamAvatar } from '../../../components/ui/TeamAvatar';
 import { LiveMatchDisplay } from '../../../components/monitor';
 import { fieldIdToNumber, resolveTheme } from '../monitorDisplayHelpers';
 import { toLiveMatch } from '../monitorMatch';
-import { monitorSideLabel, sideTeam } from '../matchSides';
 import { MonitorTimeNotes } from '../components/MonitorTimeCell';
-import { Versus } from '../../../components/ui/atoms';
 
 interface LiveSlideProps {
   slide: MonitorSlide;
@@ -74,6 +71,26 @@ export function LiveSlide({ slide, tournament, view, theme, style, pinnedMatchId
   // No live match - show next match or idle state based on whenIdle config
   const whenIdleType = slide.config.whenIdle?.type ?? 'next-match';
 
+  // Vor dem Anpfiff (@ZM-195, @ZM-138): die Live-Folie zeigt das nächste Spiel in denselben Kästen wie im Spiel (0 : 0, Farbe = Trikot bzw. Ausweichfarbe,
+  // ein festgelegtes Leibchen als Weste), die Anstoßzeit an der Stelle der Uhr; Initialen-Kreise folgen mit dem Neubau der Kästen (#418)
+  const nextRaw = nextMatch === undefined ? undefined : matches.find(m => m.id === nextMatch.id);
+  if (whenIdleType !== 'skip' && nextMatch && nextRaw) {
+    return (
+      <div style={{ ...style, containerType: 'size' }} data-testid="next-slide-area">
+        <LiveMatchDisplay
+          match={toLiveMatch(nextMatch, nextRaw, teams, tournament)}
+          group={nextRaw.group}
+          fullscreen
+          theme={theme}
+          boxes={nextMatch.boxes}
+          hideScore={!view.rules.results}
+          badge={{ kind: 'next' }}
+          kickoff={nextMatch.kickoff ? { time: nextMatch.kickoff.time, notes: <MonitorTimeNotes match={nextMatch} color={themeColors.text} testIdPrefix="monitor-next" /> } : undefined}
+        />
+      </div>
+    );
+  }
+
   return (
     <div style={style}>
       <div style={{
@@ -91,73 +108,6 @@ export function LiveSlide({ slide, tournament, view, theme, style, pinnedMatchId
         }}>
           {t('slides.live.idleSkip')}
         </div>
-      ) : nextMatch ? (
-        (() => {
-          const nextTeamA = sideTeam(nextMatch.home, teams);
-          const nextTeamB = sideTeam(nextMatch.away, teams);
-          return (
-            <>
-              <div style={{
-                fontSize: displayFontSizes.bodyLG,
-                color: themeColors.textMuted,
-                marginBottom: displaySpacing.contentLG,
-              }}>
-                {t('slides.live.nextMatch')}
-              </div>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: displaySpacing.sectionMD,
-              }}>
-                <div style={{ textAlign: 'center' }}>
-                  {nextTeamA && (
-                    <TeamAvatar team={nextTeamA} size="xxl" showColorRing />
-                  )}
-                  <div data-teamname style={{
-                    fontSize: displayFontSizes.headingMD,
-                    color: themeColors.text,
-                    marginTop: cssVars.spacing.md,
-                  }}>
-                    {monitorSideLabel(nextMatch.home)}
-                  </div>
-                </div>
-
-                <div style={{
-                  fontSize: displayFontSizes.headingLG,
-                  color: themeColors.textMuted,
-                  padding: `0 ${displaySpacing.contentLG}`,
-                }}>
-                  <Versus />
-                </div>
-
-                <div style={{ textAlign: 'center' }}>
-                  {nextTeamB && (
-                    <TeamAvatar team={nextTeamB} size="xxl" showColorRing />
-                  )}
-                  <div data-teamname style={{
-                    fontSize: displayFontSizes.headingMD,
-                    color: themeColors.text,
-                    marginTop: cssVars.spacing.md,
-                  }}>
-                    {monitorSideLabel(nextMatch.away)}
-                  </div>
-                </div>
-              </div>
-              {/* @ZM-138: Anstoßzeit des nächsten Spiels */}
-              {nextMatch.kickoff && (
-                <div style={{
-                  fontSize: displayFontSizes.bodyLG,
-                  color: themeColors.textSecondary,
-                  marginTop: displaySpacing.contentLG,
-                }}>
-                  {t('slides.live.kickoff')} {nextMatch.kickoff.time}
-                  <MonitorTimeNotes match={nextMatch} color={themeColors.text} testIdPrefix="monitor-next" />
-                </div>
-              )}
-            </>
-          );
-        })()
       ) : (
         <div style={{
           fontSize: displayFontSizes.bodyLG,

@@ -7,15 +7,14 @@ import { useTranslation } from 'react-i18next';
 import { cssVars, displayFontSizes, displayLayout, displaySizes } from '../../design-tokens';
 import type { monitorThemes } from '../../design-tokens';
 import type { MonitorTheme } from '../../types/monitor';
-import type { FinalScore, OeffentlicheZeitstrafen } from '../../core/view';
+import type { FinalScore, MatchView, OeffentlicheZeitstrafen } from '../../core/view';
 import type { LiveMatch } from '../../hooks/useLiveMatches';
-import { Icons } from '../ui/Icons';
-import { ScoreBlock } from './ScoreBlock';
+import { ScoreBox } from '../ui/molecules/ScoreBox';
+import { pairFrameStrength } from '../ui/molecules/scoreBoxStyle';
 import { TeamNameDisplay } from './TeamNameDisplay';
 import { LivePenaltyResult } from './LiveFinalScore';
 import { LivePenaltyCircles } from './LivePenaltyCircles';
 import { TEAM_NAME_ZEILENHOEHE, gemeinsameNamenGroesse } from './teamNameFit';
-import type { BlockFrame } from '../../design-tokens';
 
 export interface LiveScoreGridProps {
   match: LiveMatch;
@@ -23,9 +22,8 @@ export interface LiveScoreGridProps {
   theme: MonitorTheme;
   themeColors: (typeof monitorThemes)[keyof typeof monitorThemes];
   hideScore: boolean;
-  homeColor: string;
-  awayColor: string;
-  frames: { home: BlockFrame; away: BlockFrame };
+  /** Kästen beider Seiten (`MatchView.boxes`): Fläche (Farbe oder Trainingsleibchen) und Leibchen-Zeichen (@ZM-161) */
+  boxes: MatchView['boxes'];
   /** Endstand der Ansicht; nur ein beendetes Spiel trägt Ring, Pokal und Strafstoßergebnis */
   finalScore?: FinalScore;
   /** Finalrunde: nur dort bekommt der Sieger den Pokal (Ring hat jeder Sieger, Spec 4.5) */
@@ -37,13 +35,8 @@ export interface LiveScoreGridProps {
 const layout = displayLayout.scoreArea;
 /** Mit Strafstoßergebnis in der Mitte sind die Namen um diesen Anteil schmaler als der Kasten: Platz für „Strafstoßschießen“ zwischen den Namen (Mockup K5g) */
 const PENALTY_NAME_SHARE = 0.8;
-/** Pokal-Kreis (Mockup K5g `.cup`): Versatz über/rechts neben der Kastenecke als Bruchteil des Kreisdurchmessers, Symbolgröße als Anteil, Strichstärke des Symbols */
-const CUP_OFFSET_TOP_DIVISOR = 3;
-const CUP_OFFSET_RIGHT_DIVISOR = 5;
-const CUP_ICON_SHARE = 0.6;
-const CUP_ICON_STROKE = 2.4;
 
-export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, homeColor, awayColor, frames, finalScore, finalRound = false, zeitstrafen }: LiveScoreGridProps) {
+export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, boxes, finalScore, finalRound = false, zeitstrafen }: LiveScoreGridProps) {
   const { t } = useTranslation('monitor');
   // B3: beide Teamnamen in derselben Größe (die kleinere der beiden passenden)
   const [namePx, setNamePx] = useState<{ home?: number; away?: number }>({});
@@ -112,43 +105,35 @@ export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, home
     maxWidth: '100%',
   });
 
-  // Pokal-Kreis oben rechts am Sieger-Kasten (Mockup K5g `.cup`), Maße aus `monitorCup`
-  const cupStyle: CSSProperties = {
-    position: 'absolute',
-    top: `calc(${layout.monitorCup} / -${CUP_OFFSET_TOP_DIVISOR})`,
-    right: `calc(${layout.monitorCup} / -${CUP_OFFSET_RIGHT_DIVISOR})`,
-    width: layout.monitorCup,
-    height: layout.monitorCup,
-    borderRadius: cssVars.borderRadius.full,
-    background: themeColors.progressBar,
-    color: themeColors.background,
-    border: `${layout.frameWidthSubtle} solid ${themeColors.background}`,
-    fontSize: `calc(${layout.monitorCup} * ${CUP_ICON_SHARE})`,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxSizing: 'border-box',
-  };
+  // Gleiche Rahmenbreite beider Kästen (Entscheidung Daniel 15.10.): einer kräftig → beide kräftig. Sie hängt nur von den Farben ab, nie vom
+  // Zustand des Spiels: ohne Ergebnis-Dämpfung gerechnet, damit sich der Rahmen in keinem Zustand ändert (@ZM-151).
+  const pairFrame = pairFrameStrength({ fill: boxes.home.fill }, { fill: boxes.away.fill }, themeColors.background);
 
   const block = (side: 'a' | 'b') => {
     const home = side === 'a';
+    const box = home ? boxes.home : boxes.away;
+    const score = home ? match.homeScore : match.awayScore;
+    const cup = winner === side && finalRound;
+    // Zugänglicher Name des ganzen Kastens: Seite und Stand, Pokal des Siegers, Leibchen (die Zeichen selbst sind dekorativ)
+    const ariaLabel = [`${home ? 'Heim' : 'Gast'}: ${String(score)}`, cup ? t('liveMatch.winnerAria') : null, box.bib ? t('liveMatch.bibAria') : null].filter((part) => part !== null).join(', ');
     return (
       <div style={blockCellStyle(home ? 1 : 3)} data-testid={home ? 'live-block-home' : 'live-block-away'}>
-        <ScoreBlock
-          score={home ? match.homeScore : match.awayScore}
-          backgroundColor={home ? homeColor : awayColor}
-          position={home ? 'home' : 'away'}
-          size={size}
-          frame={home ? frames.home : frames.away}
+        <ScoreBox
+          score={score}
+          fill={box.fill}
+          size="display"
+          background={themeColors.background}
+          textColor={themeColors.text}
           outcome={outcomeOf(side)}
           ringColor={themeColors.progressBar}
-          dimColor={themeColors.background}
+          cup={cup}
+          bib={box.bib}
+          frameStrength={pairFrame}
+          ariaLabel={ariaLabel}
+          testId={home ? 'live-box-home' : 'live-box-away'}
+          position={home ? 'home' : 'away'}
+          cupTestId={`live-cup-${home ? 'home' : 'away'}`}
         />
-        {winner === side && finalRound && (
-          <span style={cupStyle} role="img" aria-label={t('liveMatch.winnerAria')} data-testid={`live-cup-${home ? 'home' : 'away'}`}>
-            <Icons.Trophy size="1em" strokeWidth={CUP_ICON_STROKE} />
-          </span>
-        )}
         {zeitstrafen && match.status !== 'FINISHED' && (
           <LivePenaltyCircles side={home ? 'home' : 'away'} zeitstrafen={zeitstrafen} themeColors={themeColors} />
         )}

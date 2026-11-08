@@ -43,18 +43,15 @@ describe('@OB-075 Monitor-Tabelle: Kurzformen im Kopf mit Vorlesetext', () => {
   });
 });
 
-describe('@OB-076 Monitor Live-Folie: das nächste Spiel mit „gegen“ / „vs“', () => {
+describe('@OB-076 Monitor Live-Folie: das nächste Spiel (seit @ZM-195 als Kästen „0 : 0“)', () => {
   const performanceSettings = {} as PerformanceSettings;
   const ohneLaufendesSpiel = () => buildTournament({ matches: FIXTURE_MATCHES.map((m) => (m.matchStatus === 'running' ? { ...m, matchStatus: 'scheduled' as const } : m)) });
 
-  it.each([['de', 'gegen'], ['en', 'vs']] as const)('%s: zwischen den Teams steht „%s“', async (lng, wort) => {
+  it.each([['de'], ['en']] as const)('%s: zwischen den Kästen steht der Doppelpunkt, die Namen stehen darunter, kein „vs.“ in den Kästen', async (lng) => {
     await renderIn(lng, <LiveSlide slide={slide('live', { fieldId: 'field-2' })} {...withView(ohneLaufendesSpiel())} performanceSettings={performanceSettings} theme="dark" style={{}} />);
-    const mitte = screen.getByText(wort);
-    expect(mitte).toBeInTheDocument();
+    expect(screen.getByTestId('live-separator')).toHaveTextContent(':');
     expect(screen.getByText('DJK Berg')).toBeInTheDocument();
-    if (lng === 'de') {
-      expect(screen.queryByText(/^(vs\.?|VS)$/)).toBeNull();
-    }
+    expect(screen.queryByText(/^(vs\.?|VS)$/)).toBeNull();
   });
 });
 

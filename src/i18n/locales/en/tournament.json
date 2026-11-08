@@ -617,6 +617,7 @@
     "groups": "Groups"
   },
   "matchCard": {
+    "bibAria": "Bib",
     "timePenalty": "$t(sport:events.timePenalty) #{{number}} · {{rest}}",
     "timePenaltyNoNumber": "$t(sport:events.timePenalty) · {{rest}}",
     "cannotMove": "Match cannot be moved",

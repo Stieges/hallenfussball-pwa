@@ -38,6 +38,7 @@
     "penaltyLabel": "$t(sport:events.penaltyShootout)",
     "penaltyNumbers": "{{home}} : {{away}}",
     "winnerAria": "Pokal",
+    "bibAria": "Leibchen",
     "afterOvertime": "nach Verlängerung",
     "winnerLine": "<name>{{name}}</name> gewinnt",
     "penaltyAria": "$t(sport:events.timePenalty) #{{number}}, noch {{rest}}",

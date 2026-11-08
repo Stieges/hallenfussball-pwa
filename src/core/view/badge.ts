@@ -50,6 +50,8 @@ export interface MatchBadgeInput {
 export type MatchBadgeModel =
   | { kind: 'badge'; state: MatchBadgeState }
   | { kind: 'kickoff'; time: string }
+  /** „Nächstes Spiel“: nur die Live-Folie des Monitors vor dem Anpfiff (@ZM-195); die Ansicht liefert es nie selbst */
+  | { kind: 'next' }
   | { kind: 'none' };
 
 /** Schlüssel des Abzeichen-Worts (Namensraum `tournament`); eine Wortquelle für Oberfläche und `viewStatusText`. */

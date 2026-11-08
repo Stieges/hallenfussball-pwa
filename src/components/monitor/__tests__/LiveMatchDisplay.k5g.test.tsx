@@ -46,19 +46,20 @@ describe('@ZM-147 @ZM-049 K5g4: Ergebnis nur eingetragen (ohne Schüsse)', () =>
   it('Sieger-Kasten mit Ring in der Primärfarbe und Pokal-Kreis, Verlierer-Kasten abgedunkelt', async () => {
     await ende(NUR_ERGEBNIS);
     expect(kasten('home').dataset.outcome).toBe('winner');
-    expect(kasten('home').style.outline).toContain(displayLayout.scoreArea.frameWidthStrong);
+    expect(kasten('home').style.outlineStyle).toBe('solid');
+    expect(kasten('home').style.outlineWidth).toBe(displayLayout.scoreArea.frameWidthStrong);
     expect(screen.getByTestId('live-cup-home')).toBeInTheDocument();
     // Fixrunde 4: Pokal-Symbol (Mockup: Lucide „trophy“), Beschriftung „Pokal“
     expect(screen.getByTestId('live-cup-home').querySelector('[data-icon="trophy"]')).not.toBeNull();
-    expect(screen.getByRole('img', { name: 'Pokal' })).toBe(screen.getByTestId('live-cup-home'));
+    expect(kasten('home')).toHaveAttribute('aria-label', expect.stringContaining('Pokal')); // der Kasten nennt den Pokal (die Zeichen sind dekorativ)
     expect(screen.getByTestId('live-cup-home').style.width).toBe(displayLayout.scoreArea.monitorCup);
     expect(kasten('away').dataset.outcome).toBe('loser');
-    expect(kasten('away').style.backgroundImage).toContain('linear-gradient');
-    // Fixrunde 4: nur ein dezenter Schleier (Teamfarbe bleibt erkennbar), nicht der 70-%-Scrim
-    expect(kasten('away').style.backgroundImage).toContain(`${displayLayout.scoreArea.loserDimShare}`);
-    expect(kasten('away').style.backgroundImage).not.toContain(displayMonitor.overlay);
+    // Fixrunde 4: nur ein dezenter Schleier (Teamfarbe bleibt erkennbar), nicht der 70-%-Scrim: die Farbe ist zum Hintergrund hin gemischt
+    expect(kasten('away').style.backgroundColor).not.toBe(kasten('home').style.backgroundColor);
+    expect(kasten('away').style.backgroundImage).toBe('');
+    expect(kasten('away').getAttribute('style')).not.toContain(displayMonitor.overlay);
     expect(parseFloat(displayLayout.scoreArea.loserDimShare)).toBeLessThanOrEqual(35);
-    expect(kasten('away').style.outline).toBe('');
+    expect(kasten('away').style.outlineStyle).toBe('');
     expect(screen.queryByTestId('live-cup-away')).toBeNull();
   });
 
@@ -105,7 +106,7 @@ describe('@ZM-049 K5g: mit Verlängerung (2:2 nach Verlängerung, Strafstoß 4:3
     expect(screen.getByTestId('live-after-overtime').textContent).toBe('nach Verlängerung');
     expect(screen.getByTestId('live-name-home')).toContainElement(screen.getByTestId('live-after-overtime'));
     expect(screen.getByTestId('live-penalty-block')).not.toContainElement(screen.getByTestId('live-after-overtime'));
-    expect(screen.getByLabelText('Heim: 2')).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Heim: 2/)).toBeInTheDocument();
     expect(screen.getByTestId('live-penalty').textContent).toBe('Strafstoßschießen 4 : 3');
   });
 });
@@ -171,7 +172,8 @@ describe('Gegenbeispiele', () => {
   it('@ZM-156 Gruppensieg: Ring um den Sieger-Kasten, Name fett, Verlierer zurückgenommen, aber kein Pokal', async () => {
     await ende({ score_a: 3, score_b: 1, decided_by: 'regular' }, undefined, GAME[7]);
     expect(kasten('home').dataset.outcome).toBe('winner');
-    expect(kasten('home').style.outline).toContain(displayLayout.scoreArea.frameWidthStrong);
+    expect(kasten('home').style.outlineStyle).toBe('solid');
+    expect(kasten('home').style.outlineWidth).toBe(displayLayout.scoreArea.frameWidthStrong);
     expect(name('home').style.fontWeight).toBe(cssVars.fontWeights.extrabold);
     expect(kasten('away').dataset.outcome).toBe('loser');
     expect(name('away').style.fontWeight).toBe(cssVars.fontWeights.semibold);

@@ -288,8 +288,26 @@ export const displayLayout = {
     monitorCup: '8.4cqh',
     // Fixrunde 4: Verlierer-Kasten nur mit dezentem Schleier (Anteil der Hintergrundfarbe), Teamfarbe bleibt erkennbar
     loserDimShare: '30%',
-    // Spielanzeige 2.2 (Spec § 8, Mockup --vest: 14 %): Breite je Streifen der Weste als Anteil der Kastenbreite
+    // Flache Köpfe und Streifen im Cockpit (Team-Kopf, Zeitstrafen-Karte): Breite je Streifen der Weste als Anteil der Breite (Mockup --vest: 14 %)
     vestStripeShare: 0.14,
+    // Trainingsleibchen (@ZM-161, Mockup leibchen-weste-3 Form E1): Maße in % der Kastenbreite bzw. -höhe. `edge` = Seitenkante des Leibchens,
+    // `strap` = äußere Kante des Trägers oben, `armRise` = Höhe, auf der der gerade, schräge Armausschnitt in die Seitenkante übergeht,
+    // `neckHalf` = linke Kante des Halsausschnitts (rechts gespiegelt), `neckDepth` = seine Tiefe. `small` = Handy-Kasten (schmaler, flacher Hals).
+    // Rest: Rundung der Achsel-Ecke und Form des runden Halses (Anteil der Tiefe, an dem die Rundung beginnt, Kurvenspannung, Ausbauchung) und Stützpunkte.
+    vest: {
+      large: { edge: 20, strap: 28, armRise: 33, neckHalf: 38, neckDepth: 22 },
+      small: { edge: 18, strap: 27, armRise: 33, neckHalf: 41, neckDepth: 19 },
+      armCorner: 2,
+      neckShoulder: 0.42,
+      neckCurve: 0.85,
+      neckBelly: 0.25,
+      cornerSteps: 4,
+      neckSteps: 6,
+      // Zweistelliger Stand auf der Weste: Schrift höchstens dieser Anteil der Kastenbreite (zwei Ziffern ≈ 1,3 em), damit die Ziffern ganz auf der Leibchenfarbe stehen
+      digitsFontShare: 0.4,
+    },
+    // Leibchen-Zeichen am Monitor-Kasten (@ZM-157): innen in der Ecke oben links, Abstand wie beim Zeitstrafen-Kreis
+    bibInset: '1.6cqh',
     // Zeitstrafe am Monitor (@ZM-182, @ZM-192; Mockup zeitstrafe-monitor Variante A, Daniel 05.11.): Kreis so groß wie der
     // Pokal-Kreis (`monitorCup`), innen in der Ecke unten links des Kastens; weitere Kreise rechts daneben
     penaltyInset: '1.6cqh',

@@ -85,22 +85,22 @@ describe('ScoreBox Grundform und DOM-Vertrag', () => {
   });
 });
 
-describe('ScoreBox Weste (@ZM-161)', () => {
-  it('@ZM-161 Weste: Ziffer auf Gelb, Streifen links und rechts in Rot (je 14 %), Leibchen-Zeichen oben links', () => {
+describe('ScoreBox Weste = Trainingsleibchen (@ZM-161)', () => {
+  it('@ZM-161 Weste: Grund Gelb mit schwarzer Ziffer, Trikotfarbe Rot als drei eigene Teile (links, rechts, Hals), Leibchen-Zeichen oben links', () => {
     const el = draw({ fill: vest(GELB, ROT), bib: true, background: HELL, textColor: TEXT_DUNKEL });
-    const share = Math.round(displayLayout.scoreArea.vestStripeShare * 100 * 1000) / 1000;
-    expect(share).toBe(14);
     expect(el).toHaveAttribute('data-fill', 'vest');
     expect(el).toHaveAttribute('data-color', GELB);
     expect(el).toHaveAttribute('data-stripes', ROT);
-    const bild = el.style.backgroundImage;
-    expect(bild).toContain('linear-gradient');
-    expect(bild).toContain(`${share}%`);
-    expect(bild).toContain(`${100 - share}%`);
-    expect(bild).not.toMatch(/\d\.\d{4,}%/); // keine Gleitkomma-Reste im CSS
-    expect(bild.indexOf(rgb(ROT))).toBeGreaterThanOrEqual(0);
-    expect(bild.indexOf(rgb(GELB))).toBeGreaterThanOrEqual(0);
-    // Gelb in der Mitte → schwarze Ziffer (Kontrast auf der Mitte, nicht auf dem Streifen)
+    expect(el.style.backgroundColor).toBe(rgb(GELB));
+    expect(el.style.backgroundImage).toBe(''); // keine Streifen mehr
+    const teile = el.querySelectorAll<HTMLElement>('[data-teil]');
+    expect(teile).toHaveLength(3);
+    for (const teil of teile) {
+      expect(teil.style.backgroundColor).toBe(rgb(ROT));
+      expect(teil.style.clipPath).toContain('polygon(');
+      expect(teil.style.position).toBe('absolute');
+    }
+    // Gelb in der Mitte → schwarze Ziffer (Kontrast auf dem Leibchen, nicht auf der Trikotfarbe)
     expect(el).toHaveAttribute('data-digit-color', BOX_BLACK);
     const bib = screen.getByTestId('box-bib');
     expect(bib.style.position).toBe('absolute');
@@ -108,17 +108,88 @@ describe('ScoreBox Weste (@ZM-161)', () => {
     expect(bib.style.top).toMatch(/^calc\(-|^-/);
   });
 
-  it('@ZM-161 Gegenbeispiel: ohne bib kein Leibchen-Zeichen, Fläche ohne Streifen', () => {
+  it('@ZM-161 die Ziffer steht ganz auf der Leibchenfarbe: kein Teil der Trikotfarbe reicht in den Streifen zwischen Seitenkanten und Hals unter der Ziffer', () => {
+    // Das Leibchen liegt zwischen den Seitenkanten `edge` und 100 − `edge` (große Form); Teile links und rechts enden dort
+    const el = draw({ fill: vest(GELB, ROT), size: 'cockpit', background: HELL, textColor: TEXT_DUNKEL });
+    const [links, rechts, hals] = Array.from(el.querySelectorAll<HTMLElement>('[data-teil]'));
+    const { edge, strap, neckHalf, neckDepth } = displayLayout.scoreArea.vest.large;
+    expect(parseFloat(links.style.left)).toBe(0);
+    expect(parseFloat(links.style.width)).toBe(strap);
+    expect(parseFloat(rechts.style.left) + parseFloat(rechts.style.width)).toBeCloseTo(100, 1);
+    expect(parseFloat(rechts.style.width)).toBe(strap);
+    expect(strap).toBeGreaterThan(edge);
+    // Hals: nur oben in der Mitte, nie bis in die untere Hälfte
+    expect(parseFloat(hals.style.left)).toBe(neckHalf);
+    expect(parseFloat(hals.style.top)).toBe(0);
+    expect(parseFloat(hals.style.height)).toBeLessThanOrEqual(neckDepth);
+  });
+
+  it('@ZM-161 kleine Kästen (compact) tragen die kleine Geometrie: schmalere Teile, flacherer Hals', () => {
+    const gross = draw({ fill: vest(GELB, ROT), size: 'cockpit', testId: 'gross' });
+    const klein = draw({ fill: vest(GELB, ROT), size: 'compact', testId: 'klein' });
+    const hoehe = (el: HTMLElement) => parseFloat(el.querySelectorAll<HTMLElement>('[data-teil]')[2].style.height);
+    expect(hoehe(klein)).toBeLessThan(hoehe(gross));
+    expect(hoehe(klein)).toBe(displayLayout.scoreArea.vest.small.neckDepth);
+  });
+
+  it('@ZM-161 der Rahmen liegt als oberste Schicht über den Teilen, der eigene Rand der Weste ist durchsichtig (kein doppelter Rahmen)', () => {
+    const el = draw({ fill: vest(GELB, ROT), size: 'display', background: DUNKEL, textColor: TEXT_HELL });
+    expect(el.style.borderColor).toBe('transparent');
+    const rahmen = screen.getByTestId('box-vest-frame');
+    expect(rahmen.style.boxShadow).toContain(el.style.borderWidth);
+    const schicht = screen.getByTestId('box-vest');
+    expect(schicht.lastElementChild).toBe(rahmen);
+    expect(schicht.style.overflow).toBe('hidden');
+  });
+
+  it('@ZM-161 Gegenbeispiel: einfarbiger Kasten ohne Leibchen hat weder Form noch Teile noch Streifen', () => {
     const el = draw({ fill: solid(BOX_WHITE), bib: false, background: HELL, textColor: TEXT_DUNKEL });
     expect(screen.queryByTestId('box-bib')).toBeNull();
+    expect(screen.queryByTestId('box-vest')).toBeNull();
+    expect(el.querySelectorAll('[data-teil]')).toHaveLength(0);
     expect(el).not.toHaveAttribute('data-stripes');
     expect(el.style.backgroundImage).toBe('');
   });
 
-  it('@ZM-154 Leibchen-Zeichen auch ohne Weste (Teamfarben aus): Zeichen ja, Streifen nein', () => {
+  it('@ZM-154 Leibchen-Zeichen auch ohne Weste (Teamfarben aus): Zeichen ja, Form nein', () => {
     const el = draw({ fill: solid(BLAU), bib: true });
     expect(screen.getByTestId('box-bib')).toBeInTheDocument();
     expect(el).toHaveAttribute('data-fill', 'solid');
+    expect(el.querySelectorAll('[data-teil]')).toHaveLength(0);
+  });
+
+  it('@ZM-157 am Monitor steht das Leibchen-Zeichen innen in der Ecke oben links (Abstand wie der Zeitstrafen-Kreis), an kleinen Kästen über der Ecke', () => {
+    draw({ fill: vest(GELB, ROT), bib: true, size: 'display', testId: 'm' });
+    const innen = screen.getByTestId('m-bib');
+    expect(innen.style.top).toBe(displayLayout.scoreArea.bibInset);
+    expect(innen.style.left).toBe(displayLayout.scoreArea.bibInset);
+    expect(displayLayout.scoreArea.bibInset).toBe(displayLayout.scoreArea.penaltyInset);
+  });
+});
+
+describe('ScoreBox Ziffern im Kasten haben Luft (Controller-Zusatz zu H3) und bleiben auf dem Leibchen (@ZM-161)', () => {
+  it('Monitor-Kasten: die Ziffernfläche ist ein Größen-Container, die Schrift höchstens 60 % der Höhe und 50 % der Breite', () => {
+    draw({ size: 'display', score: 12, fill: solid(BLAU) });
+    const flaeche = screen.getByTestId('box-digits').parentElement!;
+    expect(flaeche.style.containerType).toBe('size');
+    expect(screen.getByTestId('box-digits').style.fontSize).toBe('min(60cqh, 50cqw)');
+    expect(screen.getByTestId('box-digits')).toHaveTextContent('12');
+  });
+
+  it('@ZM-161 zweistelliger Stand auf der Weste: Schrift zusätzlich höchstens digitsFontShare der Kastenbreite (beide Ziffern bleiben auf der Leibchenfarbe)', () => {
+    const anteil = displayLayout.scoreArea.vest.digitsFontShare * 100;
+    for (const size of ['display', 'cockpit', 'compact'] as const) {
+      const el = draw({ size, score: 10, fill: vest(GELB, ROT), testId: `w-${size}` });
+      expect(screen.getByTestId(`w-${size}-digits`).style.fontSize).toContain(`${anteil}cqw`);
+      expect(el.querySelectorAll('[data-teil]')).toHaveLength(3);
+    }
+  });
+
+  it('@ZM-161 Gegenbeispiele: einstellig auf der Weste und zweistellig ohne Weste behalten die gewohnte Schrift', () => {
+    draw({ size: 'display', score: 9, fill: vest(GELB, ROT), testId: 'eins' });
+    draw({ size: 'display', score: 10, fill: solid(GELB), testId: 'zehn' });
+    expect(screen.getByTestId('eins-digits').style.fontSize).toBe('min(60cqh, 50cqw)');
+    expect(screen.getByTestId('zehn-digits').style.fontSize).toBe('min(60cqh, 50cqw)');
   });
 });
 
@@ -180,10 +251,13 @@ describe('ScoreBox Verlierer (@ZM-156)', () => {
     expect(el).toHaveAttribute('data-digit-color', BOX_WHITE);
   });
 
-  it('@ZM-156 gedämpfte Weste: Mitte und Streifen werden gedämpft', () => {
+  it('@ZM-156 gedämpfte Weste: Leibchenfarbe und Trikotfarbe werden gedämpft', () => {
     const el = draw({ fill: vest(GELB, ROT), outcome: 'loser', background: HELL, textColor: TEXT_DUNKEL });
-    expect(el.style.backgroundImage).toContain(rgb(mixHex(GELB, HELL, LOSER_DIM_SHARE)));
-    expect(el.style.backgroundImage).toContain(rgb(mixHex(ROT, HELL, LOSER_DIM_SHARE)));
+    expect(el.style.backgroundColor).toBe(rgb(mixHex(GELB, HELL, LOSER_DIM_SHARE)));
+    for (const teil of el.querySelectorAll<HTMLElement>('[data-teil]')) {
+      expect(teil.style.backgroundColor).toBe(rgb(mixHex(ROT, HELL, LOSER_DIM_SHARE)));
+    }
+    expect(screen.getByTestId('box-vest')).toBeInTheDocument(); // die Form bleibt auch am gedämpften Kasten
   });
 });
 
@@ -271,9 +345,14 @@ describe('ScoreBox Maße und Ecken (@ZM-151, @ZM-160, RF3)', () => {
       expect(mark.style.position).toBe('absolute');
       expect(digits.contains(mark)).toBe(false);
       expect(el.contains(mark)).toBe(true);
-      expect(mark.style.top).toMatch(/^calc\(-/);
+      // Pokal über der Ecke; das Leibchen-Zeichen am Monitor innen in der Ecke (@ZM-157), sonst über der Ecke
+      if (id === 'box-cup' || size !== 'display') {
+        expect(mark.style.top).toMatch(/^calc\(-/);
+      }
     }
-    expect(screen.getByTestId('box-bib').style.left).toMatch(/^calc\(-/);
+    if (size !== 'display') {
+      expect(screen.getByTestId('box-bib').style.left).toMatch(/^calc\(-/);
+    }
     expect(screen.getByTestId('box-cup').style.right).toMatch(/^calc\(-/);
     expect(digits.children).toHaveLength(0);
   });

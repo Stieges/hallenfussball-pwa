@@ -17,7 +17,7 @@ import { getGroupShortCode } from '../../utils/displayNames';
 import { buildSideContext, matchHeading, matchViewOf, sideDisplay, sideName } from './matchSides';
 import { MatchForfeitAction, type MatchForfeitActions } from './MatchForfeitAction';
 import { cardStatusOf, resultFigures } from './matchResult';
-import type { SpectatorClock } from '../../core/view';
+import type { MatchView, SpectatorClock } from '../../core/view';
 import {
   MatchCard,
   type MatchCardStatus,
@@ -178,6 +178,20 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     (match: ScheduledMatch): MatchCardStatus => cardStatusOf(view?.byId.get(match.id)),
     [view],
   );
+
+  // Kästen in Teamfarbe (Weste bei Leibchen) nur beim laufenden und beim nächsten Spiel des Felds (@ZM-158); nie im Kindermodus ohne Stand
+  const nextIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const field of new Set(matches.map((m) => m.field))) {
+      const next = view?.currentFor(field).next;
+      if (next !== undefined) { ids.add(next.id); }
+    }
+    return ids;
+  }, [view, matches]);
+  const kastenOf = (matchId: string): MatchView['boxes'] | undefined => {
+    const shown = view?.byId.get(matchId);
+    return view?.rules.results === true && shown !== undefined && (shown.isLive || nextIds.has(matchId)) ? shown.boxes : undefined;
+  };
 
   // Spielseiten: Namen immer aus der Ansicht (Slots, aktuelle Teams; @TM-015), nie aus gespeichertem Anzeigetext
   const sides = useMemo(() => buildSideContext(tournament, matches), [tournament, matches]);
@@ -719,6 +733,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
               viewStatus: matchViewOf(sides, match.id)?.status,
               badge: matchViewOf(sides, match.id)?.badge,
               clock: clockOf?.(match.id) ?? null,
+              kasten: kastenOf(match.id),
             };
 
             return (
