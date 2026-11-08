@@ -214,6 +214,23 @@ describe('Vorziehen vor dem ersten Anpfiff (Nikolaus-Turnier)', () => {
     expect(nearWarning).toMatchObject({ kind: 'shortNotice', matchNumbers: [1], inMinutes: 5 });
   });
 
+  // Befund C-ENDZEIT-OHNE-WECHSELMINUTE (Nikolaus-Durchstich N5): 9 Minuten Spielzeit + 1 Minute Wechsel = Takt von 10 Minuten.
+  // Das Ende ist das Ende des letzten Takts: 16:15 + 15 × 10 Minuten = 18:45, nicht 18:44 (Ende des letzten Anpfiffs + 9).
+  it('@ZP-089 C-ENDZEIT-OHNE-WECHSELMINUTE neues Ende 18:45 bei 9 Minuten Spielzeit und 1 Minute Wechsel (nicht 18:44)', () => {
+    const { matches, statusOf } = nikolaus();
+    const wechsel: ShiftTimingRules = { groupPhaseGameDuration: 9, groupPhaseBreakDuration: 1 };
+    const plan = planShift(matches, { from: { kind: 'match', matchId: 'n1' }, minutes: -15 }, wechsel, { now: at('16:10'), statusOf });
+    expect(plan.error).toBeUndefined();
+    expect(hhmm(plan.newEnd)).toBe('18:45');
+    expect(hhmm(plan.oldEnd)).toBe('19:00');
+  });
+
+  it('@ZP-089 Gegenbeispiel: ohne Wechselminute (10 Minuten Spielzeit, Pause 0) bleibt das Ende 18:45', () => {
+    const { matches, statusOf } = nikolaus();
+    const plan = planShift(matches, { from: { kind: 'match', matchId: 'n1' }, minutes: -15 }, NIKOLAUS_RULES, { now: at('16:10'), statusOf });
+    expect(hhmm(plan.newEnd)).toBe('18:45');
+  });
+
   it('@ZP-090 bei kurzfristigem Vorziehen steht bei Spiel 1 „ursprünglich 16:30“', () => {
     const { matches, statusOf } = nikolaus();
     const result = shiftSchedule(matches, { from: { kind: 'match', matchId: 'n1' }, minutes: -15 }, NIKOLAUS_RULES, { now: at('16:10'), statusOf });

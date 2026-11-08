@@ -112,6 +112,8 @@
     "errors": {
       "unknownFormat": "Unbekanntes Dateiformat. Bitte eine JSON- oder CSV-Datei auswählen.",
       "readError": "Fehler beim Lesen der Datei",
+      "missingDate": "In der Datei fehlt das Turnierdatum",
+      "missingStartTime": "In der Datei fehlt die Startzeit des Turniers",
       "saveFailed": "Das Turnier konnte nicht gespeichert werden. Es ist nichts importiert. Bitte versuche es erneut."
     },
     "select": {

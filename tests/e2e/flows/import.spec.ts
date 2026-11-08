@@ -58,4 +58,21 @@ test.describe('Tournament Import Flow', () => {
     // Preview-Button darf NICHT erscheinen
     await expect(page.locator('[data-testid="import-confirm"]')).toHaveCount(0);
   });
+  // @W1-042: fehlendes Datum / fehlende Startzeit wird gemeldet, nichts wird still ergänzt
+  for (const fall of [
+    { feld: 'Datum', datei: 'missing-date-tournament.json', meldung: 'In der Datei fehlt das Turnierdatum' },
+    { feld: 'Startzeit', datei: 'missing-start-time-tournament.json', meldung: 'In der Datei fehlt die Startzeit des Turniers' },
+  ]) {
+    test(`@W1-042 ${fall.feld} fehlt: Klartext-Fehler, keine Vorschau, nichts gespeichert`, async ({ page }) => {
+      await page.locator('[data-testid="dashboard-import-trigger"]').click();
+
+      const fileInput = page.locator('[data-testid="import-file-input"]');
+      await fileInput.setInputFiles(path.join(FIXTURES_DIR, fall.datei));
+
+      await expect(page.locator('[data-testid="import-error"]')).toHaveText(fall.meldung, { timeout: 5000 });
+      await expect(page.locator('[data-testid="import-warnings-continue"]')).toHaveCount(0);
+      await expect(page.locator('[data-testid="import-confirm"]')).toHaveCount(0);
+      await expect(page.locator('[data-testid="import-success-go"]')).toHaveCount(0);
+    });
+  }
 });

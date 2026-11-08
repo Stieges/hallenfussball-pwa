@@ -112,6 +112,8 @@
     "errors": {
       "unknownFormat": "Unknown file format. Please select a JSON or CSV file.",
       "readError": "Error reading file",
+      "missingDate": "The file is missing the tournament date",
+      "missingStartTime": "The file is missing the tournament start time",
       "saveFailed": "The tournament could not be saved. Nothing was imported. Please try again."
     },
     "select": {
