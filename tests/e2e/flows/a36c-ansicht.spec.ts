@@ -65,12 +65,18 @@ test.describe('A-36c Zuschauer-Seite 360×640 (/live/MESS26)', () => {
     await expect(page.locator('[data-testid="match-card-live"]')).toHaveCount(0);
   });
 
-  test('@OB-064 Endstände bleiben: Halbfinale 1 „beendet nach Verlängerung“ (2:1), Halbfinale 2 „beendet nach Strafstoßschießen“ mit (4)/(3)', async ({ page }) => {
-    await expect(karte(page, HALBFINALE_1).locator('[data-testid^="final-decision-"]')).toHaveText('beendet nach Verlängerung');
-    await expect(karte(page, HALBFINALE_1).locator('[data-testid^="final-goals-"]').nth(0)).toHaveText('2');
-    await expect(karte(page, HALBFINALE_2).locator('[data-testid^="final-decision-"]')).toHaveText('beendet nach Strafstoßschießen');
-    await expect(karte(page, HALBFINALE_2).locator('[data-testid^="final-penalty-"]').nth(0)).toHaveText('(4)');
-    await expect(karte(page, HALBFINALE_2).locator('[data-testid^="final-penalty-"]').nth(1)).toHaveText('(3)');
+  test('@OB-064 Endstände bleiben: Halbfinale 1 (2:1) klein „nach Verlängerung“ beim Stand des Siegers, Halbfinale 2 mit (4)/(3) je Zeile, nichts in der Kopfzeile', async ({ page }) => {
+    const hf1 = karte(page, HALBFINALE_1);
+    await expect(hf1.locator('[data-testid^="final-goals-"]').nth(0)).toHaveText('2');
+    await expect(hf1.locator('[data-testid^="final-overtime-"]')).toHaveCount(1);
+    await expect(hf1.locator('[data-testid^="final-overtime-"][data-testid$="-home"]')).toHaveText('nach Verlängerung');
+    await expect(hf1.locator('[data-testid^="final-overtime-"][data-testid$="-away"]')).toHaveCount(0);
+    await expect(hf1.locator('[data-testid^="final-decision-"]')).toHaveCount(0);
+    const hf2 = karte(page, HALBFINALE_2);
+    await expect(hf2.locator('[data-testid^="final-penalty-"]').nth(0)).toHaveText('(4)');
+    await expect(hf2.locator('[data-testid^="final-penalty-"]').nth(1)).toHaveText('(3)');
+    await expect(hf2.locator('[data-testid^="final-decision-"]')).toHaveCount(0);
+    await expect(hf2.locator('[data-testid^="final-overtime-"]')).toHaveCount(0);
   });
 
   test('@ZM-039 Filter „Live“: nur das Finale; „Beendet“ enthält das Finale nicht', async ({ page }) => {

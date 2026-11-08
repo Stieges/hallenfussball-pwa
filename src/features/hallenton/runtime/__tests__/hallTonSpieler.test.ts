@@ -168,7 +168,8 @@ describe('hallTonSpieler', () => {
     spieler.planen('a', 'abpfiff', 1);
     spieler.planen('h', 'halbzeit', 2);
     expect(kontext.gains.map((g) => g.gain.value)).toEqual([0.8, 0.5]);
-    expect(JSON.parse(lokal.daten['hallenton:lautstaerke'] ?? '{}')).toEqual({ abpfiff: 80, halbzeit: 50 });
+    // @HT-023 seit 07.11. mit eigenem Regler für die Torhymne (Vorbelegung 100 %)
+    expect(JSON.parse(lokal.daten['hallenton:lautstaerke'] ?? '{}')).toEqual({ abpfiff: 80, halbzeit: 50, tor: 100 });
   });
 
   it('@HT-023 die Einstellung bleibt nach dem Neuladen der App erhalten (neuer Spieler, gleicher Speicher)', async () => {

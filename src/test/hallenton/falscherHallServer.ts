@@ -4,6 +4,8 @@
  * `hall_field_lead_heartbeat`, `hall_output_heard` und `hall_sound_status` (volle/schmale Sicht). Zeit ist die Serverzeit
  * `jetzt()`; Alter rechnet der Server. `netz` steuert das Netz (`weg` = jede Anfrage scheitert mit `netz`), `fehler` liefert
  * einen festen Fehlergrund (z. B. `kein_recht`, `turnier_beendet`). Jedes Lebenszeichen wird mit Absender protokolliert.
+ * Seit `20261123_001_hallenton_torhymne.sql`: nach dem Turnierende (`turnierBeendet`) antwortet das Lebenszeichen 55000
+ * (`turnier_beendet`, `hall_require_open`); `torWahl` liefert „Ton bei Tor“ und die Torhymnen in der vollen Sicht.
  */
 import type {
   HallArgs, HallErgebnis, HallFehlerGrund, HallHeartbeatAntwort, HallHeardAntwort, HallLeadHeartbeatAntwort,
@@ -41,6 +43,10 @@ export class FalscherHallServer {
   /** Antwort auf Lebenszeichen kommt so viel später an (ms, über `spaeter`). */
   verzoegerungMs = 0;
   vollSicht = true;
+  /** Turnier abgeschlossen/abgebrochen (20261123_001: Lebenszeichen 55000). */
+  turnierBeendet = false;
+  /** „Ton bei Tor“ je Feld und Torhymnen (Pfade) der vollen Sicht. */
+  torWahl: { goalToneFields: number[]; goalAnthemPaths: string[] } = { goalToneFields: [], goalAnthemPaths: [] };
   private testZaehler = 0;
 
   constructor(readonly jetzt: () => number, private readonly spaeter: (fn: () => void, ms: number) => void = (fn) => fn()) {}
@@ -62,6 +68,10 @@ export class FalscherHallServer {
 
   /** Absender `von` (Tab) nur fürs Protokoll. */
   heartbeat(von: string, a: HallArgs<'hall_speaker_heartbeat'>): Promise<HallErgebnis<HallHeartbeatAntwort>> {
+    if (this.turnierBeendet && this.netz === 'ok' && this.fehler === null) {
+      this.aufrufe.push('hall_speaker_heartbeat');
+      return Promise.resolve({ ok: false, grund: 'turnier_beendet' }); // hall_require_open: 55000, nichts geschrieben
+    }
     const lauf = this.antwort('hall_speaker_heartbeat', (): HallHeartbeatAntwort => {
       const now = this.jetzt();
       this.lebenszeichen.push({ von, at: now, state: a.p_state, outputChanged: a.p_output_changed === true, fields: [...a.p_fields] });
@@ -165,7 +175,7 @@ export class FalscherHallServer {
           outputHint: s.hintAt !== null, hintAt: s.hintAt, lastSeen: s.lastSeen, ageMs: alter(s), test: s.test,
         })),
         leads: [...this.leitung.entries()].map(([field, l]) => ({ field, ageMs: now - l.lastSeen })),
-        settings: { halftimeSound: 'horn-1', halftimeCustomPath: null, endCustomPath: null, goalToneFields: [] },
+        settings: { halftimeSound: 'horn-1', halftimeCustomPath: null, endCustomPath: null, ...this.torWahl },
       };
     });
   }

@@ -617,6 +617,9 @@
     "groups": "Groups"
   },
   "matchCard": {
+    "winnerAria": "Winner, trophy",
+    "bibSpoken": "{{team}} wearing bibs",
+    "bibAria": "Bib",
     "timePenalty": "$t(sport:events.timePenalty) #{{number}} · {{rest}}",
     "timePenaltyNoNumber": "$t(sport:events.timePenalty) · {{rest}}",
     "cannotMove": "Match cannot be moved",
@@ -640,6 +643,7 @@
   },
   "matchResult": {
     "overtimeShort": "$t(short:ergebniszelle.extraTime)",
+    "afterOvertime": "$t(sport:phases.afterExtraTime)",
     "penaltyShort": "$t(short:ergebniszelle.afterPenalties)",
     "finishedPenalty": "ended on penalties",
     "running": "live",

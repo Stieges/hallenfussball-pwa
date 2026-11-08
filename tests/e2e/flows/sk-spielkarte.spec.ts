@@ -86,12 +86,14 @@ const gewicht = (el: ReturnType<Page['locator']>) => el.evaluate((n) => Number(g
 test.describe('@OB-064 Spielplan der Verwaltung, Handy 360×640 hoch', () => {
   test.beforeEach(async ({ page }) => { await oeffneSpielplan(page, HANDY); });
 
-  test('Halbfinale 1 nach Verlängerung: Tore 2 und 1 je Zeile, „beendet nach Verlängerung“ in der Kopfzeile, Sieger fett', async ({ page }) => {
+  test('Halbfinale 1 nach Verlängerung: Tore 2 und 1 je Zeile, klein „nach Verlängerung“ beim Stand des Siegers (nicht beim Verlierer, nichts in der Kopfzeile), Sieger fett', async ({ page }) => {
     const karte = finalKarte(page, 0);
     await karte.scrollIntoViewIfNeeded();
     await expect(karte.locator('[data-testid^="final-goals-"]').nth(0)).toHaveText('2');
     await expect(karte.locator('[data-testid^="final-goals-"]').nth(1)).toHaveText('1');
-    await expect(karte.locator('[data-testid^="final-decision-"]')).toHaveText('beendet nach Verlängerung');
+    await expect(karte.locator('[data-testid^="final-overtime-"]')).toHaveCount(1);
+    await expect(karte.locator('[data-testid^="final-overtime-"][data-testid$="-home"]')).toHaveText('nach Verlängerung');
+    await expect(karte.locator('[data-testid^="final-decision-"]')).toHaveCount(0);
     await expect(karte.locator('[data-testid^="final-penalty-"]')).toHaveCount(0);
     await expect(karte.locator('[data-winner="true"]')).toHaveCount(1);
     expect(await gewicht(karte.locator('[data-testid^="final-name-"]').nth(0))).toBeGreaterThanOrEqual(700);
@@ -99,14 +101,14 @@ test.describe('@OB-064 Spielplan der Verwaltung, Handy 360×640 hoch', () => {
     await bild(page, 'handy-360-halbfinale-1-nV', karte);
   });
 
-  test('Halbfinale 2 nach Strafstoßschießen: Tore 0 und 0, (4) und (3) je Zeile, „beendet nach Strafstoßschießen“, Sieger fett', async ({ page }) => {
+  test('Halbfinale 2 nach Strafstoßschießen: Tore 0 und 0, (4) und (3) je Zeile, nichts in der Kopfzeile, Sieger fett', async ({ page }) => {
     const karte = finalKarte(page, 1);
     await karte.scrollIntoViewIfNeeded();
     await expect(karte.locator('[data-testid^="final-goals-"]').nth(0)).toHaveText('0');
     await expect(karte.locator('[data-testid^="final-goals-"]').nth(1)).toHaveText('0');
     await expect(karte.locator('[data-testid^="final-penalty-"]').nth(0)).toHaveText('(4)');
     await expect(karte.locator('[data-testid^="final-penalty-"]').nth(1)).toHaveText('(3)');
-    await expect(karte.locator('[data-testid^="final-decision-"]')).toHaveText('beendet nach Strafstoßschießen');
+    await expect(karte.locator('[data-testid^="final-decision-"]')).toHaveCount(0);
     // Sieger (Heim) fett, Gegenbeispiel: der Verlierer (Gast) steht nicht fett
     expect(await gewicht(karte.locator('[data-testid^="final-name-"]').nth(0))).toBeGreaterThanOrEqual(700);
     expect(await gewicht(karte.locator('[data-testid^="final-name-"]').nth(1))).toBeLessThan(700);

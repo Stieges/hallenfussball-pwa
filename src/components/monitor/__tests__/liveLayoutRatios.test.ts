@@ -4,8 +4,7 @@
  * Rechnet je Auflösung mit den echten Token-Werten (Layout-Rechnung, ohne Browser), mit seitlichem Polster der Folie.
  */
 import { describe, it, expect } from 'vitest';
-import { displayFontSizes, displayLayout } from '../../../design-tokens';
-import { scoreDigitFontSize } from '../scoreDigitSize';
+import { displayFontSizes, displayLayout, scoreDigitFontSize } from '../../../design-tokens';
 import { TEAM_NAME_ZEILENHOEHE } from '../teamNameFit';
 import { RESOLUTIONS, resolveCss } from './cssResolve';
 
@@ -50,7 +49,7 @@ describe.each(RESOLUTIONS.flatMap(r => [0, 48].map(rand => ({ ...r, rand }))))('
   });
 
   it('Luft: Ziffernhöhe höchstens 60 % des Kastens, zweistellig seitlich ≥ halbe Ziffernbreite', () => {
-    expect(m.digit).toBeLessThanOrEqual(0.6 * m.boxH);
+    expect(m.digit).toBeLessThanOrEqual(L.digitMaxOfBox.height * m.boxH);
     const digitWidth = 0.6 * m.digit;
     expect((m.boxW - 2 * digitWidth) / 2).toBeGreaterThanOrEqual(0.5 * digitWidth);
   });

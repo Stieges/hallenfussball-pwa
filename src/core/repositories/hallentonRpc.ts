@@ -1,12 +1,12 @@
 /**
- * Client der Hallenton-Funktionen (`supabase/migrations/20261121_001_hallenton.sql`, Record
- * `docs/anforderungen/2026-10-15_hallenton.md`). Muster `fieldControlRpc.ts`: nur `.rpc`, Zeitlimit
+ * Client der Hallenton-Funktionen (`supabase/migrations/20261121_001_hallenton.sql`, Torhymne
+ * `20261123_001_hallenton_torhymne.sql`, Record `docs/anforderungen/2026-10-15_hallenton.md`). Muster `fieldControlRpc.ts`: nur `.rpc`, Zeitlimit
  * `withCloudReadTimeout`, jede `Json`-Antwort per zod genau nach der Antwortform der SQL-Funktion geprüft.
  *
  * Fehlerbild als Ergebnisart, nie ein Wurf:
  * - 42501 → `kein_recht` (auch „Turnier gibt es nicht“, der Server unterscheidet das bewusst nicht, @HT-044)
  * - 22023 → `ungueltig`
- * - 55000 → `turnier_beendet` (ändernde Wege nach dem Turnierende, @HT-046)
+ * - 55000 → `turnier_beendet` (ändernde Wege und seit 20261123_001 das Lebenszeichen nach dem Turnierende, @HT-046)
  * - Zeitlimit, Netz, fehlender Client → `netz`
  * - Antwort passt nicht zum Vertrag oder unbekannter Server-Fehler → `antwort_unbekannt` (kein Ton nach geratener Antwort)
  *
@@ -22,7 +22,8 @@ type Client = SupabaseClient<Database> | null;
 type Functions = Database['public']['Functions'];
 type HallFunktion =
   | 'hall_speaker_assign' | 'hall_speaker_release' | 'hall_speaker_heartbeat' | 'hall_field_lead_heartbeat'
-  | 'hall_test_tone_request' | 'hall_test_tone_ack' | 'hall_output_heard' | 'hall_sound_settings_set' | 'hall_sound_status';
+  | 'hall_test_tone_request' | 'hall_test_tone_ack' | 'hall_output_heard' | 'hall_sound_settings_set' | 'hall_sound_status'
+  | 'hall_goal_anthems_set';
 export type HallArgs<F extends HallFunktion> = Functions[F]['Args'];
 
 export type HallFehlerGrund = 'kein_recht' | 'ungueltig' | 'turnier_beendet' | 'netz' | 'antwort_unbekannt';
@@ -95,6 +96,8 @@ const VolleSichtSchema = z.object({
     halftimeCustomPath: z.string().nullable(),
     endCustomPath: z.string().nullable(),
     goalToneFields: z.array(z.number().int()),
+    /** Torhymnen in ihrer Reihenfolge (@HT-024, seit 20261123_001); fehlt das Feld in einer alten Antwort, gilt `[]`. */
+    goalAnthemPaths: z.array(z.string()).default([]),
   }),
 });
 const SchmaleSichtSchema = z.object({
@@ -199,6 +202,11 @@ export function hallSoundSettingsSet(client: Client, args: HallSoundSettingsArgs
   // Der erzeugte Typ führt jedes Argument als Pflicht-Text; die Server-Funktion nimmt NULL für „kein eigener Ton“ an
   // (Muster `deviceOutboxReportRpc.ts`).
   return rufe(client, 'hall_sound_settings_set', args as unknown as HallArgs<'hall_sound_settings_set'>, mit(SettingsSetSchema));
+}
+
+/** Torhymnen des Turniers setzen (@HT-024): die ganze Liste in ihrer Reihenfolge, höchstens 5, `[]` leert sie. */
+export function hallGoalAnthemsSet(client: Client, args: HallArgs<'hall_goal_anthems_set'>): Promise<HallErgebnis<HallSettingsSetAntwort>> {
+  return rufe(client, 'hall_goal_anthems_set', args, mit(SettingsSetSchema));
 }
 
 /** Stand lesen: volle Sicht mit `manageScreens`, schmale Sicht mit nur `writeMatchData` (@HT-039, @HT-040, @HT-041). */

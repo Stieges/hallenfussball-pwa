@@ -8,14 +8,16 @@
  *   Eigener Ton nicht ladbar oder länger als 5 s → „Hupe 1“ und Zustand `custom_sound_failed` (@HT-028 Zeile 4).
  * - `planen(id, art, t)`: `AudioBufferSourceNode.start(t)` → Lautstärke (`GainNode`) → Begrenzer (`DynamicsCompressorNode`)
  *   → Ausgang, harter Stopp nach 5 s. Dieselbe Kennung ersetzt den alten Ton.
- * - Lautstärke je Ton und Stumm je Gerät in `localStorage` (`hallenton:lautstaerke`, `hallenton:stumm`), nicht
- *   turnierweit (@HT-023). Abpfiff-Ton auf 0 % oder stumm → Zustand `volume_zero` (@HT-039).
+ * - Lautstärke je Ton (auch Torhymne, Regler `tor`) und Stumm je Gerät in `localStorage` (`hallenton:lautstaerke`,
+ *   `hallenton:stumm`), nicht turnierweit (@HT-023). Abpfiff-Ton auf 0 % oder stumm → Zustand `volume_zero` (@HT-039).
+ * - H3c: Torhymnen (`hymnen`, `torhymnenAusgabe.ts`) auf derselben Ausgabe; jeder hier geplante Ton beendet sie zu seinem Beginn.
  */
 import type { AudioKontext, AudioPuffer, GainKnoten, KompressorKnoten, QuellKnoten } from './webAudioTypen';
-import { browserSpeicher, gespeicherteLautstaerke, lies, schreib, LAUTSTAERKE_SCHLUESSEL, STUMM_SCHLUESSEL, type Speicher, type TonArt } from './tonEinstellungen';
+import { browserSpeicher, gespeicherteLautstaerke, lies, schreib, LAUTSTAERKE_SCHLUESSEL, STUMM_SCHLUESSEL, type ReglerArt, type Speicher, type TonArt } from './tonEinstellungen';
+import { erzeugeTorhymnenAusgabe, istHttps, type TorhymnenAusgabe } from './torhymnenAusgabe';
 
 export type { AudioKontext, AudioPuffer, AudioZiel, GainKnoten, KompressorKnoten, QuellKnoten } from './webAudioTypen';
-export { LAUTSTAERKE_SCHLUESSEL, STUMM_SCHLUESSEL, type Speicher, type TonArt } from './tonEinstellungen';
+export { LAUTSTAERKE_SCHLUESSEL, STUMM_SCHLUESSEL, type ReglerArt, type Speicher, type TonArt } from './tonEinstellungen';
 
 export type HupenId = 'horn-1' | 'horn-2' | 'horn-3';
 export type TonWahl = HupenId | { eigeneUrl: string };
@@ -26,7 +28,6 @@ export const HART_STOPP_SEK = 5;
 const HUPEN_URL: Record<HupenId, string> = { 'horn-1': '/sounds/horn-1.mp3', 'horn-2': '/sounds/horn-2.mp3', 'horn-3': '/sounds/horn-3.mp3' };
 const ARTEN: readonly TonArt[] = ['abpfiff', 'halbzeit'];
 
-
 export interface HallTonSpieler {
   aktivieren(): Promise<boolean>;
   laden(toene: Record<TonArt, TonWahl>): Promise<Record<TonArt, LadeStand>>;
@@ -36,8 +37,8 @@ export interface HallTonSpieler {
   jetztSpielen(art: TonArt): boolean;
   /** Audiozeit (s) für eine Serverzeit (ms), abzüglich `outputLatency`, wo vorhanden. */
   audioZeitFuerServerZeit(serverMs: number, serverNowMs: number): number;
-  lautstaerke(art: TonArt): number;
-  setzeLautstaerke(art: TonArt, prozent: number): void;
+  lautstaerke(art: ReglerArt): number;
+  setzeLautstaerke(art: ReglerArt, prozent: number): void;
   stumm(): boolean;
   setzeStumm(stumm: boolean): void;
   zustand(): SpielerZustand;
@@ -45,6 +46,8 @@ export interface HallTonSpieler {
   geplant(): string[];
   /** Für `ausgangsSignale` (dieselbe Ausgabe). */
   audioKontext(): AudioKontext;
+  /** Torhymnen (@HT-024): laden, spielen, stoppen. */
+  readonly hymnen: TorhymnenAusgabe;
 }
 
 export interface HallTonSpielerAbhaengigkeiten {
@@ -53,15 +56,8 @@ export interface HallTonSpielerAbhaengigkeiten {
   speicher: Speicher | null;
 }
 
-function istHttps(url: string): boolean {
-  try {
-    return new URL(url).protocol === 'https:';
-  } catch {
-    return false;
-  }
-}
-
-interface Geplant { quelle: QuellKnoten; gain: GainKnoten; art: TonArt }
+/** `startAt`/`endetUm`: Audiozeit von Beginn und hartem Ende (für die Torhymne). */
+interface Geplant { quelle: QuellKnoten; gain: GainKnoten; art: TonArt; startAt: number; endetUm: number }
 
 export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: HallTonSpielerAbhaengigkeiten): HallTonSpieler {
   let kontextWert: AudioKontext | null = null;
@@ -158,6 +154,11 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
     eintrag.gain.disconnect();
   };
 
+  const hymnen = erzeugeTorhymnenAusgabe({
+    kontext, begrenzer, dekodiere, andereToene: () => geplant.values(), lautstaerke: () => lautstaerke.tor,
+    darf: () => aktiviert && kontextWert?.state === 'running' && !stumm && lautstaerke.tor > 0, // ohne geladenen Abpfiff-Ton
+  });
+
   const abbrechen = (id: string): void => {
     const eintrag = geplant.get(id);
     if (!eintrag) {
@@ -170,6 +171,7 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
       // schon beendet
     }
     trennen(eintrag);
+    hymnen.toeneGeaendert(); // die Hymne läuft wieder bis zu ihrer harten Grenze
   };
 
   // Ein Ton mit vergangener Startzeit spielt sofort (Web Audio): die 5-s-Regel von @HT-013 („kein altes Ende nachholen“)
@@ -187,7 +189,7 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
     gain.gain.value = lautstaerke[art] / 100;
     quelle.connect(gain);
     gain.connect(begrenzer());
-    const eintrag: Geplant = { quelle, gain, art };
+    const eintrag: Geplant = { quelle, gain, art, startAt: startAtAudioSec, endetUm: startAtAudioSec + Math.min(ton.duration, HART_STOPP_SEK) };
     quelle.onended = () => {
       if (geplant.get(id) === eintrag) {
         geplant.delete(id);
@@ -197,6 +199,7 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
     quelle.start(startAtAudioSec);
     quelle.stop(startAtAudioSec + HART_STOPP_SEK);
     geplant.set(id, eintrag);
+    hymnen.toeneGeaendert(); // jeder Ton beendet eine laufende Hymne genau zu seinem Beginn (@HT-024)
     return true;
   };
 
@@ -259,6 +262,9 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
       const wert = Math.round(Math.min(100, Math.max(0, prozent)));
       lautstaerke = { ...lautstaerke, [art]: wert };
       schreib(speicher, LAUTSTAERKE_SCHLUESSEL, JSON.stringify(lautstaerke));
+      if (art === 'tor') {
+        hymnen.setzeLautstaerke(wert);
+      }
       for (const eintrag of geplant.values()) {
         if (eintrag.art === art) {
           eintrag.gain.gain.value = wert / 100;
@@ -279,6 +285,7 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
     },
     geplant: () => [...geplant.keys()],
     audioKontext: kontext,
+    hymnen,
   };
 }
 

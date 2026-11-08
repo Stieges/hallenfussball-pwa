@@ -9,7 +9,8 @@
  * - `ausschalten()` über `hall_speaker_release` (@HT-038); die Laufzeit stoppt auch ohne Netz (Wunsch des Nutzers). Ohne Netz
  *   holt das Gerät die Abmeldung später nach (`ausstehendeAbmeldung.ts`, H3b-3); ein neues Einschalten verwirft sie.
  * - `hierAnhoeren(ton)` spielt den Ton nur auf diesem Gerät (@HT-023, „Anhören“) – mit der Tonwahl des Turniers, auch vor der
- *   Aktivierung und ohne Lautsprecher-Funktion (k4-neu-2, H3b-3).
+ *   Aktivierung und ohne Lautsprecher-Funktion (k4-neu-2, H3b-3). H3c: `hierAnhoeren('tor', i)` spielt die Torhymne `i`
+ *   (Vorbelegung die erste) über ihren eigenen Regler, höchstens 10 s; Regler `tor` in `lautstaerke` (für H4, keine Oberfläche).
  */
 import { useCallback, useMemo, useReducer, useSyncExternalStore } from 'react';
 import { getDeviceId } from '../../core/device/deviceId';
@@ -18,11 +19,11 @@ import {
 } from '../../core/repositories/hallentonRpc';
 import { supabase } from '../../lib/supabase';
 import { merkeAbmeldung, vergissAbmeldung, vergissAbmeldungWenn } from './ausstehendeAbmeldung';
-import { leseTonWahlSofort } from './browserLaufzeit';
+import { leseTonWahlSofort, leseTorWahlZumAnhoeren } from './browserLaufzeit';
 import { ladeTurnierLokal } from './lokalesTurnier';
 import { abonniereGeraet, geraetSpieler, geraetStand, schlafenQuittiert, setzeEinschaltung } from './lautsprecherGeraet';
 import type { LaufzeitSnapshot } from './runtime/HallLautsprecherLaufzeit';
-import type { TonArt } from './runtime/hallTonSpieler';
+import type { ReglerArt } from './runtime/hallTonSpieler';
 
 export type HallLautsprecherRolle = 'keiner' | 'diesesTurnier' | 'anderesTurnier';
 
@@ -36,9 +37,10 @@ export interface HallLautsprecher {
   einschalten(felder: readonly number[], name: string, abloesen?: boolean): Promise<HallErgebnis<HallAssignAntwort>>;
   tonAktivieren(): Promise<boolean>;
   ausschalten(): Promise<HallErgebnis<HallReleaseAntwort> | null>;
-  hierAnhoeren(ton: TonArt): Promise<boolean>;
-  lautstaerke: Readonly<Record<TonArt, number>>;
-  setzeLautstaerke(ton: TonArt, prozent: number): void;
+  /** `ton = 'tor'`: die Torhymne Nummer `hymne` (0 = die erste) der Liste des Turniers. */
+  hierAnhoeren(ton: ReglerArt, hymne?: number): Promise<boolean>;
+  lautstaerke: Readonly<Record<ReglerArt, number>>;
+  setzeLautstaerke(ton: ReglerArt, prozent: number): void;
   stumm: boolean;
   setzeStumm(stumm: boolean): void;
   /** Fehlergrund des letzten Lebenszeichens (z. B. `ungueltig`); `null` = angekommen (H3b-3 K2). */
@@ -90,17 +92,23 @@ export function useHallLautsprecher(tid: string): HallLautsprecher {
     return ergebnis;
   }, [tid]);
 
-  const hierAnhoeren = useCallback(async (ton: TonArt) => {
+  const hierAnhoeren = useCallback(async (ton: ReglerArt, hymne = 0) => {
     const spieler = geraetSpieler();
     await spieler.aktivieren(); // der Klick ist selbst eine Geste: `resume()` läuft vor jedem await
     // k4-neu-2: die Tonwahl des Turniers – mit Laufzeit über deren Wahl (lädt nur, solange der Tab nicht aktiviert ist, ohne
     // ihn zu aktivieren, W2-neu-1), sonst selbst gelesen; K5: sofort mit der lokal bekannten Wahl, ohne aufs Netz zu warten
     const laufzeit = geraetStand().laufzeit;
-    await (laufzeit ? laufzeit.ladeToeneZumAnhoeren() : spieler.laden(await leseTonWahlSofort(tid, ladeTurnierLokal)));
-    return spieler.jetztSpielen(ton);
+    if (laufzeit) {
+      await laufzeit.ladeToeneZumAnhoeren();
+    } else if (ton === 'tor') {
+      await spieler.hymnen.laden((await leseTorWahlZumAnhoeren(tid, ladeTurnierLokal)).hymnen);
+    } else {
+      await spieler.laden(await leseTonWahlSofort(tid, ladeTurnierLokal));
+    }
+    return ton === 'tor' ? spieler.hymnen.spielen(hymne) : spieler.jetztSpielen(ton);
   }, [tid]);
 
-  const setzeLautstaerke = useCallback((ton: TonArt, prozent: number) => {
+  const setzeLautstaerke = useCallback((ton: ReglerArt, prozent: number) => {
     geraetSpieler().setzeLautstaerke(ton, prozent);
     neuZeichnen();
   }, []);
@@ -112,7 +120,8 @@ export function useHallLautsprecher(tid: string): HallLautsprecher {
   const spieler = geraetSpieler(); // ohne `AudioContext`: der entsteht erst beim Abspielen oder Aktivieren
   const abpfiff = spieler.lautstaerke('abpfiff');
   const halbzeit = spieler.lautstaerke('halbzeit');
-  const lautstaerke = useMemo(() => ({ abpfiff, halbzeit }), [abpfiff, halbzeit]);
+  const tor = spieler.lautstaerke('tor');
+  const lautstaerke = useMemo(() => ({ abpfiff, halbzeit, tor }), [abpfiff, halbzeit, tor]);
 
   return {
     rolle,

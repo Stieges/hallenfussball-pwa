@@ -1697,4 +1697,42 @@ SELECT 'gathering-screens-guards',
        AND coalesce((SELECT position('p_key !~ ''^[0-9a-f]{32}$''' IN p.prosrc) > 0
                             AND position('public.gathering_screen_reason(v_g.id, v_g.on_screen_tournament_id) IS NULL' IN p.prosrc) > 0
                        FROM pg_proc p WHERE p.oid = to_regprocedure('public.gathering_screen_display(text,bigint)')), false)
+-- ---------------------------------------------------------------------------------------------------------------
+-- Hallenton Torhymne (20261123_001_hallenton_torhymne.sql, Record Hallenton @HT-024, @HT-046): Pruefskript
+-- scripts/hallenton-check.sh (Kategorie T), Rollen-Zeilen scripts/rls-matrix.d/spur-hallenton.sh. Vor dem Live-Einspielen
+-- "f" (vom Drift-Check bis dahin ausgelassen).
+-- ---------------------------------------------------------------------------------------------------------------
+-- (1) hall_goal_anthems_set: SECURITY DEFINER, search_path fest, EXECUTE nur authenticated (anon nicht, service_role nicht,
+--     kein PUBLIC); prueft manageScreens und das offene Turnier (55000), bevor es schreibt.
+UNION ALL
+SELECT 'hallenton-goal-anthems-rpc-authenticated-only',
+       coalesce((SELECT p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                        AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('service_role', p.oid, 'EXECUTE')
+                        AND p.proacl IS NOT NULL
+                        AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+                        AND position('PERFORM public.hall_require(p_tournament_id, ''manageScreens'');' IN p.prosrc) > 0
+                        AND position('PERFORM public.hall_require_open(p_tournament_id);' IN p.prosrc) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.hall_goal_anthems_set(uuid,text[])')), false)
+-- (2) Liste der Torhymnen: Spalte text[] NOT NULL, Vorbelegung leer, Pruefregel mit hoechstens 5 Eintraegen, der Pfad-Form
+--     und ohne Komma in einem Eintrag (Nachpruefung H3c, N1).
+UNION ALL
+SELECT 'hallenton-goal-anthems-column-checked',
+       coalesce((SELECT a.attnotnull AND format_type(a.atttypid, a.atttypmod) = 'text[]'
+                        AND pg_get_expr(d.adbin, d.adrelid) = '''{}''::text[]'
+                   FROM pg_attribute a LEFT JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
+                  WHERE a.attrelid = to_regclass('public.hall_sound_settings') AND a.attname = 'goal_anthem_paths'
+                    AND NOT a.attisdropped), false)
+       AND coalesce((SELECT position('cardinality(goal_anthem_paths) > 5' IN pg_get_constraintdef(con.oid)) > 0
+                            AND position('(mp3|wav|m4a)' IN pg_get_constraintdef(con.oid)) > 0
+                            AND position(''',''::text' IN pg_get_constraintdef(con.oid)) > 0
+                       FROM pg_constraint con
+                      WHERE con.conrelid = to_regclass('public.hall_sound_settings')
+                        AND con.conname = 'hall_sound_settings_goal_anthems'), false)
+-- (3) Lebenszeichen nach dem Turnierende: 55000 ueber hall_require_open (Ruling W1 aus H3b-3, dauerhaft).
+UNION ALL
+SELECT 'hallenton-heartbeat-closed-tournament',
+       coalesce((SELECT position('PERFORM public.hall_require_open(p_tournament_id);' IN p.prosrc) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.hall_speaker_heartbeat(uuid,uuid,integer[],text,boolean)')), false)
 ;

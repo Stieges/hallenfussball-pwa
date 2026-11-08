@@ -617,6 +617,9 @@
     "groups": "Gruppen"
   },
   "matchCard": {
+    "winnerAria": "Sieger, Pokal",
+    "bibSpoken": "{{team}} in Leibchen",
+    "bibAria": "Leibchen",
     "timePenalty": "$t(sport:events.timePenalty) #{{number}} · {{rest}}",
     "timePenaltyNoNumber": "$t(sport:events.timePenalty) · {{rest}}",
     "cannotMove": "Spiel kann nicht verschoben werden",
@@ -640,6 +643,7 @@
   },
   "matchResult": {
     "overtimeShort": "$t(short:ergebniszelle.extraTime)",
+    "afterOvertime": "$t(sport:phases.afterExtraTime)",
     "penaltyShort": "$t(short:ergebniszelle.afterPenalties)",
     "finishedPenalty": "beendet nach Strafstoßschießen",
     "running": "läuft",

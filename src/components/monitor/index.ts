@@ -10,8 +10,6 @@ export { LiveMatchDisplay, NoMatchDisplay } from './LiveMatchDisplay';
 export type { LiveMatchDisplayProps, NoMatchDisplayProps } from './LiveMatchDisplay';
 
 // Score block
-export { ScoreBlock } from './ScoreBlock';
-export type { ScoreBlockProps } from './ScoreBlock';
 
 // Team name display
 export { TeamNameDisplay } from './TeamNameDisplay';

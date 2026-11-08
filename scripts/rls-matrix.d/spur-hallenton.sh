@@ -19,10 +19,13 @@
 # knappe Stand mit Hinweis „Prüfen“ (@HT-050); manageScreens zusaetzlich „Gehört“ (@HT-049); nach dem Turnierende
 # (@HT-046) jede aendernde Operation gesperrt; sonst abgelehnt (42501 aus der Rechtepruefung). anon: kein EXECUTE (42501 permission denied), beim
 # Hochladen RLS. Zusaetzlich wird der Wert danach als Superuser geprueft (nichts geaendert = abgelehnt wirkt).
+# Torhymne (20261123_001_hallenton_torhymne.sql, @HT-024, @HT-046): spielt diese Datei nach 20261121_001 ebenfalls ein;
+# je Identitaet Hymnen setzen (manageScreens), nach dem Turnierende Hymnen setzen und Lebenszeichen gesperrt (55000).
 
 HT_MISMATCHES=0
 HT_CELLS=0
 HT_FILE="$REPO_ROOT/supabase/migrations/20261121_001_hallenton.sql"
+HT_FOLLOW="$REPO_ROOT/supabase/migrations/20261123_001_hallenton_torhymne.sql"
 HT_STUB="$REPO_ROOT/scripts/lib/hallenton-storage-stub.sql"
 HT_HANDSTEP="$REPO_ROOT/supabase/handschritte/20261121_001_hallenton_storage_policies.sql"
 HT_DEV_R="$(uuid_for hallenton:device:rechner)"
@@ -54,6 +57,16 @@ elif [[ "$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT to_regcla
   else
     HT_READY=0
     ht_cell "Migration einspielbar (Kette davor vollstaendig?)" "nein" "ja"
+  fi
+fi
+if [[ "$HT_READY" -eq 1 && "${HALLENTON_OHNE_MIGRATION:-0}" != "1" ]] \
+   && [[ "$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT to_regprocedure('public.hall_goal_anthems_set(uuid,text[])') IS NOT NULL;")" != "t" ]]; then
+  if docker exec -i -e PGOPTIONS="-c client_min_messages=warning" "$CONTAINER_NAME" \
+       psql -U postgres -X -q -v ON_ERROR_STOP=1 < "$HT_FOLLOW" >/dev/null 2>&1; then
+    echo "hallenton: $(basename "$HT_FOLLOW") eingespielt"
+  else
+    HT_READY=0
+    ht_cell "Torhymne einspielbar (20261121_001 vorhanden?)" "nein" "ja"
   fi
 fi
 
@@ -114,6 +127,8 @@ HT_CLOSED="SET LOCAL app.lifecycle_write = 'on';
 UPDATE public.tournaments SET lifecycle_status = 'finished', finished_at = now() WHERE id = '$T_MAIN';
 RESET app.lifecycle_write;"
 HT_ONE_FILE="INSERT INTO storage.objects (bucket_id, name) VALUES ('hallenton-sounds', '$T_MAIN/$HT_SOUND.wav');"
+HT_ANTHEM="ARRAY['$T_MAIN/$HT_SOUND.mp3']::text[]"
+HT_ANTHEMS="SELECT coalesce((SELECT cardinality(goal_anthem_paths) FROM public.hall_sound_settings WHERE tournament_id = '$T_MAIN'), 0)"
 # Erwartung: <erlaubt-Wert> wenn erlaubt, sonst <abgelehnt-Token>|<unveraendert>
 ht_exp() { [[ "$1" == "true" ]] && echo "$2" || echo "$3|$4"; }
 
@@ -157,6 +172,9 @@ if [[ "$HT_READY" -eq 1 ]]; then
     ht_cell "@HT-022 $ht_id laedt einen eigenen Ton hoch" \
       "$(ht_probe "$ht_role" "$ht_uid" "" "WITH i AS (INSERT INTO storage.objects (bucket_id, name) VALUES ('hallenton-sounds', '$T_MAIN/$HT_SOUND.mp3') RETURNING 1) SELECT 'htr:' || count(*) FROM i;" "SELECT count(*) FROM storage.objects WHERE bucket_id = 'hallenton-sounds'")" \
       "$(ht_exp "$ht_manage" "1|1" rls 0)"
+    ht_cell "@HT-024 $ht_id setzt die Torhymnen" \
+      "$(ht_probe "$ht_role" "$ht_uid" "" "SELECT 'htr:' || (public.hall_goal_anthems_set('$T_MAIN'::uuid, $HT_ANTHEM) ->> 'status');" "$HT_ANTHEMS")" \
+      "$(ht_exp "$ht_manage" "saved|1" "$ht_deny" 0)"
     ht_cell "@HT-049 $ht_id waehlt „Gehört“ (Hinweis weg)" \
       "$(ht_probe "$ht_role" "$ht_uid" "$HT_HINTED" "SELECT 'htr:' || (public.hall_output_heard('$T_MAIN'::uuid, 1) ->> 'status');" "$HT_HINT")" \
       "$(ht_exp "$ht_manage" "heard|weg" "$ht_deny" gesetzt)"
@@ -172,6 +190,12 @@ if [[ "$HT_READY" -eq 1 ]]; then
     ht_cell "@HT-046 abgeschlossen: $ht_id loest den Testton aus" \
       "$(ht_probe "$ht_role" "$ht_uid" "$HT_SPEAKER $HT_CLOSED" "SELECT 'htr:' || (public.hall_test_tone_request('$T_MAIN'::uuid, 1) ->> 'status');" "SELECT (test_id IS NOT NULL)::text FROM public.hall_speakers WHERE tournament_id = '$T_MAIN'")" \
       "$ht_closed_deny|false"
+    ht_cell "@HT-046 abgeschlossen: $ht_id setzt die Torhymnen" \
+      "$(ht_probe "$ht_role" "$ht_uid" "$HT_CLOSED" "SELECT 'htr:' || (public.hall_goal_anthems_set('$T_MAIN'::uuid, $HT_ANTHEM) ->> 'status');" "$HT_ANTHEMS")" \
+      "$ht_closed_deny|0"
+    ht_cell "@HT-046 abgeschlossen: $ht_id meldet „bereit“ (Lebenszeichen, 55000)" \
+      "$(ht_probe "$ht_role" "$ht_uid" "$HT_SPEAKER $HT_CLOSED" "SELECT 'htr:' || (public.hall_speaker_heartbeat('$T_MAIN'::uuid, '$HT_DEV_R'::uuid, '{1}'::int[], 'ready', false) ->> 'status');" "$HT_ROW")" \
+      "$ht_closed_deny|$HT_ROW_R_NA"
     ht_cell "@HT-046 abgeschlossen: $ht_id waehlt „Gehört“" \
       "$(ht_probe "$ht_role" "$ht_uid" "$HT_HINTED $HT_CLOSED" "SELECT 'htr:' || (public.hall_output_heard('$T_MAIN'::uuid, 1) ->> 'status');" "$HT_HINT")" \
       "$ht_closed_deny|gesetzt"
@@ -190,4 +214,4 @@ if [[ "$HT_READY" -eq 1 ]]; then
   done
 fi
 
-echo "hallenton: $HT_CELLS Zellen geprueft ((${#MATRIX_IDS[@]} Identitaeten + anon) x 17, davon 7 im abgeschlossenen Turnier), $HT_MISMATCHES Abweichung(en)"
+echo "hallenton: $HT_CELLS Zellen geprueft ((${#MATRIX_IDS[@]} Identitaeten + anon) x 20, davon 9 im abgeschlossenen Turnier), $HT_MISMATCHES Abweichung(en)"

@@ -8,13 +8,19 @@
  *
  * Die Torzahl steht rechts in der Zeile ihrer Mannschaft, ein Strafstoßergebnis kleiner daneben. Der Sieger eines
  * beendeten Spiels steht fett. Die Torzahl ist der Klickbereich ins Cockpit (≥ 44 px hoch).
+ * Beim laufenden und beim nächsten Spiel steht die Torzahl in einem kleinen Kasten in der Farbe der Mannschaft (Weste = Trainingsleibchen
+ * mit Leibchen-Zeichen bei festgelegtem Leibchen, @ZM-158, @ZM-161); alle anderen Spiele zeigen die Zahl wie bisher.
  */
 import { Fragment, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
+import { overHex } from '../../../design-tokens/displayColor';
+import { useTheme } from '../../../hooks/useTheme';
 import { TeamAvatar } from '../../ui/TeamAvatar';
+import { ScoreBox } from '../../ui/molecules/ScoreBox';
+import { pairFrameStrength } from '../../ui/molecules/scoreBoxStyle';
 import { ZeitstrafeHinweis } from '../../ui/molecules/ZeitstrafeHinweis';
-import type { OeffentlicheZeitstrafen } from '../../../core/view';
+import type { MatchView, OeffentlicheZeitstrafen } from '../../../core/view';
 import type { ResultFigures } from '../matchResult';
 import type { MatchCardStatus } from './MatchCardScore';
 import type { Team } from './MatchCard';
@@ -30,6 +36,8 @@ export interface TeamScoreRowsProps {
   disabled?: boolean;
   /** Laufende Zeitstrafen (Uhr der Karte, @ZM-184): „Zeitstrafe #5 · 1:23“ unter dem Namen des Teams */
   zeitstrafen?: OeffentlicheZeitstrafen;
+  /** Kästen der Ansicht (`MatchView.boxes`) für das laufende und das nächste Spiel; ohne Angabe steht die Zahl wie bisher */
+  kasten?: MatchView['boxes'];
 }
 
 type Side = 'a' | 'b';
@@ -59,8 +67,9 @@ const goalsStyle: CSSProperties = {
   fontFamily: 'inherit',
 };
 
-export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam, awayTeam, result, status, onScoreClick, disabled = false, zeitstrafen }) => {
+export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam, awayTeam, result, status, onScoreClick, disabled = false, zeitstrafen, kasten }) => {
   const { t } = useTranslation('tournament');
+  const { colors } = useTheme();
   const decided = result?.winner !== undefined && result.winner !== null;
 
   const spokenResult = (() => {
@@ -71,6 +80,16 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
     if (result.decision === 'overtime') { return t('matchResult.scoreAriaOvertime', values); }
     return t('matchCard.scoreAriaFinal', values);
   })();
+
+  // Hintergrund hinter dem Kasten = die sichtbare Farbe der Karte (Fläche der Karte über der Seite; das laufende Spiel zusätzlich mit der Tönung), hell oder dunkel
+  const kartenFarbe = overHex(colors.surface, colors.background);
+  const hintergrund = status === 'running' ? overHex(colors.primaryMedium, kartenFarbe) : kartenFarbe;
+  // Gleiche Rahmenbreite beider Kästen
+  const rahmen = kasten === undefined ? undefined : pairFrameStrength({ fill: kasten.home.fill }, { fill: kasten.away.fill }, hintergrund);
+
+  // „Leibchen“ ist auch für Bildschirmleser hörbar: der Vorlesetext des Stands nennt die Mannschaften mit Leibchen (@ZM-158, @ZM-161)
+  const bibTeams = kasten === undefined ? [] : [kasten.home.bib ? homeTeam.name : null, kasten.away.bib ? awayTeam.name : null].filter((name) => name !== null);
+  const spokenWithBib = bibTeams.length === 0 ? spokenResult : `${spokenResult}. ${bibTeams.map((name) => t('matchCard.bibSpoken', { team: name })).join(', ')}`;
 
   const renderRow = (side: Side, team: Team) => {
     const isWinner = decided && result?.winner === side;
@@ -109,12 +128,25 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
             fontWeight: isWinner ? cssVars.fontWeights.bold : cssVars.fontWeights.semibold,
             color: isLoser || goals === undefined ? cssVars.colors.textSecondary : cssVars.colors.textPrimary,
           }}
-          aria-label={first ? spokenResult : undefined}
+          aria-label={first ? spokenWithBib : undefined}
           aria-hidden={first ? undefined : true}
           tabIndex={first && !disabled ? 0 : -1}
           onClick={(e) => { e.stopPropagation(); if (!disabled) { onScoreClick(); } }}
         >
-          {goals ?? '–'}
+          {kasten === undefined ? (goals ?? '–') : (
+            <ScoreBox
+              score={goals ?? 0}
+              fill={(first ? kasten.home : kasten.away).fill}
+              size="compact"
+              background={hintergrund}
+              textColor={colors.textPrimary}
+              bib={(first ? kasten.home : kasten.away).bib}
+              frameStrength={rahmen}
+              ariaLabel={`${team.name}: ${String(goals ?? 0)}${(first ? kasten.home : kasten.away).bib ? `, ${t('matchCard.bibAria')}` : ''}`}
+              testId={`match-box-${matchId}-${seite}`}
+              position={seite}
+            />
+          )}
         </button>
         {penalty !== undefined && (
           <span
@@ -137,7 +169,7 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
   };
 
   return (
-    <div style={gridStyle}>
+    <div style={kasten === undefined ? gridStyle : { ...gridStyle, rowGap: cssVars.spacing.md, paddingTop: cssVars.spacing.sm }} data-kasten={kasten === undefined ? undefined : 'true'}>
       {renderRow('a', homeTeam)}
       {renderRow('b', awayTeam)}
     </div>
