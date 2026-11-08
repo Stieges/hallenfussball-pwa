@@ -5,6 +5,7 @@
  */
 import type jsPDF from 'jspdf';
 import type { GeneratedSchedule } from '../../../core/generators';
+import type { ScorerRow } from '../../../core/standings/finalStandings/types';
 import type { TournamentGraphics } from '../../../core/storage/tournamentGraphicsStore';
 import type { Standing, Tournament } from '../../../types/tournament';
 import { getLocationName } from '../../../utils/locationHelpers';
@@ -52,7 +53,7 @@ export interface BuildContext {
    * Gespeicherter Endstand des abgeschlossenen Turniers (@ET-045, nie neu gerechnet): Plätze und Abschlusszeitpunkt. Der Spielplan
    * nennt damit den ganzen Endstand (@DR-009), der Endstand braucht ihn (@DR-011). Fehlt er, gibt es kein Endstand-PDF.
    */
-  final?: { ranking: RankEntry[]; closedAt: Date };
+  final?: { ranking: RankEntry[]; closedAt: Date; /** Torschützen des gespeicherten Endstands (@DR-052); ohne Angabe keine Liste. */ scorers?: ScorerRow[] };
 }
 
 export interface BuiltPdf {
@@ -85,7 +86,7 @@ export async function buildChoice(choice: PdfChoice, ctx: BuildContext): Promise
     includeScores: choice !== 'blank',
     edition: choice === 'blank' ? 'blank' : choice === 'final' ? 'final' : 'plan',
     // Nach dem Abschluss: Platzierung laut gespeichertem Endstand (@DR-009), im Endstand dazu die Abschlusszeile (@DR-011)
-    ...(final !== undefined && choice !== 'blank' ? { ranking: final.ranking, closed: true, closedAt: final.closedAt } : {}),
+    ...(final !== undefined && choice !== 'blank' ? { ranking: final.ranking, ...(final.scorers === undefined ? {} : { scorers: final.scorers }), closed: true, closedAt: final.closedAt } : {}),
     viewerResultsHidden: tournament.hideScoresForPublic,
     ...(tournament.organizer?.trim() ? { organizerName: tournament.organizer } : {}),
     ...publicContactOption(tournament),
