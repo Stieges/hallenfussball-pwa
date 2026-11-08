@@ -24,6 +24,7 @@ import { test, expect } from './fixtures';
 import { appendAsRole, newRoleContext } from './engineHelpers';
 import { deleteCup, svc } from './coadminEinsatz';
 import { E2E_TURNIERTAG_CUP_ID } from './testData';
+import { neuLaden } from '../helpers/neuLaden';
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 const CODE_ZEICHEN = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -200,7 +201,7 @@ test.describe('Zeiten verschieben kommt über den Server bei den Zuschauern an (
       await page.getByTestId('time-shift-confirm').click();
       await expect(page.getByTestId('time-shift-strip')).toContainText('Zeiten um 10 Minuten verschoben');
       // Neustart, bevor das Speichern beim Server angekommen ist (@FU-007): die Warteschlange sendet aus dem Speicher
-      await page.reload();
+      await neuLaden(page);
       await expect.poll(async () => (await zeilen(id)).filter((z) => z.original_start !== null).length, {
         message: 'nach dem Neuladen steht die Verschiebung in der Datenbank (matches.original_start)', timeout: 30_000,
       }).toBeGreaterThan(0);
