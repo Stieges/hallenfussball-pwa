@@ -66,10 +66,12 @@ runs:
         CLI_VERSION: ${{ inputs.version }}
       run: |
         set -euo pipefail
-        actual="$(supabase --version 2>&1 | tail -n 1)" || true
-        echo "supabase --version: ${actual}"
+        # Die CLI hängt Hinweise (Update-Empfehlung) an die Ausgabe: ganze Ausgabe prüfen.
+        actual="$(supabase --version 2>&1)" || true
+        echo "supabase --version:"
+        echo "${actual}"
         if ! printf '%s' "$actual" | grep -Eq "(^|[^0-9.])${CLI_VERSION//./\\.}([^0-9.]|$)"; then
-          echo "::error::Supabase CLI hat Version '${actual}', erwartet ${CLI_VERSION}. Bezugsweg prüfen (Cache, setup-cli, npm)."
+          echo "::error::Supabase CLI meldet nicht die Version ${CLI_VERSION} (Ausgabe siehe oben). Bezugsweg prüfen (Cache, setup-cli, npm)."
           exit 1
         fi
 
