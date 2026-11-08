@@ -16,6 +16,7 @@ import { test, expect } from './helpers/test-fixtures';
 import { t } from './helpers/i18n';
 import { gleicheFarbe, linienFarben, pdfNachKlick } from './helpers/pdfDownload';
 import { buildVisualTournament } from './visual/helpers';
+import { neuLaden } from './helpers/neuLaden';
 
 const LOGOS = join(dirname(fileURLToPath(import.meta.url)), '..', 'fixtures', 'logos');
 const fixture = (name: string): Buffer => readFileSync(join(LOGOS, name));
@@ -276,7 +277,7 @@ test.describe('Turnierlogo im Assistenten (gebauter Stand)', () => {
     expect((await storedGraphics(page)).map(entry => entry.key)).toEqual([`tournament-graphics-${id ?? ''}`]); // unter der ID des Entwurfs
 
     await page.goto(`/#/tournament/${id ?? ''}/edit`);
-    await page.reload();
+    await neuLaden(page);
 
     await expect(page.getByTestId('turnierlogo-vorschau')).toBeVisible();
     await expect(page.getByTestId('zweite-grafik-vorschau')).toBeVisible();
@@ -487,7 +488,7 @@ test.describe('Turnierlogo im PDF (gebauter Stand)', () => {
           tx.oncomplete = () => { open.result.close(); resolve(); };
         };
       }), [alsGeteiltesTurnier(id)]);
-      await fremd.reload();
+      await neuLaden(fremd);
       await oeffneDialog(fremd, id);
 
       const plan = await pdfNachKlick(fremd, 'pdf-save');

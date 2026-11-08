@@ -181,12 +181,26 @@ function originalStartFromRow(tournamentDate: string, value: string | null | und
   return at === undefined ? {} : { originalStart: at };
 }
 
-/** Uhrzeit-Spalte (`time`) aus einer Wanduhr; wie bisher für `scheduled_start` (Ortszeit des Geräts). */
+const TIME_TEXT = /^\d{2}:\d{2}(:\d{2})?$/;
+
+/**
+ * Uhrzeit-Spalte (`time`) aus einer Wanduhr; wie bisher für `scheduled_start` (Ortszeit des Geräts).
+ * C-ZEITVERSCHIEBUNG-NICHT-IN-CLOUD: Nach einem Neustart kommt das Turnier der Warteschlange als JSON, Zeitpunkte sind dann
+ * ISO-Texte. Die ersten 8 Zeichen („2026-11-“) lehnte der Server mit 22007 ab – ein ISO-Text gilt deshalb als Zeitpunkt.
+ * Ein unlesbarer Wert wird laut abgelehnt (nie still NULL oder Unsinn in eine Anstoßzeit).
+ */
 function toTimeColumn(value: Date | string | undefined): string | null {
   if (!value) {
     return null;
   }
-  return value instanceof Date ? value.toTimeString().slice(0, 8) : String(value).slice(0, 8);
+  if (typeof value === 'string' && TIME_TEXT.test(value)) {
+    return value.length === 5 ? `${value}:00` : value;
+  }
+  const at = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(at.getTime())) {
+    throw new RepositoryError('mapMatch', `Uhrzeit nicht lesbar: ${String(value)}`);
+  }
+  return at.toTimeString().slice(0, 8);
 }
 
 /**

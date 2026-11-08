@@ -18,6 +18,7 @@ import { writeFileSync } from 'node:fs';
 import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
 import { cup, NAMEN } from '../helpers/laptopCup';
+import { neuLaden } from '../helpers/neuLaden';
 
 const ID = 'e2e-nichtantritt-cup';
 const BILDER = process.env.NICHTANTRITT_BILDER ?? '';
@@ -93,7 +94,7 @@ test.describe('B-12 Nichtantritt (Turnierleitung, lokal)', () => {
     // Abbrechen: nichts gespeichert, auch nach dem Neuladen nicht
     await page.getByTestId('forfeit-cancel').click();
     await expect(page.getByTestId('forfeit-dialog')).toHaveCount(0);
-    await page.reload();
+    await neuLaden(page);
     await expect(page.locator('[data-match-card]:visible').first()).toBeVisible({ timeout: 15000 });
     await expect(page.getByText('gewertet')).toHaveCount(0);
 
@@ -103,7 +104,7 @@ test.describe('B-12 Nichtantritt (Turnierleitung, lokal)', () => {
     await page.getByTestId('forfeit-confirm').click();
     await expect(page.getByTestId('forfeit-dialog')).toHaveCount(0);
     await expect(page.getByText('gewertet').filter({ visible: true }).first()).toBeVisible();
-    await page.reload();
+    await neuLaden(page);
     await expect(page.getByText('gewertet').filter({ visible: true }).first()).toBeVisible({ timeout: 15000 });
 
     // @W2A-026 zurücknehmen: Spiel wieder offen, „Nicht angetreten“ wieder da

@@ -16,6 +16,7 @@ import { restAsRole } from '../../restAsRole';
 import { eventOf } from './playViaRpc';
 import { expectPageAnchor, expectSollMarker } from './shared';
 import type { StepContext, TurniertagStep } from './types';
+import { neuLaden } from '../../../helpers/neuLaden';
 
 const KAMMER = 'DJK Kammer';
 const ROT = 'TSV Waging rot';
@@ -362,7 +363,7 @@ async function turnierAbschliessen({ asRole }: StepContext): Promise<void> {
   const danach = (await fetchNikolausSpiele())[14];
   expect(`${String(danach.score_a)}:${String(danach.score_b)}`, 'das Ergebnis ist unverändert').toBe(vorherStand);
   expect(await getRows<{ id: number }>(`late_entries?tournament_id=eq.${NIKOLAUS.tournamentId}&select=id`, 'nach dem Ende eingetroffen'), 'aufbewahrt').toHaveLength(1);
-  await seite.reload();
+  await neuLaden(seite);
   await expect(seite.getByTestId('late-entry'), 'Olli sieht den Eintrag „nach dem Ende eingetroffen“').toHaveCount(1, { timeout: 20_000 });
   await expect(seite.getByTestId('late-entry')).toContainText('zählt nicht');
 }

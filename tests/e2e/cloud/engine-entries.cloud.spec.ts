@@ -24,6 +24,7 @@ import {
 import { fetchMatchRow } from './helpers';
 import { E2E_USERS, engineCupIds, engineEventId, type EngineCupSlug } from './testData';
 import { tippeKarte, wartePicker } from '../helpers/cockpitNeu';
+import { neuLaden } from '../helpers/neuLaden';
 
 function cup(slug: EngineCupSlug) {
   return { ids: engineCupIds(slug), target: engineCupTarget(slug) };
@@ -94,7 +95,7 @@ test.describe('Engine-Einträge über Geräte', () => {
     await expectOneNewRow(ids.matchId, seededRows, 'AMEND', goalId);
     await expect(ownerPage.locator('[data-testid="sync-status"]')).toHaveAttribute('data-pending', '0', { timeout: 10000 });
 
-    await ownerPage.reload();
+    await neuLaden(ownerPage);
     await ownerPage.waitForLoadState('networkidle');
     // `?matchId=` ist nach dem ersten Öffnen verbraucht (C-MATCHID-URL-BLEIBT): dasselbe Spiel nach dem Neuladen erneut öffnen
     await openCockpit(ownerPage, ids.tournamentId, ids.matchId);
@@ -150,7 +151,7 @@ test.describe('Engine-Einträge über Geräte', () => {
     await helperPage.locator('[data-testid="event-edit-save"]').click();
     await expectOneNewRow(ids.matchId, seededRows, 'AMEND', goalAwayId);
     await expect(helperPage.locator('[data-testid="sync-status"]')).toHaveAttribute('data-pending', '0', { timeout: 10000 });
-    await helperPage.reload();
+    await neuLaden(helperPage);
     await helperPage.waitForLoadState('networkidle');
     // `?matchId=` ist nach dem ersten Öffnen verbraucht (C-MATCHID-URL-BLEIBT): dasselbe Spiel nach dem Neuladen erneut öffnen
     await openCockpit(helperPage, ids.tournamentId, ids.matchId);

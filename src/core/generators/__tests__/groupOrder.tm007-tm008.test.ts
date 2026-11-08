@@ -57,7 +57,7 @@ describe('@TM-007 Spielreihenfolge innerhalb einer Gruppe nach dem DFB-Schlüsse
 
   it.fails.each([
     [4, '1T04M'], [6, '1T06M'], [11, '1T11M'], [12, '1T12M'], [18, '1T18M'], [24, '1T24M'],
-  ])('@TM-007 C-DFB-SCHLUESSEL-LUECKEN %i Teams (%s): Reihenfolge folgt dem Schlüssel (im MVP abgeschaltet, @W4-028)', (teams, pattern) => {
+  ])('@TM-007 C-DFB-SCHLUESSEL-LUECKEN %i Teams (%s): Reihenfolge folgt dem Schlüssel (im MVP abgeschaltet, siehe Kopfkommentar)', (teams, pattern) => {
     expect(groupOrder(teams, { useDFBKeys: true, pattern })).toEqual(dfbOrder(teams));
   });
 });

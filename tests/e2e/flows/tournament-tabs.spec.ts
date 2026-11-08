@@ -11,6 +11,7 @@
 
 import { test, expect } from '../helpers/test-fixtures';
 import { t } from '../helpers/i18n';
+import { neuLaden } from '../helpers/neuLaden';
 
 /**
  * Helper: Get a date 7 days in the future
@@ -275,7 +276,7 @@ test.describe('Tournament Management Tabs', () => {
     await page.waitForLoadState('networkidle');
 
     // WHEN - Page reload
-    await page.reload();
+    await neuLaden(page);
     await page.waitForLoadState('networkidle');
 
     // THEN - Immer noch auf Teams-Tab
