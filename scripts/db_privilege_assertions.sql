@@ -1715,7 +1715,8 @@ SELECT 'hallenton-goal-anthems-rpc-authenticated-only',
                         AND position('PERFORM public.hall_require(p_tournament_id, ''manageScreens'');' IN p.prosrc) > 0
                         AND position('PERFORM public.hall_require_open(p_tournament_id);' IN p.prosrc) > 0
                    FROM pg_proc p WHERE p.oid = to_regprocedure('public.hall_goal_anthems_set(uuid,text[])')), false)
--- (2) Liste der Torhymnen: Spalte text[] NOT NULL, Vorbelegung leer, Pruefregel mit hoechstens 5 Eintraegen und der Pfad-Form.
+-- (2) Liste der Torhymnen: Spalte text[] NOT NULL, Vorbelegung leer, Pruefregel mit hoechstens 5 Eintraegen, der Pfad-Form
+--     und ohne Komma in einem Eintrag (Nachpruefung H3c, N1).
 UNION ALL
 SELECT 'hallenton-goal-anthems-column-checked',
        coalesce((SELECT a.attnotnull AND format_type(a.atttypid, a.atttypmod) = 'text[]'
@@ -1725,6 +1726,7 @@ SELECT 'hallenton-goal-anthems-column-checked',
                     AND NOT a.attisdropped), false)
        AND coalesce((SELECT position('cardinality(goal_anthem_paths) > 5' IN pg_get_constraintdef(con.oid)) > 0
                             AND position('(mp3|wav|m4a)' IN pg_get_constraintdef(con.oid)) > 0
+                            AND position(''',''::text' IN pg_get_constraintdef(con.oid)) > 0
                        FROM pg_constraint con
                       WHERE con.conrelid = to_regclass('public.hall_sound_settings')
                         AND con.conname = 'hall_sound_settings_goal_anthems'), false)
