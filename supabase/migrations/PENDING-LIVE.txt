@@ -4,3 +4,4 @@
 # und die CI-Tests spielen jede Migration weiter ein.
 # Format je Zeile: <dateiname> <frist YYYY-MM-DD> <commit-vorher (origin/main vor dem Merge)>
 # Nach dem Einspielen im Fenster entfernt der Controller die Zeile (Freigabe-Unterlage des Pakets, § 2).
+20261123_001_hallenton_torhymne.sql 2026-11-20 9688b47d798a7d529d582fea9932d1e3c3a63a78

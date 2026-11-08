@@ -23,12 +23,16 @@
 #   W  zweites Einspielen: Exit 0, Schema und Daten wie nach dem ersten.
 #   X  Rueckweg: Schema public = vor der Migration (pg_dump identisch), Storage-Policies weg, Bucket weg; danach erneut
 #      einspielbar.
+#   T  Folge-Migration 20261123_001_hallenton_torhymne.sql (Torhymne, @HT-024, @HT-046; scripts/lib/hallenton-torhymne-check.sh):
+#      Fail-fast auf der Baseline, Rollen und Szenario-Zeilen der Hymnen-Liste, Lebenszeichen nach Turnierende 55000,
+#      Schema, Rechte-Assertions vorher |f / nachher |t, zweites Einspielen, Rueckweg (Schema danach = vorher).
 #
 # Aufrufoptionen:
 #   bash scripts/hallenton-check.sh                      normaler Lauf, Exit 0 nur ohne Abweichung
-#   bash scripts/hallenton-check.sh --without-migration  Gegenprobe: ohne die Migration -> R ROT (Exit 0)
-#   bash scripts/hallenton-check.sh --gegenprobe         je Mutation (M1-M19) ein Lauf; Exit 0 NUR, wenn JEDE rot faerbt
-#                                                        (GEGENPROBE_NUR="M1 M3" schraenkt ein)
+#   bash scripts/hallenton-check.sh --without-migration  Gegenprobe: ohne die Migration -> R ROT, ohne die Torhymne -> T ROT
+#                                                        (Exit 0)
+#   bash scripts/hallenton-check.sh --gegenprobe         je Mutation (M1-M19, TM1-TM8) ein Lauf; Exit 0 NUR, wenn JEDE rot
+#                                                        faerbt (GEGENPROBE_NUR="M1 TM3" schraenkt ein)
 #   bash scripts/hallenton-check.sh --print-rueckweg     Rueckweg ausgeben, ohne Container
 #
 # Aendert NICHTS an der Produktionsdatenbank und nichts an einem lokalen Supabase-Stack -- eigener Wegwerf-Container,
@@ -189,9 +193,9 @@ schema_dump() { docker exec "$CURRENT_CONTAINER" pg_dump -U postgres --schema-on
 counts() { python3 "$REPO_ROOT/scripts/db_catalog_counts.py" /dev/stdin <<<"$1"; }
 count_of() { python3 -c "import json,sys; print(json.load(sys.stdin)['$2'])" <<<"$1"; }
 
-CATS=(F R S W X)
-DEVS=(0 0 0 0 0)
-OKS=(0 0 0 0 0)
+CATS=(F R S W X T)
+DEVS=(0 0 0 0 0 0)
+OKS=(0 0 0 0 0 0)
 cat_index() {
   local i
   for i in "${!CATS[@]}"; do [[ "${CATS[$i]}" == "$1" ]] && { echo "$i"; return 0; }; done
@@ -207,7 +211,7 @@ check() { # check <Kategorie> <Name> <erwartet> <erhalten>
   fi
 }
 total_dev() { local s=0 d; for d in "${DEVS[@]}"; do s=$((s + d)); done; echo "$s"; }
-reset_counts() { DEVS=(0 0 0 0 0); OKS=(0 0 0 0 0); }
+reset_counts() { DEVS=(0 0 0 0 0 0); OKS=(0 0 0 0 0 0); }
 summary() {
   local i
   echo
@@ -350,6 +354,8 @@ IDS=(
   "Fremder ohne Anmeldung (anon)::kein-execute:kein-execute:kein-execute"
 )
 pick() { [[ "$1" == ok ]] && echo "$2" || echo "$1|$3"; }
+# shellcheck source=lib/hallenton-torhymne-check.sh
+source "$REPO_ROOT/scripts/lib/hallenton-torhymne-check.sh"
 
 # ---------------------------------------------------------------------------------------------------------
 run_probes() {
@@ -744,14 +750,14 @@ if [[ "$MODE" == "gegenprobe" ]]; then
   if [[ -n "${GEGENPROBE_NUR:-}" ]]; then
     SEL=()
     for mut in "${MUTATIONS[@]}"; do [[ " $GEGENPROBE_NUR " == *" ${mut%%|*} "* ]] && SEL+=("$mut"); done
-    MUTATIONS=("${SEL[@]}")
+    MUTATIONS=(${SEL[@]+"${SEL[@]}"})
   fi
   start_container gegenprobe
   psql_stdin < "$BASELINE_FILE"
   apply_before
   apply_target
   RED_TOTAL=0
-  for mut in "${MUTATIONS[@]}"; do
+  for mut in ${MUTATIONS[@]+"${MUTATIONS[@]}"}; do
     IFS='|' read -r mid mtext mfrom mto <<<"$mut"
     mutated="$WORK_DIR/$mid.sql"
     python3 - "$TARGET_FILE" "$mutated" "$mfrom" "$mto" <<'PY' || { echo "::error::Mutation $mid nicht anwendbar"; exit 1; }
@@ -783,8 +789,12 @@ PY
   rueckweg_sql | psql_stdin
   echo
   echo "Gegenprobe: $RED_TOTAL von ${#MUTATIONS[@]} Mutationen rot."
+  apply_target
+  for f in ${AFTER[@]+"${AFTER[@]}"}; do [[ "$(basename "$f")" == "$FOLLOW_NAME" ]] || psql_stdin < "$f"; done
+  T_OK=0
+  run_torhymne_gegenprobe && T_OK=1
   FERTIG=1
-  [[ "$RED_TOTAL" -eq "${#MUTATIONS[@]}" ]]
+  [[ "$RED_TOTAL" -eq "${#MUTATIONS[@]}" && "$T_OK" -eq 1 ]]
   exit $?
 fi
 
@@ -795,14 +805,19 @@ psql_stdin < "$BASELINE_FILE"
 if [[ "$MODE" == "without-migration" ]]; then
   apply_before
   run_probes
+  # ohne die Torhymne (20261121_001 und spaetere Migrationen ausser 20261123_001 eingespielt): T muss rot sein
+  apply_target
+  for f in ${AFTER[@]+"${AFTER[@]}"}; do [[ "$(basename "$f")" == "$FOLLOW_NAME" ]] || psql_stdin < "$f"; done
+  run_torhymne_without
   summary
   R_DEV="${DEVS[$(cat_index R)]}"
+  T_DEV="${DEVS[$(cat_index T)]}"
   FERTIG=1
-  if [[ "$R_DEV" -gt 0 ]]; then
-    echo "Ohne Migration: R rot ($R_DEV) -- Gegenprobe wie verlangt."
+  if [[ "$R_DEV" -gt 0 && "$T_DEV" -gt 0 ]]; then
+    echo "Ohne Migration: R rot ($R_DEV), ohne Torhymne: T rot ($T_DEV) -- Gegenprobe wie verlangt."
     exit 0
   fi
-  echo "::error::Ohne Migration nicht wie verlangt (R=$R_DEV muss > 0 sein)."
+  echo "::error::Ohne Migration nicht wie verlangt (R=$R_DEV und T=$T_DEV muessen > 0 sein)."
   exit 1
 fi
 
@@ -812,6 +827,7 @@ set +e; F_OUT="$(psql_stdin < "$TARGET_FILE" 2>&1)"; F_RC=$?; set -e
 check F "Migration auf der Baseline allein: bricht ab mit Hinweis" "abbruch|ja" \
   "$([[ "$F_RC" -ne 0 ]] && echo abbruch || echo "lief($F_RC)")|$([[ "$F_OUT" == *"20261121_001_hallenton: has_tournament_permission/is_real_account fehlen"* ]] && echo ja || echo "nein: $F_OUT")"
 check F "Migration auf der Baseline allein: Schema unveraendert" "identisch" "$([[ "$(schema_dump)" == "$DUMP_PRE" ]] && echo identisch || echo verschieden)"
+torhymne_fail_fast
 
 apply_before
 
@@ -889,10 +905,17 @@ rueckweg_sql | psql_stdin
 check X "Rueckweg mit leerem Bucket: Bucket entfaellt" "0" "$(q "SELECT count(*) FROM storage.buckets WHERE id = 'hallenton-sounds';")"
 apply_target
 
+SEEN_FOLLOW=0
 for f in ${AFTER[@]+"${AFTER[@]}"}; do
+  if [[ "$(basename "$f")" == "$FOLLOW_NAME" ]]; then
+    SEEN_FOLLOW=1
+    run_torhymne_section
+    continue
+  fi
   psql_stdin < "$f"
   echo "OK    spaetere Migration laeuft: $(basename "$f")" >&2
 done
+check T "Folge-Migration $FOLLOW_NAME in der Liste der spaeteren Migrationen" "1" "$SEEN_FOLLOW"
 
 summary
 echo

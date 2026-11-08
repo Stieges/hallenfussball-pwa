@@ -245,6 +245,10 @@ pending_assertions_for() {
     20261124_001_zeitstrafe_endet_bei_gegentor.sql)
       echo "public-read-core-unchanged"
       ;;
+    # Hallenton Torhymne (@HT-024, @HT-046): Liste der Torhymnen, hall_goal_anthems_set, Lebenszeichen 55000 nach dem Ende
+    20261123_001_hallenton_torhymne.sql)
+      echo "hallenton-goal-anthems-rpc-authenticated-only hallenton-goal-anthems-column-checked hallenton-heartbeat-closed-tournament"
+      ;;
     *)
       return 1
       ;;
@@ -765,6 +769,10 @@ PRIVILEGE_ASSERTION_NAMES=(
   "gathering-screens-table-no-client-rights"
   "gathering-screens-rpcs"
   "gathering-screens-guards"
+  # Hallenton Torhymne (20261123_001_hallenton_torhymne.sql, @HT-024, @HT-046): eigener Block am Ende von db_privilege_assertions.sql
+  "hallenton-goal-anthems-rpc-authenticated-only"
+  "hallenton-goal-anthems-column-checked"
+  "hallenton-heartbeat-closed-tournament"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
