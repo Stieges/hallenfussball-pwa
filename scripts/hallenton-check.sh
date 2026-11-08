@@ -31,7 +31,7 @@
 #   bash scripts/hallenton-check.sh                      normaler Lauf, Exit 0 nur ohne Abweichung
 #   bash scripts/hallenton-check.sh --without-migration  Gegenprobe: ohne die Migration -> R ROT, ohne die Torhymne -> T ROT
 #                                                        (Exit 0)
-#   bash scripts/hallenton-check.sh --gegenprobe         je Mutation (M1-M19, TM1-TM8) ein Lauf; Exit 0 NUR, wenn JEDE rot
+#   bash scripts/hallenton-check.sh --gegenprobe         je Mutation (M1-M19, TM1-TM9) ein Lauf; Exit 0 NUR, wenn JEDE rot
 #                                                        faerbt (GEGENPROBE_NUR="M1 TM3" schraenkt ein)
 #   bash scripts/hallenton-check.sh --print-rueckweg     Rueckweg ausgeben, ohne Container
 #

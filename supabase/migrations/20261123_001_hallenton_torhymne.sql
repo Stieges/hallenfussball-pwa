@@ -6,7 +6,8 @@
 -- Inhalt:
 --   1. hall_sound_settings.goal_anthem_paths text[] NOT NULL DEFAULT '{}': die Torhymnen des Turniers in ihrer
 --      Reihenfolge (der Lautsprecher spielt sie der Reihe nach). Pruefregel hall_sound_settings_goal_anthems: hoechstens 5,
---      eindimensional, keine NULL, jeder Pfad in der Form der bestehenden Pfad-Pruefung <tournament_id>/<uuid>.mp3|wav|m4a
+--      eindimensional, keine NULL, kein Komma in einem Eintrag, jeder Pfad in der Form der bestehenden Pfad-Pruefung
+--      <tournament_id>/<uuid>.mp3|wav|m4a
 --      (Bucket hallenton-sounds, derselbe wie der eigene Ton; Hochladen/Policies unveraendert aus 20261121_001).
 --   2. hall_goal_anthems_set(p_tournament_id, p_paths) -- Schreiben der Liste, SECURITY DEFINER, search_path fest, EXECUTE nur
 --      authenticated (NICHT anon/PUBLIC/service_role). Reihenfolge der Pruefung wie hall_sound_settings_set: manageScreens
@@ -72,6 +73,8 @@ BEGIN
       CASE WHEN coalesce(array_ndims(goal_anthem_paths), 1) <> 1 OR cardinality(goal_anthem_paths) > 5 THEN false
            WHEN cardinality(goal_anthem_paths) = 0 THEN true
            ELSE array_position(goal_anthem_paths, NULL) IS NULL
+                -- kein Eintrag mit Komma: sonst ergaebe ein einzelner Eintrag '<pfad>,<pfad>' zusammengefuegt zwei gueltige
+                AND position(',' IN array_to_string(goal_anthem_paths, '')) = 0
                 AND array_to_string(goal_anthem_paths, ',') ~ ('^(' || tournament_id::text
                     || '/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(mp3|wav|m4a))(,' || tournament_id::text
                     || '/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(mp3|wav|m4a))*$')

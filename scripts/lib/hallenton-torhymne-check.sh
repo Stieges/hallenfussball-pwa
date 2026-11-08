@@ -78,6 +78,12 @@ run_torhymne_probes() {
     check T "gegen-falscher Pfad ($label) -> ungueltig" "ungueltig|keine" \
       "$(short "$(probe "$U_OLLI" "" "$(ANTHEMS "$T_NORD" "$(arr "${falsch#*:}" "$H_A")")" "$ANTHEM_ROW")")"
   done
+  check T "gegen-Komma: ein Eintrag „A,B“ (zwei gueltige Pfade zusammengeklebt) -> ungueltig" "ungueltig|keine" \
+    "$(short "$(probe "$U_OLLI" "" "$(ANTHEMS "$T_NORD" "ARRAY['$H_A,$H_B']::text[]")" "$ANTHEM_ROW")")"
+  check T "gegen-Komma: Eintrag „A,B“ neben C -> ungueltig" "ungueltig|keine" \
+    "$(short "$(probe "$U_OLLI" "" "$(ANTHEMS "$T_NORD" "ARRAY['$H_C', '$H_A,$H_B']::text[]")" "$ANTHEM_ROW")")"
+  check T "gegen-direkt: Pruefregel haelt auch ohne Funktion (Superuser schreibt „A,B“ als einen Eintrag)" "pruefregel|1" \
+    "$(short "$(probe "$U_OLLI" "" "RESET ROLE; INSERT INTO public.hall_sound_settings (tournament_id, goal_anthem_paths) VALUES ('$T_NORD', ARRAY['$H_A,$H_B']);" "1")")"
   check T "gegen-doppelte Hymne (A, B, A) -> ungueltig" "ungueltig|keine" \
     "$(short "$(probe "$U_OLLI" "" "$(ANTHEMS "$T_NORD" "$(arr "$H_A" "$H_B" "$H_A")")" "$ANTHEM_ROW")")"
   check T "gegen-Liste NULL -> ungueltig" "ungueltig|keine" \
@@ -206,6 +212,7 @@ TORHYMNE_MUTATIONS=(
   "TM5|doppelte Hymnen erlaubt|     OR (SELECT count(DISTINCT u.x) FROM unnest(p_paths) AS u(x)) <> cardinality(p_paths) THEN|     THEN"
   "TM6|anon behaelt EXECUTE (PUBLIC)|REVOKE ALL ON FUNCTION public.hall_goal_anthems_set(uuid, text[]) FROM PUBLIC, anon, service_role;\n|"
   "TM7|Pfad ohne Turnier-Bindung (fremdes Turnier erlaubt)|('^(' || tournament_id::text\n                    || '/|('^([0-9a-f-]{36}'\n                    || '/"
+  "TM9|Komma in einem Eintrag erlaubt (zusammengeklebte Pfade)|                AND position(',' IN array_to_string(goal_anthem_paths, '')) = 0\n|"
   "TM8|Stand ohne goalAnthemPaths|                                                    'goalAnthemPaths', to_jsonb(st.goal_anthem_paths))|                                                    'goalAnthemPaths', '[]'::jsonb)"
 )
 run_torhymne_gegenprobe() { # nach apply_before + apply_target + spaeteren Migrationen vor der Torhymne
