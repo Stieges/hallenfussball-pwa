@@ -12,7 +12,6 @@ import {
   planeHallToene,
   type FeldStand,
   type HallTonArt,
-  type StandQuelle,
   type TonGedaechtnis,
 } from '..';
 
@@ -84,16 +83,16 @@ export const ENDE_A2 = T0 + 2 * ABSCHNITT_MS + PAUSE_MS;
 export function stand(
   state: MatchState,
   ctx: MatchContext,
-  quelle: StandQuelle,
+  antwortAlterMs: number,
   bekanntSeit: number,
   feldId = 'feld-1',
 ): FeldStand {
-  return { feldId, ctx, state, quelle, bekanntSeit };
+  return { feldId, ctx, state, antwortAlterMs, bekanntSeit };
 }
 
-export const COCKPIT: StandQuelle = { art: 'eigenesCockpit' };
-export function server(antwortAlterMs = 0): StandQuelle {
-  return { art: 'server', antwortAlterMs };
+/** Stand am Server mit dem Alter der letzten Antwort (Regel 2: es gibt keine andere Quelle). */
+export function server(antwortAlterMs = 0): number {
+  return antwortAlterMs;
 }
 
 export interface GespielterTon {

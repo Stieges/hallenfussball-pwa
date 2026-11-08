@@ -1,57 +1,16 @@
 /**
- * H3b-2b Fixrunde 1 (Review `task-h3b2b-review.md`): K1 eigenes Cockpit unabhängig von der Netzrunde, W1 Uhrsprung nach dem
+ * H3b-2b Fixrunde 1 (Review `task-h3b2b-review.md`): W1 Uhrsprung nach dem
  * Beginn, W2 Gedächtnis über Tabs und Neuladen, W3 Sperre erst nach „Ton aktivieren“, k3 Mehrfeld-Ton, k4 neuer Uhr-Versatz.
- * Werte aus `docs/anforderungen/2026-10-15_hallenton.md` (Regeln 2 und 4, @HT-010, @HT-013, @HT-033 Zeilen 2, 8, 11).
+ * Werte aus `docs/anforderungen/2026-10-15_hallenton.md` (Regeln 2 und 4, @HT-010, @HT-013, @HT-033 Zeile 8). K1 (eigenes Cockpit)
+ * entfällt mit Regel 2 vom 07.11.; seine Lagen prüft `laufzeit.serverstand.test.ts` nach dem neuen Wortlaut.
  */
 import { describe, expect, it } from 'vitest';
-import type { MatchState } from '../../../../core/match';
 import {
-  ABSCHNITT_MS, COCKPIT, CTX_11, CTX_12, ENDE_A2, T0, ev, server, stand, stateAus, zweiterAbschnitt,
+  ABSCHNITT_MS, CTX_11, CTX_12, ENDE_A2, T0, ev, server, zweiterAbschnitt,
 } from '../../../../core/hallenton/__tests__/hallentonFixtures';
 import { FalschesGeraet } from '../../../../test/hallenton/falschesGeraet';
 import { ManuelleUhr } from '../../../../test/hallenton/manuelleUhr';
 import { Tab, feldAus } from './laufzeitTestlage';
-
-/** Eigenes Cockpit: der Stand ändert sich sofort zur Zeit des Eintrags (keine Laufzeit über den Server). */
-function eigenesCockpit(tab: Tab, stufen: Array<{ ab: number; state: MatchState }>): void {
-  tab.ffs.staendeZu = (jetzt) => {
-    const aktuell = [...stufen].reverse().find((s) => jetzt >= s.ab) ?? stufen[0];
-    return [stand(aktuell.state, CTX_11, COCKPIT, aktuell.ab, 'field-1')];
-  };
-}
-
-describe('K1 – das eigene Cockpit gilt in jedem Takt, auch wenn die Abfrage hängt (@HT-033 Zeilen 2, 11)', () => {
-  it('@HT-033 Zeile 2: Olli hält 1 s vor dem Ende an, die Abfrage hängt → kein Ton; nach dem Weiterlaufen genau ein Ton zum neuen Ende', async () => {
-    const log = zweiterAbschnitt();
-    const pause = ev('PAUSE', ENDE_A2 - 1000, 2, null);
-    const weiter = ev('RESUME', ENDE_A2 + 9000, 2, null);
-    const tab = new Tab({ start: ENDE_A2 - 8000 });
-    eigenesCockpit(tab, [
-      { ab: T0, state: stateAus(log) },
-      { ab: ENDE_A2 - 1000, state: stateAus([...log, pause]) },
-      { ab: ENDE_A2 + 9000, state: stateAus([...log, pause, weiter]) },
-    ]);
-    await tab.starte();
-    await tab.vor(22_000, [{ um: ENDE_A2 - 6000, tu: () => { tab.ffs.haengt = true; } }]);
-    expect(tab.toene().map((t) => t.art)).toEqual(['abpfiff']);
-    expect(Math.abs(tab.toene()[0].at - (ENDE_A2 + 10_000))).toBeLessThanOrEqual(300);
-  });
-
-  it('@HT-033 Zeile 11: Ende von Hand im eigenen Cockpit bei hängender Abfrage tönt höchstens 250 ms später', async () => {
-    const log = zweiterAbschnitt();
-    const vonHand = ENDE_A2 - 30_000;
-    const tab = new Tab({ start: vonHand - 8000 });
-    eigenesCockpit(tab, [
-      { ab: T0, state: stateAus(log) },
-      { ab: vonHand, state: stateAus([...log, ev('MATCH_END', vonHand, 2, 2 * ABSCHNITT_MS - 30_000)]) },
-    ]);
-    await tab.starte();
-    await tab.vor(12_000, [{ um: vonHand - 5000, tu: () => { tab.ffs.haengt = true; } }]);
-    expect(tab.toene().map((t) => t.art)).toEqual(['abpfiff']);
-    expect(tab.toene()[0].at - vonHand).toBeGreaterThanOrEqual(0);
-    expect(tab.toene()[0].at - vonHand).toBeLessThanOrEqual(250);
-  });
-});
 
 describe('W1 – ein Uhrsprung bricht einen begonnenen Ton nicht ab (@HT-010, Regel 4)', () => {
   it('@HT-010 Sprung 100 ms nach dem Ton → genau ein Ton, nicht abgeschnitten', async () => {
@@ -151,12 +110,12 @@ describe('k3 – ein Mehrfeld-Ton erledigt nur die Enden der freien Felder', () 
   it('@HT-032 Feld 2 ohne frische Antwort tönt mit; war es in Wahrheit angehalten, tönt sein echtes Ende später', async () => {
     const tab = new Tab({ start: ENDE_A2 - 6000, felder: [1, 2] });
     const f1 = feldAus([{ ab: T0, log: zweiterAbschnitt() }], CTX_11, 'field-1', server(100));
-    // Feld 2 endet 300 ms vor Feld 1 (ein gemeinsamer Ton zu ENDE − 300 ms); seine letzte Antwort ist 3,1 s älter als der Ton
+    // Feld 2 endet 300 ms vor Feld 1 (ein gemeinsamer Ton zu ENDE − 300 ms); seine letzte Antwort ist 5,1 s älter als der Ton
     const start12 = T0 - 300;
     const log12 = zweiterAbschnitt(start12);
     const pause = ev('PAUSE', ENDE_A2 - 1300, 2, null);
     const weiter = ev('RESUME', ENDE_A2 + 5000, 2, null);
-    const letzteAntwort = ENDE_A2 - 3400;
+    const letzteAntwort = ENDE_A2 - 5400;
     const f2 = feldAus(
       [{ ab: start12, log: log12 }, { ab: ENDE_A2 + 1700, log: [...log12, pause] }, { ab: ENDE_A2 + 5000, log: [...log12, pause, weiter] }],
       CTX_12, 'field-2', (jetzt) => (jetzt < ENDE_A2 + 2000 ? server(jetzt - Math.min(jetzt, letzteAntwort)) : server(100)),

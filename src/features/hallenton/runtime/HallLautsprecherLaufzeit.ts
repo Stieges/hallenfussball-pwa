@@ -7,10 +7,11 @@
  *   gibt er die Sperre frei (k-neu-4). Erst mit der Sperre entstehen Worker-Takt und Feldstand.
  * - Takt (250 ms aus dem Worker): `bestaetigen` → Uhrsprung → synchron `staende()` und `planeHallToene` mit dem Gedächtnis →
  *   Freigabe. Die Netzrunde `feldStand.aktualisieren(serverNow, letzterPlan.abfrageTaktMs)` wird nur angestoßen, nie
- *   abgewartet; läuft sie noch, startet keine zweite (K1: der Stand der eigenen Engine gilt in jedem Takt).
+ *   abgewartet; läuft sie noch, startet keine zweite (das Alter der Antwort wächst in jedem Takt weiter).
  *   `hallTonGespielt` erst nach dem tatsächlichen Beginn; das Gedächtnis teilen die Tabs je Turnier (W2).
- * - Freigabe je Feld (@HT-011 ↔ @HT-029): frisch heißt, die Antwort **dieses Felds** (`quelle.antwortAlterMs`) liegt nicht
- *   vor `at − 3 s`; ein Feld nach eigenem Cockpit ist immer frei; ein Ton für mehrere Felder ist frei, wenn eines frei ist.
+ * - Regel 2 („Hupe und Anzeige sagen dasselbe“, 07.11.): nur der Stand am Server, auch wenn das Gerät das Feld selbst leitet.
+ *   Freigabe je Feld (@HT-011 ↔ @HT-029): frisch heißt, die Antwort **dieses Felds** (`antwortAlterMs`) liegt nicht vor
+ *   `at − 5 s`; ein Ton für mehrere Felder ist frei, wenn eines frei ist.
  * - Uhrsprung (`uhrsprungMs`): erst bestätigen (mit der Zeit vor dem Sprung), dann alles noch nicht Begonnene abbrechen,
  *   `sync()`, danach neu planen (@HT-010, W1).
  * - Zustand je Feld: `slept` (bis „Ton aktivieren“, @HT-037), `not_activated` (@HT-012/013), `background` (Takt setzt länger
@@ -18,8 +19,8 @@
  *   Planers; im Ruhezustand nur nach einem gescheiterten Versuch, Ruling N-2), `custom_sound_failed`, sonst `ready`.
  * - Verfügbarkeit: `nichtVerfuegbar` (Gast) und `turnierBeendet` schalten still ab, ohne Ausnahme.
  * - Lautsprecher-Felder über die Tabs (`lautsprecherKanal.ts`) mit „bereit“ = `ready` oder `custom_sound_failed` (die Halle
- *   hört dann „Hupe 1“, @HT-028); der Halter erneuert die Meldung höchstens einmal je Sekunde (W-neu-1), auch wenn die Uhr
- *   zurücksprang (k4-neu-1: negatives Alter).
+ *   hört dann „Hupe 1“, @HT-028) und der Serverzeit der letzten Antwort je Feld (K3); der Halter erneuert die Meldung
+ *   höchstens einmal je Sekunde (W-neu-1), auch wenn die Uhr zurücksprang (k4-neu-1: negatives Alter).
  * - H3b-3: `beimTakt` für das Lebenszeichen, `stillAbschalten` (Turnierende), Tonwahl-Wechsel erst in Ruhe (`tonWahlWechsel.ts`).
  */
 import {
@@ -27,11 +28,12 @@ import {
   type FeldStand, type GeplanterTon, type PlanErgebnis, type TonGedaechtnis,
 } from '../../../core/hallenton';
 import type { FeldStandQuelle } from './feldStand';
+import type { LautsprecherFeldMeldung } from './lautsprecherKanal';
 import { teileGedaechtnis, vereineGedaechtnis } from './geteiltesGedaechtnis';
 import { erzeugeUhrsprungWache } from './uhrsprungWache';
 import type { TaktQuelle } from './taktQuelle';
 import {
-  feldZustaende, meldeFelderAnTabs, geraeteZustandAus, naechsterTonAus, nurFreieEnden, tonFrei, warnFelderAus,
+  antwortAtVon, feldZustaende, meldeFelderAnTabs, geraeteZustandAus, naechsterTonAus, nurFreieEnden, tonFrei, warnFelderAus,
   type HallLautsprecherLaufzeit, type LaufzeitDeps, type LaufzeitRolle, type LaufzeitSnapshot,
 } from './laufzeitZustand';
 import { VORBELEGUNG } from './tonWahl';
@@ -66,7 +68,7 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
   let ausgesetzt = false;
   let taktFehler = false;
   let warAngehalten = false;
-  let gemeldet: string | null = null;
+  let gemeldet: readonly LautsprecherFeldMeldung[] | null = null;
   let snapshot: LaufzeitSnapshot = baue();
 
   function baue(): LaufzeitSnapshot {
@@ -89,7 +91,7 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
       }
     }
     if (rolle === 'toent') {
-      gemeldet = meldeFelderAnTabs(deps.kanal, deps.turnierId, deps.felder, snapshot.zustandJeFeld, gemeldet);
+      gemeldet = meldeFelderAnTabs(deps.kanal, deps.turnierId, deps.felder, snapshot.zustandJeFeld, (id) => antwortAtVon(id, staende, staendeUm), staendeUm, gemeldet);
     }
   }
 
@@ -127,7 +129,7 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
     melden();
   }
 
-  /** Synchron in jedem Takt: aktueller Stand (eigene Engine sofort, Server mit Antwort-Alter) → Plan → Ton-Steuerung. */
+  /** Synchron in jedem Takt: Stand am Server mit Antwort-Alter → Plan → Ton-Steuerung. */
   function planeJetzt(quelle: FeldStandQuelle, jetzt: number): void {
     const verfuegbar = quelle.verfuegbarkeit();
     if (verfuegbar === 'nichtVerfuegbar' || verfuegbar === 'turnierBeendet') {

@@ -1,10 +1,11 @@
 /**
- * `ownFields` meldet jeden gelesenen Steuer-Stand an Beobachter (H3b-3, Befund 6a: der Hallen-Lautsprecher merkt ihn für ein
- * Neuladen ohne Netz, @HT-033 Zeile 11) – auch einen ohne eigenes Feld, und das Leeren beim Abmelden.
+ * `ownFields` hält je Turnier die Felder, die dieses Gerät steuert – das Lebenszeichen der Leitung braucht ihn (H3b-3,
+ * @HT-035). Den Beobachter für den Hallen-Lautsprecher (Befund 6a) gibt es seit H3b-4 nicht mehr: unter Regel 2 zählt für den
+ * Lautsprecher nicht, wer das Feld leitet.
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import type { FieldControlInfo } from '../../repositories/fieldControlRpc';
-import { clearOwnFields, noteFieldControlList, onOwnFieldsNoted, ownFieldsByTournament } from '../ownFields';
+import { clearOwnFields, noteFieldControlList, ownFieldsByTournament } from '../ownFields';
 
 const info = (field: number, isMine: boolean): FieldControlInfo => ({
   field, epoch: 1, holderName: null, holderRole: null, holderDeviceLabel: null, isMine, claimedAt: null,
@@ -14,16 +15,14 @@ afterEach(() => {
   clearOwnFields();
 });
 
-describe('onOwnFieldsNoted', () => {
-  it('meldet jeden gelesenen Stand mit den eigenen Feldern, auch ohne eigenes Feld, und das Leeren (null)', () => {
-    const gesehen: Array<[string | null, readonly number[]]> = [];
-    const ab = onOwnFieldsNoted((tid, felder) => { gesehen.push([tid, felder]); });
+describe('ownFieldsByTournament', () => {
+  it('hält nur die eigenen Felder sortiert; ein Stand ohne eigenes Feld nimmt das Turnier heraus; Abmelden leert alles', () => {
     noteFieldControlList('hallencup-nord', [info(2, true), info(1, true), info(3, false)]);
-    noteFieldControlList('hallencup-nord', [info(1, false)]);
+    noteFieldControlList('hallencup-sued', [info(1, true)]);
+    expect(ownFieldsByTournament()).toEqual({ 'hallencup-nord': [1, 2], 'hallencup-sued': [1] });
+    noteFieldControlList('hallencup-sued', [info(1, false)]);
+    expect(ownFieldsByTournament()).toEqual({ 'hallencup-nord': [1, 2] });
     clearOwnFields();
-    ab();
-    noteFieldControlList('hallencup-nord', [info(1, true)]);
-    expect(gesehen).toEqual([['hallencup-nord', [1, 2]], ['hallencup-nord', []], [null, []]]);
-    expect(ownFieldsByTournament()).toEqual({ 'hallencup-nord': [1] });
+    expect(ownFieldsByTournament()).toEqual({});
   });
 });

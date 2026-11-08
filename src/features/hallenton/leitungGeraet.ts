@@ -7,6 +7,9 @@
  * hat das Spiel), sonst nach der lokalen Kopie. Welche Spiele auf dem Feld liegen, sagt die lokale Turnierkopie, nur lokal
  * gelesen (`lokalesTurnier.ts`, kein Abgleich mit der Cloud, W2) und höchstens alle 30 s – nur für Turniere mit eigenem Feld.
  * Ohne angepfiffenes Spiel entsteht so keine Anfrage an den Server.
+ * N3 (H3b-3): Ändert sich die eigene Engine (Anpfiff, neues Spiel), liest die Leitung die lokale Kopie sofort neu, höchstens
+ * einmal je Sekunde – so ist ein Spiel, das noch nicht im gemerkten Plan stand, zum nächsten 5-s-Takt bekannt. Die Engine
+ * selbst kennt das Feld ihrer Spiele nicht (`MatchContext` ohne Feld), deshalb bleibt die Kopie die Quelle für das Feld.
  */
 import { getDeviceId } from '../../core/device/deviceId';
 import { ownFieldsByTournament } from '../../core/fieldControl/ownFields';
@@ -20,6 +23,8 @@ import { planAusTurnier } from './runtime/lokalerSpielplan';
 import { echterZeitgeber, type Zeitgeber } from './runtime/zeitgeber';
 
 export const PLAN_NEU_MS = 30_000;
+/** N3: nach einer Änderung der eigenen Engine frühestens so lange nach dem letzten Lesen neu lesen (ms). */
+export const PLAN_ANSTOSS_MS = 1000;
 
 let leitung: LeitungLebenszeichen | null = null;
 const zuhoerer = new Set<() => void>();
@@ -55,9 +60,9 @@ export function erzeugeBrowserLeitung({ engine, ladeTurnier, rpc = hallFieldLead
   const plaene = new Map<string, { plan: PlanSpiel[]; um: number }>();
   const ladend = new Set<string>();
 
-  function plan(turnierId: string): PlanSpiel[] {
+  function lesen(turnierId: string, abstandMs: number): void {
     const alt = plaene.get(turnierId);
-    if ((!alt || zeitgeber.jetzt() - alt.um >= PLAN_NEU_MS) && !ladend.has(turnierId)) {
+    if ((!alt || zeitgeber.jetzt() - alt.um >= abstandMs) && !ladend.has(turnierId)) {
       ladend.add(turnierId);
       void ladeTurnier(turnierId).catch(() => null).then((t) => {
         ladend.delete(turnierId);
@@ -71,10 +76,14 @@ export function erzeugeBrowserLeitung({ engine, ladeTurnier, rpc = hallFieldLead
         plaene.set(turnierId, { plan: neu, um: zeitgeber.jetzt() });
       });
     }
-    return alt?.plan ?? [];
   }
 
-  return erzeugeLeitungLebenszeichen({
+  function plan(turnierId: string): PlanSpiel[] {
+    lesen(turnierId, PLAN_NEU_MS);
+    return plaene.get(turnierId)?.plan ?? [];
+  }
+
+  const lebenszeichen = erzeugeLeitungLebenszeichen({
     deviceId: getDeviceId(),
     eigeneFelder: ownFieldsByTournament,
     angepfiffen: (turnierId, feld) => plan(turnierId).some((spiel) => spiel.field === feld
@@ -82,4 +91,21 @@ export function erzeugeBrowserLeitung({ engine, ladeTurnier, rpc = hallFieldLead
     rpc: (args) => rpc(supabase, args),
     zeitgeber,
   });
+  let abmelden: (() => void) | null = null;
+  return {
+    ...lebenszeichen,
+    start() {
+      abmelden ??= engine.engine.subscribe(() => {
+        for (const turnierId of Object.keys(ownFieldsByTournament())) {
+          lesen(turnierId, PLAN_ANSTOSS_MS);
+        }
+      });
+      lebenszeichen.start();
+    },
+    stop() {
+      abmelden?.();
+      abmelden = null;
+      lebenszeichen.stop();
+    },
+  };
 }

@@ -6,7 +6,7 @@
  * Ein Ton „erklingt“, wenn seine Quelle gestartet und nicht vor dem Start gestoppt wurde; seine Serverzeit folgt aus der
  * Audiozeit. Abpfiff-Ton = „Hupe 2“ (2 s), Halbzeit-Ton = „Hupe 3“ (1 s).
  */
-import type { FeldStand, HallTonArt, StandQuelle } from '../../../../core/hallenton';
+import type { FeldStand, HallTonArt } from '../../../../core/hallenton';
 import type { EngineEvent, MatchContext } from '../../../../core/match';
 import { CTX_11, server, stand, stateAus } from '../../../../core/hallenton/__tests__/hallentonFixtures';
 import { FalscherAudioKontext, tonDaten } from '../../../../test/hallenton/falscherAudioKontext';
@@ -25,8 +25,11 @@ const ART_JE_DAUER: Record<number, HallTonArt> = { 2: 'abpfiff', 1: 'halbzeit' }
 
 export type Stufe = { ab: number; log: EngineEvent[] };
 
-/** Stand eines Felds je Zeit aus Stufen am Server; ein Ereignis um `ab` ist 300 ms später am Rechner bekannt. */
-export function feldAus(stufen: Stufe[], ctx: MatchContext = CTX_11, feldId = 'field-1', quelle: StandQuelle | ((jetzt: number) => StandQuelle) = server(200)) {
+/**
+ * Stand eines Felds je Zeit aus Stufen am Server; ein Ereignis um `ab` ist 300 ms später am Rechner bekannt. `alter` ist das
+ * Alter der letzten Antwort (fest oder je Zeit).
+ */
+export function feldAus(stufen: Stufe[], ctx: MatchContext = CTX_11, feldId = 'field-1', alter: number | ((jetzt: number) => number) = server(200)) {
   const states = stufen.map((s) => ({ ab: s.ab, state: stateAus(s.log, ctx) }));
   return (jetzt: number): FeldStand => {
     let aktuell = states[0];
@@ -35,7 +38,7 @@ export function feldAus(stufen: Stufe[], ctx: MatchContext = CTX_11, feldId = 'f
         aktuell = s;
       }
     }
-    return stand(aktuell.state, ctx, typeof quelle === 'function' ? quelle(jetzt) : quelle, aktuell.ab + 300, feldId);
+    return stand(aktuell.state, ctx, typeof alter === 'function' ? alter(jetzt) : alter, aktuell.ab + 300, feldId);
   };
 }
 

@@ -1,81 +1,18 @@
 /**
- * H3b-3 Restpunkte aus H3b-2b: Steuer-Stand über ein Neuladen ohne Netz (Befund 6a, @HT-033 Zeile 11), Meldung auch bei
- * zurückgesprungener Uhr (k4-neu-1, Regel 3), Tonwahl-Wechsel erst in Ruhe (k-neu-2, @HT-025) und „Anhören“ vor der
- * Aktivierung mit der Hupe des Turniers (k4-neu-2, @HT-023).
+ * H3b-3 Restpunkte aus H3b-2b: Meldung auch bei zurückgesprungener Uhr (k4-neu-1, Regel 3), Tonwahl-Wechsel erst in Ruhe
+ * (k-neu-2, @HT-025) und „Anhören“ vor der Aktivierung mit der Hupe des Turniers (k4-neu-2, @HT-023). Die Tests zu Befund 6a
+ * (Steuer-Stand über ein Neuladen) entfallen mit Regel 2 vom 07.11. (Hinweis K4 aus dem Review von H3b-3).
  */
 import { describe, expect, it, vi } from 'vitest';
-import { COCKPIT, ENDE_A2, T0, anpfiff, zweiterAbschnitt } from '../../../../core/hallenton/__tests__/hallentonFixtures';
-import type { OwnFieldsListener } from '../../../../core/fieldControl/ownFields';
-import { FalscherSpeicher } from '../../../../test/hallenton/falschesGeraet';
+import { ENDE_A2, T0, anpfiff, server, zweiterAbschnitt } from '../../../../core/hallenton/__tests__/hallentonFixtures';
 import { bereiteLautsprecherFeldIds, leseLautsprecherFelder } from '../lautsprecherKanal';
-import { erzeugeSteuerStandMerker } from '../steuerStandMerker';
 import { Tab, feldAus } from './laufzeitTestlage';
-
-function merkerLage(speicher = new FalscherSpeicher()) {
-  const zuhoerer = new Set<OwnFieldsListener>();
-  const gelesen: Record<string, readonly number[]> = {};
-  const merker = erzeugeSteuerStandMerker({
-    speicher,
-    eigeneFelder: () => gelesen,
-    abonniere: (fn) => { zuhoerer.add(fn); return () => zuhoerer.delete(fn); },
-    merkenFuer: (tid) => tid === 'hallencup-nord',
-  });
-  const lesen = (tid: string | null, felder: number[]): void => {
-    if (tid !== null) {
-      gelesen[tid] = felder;
-    }
-    for (const fn of zuhoerer) {
-      fn(tid, felder);
-    }
-  };
-  return { speicher, merker, lesen };
-}
-
-describe('Befund 6a – „leite ich Feld X?“ über ein Neuladen ohne Netz hinweg (@HT-033 Zeile 11)', () => {
-  it('@HT-033 Zeile 11: Laptop leitet Feld 1, lädt ohne Netz neu → das eigene Feld gilt sofort als eigenes Cockpit', () => {
-    const vorher = merkerLage();
-    vorher.lesen('hallencup-nord', [1]);
-    const nachNeuladen = merkerLage(vorher.speicher); // neue Seite, noch nichts gelesen (kein Netz)
-    expect(nachNeuladen.merker.leiteIchFeld('hallencup-nord', 1)).toBe(true);
-    expect(nachNeuladen.merker.leiteIchFeld('hallencup-nord', 2)).toBe(false);
-  });
-
-  it('ab dem ersten Lesen gilt nur der gelesene Stand (Steuer abgegeben → nicht mehr eigenes Feld)', () => {
-    const vorher = merkerLage();
-    vorher.lesen('hallencup-nord', [1]);
-    const nach = merkerLage(vorher.speicher);
-    nach.lesen('hallencup-nord', []);
-    expect(nach.merker.leiteIchFeld('hallencup-nord', 1)).toBe(false);
-    expect(merkerLage(nach.speicher).merker.leiteIchFeld('hallencup-nord', 1)).toBe(false); // auch gemerkt
-  });
-
-  it('der gelesene Stand gilt auch, wenn das Merken scheitert (Speicher voll/gesperrt)', () => {
-    const vorher = merkerLage();
-    vorher.lesen('hallencup-nord', [1]);
-    const gesperrt = new FalscherSpeicher();
-    gesperrt.setItem('hallenton:steuer', vorher.speicher.getItem('hallenton:steuer') ?? '');
-    gesperrt.setItem = () => { throw new Error('QuotaExceededError'); };
-    const nach = merkerLage(gesperrt);
-    expect(nach.merker.leiteIchFeld('hallencup-nord', 1)).toBe(true); // vor dem Lesen: der gemerkte Stand
-    nach.lesen('hallencup-nord', []);
-    expect(nach.merker.leiteIchFeld('hallencup-nord', 1)).toBe(false);
-  });
-
-  it('Gegenbeispiel: ein anderes Turnier wird nicht gemerkt; Abmelden löscht den gemerkten Stand', () => {
-    const l = merkerLage();
-    l.lesen('hallencup-sued', [2]);
-    expect(merkerLage(l.speicher).merker.leiteIchFeld('hallencup-sued', 2)).toBe(false);
-    l.lesen('hallencup-nord', [1]);
-    l.lesen(null, []);
-    expect(merkerLage(l.speicher).merker.leiteIchFeld('hallencup-nord', 1)).toBe(false);
-  });
-});
 
 describe('k4-neu-1 – springt die Uhr zurück, wird die Meldung trotzdem erneuert (Regel 3)', () => {
   it('Regel 3: Geräteuhr springt 5 s zurück → die Meldung „bereit“ ist nach höchstens 1,25 s wieder gültig und bleibt es', async () => {
     let versatz = 0;
     const tab = new Tab({ start: T0, kanalVersatz: () => versatz });
-    const feld = feldAus([{ ab: T0, log: anpfiff() }], undefined, 'field-1', COCKPIT);
+    const feld = feldAus([{ ab: T0, log: anpfiff() }], undefined, 'field-1', server(200));
     tab.ffs.staendeZu = (jetzt) => [feld(jetzt)];
     await tab.starte();
     await tab.vor(3000);
@@ -93,7 +30,7 @@ describe('k4-neu-1 – springt die Uhr zurück, wird die Meldung trotzdem erneue
 describe('k-neu-2 – die Tonwahl ändert sich während des Turniers (@HT-025)', () => {
   async function tabVorEnde(abstandMs: number) {
     const tab = new Tab({ start: ENDE_A2 - 20_000 });
-    const feld = feldAus([{ ab: T0, log: zweiterAbschnitt() }], undefined, 'field-1', COCKPIT);
+    const feld = feldAus([{ ab: T0, log: zweiterAbschnitt() }], undefined, 'field-1', server(200));
     tab.ffs.staendeZu = (jetzt) => [feld(jetzt)];
     await tab.starte();
     await tab.vor(ENDE_A2 - abstandMs - tab.uhr.jetzt());

@@ -2,8 +2,8 @@
  * Planer des Hallen-Lautsprechers (Record `2026-10-15_hallenton.md`, vier Regeln; @HT-002 – @HT-013, @HT-031 – @HT-034).
  * Rein, ohne React und ohne Uhr: Stand je Feld + Serverzeit + Gedächtnis → geplante Töne und Warnungen.
  *
- * - Regel 2: Stand am Server nur mit Antwort ≤ 3 s; sonst kein Ton nach altem Stand und Warnung (@HT-011). Das eigene
- *   Cockpit gilt immer (@HT-033 Zeile 11).
+ * - Regel 2 („Hupe und Anzeige sagen dasselbe“, 07.11.): immer der Stand am Server, auch wenn das Gerät das Feld selbst
+ *   leitet; nur mit Antwort ≤ 5 s, sonst kein Ton nach altem Stand und Warnung (@HT-011, @HT-033 Zeilen 4, 11).
  * - Kein Nachholen (@HT-013): Ein Ende, das bei seiner Ankunft (`bekanntSeit`) länger als 5 s zurückliegt, tönt nicht;
  *   ebenso keins, das seit mehr als 5 s bekannt ist und noch nicht gespielt wurde. Ein Ende durch eine Korrektur über die
  *   Grenze zählt ab der Korrektur (`enden.ts`, Controller 07.11.).
@@ -19,7 +19,7 @@ export const NACHHOLEN_MAX_MS = 5000;
 /** Enden innerhalb von 1 s ergeben einen Ton (Regel 4, @HT-032). */
 export const ZUSAMMEN_MS = 1000;
 /** Ältere Antwort des Servers: kein Ton nach diesem Stand (@HT-011). */
-export const ANTWORT_MAX_ALTER_MS = 3000;
+export const ANTWORT_MAX_ALTER_MS = 5000;
 /** Ab 15 s vor dem errechneten Ende jede Sekunde nachfragen („Im Einzelnen“, @HT-005). */
 export const ENGE_ABFRAGE_AB_MS = 15_000;
 export const ENGE_ABFRAGE_TAKT_MS = 1000;
@@ -33,7 +33,6 @@ interface Kandidat {
   ende: FeldEnde;
   /** Wann der Ton erklänge: das Ende, frühestens jetzt. */
   zeit: number;
-  ausServer: boolean;
 }
 
 /**
@@ -58,9 +57,7 @@ function tonAus(gruppe: readonly Kandidat[]): GeplanterTon {
     at, art, felder,
     schluessel: gruppe.map((k) => k.ende.schluessel),
     enden: gruppe.map((k) => ({ schluessel: k.ende.schluessel, feldId: k.feldId, at: k.ende.at })),
-    // gemischte Gruppe (Server-Feld + eigenes Cockpit): keine Prüfung – der Ton ist für das eigene Feld ohnehin fällig, ein
-    // Server-Feld mit veraltetem Stand tönt dann mit (Review M3, harmlos)
-    antwortNoetigAb: gruppe.every((k) => k.ausServer) ? at - ANTWORT_MAX_ALTER_MS : null,
+    antwortNoetigAb: at - ANTWORT_MAX_ALTER_MS,
   };
 }
 
@@ -94,14 +91,13 @@ export function planeHallToene(eingabe: PlanEingabe, gedaechtnis: TonGedaechtnis
   };
 
   for (const feld of eingabe.felder) {
-    const ausServer = feld.quelle.art === 'server';
-    if (feld.quelle.art === 'server' && feld.quelle.antwortAlterMs > ANTWORT_MAX_ALTER_MS) {
+    if (feld.antwortAlterMs > ANTWORT_MAX_ALTER_MS) {
       // Gerätestatus, auch ohne laufendes Spiel; Hinweise im Cockpit zeigt H3b nur bei laufendem Spiel (Review M7)
       warnungen.push({ feldId: feld.feldId, grund: 'keineVerbindung' });
       continue;
     }
     // enge Abfrage auch bei angehaltener Uhr kurz vor Schluss: jede Unterbrechung verschiebt das Ende (@HT-005, I1)
-    const rest = ausServer ? restBisGrenzeMs(feld.state, feld.ctx, serverNow) : null;
+    const rest = restBisGrenzeMs(feld.state, feld.ctx, serverNow);
     if (rest !== null && rest <= ENGE_ABFRAGE_AB_MS) {
       abfrageTaktMs = ENGE_ABFRAGE_TAKT_MS;
     }
@@ -123,7 +119,7 @@ export function planeHallToene(eingabe: PlanEingabe, gedaechtnis: TonGedaechtnis
       }
       continue;
     }
-    kandidaten.push({ feldId: feld.feldId, ende, zeit, ausServer });
+    kandidaten.push({ feldId: feld.feldId, ende, zeit });
   }
 
   return {

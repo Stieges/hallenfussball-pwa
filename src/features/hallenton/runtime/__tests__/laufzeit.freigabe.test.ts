@@ -1,10 +1,9 @@
 /**
- * H3b-2b Tonlaufzeit: Freigabe vor dem Ton (@HT-011 ↔ @HT-029, Plan „Freigabe vor dem Ton“), Weckruf 3 s vorher, „gespielt“
- * erst nach dem Beginn, eine Runde zur Zeit, Uhrsprung (@HT-010) und @HT-033 Zeile 4. Gefälschter Feldstand, echter Takt und
+ * H3b-2b Tonlaufzeit: Freigabe vor dem Ton (@HT-011 ↔ @HT-029, Plan „Freigabe vor dem Ton“; seit H3b-4 mit 5 s), Weckruf 3 s
+ * vorher, „gespielt“ erst nach dem Beginn, eine Runde zur Zeit, Uhrsprung (@HT-010) und @HT-033 Zeilen 4, 11. Gefälschter Feldstand, echter Takt und
  * Spieler. Spiel 11 im zweiten Abschnitt, Ende `ENDE_A2`; Tom leitet am Handy (Stand am Server).
  */
 import { describe, expect, it } from 'vitest';
-import type { StandQuelle } from '../../../../core/hallenton';
 import { ABSCHNITT_MS, CTX_11, CTX_12, ENDE_A2, T0, anpfiff, ev, server, zweiterAbschnitt } from '../../../../core/hallenton/__tests__/hallentonFixtures';
 import { Tab, feldAus } from './laufzeitTestlage';
 
@@ -16,9 +15,9 @@ function antwortenBis(netzWegAb: number) {
   };
 }
 
-async function tabImSpiel(start: number, quelle: StandQuelle | ((jetzt: number) => StandQuelle) = antwortenBis(Number.POSITIVE_INFINITY), log = zweiterAbschnitt()): Promise<Tab> {
+async function tabImSpiel(start: number, alter: number | ((jetzt: number) => number) = antwortenBis(Number.POSITIVE_INFINITY), log = zweiterAbschnitt()): Promise<Tab> {
   const tab = new Tab({ start });
-  const feld = feldAus([{ ab: T0, log }], CTX_11, 'field-1', quelle);
+  const feld = feldAus([{ ab: T0, log }], CTX_11, 'field-1', alter);
   tab.ffs.staendeZu = (jetzt) => [feld(jetzt)];
   await tab.starte();
   return tab;
@@ -26,8 +25,8 @@ async function tabImSpiel(start: number, quelle: StandQuelle | ((jetzt: number) 
 
 describe('Freigabe vor dem Ton (@HT-011 ↔ @HT-029)', () => {
   it('@HT-011 die Antwort für das Feld fehlt 250 ms vor dem Ton → der geplante Ton wird abgebrochen, kein Ton nach altem Stand', async () => {
-    const tab = await tabImSpiel(ENDE_A2 - 10_000, antwortenBis(ENDE_A2 - 3600));
-    await tab.vor(8000, [{ um: ENDE_A2 - 3600, tu: () => { tab.ffs.haengt = true; } }]); // Abfrage hängt: kein neuer Plan
+    const tab = await tabImSpiel(ENDE_A2 - 10_000, antwortenBis(ENDE_A2 - 5600));
+    await tab.vor(8000, [{ um: ENDE_A2 - 5600, tu: () => { tab.ffs.haengt = true; } }]); // Abfrage hängt: kein neuer Plan
     expect(tab.spieler.geplant()).toHaveLength(1); // der Weckruf 3 s vorher hat ihn eingeplant
     await tab.vor(8000);
     expect(tab.toene()).toEqual([]);
@@ -35,9 +34,9 @@ describe('Freigabe vor dem Ton (@HT-011 ↔ @HT-029)', () => {
   });
 
   it('@HT-029 Restrisiko: setzt der Worker genau in den letzten 250 ms aus, spielt der schon geplante Ton', async () => {
-    // letzte Antwort 3,1 s vor dem Ton: beim letzten Takt vor dem Aussetzer (≤ 2,7 s alt) plant der Planer ihn noch, zu `at`
-    // wäre sie 3,1 s alt – nur die Freigabe im 250-ms-Fenster hätte ihn verhindert
-    const letzteAntwort = ENDE_A2 - 3100;
+    // letzte Antwort 5,1 s vor dem Ton: beim letzten Takt vor dem Aussetzer (≤ 4,7 s alt) plant der Planer ihn noch, zu `at`
+    // wäre sie 5,1 s alt – nur die Freigabe im 250-ms-Fenster hätte ihn verhindert
+    const letzteAntwort = ENDE_A2 - 5100;
     const tab = await tabImSpiel(ENDE_A2 - 10_000, (jetzt) => server(jetzt - Math.min(jetzt, letzteAntwort)));
     await tab.vor(12_000, [
       { um: letzteAntwort, tu: () => { tab.ffs.haengt = true; } },
@@ -48,12 +47,12 @@ describe('Freigabe vor dem Ton (@HT-011 ↔ @HT-029)', () => {
   });
 
   it('@HT-032 Freigabe je Feld: Feld 2 ohne frische Antwort tönt nicht, Feld 1 mit frischer Antwort tönt', async () => {
-    // Feld 2 (Ende 2 s nach Feld 1) bekommt ab ENDE_A2 − 1,5 s keine lesbare Antwort mehr; ab ENDE_A2 + 0,5 s wird keine Runde
+    // Feld 2 (Ende 2 s nach Feld 1) bekommt ab ENDE_A2 − 3,5 s keine lesbare Antwort mehr; ab ENDE_A2 + 0,5 s wird keine Runde
     // mehr fertig – nur die Freigabe je Feld kann den Ton noch verhindern, das globale Alter (Feld 1) wäre frisch
     const tab = new Tab({ start: ENDE_A2 - 8000, felder: [1, 2] });
     const f1 = feldAus([{ ab: T0, log: zweiterAbschnitt() }], CTX_11, 'field-1', server(100));
     const start12 = T0 + 2000;
-    const f2 = feldAus([{ ab: start12, log: zweiterAbschnitt(start12) }], CTX_12, 'field-2', antwortenBis(ENDE_A2 - 1500));
+    const f2 = feldAus([{ ab: start12, log: zweiterAbschnitt(start12) }], CTX_12, 'field-2', antwortenBis(ENDE_A2 - 3500));
     tab.ffs.staendeZu = (jetzt) => [f1(jetzt), f2(jetzt)];
     await tab.starte();
     await tab.vor(16_000, [{ um: ENDE_A2 + 500, tu: () => { tab.ffs.haengt = true; } }]);
@@ -62,19 +61,15 @@ describe('Freigabe vor dem Ton (@HT-011 ↔ @HT-029)', () => {
     expect(tab.abgebrochen()).toBe(1);
   });
 
-  // Fixrunde 1 (K1): Die alte Fassung bestätigte den Fehler mit – sie prüfte nur einen eingefrorenen Stand. Nach Regel 2
-  // („Leitet es das Feld selbst, gilt das eigene Cockpit“) zählt der jeweils aktuelle eigene Stand, auch während die Abfrage hängt.
-  it('@HT-033 Zeile 11: ein Feld nach eigenem Cockpit ist frei und wird in jedem Takt neu gelesen, auch wenn keine Abfrage mehr antwortet', async () => {
-    const tab = new Tab({ start: ENDE_A2 - 10_000 });
-    const feld = feldAus([{ ab: T0, log: zweiterAbschnitt() }], CTX_11, 'field-1', { art: 'eigenesCockpit' });
-    tab.ffs.staendeZu = (jetzt) => [feld(jetzt)];
-    await tab.starte();
-    await tab.vor(5000);
-    tab.ffs.haengt = true;
+  it('@HT-033 Zeile 11: Laptop leitet ohne Netz, die Abfrage hängt → das Alter der Antwort wächst in jedem Takt, kein Ton nach altem Stand', async () => {
+    const netzWeg = ENDE_A2 - 8000;
+    const tab = await tabImSpiel(ENDE_A2 - 12_000, antwortenBis(netzWeg));
+    await tab.vor(4100, [{ um: netzWeg, tu: () => { tab.ffs.haengt = true; } }]);
     const gelesen = tab.ffs.staendeAufrufe;
-    await tab.vor(9000);
-    expect(tab.ffs.staendeAufrufe - gelesen).toBeGreaterThanOrEqual(35);
-    expect(tab.toene().map((t) => t.art)).toEqual(['abpfiff']);
+    await tab.vor(12_000);
+    expect(tab.ffs.staendeAufrufe - gelesen).toBeGreaterThanOrEqual(47);
+    expect(tab.toene()).toEqual([]);
+    expect(tab.laufzeit.getSnapshot().zustandJeFeld['field-1']).toBe('keineVerbindung');
   });
 });
 
@@ -116,10 +111,10 @@ describe('Weckruf, Ersetzen und „gespielt“ (Einbau-Vertrag Punkte 2–4)', (
   });
 
   it('ein abgebrochener Ton gilt nicht als gespielt: kommt die frische Antwort innerhalb von 5 s, ertönt das Ende einmal', async () => {
-    const tab = await tabImSpiel(ENDE_A2 - 10_000, antwortenBis(ENDE_A2 - 3600));
+    const tab = await tabImSpiel(ENDE_A2 - 10_000, antwortenBis(ENDE_A2 - 5600));
     const frisch = feldAus([{ ab: T0, log: zweiterAbschnitt() }]);
     await tab.vor(16_000, [
-      { um: ENDE_A2 - 3600, tu: () => { tab.ffs.haengt = true; } },
+      { um: ENDE_A2 - 5600, tu: () => { tab.ffs.haengt = true; } },
       { um: ENDE_A2 + 2000, tu: () => { tab.ffs.staendeZu = (jetzt) => [frisch(jetzt)]; tab.ffs.loesen(); } },
     ]);
     expect(tab.abgebrochen()).toBe(1);
@@ -170,9 +165,9 @@ describe('@HT-033 Zeile 4 und N-2 im Ruhezustand', () => {
     expect(tab.laufzeit.getSnapshot().zustandJeFeld['field-1']).toBe('keineVerbindung');
   });
 
-  it('N-2 im Ruhezustand: kein Spiel angepfiffen, Antwort 4 s alt ohne gescheiterten Versuch → keine Warnung', async () => {
+  it('N-2 im Ruhezustand: kein Spiel angepfiffen, Antwort 5,5 s alt ohne gescheiterten Versuch → keine Warnung', async () => {
     const tab = new Tab({ start: T0 - 60_000 });
-    const feld = feldAus([{ ab: T0 - 120_000, log: [] }], CTX_11, 'field-1', server(4000));
+    const feld = feldAus([{ ab: T0 - 120_000, log: [] }], CTX_11, 'field-1', server(5500));
     tab.ffs.staendeZu = (jetzt) => [feld(jetzt)];
     await tab.starte();
     await tab.vor(2000);
@@ -182,8 +177,8 @@ describe('@HT-033 Zeile 4 und N-2 im Ruhezustand', () => {
     expect(tab.laufzeit.getSnapshot().zustandJeFeld['field-1']).toBe('keineVerbindung');
   });
 
-  it('angepfiffen und Antwort älter als 3 s → Warnung auch ohne gemeldeten Fehlschlag (Abfrage hängt)', async () => {
-    const tab = await tabImSpiel(T0 + 60_000, server(3500), anpfiff());
+  it('angepfiffen und Antwort älter als 5 s → Warnung auch ohne gemeldeten Fehlschlag (Abfrage hängt)', async () => {
+    const tab = await tabImSpiel(T0 + 60_000, server(5500), anpfiff());
     await tab.vor(1000);
     expect(tab.laufzeit.getSnapshot().zustandJeFeld['field-1']).toBe('keineVerbindung');
   });

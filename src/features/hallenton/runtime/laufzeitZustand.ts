@@ -11,7 +11,7 @@ import { istAngepfiffen } from './feldStandSpiele';
 import type { HallTonSpieler, SpielerZustand, TonArt, TonWahl } from './hallTonSpieler';
 import type { FeldStandQuelle } from './feldStand';
 import type { GeraeteSperre } from './geraeteSperre';
-import { MELDUNG_ERNEUERN_MS, type KanalSpeicher, type LautsprecherKanal } from './lautsprecherKanal';
+import { MELDUNG_ERNEUERN_MS, type KanalSpeicher, type LautsprecherFeldMeldung, type LautsprecherKanal } from './lautsprecherKanal';
 import type { TaktQuelle } from './taktQuelle';
 import type { UhrProbe } from '../../../core/hallenton';
 
@@ -117,21 +117,27 @@ export function naechsterTonAus(ton: GeplanterTon | null, staende: readonly Feld
   return { at: ton.at, art: ton.art, felder: ton.felder, spiele: ton.felder.flatMap((f) => spielJeFeld.get(f) ?? []) };
 }
 
-/** Freigabe eines Felds für einen Ton zu `at`: eigenes Cockpit immer, sonst die Antwort dieses Felds nicht vor `at − 3 s`. */
-export function feldFrei(feldId: string, at: number, staende: readonly FeldStand[], staendeUm: number): boolean {
+/** Serverzeit der letzten Antwort für das Feld (`staendeUm − antwortAlterMs`); `null` ohne Stand oder ohne Antwort. */
+export function antwortAtVon(feldId: string, staende: readonly FeldStand[], staendeUm: number): number | null {
   const stand = staende.find((s) => s.feldId === feldId);
-  if (!stand) {
-    return false;
-  }
-  return stand.quelle.art === 'eigenesCockpit' || staendeUm - stand.quelle.antwortAlterMs >= at - ANTWORT_MAX_ALTER_MS;
+  return stand && Number.isFinite(stand.antwortAlterMs) ? staendeUm - stand.antwortAlterMs : null;
 }
 
 /**
- * Freigabe vor dem Ton (@HT-011 ↔ @HT-029) je Feld (`quelle.antwortAlterMs` zum Zeitpunkt `staendeUm`). Ein Ton für mehrere
+ * Freigabe eines Felds für einen Ton (Regel 2, @HT-011): die Antwort dieses Felds liegt nicht vor `ton.antwortNoetigAb`
+ * (`at − 5 s`, vom Planer gesetzt – eine Grenze, eine Stelle; K-3 aus dem Review von H3b-4).
+ */
+export function feldFrei(feldId: string, ton: GeplanterTon, staende: readonly FeldStand[], staendeUm: number): boolean {
+  const antwortAt = antwortAtVon(feldId, staende, staendeUm);
+  return antwortAt !== null && antwortAt >= ton.antwortNoetigAb;
+}
+
+/**
+ * Freigabe vor dem Ton (@HT-011 ↔ @HT-029) je Feld (`antwortAlterMs` zum Zeitpunkt `staendeUm`). Ein Ton für mehrere
  * Felder ist frei, wenn eines seiner Felder frei ist (die übrigen Felder tönen, @HT-032).
  */
 export function tonFrei(ton: GeplanterTon, staende: readonly FeldStand[], staendeUm: number): boolean {
-  return ton.felder.some((feldId) => feldFrei(feldId, ton.at, staende, staendeUm));
+  return ton.felder.some((feldId) => feldFrei(feldId, ton, staende, staendeUm));
 }
 
 /**
@@ -139,7 +145,7 @@ export function tonFrei(ton: GeplanterTon, staende: readonly FeldStand[], staend
  * angehalten sein, sein echtes Ende tönt dann später. Ohne freies Feld (Ton trotz Aussetzer, Restrisiko) alle.
  */
 export function nurFreieEnden(ton: GeplanterTon, staende: readonly FeldStand[], staendeUm: number): GeplanterTon {
-  const freie = ton.felder.filter((feldId) => feldFrei(feldId, ton.at, staende, staendeUm));
+  const freie = ton.felder.filter((feldId) => feldFrei(feldId, ton, staende, staendeUm));
   return freie.length === 0 ? ton : { ...ton, enden: ton.enden.filter((e) => freie.includes(e.feldId)) };
 }
 
@@ -149,23 +155,53 @@ export function warnFelderAus(warnungen: readonly { feldId: string }[], staende:
   return new Set(warnungen.filter((w) => gescheitert || angepfiffen(w.feldId)).map((w) => w.feldId));
 }
 
+/** K-2: Eine gemeldete Antwort, die so alt ist, wird sofort ersetzt, sobald eine neuere vorliegt (nach einem Aussetzer). */
+const NACH_AUSSETZER_MS = ANTWORT_MAX_ALTER_MS - 1000;
+
+/** Nach einem Aussetzer: die gemeldete Antwort ist mindestens 4 s alt, und eine neuere liegt vor. */
+function nachAussetzer(neu: number | null | undefined, alt: number | null | undefined, jetzt: number): boolean {
+  return typeof neu === 'number' && typeof alt === 'number' && neu > alt && jetzt - alt >= NACH_AUSSETZER_MS;
+}
+
+/**
+ * Geändert heißt: anderes Feld, anderes „bereit“, Antwort neu da bzw. weg oder eine neue Antwort nach einem Aussetzer (K-2);
+ * sonst trägt die Erneuerung je Sekunde die Zeit der Antwort nach.
+ */
+function weichtAb(a: readonly LautsprecherFeldMeldung[], b: readonly LautsprecherFeldMeldung[] | null, jetzt: number): boolean {
+  if (b?.length !== a.length) {
+    return true;
+  }
+  return a.some((f, i) => f.feld !== b[i].feld || f.bereit !== b[i].bereit || (f.antwortAt === null) !== (b[i].antwortAt === null)
+    || nachAussetzer(f.antwortAt, b[i].antwortAt, jetzt));
+}
+
 /**
  * Lautsprecher-Felder an die Tabs melden (Regel 3, Reload-Tor): bei jeder Änderung, sonst höchstens einmal je Sekunde erneuert
  * (W-neu-1). Das Alter misst die Uhr des Kanals (k3-neu-1); ein negatives Alter (Uhr zurückgesprungen) erneuert ebenfalls
- * (k4-neu-1), sonst veraltete die Meldung für die Lesenden. Rückgabe: der gemeldete Inhalt (für den nächsten Vergleich).
+ * (k4-neu-1), sonst veraltete die Meldung für die Lesenden. Je Feld steht die Serverzeit der letzten Antwort dabei (K3 aus
+ * H3b-3): Das Cockpit prüft damit beim Ton-Anlass dieselbe 5-s-Grenze wie die Freigabe (`cockpitTon.ts`). Die Zeit kommt mit
+ * der Erneuerung je Sekunde nach (sonst schriebe jede Antwort), nach einem Aussetzer sofort (K-2); ist sie älter als die wahre,
+ * tönt das Cockpit im Zweifel mit – nie gar kein Ton. Abgerundet (K-1): die Meldung wirkt eher älter, nie jünger. `jetzt` ist
+ * die Serverzeit des Stands. Rückgabe: die zuletzt geschriebenen Felder (für den nächsten Vergleich).
  */
 export function meldeFelderAnTabs(
   kanal: Pick<LautsprecherKanal, 'melden' | 'eigenesAlter'>,
   turnierId: string,
   felder: readonly number[],
   zustandJeFeld: Readonly<Record<string, FeldZustand>>,
-  zuletzt: string | null,
-): string {
-  const liste = felder.map((feld) => ({ feld, bereit: BEREIT.has(zustandJeFeld[feldKennung(feld)]) }));
-  const text = JSON.stringify(liste);
+  antwortAt: (feldId: string) => number | null,
+  jetzt: number,
+  zuletzt: readonly LautsprecherFeldMeldung[] | null,
+): readonly LautsprecherFeldMeldung[] | null {
+  const liste = felder.map((feld) => {
+    const id = feldKennung(feld);
+    const at = antwortAt(id);
+    return { feld, bereit: BEREIT.has(zustandJeFeld[id]), antwortAt: at === null ? null : Math.floor(at) };
+  });
   const alter = kanal.eigenesAlter();
-  if (zuletzt !== text || alter === null || alter < 0 || alter >= MELDUNG_ERNEUERN_MS) {
+  if (weichtAb(liste, zuletzt, jetzt) || alter === null || alter < 0 || alter >= MELDUNG_ERNEUERN_MS) {
     kanal.melden({ turnierId, felder: liste });
+    return liste;
   }
-  return text;
+  return zuletzt;
 }

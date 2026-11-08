@@ -9,7 +9,6 @@ export type {
   HallTonWarnung,
   PlanEingabe,
   PlanErgebnis,
-  StandQuelle,
   TonGedaechtnis,
 } from './types';
 export { endeSchluessel, feldEndeOf, type EndeKennung, type FeldEnde } from './enden';

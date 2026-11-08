@@ -48,10 +48,8 @@ describe('Gegenbeispiel: eine unlesbare Ereigniszeile (z. B. neuer Ereignistyp e
 
   it('@HT-011 nur Feld 2 gilt als nicht beantwortet: seine Antwort altert, der Planer warnt nur für Feld 2', async () => {
     const { lage, plaene } = await lauf();
-    const feld1 = lage.stand('field-1')?.quelle;
-    const feld2 = lage.stand('field-2')?.quelle;
-    expect(feld1?.art === 'server' && feld1.antwortAlterMs).toBeLessThanOrEqual(1000);
-    expect(feld2?.art === 'server' && feld2.antwortAlterMs).toBeGreaterThan(3000);
+    expect(lage.stand('field-1')?.antwortAlterMs).toBeLessThanOrEqual(1000);
+    expect(lage.stand('field-2')?.antwortAlterMs).toBeGreaterThan(5000);
     expect(plaene[plaene.length - 1].warnungen).toEqual([{ feldId: 'field-2', grund: 'keineVerbindung' }]);
     expect(lage.fs.letzteAntwortAt()).toBeGreaterThan(lage.uhr.jetzt() - 1500);
   });

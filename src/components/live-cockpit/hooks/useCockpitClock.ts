@@ -3,9 +3,9 @@
  * (`useEngineClockCommands`), Abschnittsende und Abpfiff von selbst (`useAutoSectionEnd`), Ton und Vibration
  * (`useWhistle`, einzige Quelle) und der Wiederanpfiff. Die Hülle verdrahtet nur noch das Ergebnis.
  *
- * Regel 3 Hallenton (H3b-3, @HT-009, @HT-033 Zeilen 2, 9, 10): Der Ton gilt nur, wenn `soundEnabled` und der Hallen-Lautsprecher
- * dieses Geräts für das Feld nicht bereit ist (`cockpitTonSchweigtJetzt`, bei jedem Ton-Anlass neu gelesen; im Zweifel tönt das
- * Cockpit). Die Vibration bleibt, ebenso der Ton des Abzeichens und die Testtöne im Cockpit (andere Wege).
+ * Regel 3 Hallenton (H3b-3, @HT-009, @HT-033 Zeilen 2, 9, 10, 11): Der Ton gilt nur, wenn `soundEnabled` und der
+ * Hallen-Lautsprecher dieses Geräts für das Feld nicht bereit ist oder seine letzte Antwort des Servers älter als 5 s ist
+ * (`cockpitTonSchweigtJetzt` mit der Serverzeit des Ton-Anlasses, jedes Mal neu gelesen; im Zweifel tönt das Cockpit). Die Vibration bleibt, ebenso der Ton des Abzeichens und die Testtöne im Cockpit (andere Wege).
  */
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -52,10 +52,10 @@ export function useCockpitClock(args: CockpitClockArgs): CockpitClock {
   const commands = useEngineClockCommands({ tournamentId, match, onError });
   const feldId = match?.fieldId ?? null;
   const tonAnlass = useCallback(() => {
-    if (!cockpitTonSchweigtJetzt(tournamentId, feldId)) {
+    if (!cockpitTonSchweigtJetzt(tournamentId, feldId, serverNow())) {
       playSound();
     }
-  }, [tournamentId, feldId, playSound]);
+  }, [tournamentId, feldId, playSound, serverNow]);
   const whistle = useWhistle({ soundEnabled: settings.soundEnabled, hapticEnabled: settings.hapticEnabled, play: tonAnlass });
 
   const onEnded = useCallback((ended: SectionEnded) => {

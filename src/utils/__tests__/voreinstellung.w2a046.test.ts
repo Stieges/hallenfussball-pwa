@@ -43,13 +43,13 @@ describe('TB-2 Voreinstellung BFV privat', () => {
     expect(csv.isValid).toBe(true);
     expect(kern(csv.tournament?.placementLogic)).toEqual(BFV_PRIVAT);
 
-    const json = validateAndParseTournamentImport(JSON.stringify({ title: 'Nikolaus', teams: [{ name: 'TSV Waging rot' }, { name: 'DJK Kammer' }] }), 'json');
+    const json = validateAndParseTournamentImport(JSON.stringify({ title: 'Nikolaus', date: '2026-11-28', startTime: '09:00', teams: [{ name: 'TSV Waging rot' }, { name: 'DJK Kammer' }] }), 'json');
     expect(kern(json.tournament?.placementLogic)).toEqual(BFV_PRIVAT);
 
     expect(kern(JSON_TEMPLATE.placementLogic)).toEqual(BFV_PRIVAT);
     // Gegenbeispiel: eine im JSON gespeicherte Reihenfolge wird übernommen, nicht überschrieben.
     const eigene = validateAndParseTournamentImport(JSON.stringify({
-      title: 'Nikolaus', teams: [{ name: 'A' }, { name: 'B' }], placementLogic: [{ id: 'points', label: 'Punkte', enabled: true }],
+      title: 'Nikolaus', date: '2026-11-28', startTime: '09:00', teams: [{ name: 'A' }, { name: 'B' }], placementLogic: [{ id: 'points', label: 'Punkte', enabled: true }],
     }), 'json');
     expect(kern(eigene.tournament?.placementLogic)).toEqual([{ id: 'points', enabled: true }]);
   });

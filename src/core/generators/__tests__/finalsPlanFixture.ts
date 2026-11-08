@@ -61,6 +61,8 @@ export function planOf(fixtureCase: FixtureCase): FilePlanMatch[] {
 export function importFileOf(fixtureCase: FixtureCase, plan: FilePlanMatch[] = planOf(fixtureCase)): string {
   return JSON.stringify({
     title: 'Hallencup Nord',
+    date: '2026-11-28',
+    startTime: '09:00',
     teams: fixtureCase.groups.flatMap((g) =>
       Array.from({ length: g.teamCount }, (_, n) => ({ id: `${g.id}${n + 1}`, name: `Team ${g.id}${n + 1}`, group: g.id })),
     ),

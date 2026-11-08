@@ -21,6 +21,8 @@ function importiere(finalsConfig: Record<string, unknown>) {
   return validateAndParseTournamentImport(
     JSON.stringify({
       title: 'Import-Prüfung',
+      date: '2026-11-28',
+      startTime: '09:00',
       teams: [{ id: 'a', name: 'Alpha' }],
       finalsConfig,
     }),

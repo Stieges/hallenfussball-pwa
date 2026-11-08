@@ -13,7 +13,8 @@
  * - Ursprüngliche Uhrzeiten wiederherstellen: nur nicht angepfiffene Spiele; läge die Uhrzeit in der Vergangenheit, bleibt das
  *   Spiel, wo es ist, und wird genannt (@ZP-036, @ZP-037).
  *
- * Das neue Ende ist das Ende des letzten Spiels (Anpfiff + Spieldauer mit Halbzeitpausen). Die Reserve für Verlängerung und
+ * Das neue Ende ist das Ende des letzten Takts: Anpfiff + Spieldauer mit Halbzeitpausen + die eingestellte Pause (Wechselminute)
+ * nach dem letzten Spiel (@ZP-089, Befund C-ENDZEIT-OHNE-WECHSELMINUTE). Die Reserve für Verlängerung und
  * Strafstoßschießen ist im Record Zeitrahmen und Fairness noch geparkt (Höhe offen) und hier nicht eingerechnet.
  */
 import type { Match, Tournament } from '../../types/tournament';
@@ -178,7 +179,8 @@ function endOf(matches: readonly Match[], rules: ShiftTimingRules, status: (m: M
     if (t === undefined || classify(status(m)) === 'cancelled') {
       continue;
     }
-    const e = t + matchDurationMinutes(m, rules) * MINUTE_MS;
+    // Ende des letzten Takts: Spieldauer plus die Wechselminute (eingestellte Pause) nach dem Spiel (@ZP-089)
+    const e = t + (matchDurationMinutes(m, rules) + breakMinutes(m, rules)) * MINUTE_MS;
     end = end === undefined ? e : Math.max(end, e);
   }
   return end === undefined ? undefined : new Date(end);

@@ -47,6 +47,8 @@ export class LzTab {
   ackNetz = true;
   /** Lokale Turnierkopie: abgeschlossen (W1). */
   turnierBeendet = false;
+  /** Das Lesen der lokalen Kopie kehrt nie zurück (N1, z. B. IndexedDB blockiert). */
+  endePruefungHaengt = false;
   endePruefungen = 0;
   readonly fehler: Array<string | null> = [];
 
@@ -72,7 +74,7 @@ export class LzTab {
       speicher: o.ohneSpeicher ? null : this.tab.geraet.speicher,
       turnierBeendet: () => {
         this.endePruefungen += 1;
-        return Promise.resolve(this.turnierBeendet);
+        return this.endePruefungHaengt ? new Promise<boolean>(() => undefined) : Promise.resolve(this.turnierBeendet);
       },
       beiFehler: (grund) => {
         this.fehler.push(grund);
