@@ -27,6 +27,11 @@ export interface KanalSpeicher extends Speicher {
 export interface LautsprecherFeldMeldung {
   feld: number;
   bereit: boolean;
+  /**
+   * Serverzeit der letzten Antwort des Servers für dieses Feld (K3 aus H3b-3); `null` = keine. Fehlt der Wert (ältere Meldung),
+   * gilt das wie `null`: das Cockpit tönt.
+   */
+  antwortAt?: number | null;
 }
 
 export interface LautsprecherMeldung {
@@ -81,8 +86,12 @@ function alsMeldung(roh: unknown): LautsprecherMeldung | null {
   if (typeof m.turnierId !== 'string' || typeof m.tabId !== 'string' || typeof m.at !== 'number' || felder === null) {
     return null;
   }
-  const gueltig = felder.every((f: unknown) => !!f && typeof f === 'object'
-    && Number.isInteger((f as LautsprecherFeldMeldung).feld) && typeof (f as LautsprecherFeldMeldung).bereit === 'boolean');
+  const gueltig = felder.every((f: unknown) => {
+    const feld = f as LautsprecherFeldMeldung;
+    const antwortAt = !!f && typeof f === 'object' ? feld.antwortAt : undefined;
+    return !!f && typeof f === 'object' && Number.isInteger(feld.feld) && typeof feld.bereit === 'boolean'
+      && (antwortAt === undefined || antwortAt === null || Number.isFinite(antwortAt));
+  });
   return gueltig ? { turnierId: m.turnierId, felder, tabId: m.tabId, at: m.at } : null;
 }
 

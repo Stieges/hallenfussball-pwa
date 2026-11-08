@@ -1,14 +1,16 @@
 /**
- * Vier Regeln (Record „Im Einzelnen“) und die Kombinations-Tabelle @HT-033, Zeilen 1, 2, 3, 4, 7, 10 (dazu 11 und 12,
- * ebenfalls auf Logik-Ebene prüfbar); dazu @HT-009, @HT-011 und @HT-034 (Logik-Teil). Testskelett aus dem Gherkin.
+ * Vier Regeln (Record „Im Einzelnen“) und die Kombinations-Tabelle @HT-033, Zeilen 1, 2, 3, 4, 7, 10, 11, 12 auf Logik-Ebene;
+ * dazu @HT-009, @HT-011 und @HT-034 (Logik-Teil). Testskelett aus dem Gherkin.
  * Laptop = Rechner der Turnierleitung und Hallen-Lautsprecher; Handy = Toms Handy.
- * Leitet der Laptop das Feld selbst, plant er nach dem eigenen Cockpit, sonst nach dem Stand am Server (Regel 2).
+ * Regel 2 seit 07.11. („Hupe und Anzeige sagen dasselbe“): Der Lautsprecher plant immer nach dem Stand am Server wie der
+ * Monitor, auch wenn der Laptop das Feld selbst leitet. Wer leitet, ändert am Stand nichts – die Ereignisse des leitenden
+ * Geräts kommen über den Server an.
  */
 import { describe, expect, it } from 'vitest';
 import { phaseViewOf } from '../../match/client/phaseView';
 import { LEERES_GEDAECHTNIS, cockpitTonSchweigt, planeHallToene, type FeldStand } from '..';
 import {
-  ABSCHNITT_MS, COCKPIT, CTX_11, CTX_12, ENDE_A2, PAUSE_MS, T0, TAKT_VERSAETZE, ev, lauf, laufImTakt, server, stand, stateAus,
+  ABSCHNITT_MS, CTX_11, CTX_12, ENDE_A2, PAUSE_MS, T0, TAKT_VERSAETZE, ev, lauf, laufImTakt, server, stand, stateAus,
   zweiterAbschnitt,
 } from './hallentonFixtures';
 
@@ -25,21 +27,17 @@ function vomServer(jetzt: number, alterMs = 0): FeldStand {
     : stand(beendet11, CTX_11, server(alterMs), ENDE_A2 + LAUFZEIT_MS);
 }
 
-/** Eigenes Cockpit: das Ende von selbst steht sofort im eigenen Stand. */
-function vomCockpit(jetzt: number): FeldStand {
-  return jetzt < ENDE_A2 ? stand(laeuft11, CTX_11, COCKPIT, T0) : stand(beendet11, CTX_11, COCKPIT, ENDE_A2);
-}
-
-/** @HT-033 Zeile 7: Feld 1 nach Server (Spiel 11), Feld 2 nach eigenem Cockpit (Spiel 12 endet 0,5 s nach Spiel 11). */
+/** @HT-033 Zeile 7: Feld 1 leitet das Handy (Spiel 11), Feld 2 der Laptop (Spiel 12 endet 0,5 s nach Spiel 11) – beide am Server. */
 function zeile7Felder(): (jetzt: number) => FeldStand[] {
-  // Spiel 12 auf Feld 2 endet 0,5 s nach Spiel 11
   const start12 = ENDE_A2 + 500 - (2 * ABSCHNITT_MS + PAUSE_MS);
   const laeuft12 = stateAus(zweiterAbschnitt(start12), CTX_12);
   const ende12 = ENDE_A2 + 500;
   const beendet12 = stateAus([...zweiterAbschnitt(start12), ev('MATCH_END', ende12, 2, 2 * ABSCHNITT_MS)], CTX_12);
   return (jetzt: number): FeldStand[] => [
     vomServer(jetzt),
-    jetzt < ende12 ? stand(laeuft12, CTX_12, COCKPIT, start12, 'feld-2') : stand(beendet12, CTX_12, COCKPIT, ende12, 'feld-2'),
+    jetzt < ende12 + LAUFZEIT_MS
+      ? stand(laeuft12, CTX_12, server(0), start12, 'feld-2')
+      : stand(beendet12, CTX_12, server(0), ende12 + LAUFZEIT_MS, 'feld-2'),
   ];
 }
 
@@ -54,10 +52,10 @@ describe('@HT-033 Die vier Regeln entscheiden jede Kombination aus leitendem Ger
     expect(cockpitTonSchweigt('feld-1', [])).toBe(false);
   });
 
-  it('@HT-033 Zeile 2: Laptop leitet und ist Lautsprecher → einmal, nach eigenem Stand; Cockpit-Ton schweigt', () => {
-    const { gespielt } = lauf((jetzt) => [vomCockpit(jetzt)], ENDE_A2 - 3000, ENDE_A2 + 6000);
+  it('@HT-033 Zeile 2: Laptop leitet und ist Lautsprecher → Laptop, einmal, nach dem Stand am Server wie der Monitor; Cockpit-Ton schweigt', () => {
+    const { gespielt } = lauf((jetzt) => [vomServer(jetzt)], ENDE_A2 - 3000, ENDE_A2 + 6000);
     expect(gespielt).toHaveLength(1);
-    expect(Math.abs(gespielt[0].at - ENDE_A2)).toBeLessThanOrEqual(1000);
+    expect(Math.abs(gespielt[0].at - cockpitGrenze)).toBeLessThanOrEqual(1000);
     expect(cockpitTonSchweigt('feld-1', ['feld-1'])).toBe(true);
   });
 
@@ -96,7 +94,7 @@ describe('@HT-033 Die vier Regeln entscheiden jede Kombination aus leitendem Ger
     expect(cockpitTonSchweigt('feld-1', [])).toBe(false);
   });
 
-  it('@HT-033 Zeile 7: F1 leitet das Handy, F2 der Laptop, Laptop für beide → F1 nach Server, F2 nach eigenem Stand; gleichzeitig = ein Ton', () => {
+  it('@HT-033 Zeile 7: F1 Handy, F2 Laptop, Laptop für beide → beide nach dem Stand am Server; gleichzeitig = ein Ton; Laptop-Cockpit F2 schweigt', () => {
     const felder = zeile7Felder();
     const { gespielt } = lauf(felder, ENDE_A2 - 3000, ENDE_A2 + 6000);
     expect(gespielt).toHaveLength(1);
@@ -105,31 +103,32 @@ describe('@HT-033 Die vier Regeln entscheiden jede Kombination aus leitendem Ger
   });
 
   it('@HT-033 Zeile 10: Wechsel Handy → Laptop im Spiel → weiter genau ein Ton; Cockpit-Ton schweigt ab dem Wechsel', () => {
-    const wechsel = ENDE_A2 - 2000;
-    const felder = (jetzt: number) => [jetzt < wechsel ? vomServer(jetzt) : vomCockpit(jetzt)];
-    const { gespielt } = lauf(felder, ENDE_A2 - 5000, ENDE_A2 + 6000);
+    // der Laptop übernimmt 2 s vor dem Ende; der Stand am Server läuft ohne Bruch weiter (kein Sonderfall „Rollenwechsel“)
+    const { gespielt } = lauf((jetzt) => [vomServer(jetzt)], ENDE_A2 - 5000, ENDE_A2 + 6000);
     expect(gespielt).toHaveLength(1);
     expect(cockpitTonSchweigt('feld-1', ['feld-1'])).toBe(true);
   });
 
-  it('@HT-033 Zeile 10: Wechsel genau während des Endes (Ton schon nach Server gespielt) → kein zweiter Ton nach eigenem Stand', () => {
+  it('Gegenbeispiel (früher Zeile 10): Wechsel genau während des Endes → kein Doppelton', () => {
+    // vor und nach dem Wechsel derselbe Stand am Server; nur das Alter der Antwort springt (neue Abfrage nach dem Wechsel)
     const wechsel = ENDE_A2 + 100;
-    const felder = (jetzt: number) => [jetzt < wechsel ? vomServer(jetzt) : vomCockpit(jetzt)];
+    const felder = (jetzt: number): FeldStand[] => [vomServer(jetzt, jetzt < wechsel ? 200 : 0)];
     expect(lauf(felder, ENDE_A2 - 3000, ENDE_A2 + 6000).gespielt).toHaveLength(1);
   });
 
-  it('@HT-033 Zeile 11: Laptop leitet selbst ohne Netz → einmal nach eigenem Stand, keine Warnung „Keine Verbindung“', () => {
-    // Grenze des Tests: `eigenesCockpit` kennt kein Netz – fachlich gleich Zeile 2; geprüft wird, dass ohne Server keine Warnung kommt
-    const { gespielt } = lauf((jetzt) => [vomCockpit(jetzt)], ENDE_A2 - 3000, ENDE_A2 + 6000);
-    expect(gespielt).toHaveLength(1);
-    const plan = planeHallToene({ felder: [vomCockpit(ENDE_A2 - 1000)], serverNow: ENDE_A2 - 1000 }, LEERES_GEDAECHTNIS);
-    expect(plan.warnungen).toEqual([]);
+  it('@HT-033 Zeile 11: Laptop leitet ohne Netz → kein Hallenton nach unsicherem Stand; Warnung wie Zeile 4', () => {
+    // der Laptop pfeift ohne Netz an und leitet den zweiten Abschnitt; der Server kennt nur den Stand vor dem Netzverlust
+    const verlorenUm = ENDE_A2 - 30_000;
+    const felder = (jetzt: number) => [stand(laeuft11, CTX_11, server(jetzt - verlorenUm), T0)];
+    expect(lauf(felder, ENDE_A2 - 5000, ENDE_A2 + 10_000).gespielt).toEqual([]);
+    const plan = planeHallToene({ felder: felder(ENDE_A2), serverNow: ENDE_A2 }, LEERES_GEDAECHTNIS);
+    expect(plan.warnungen).toEqual([{ feldId: 'feld-1', grund: 'keineVerbindung' }]);
+    // Regel 3: der Lautsprecher ist nicht bereit (keine Verbindung) → das Cockpit am Laptop tönt
+    expect(cockpitTonSchweigt('feld-1', [])).toBe(false);
   });
 
-  it('@HT-033 Zeile 12: Wechsel Laptop → Handy im Spiel → weiter genau ein Ton, ab dem Wechsel im Gleichtakt mit dem Monitor', () => {
-    const wechsel = ENDE_A2 - 2000;
-    const felder = (jetzt: number) => [jetzt < wechsel ? vomCockpit(jetzt) : vomServer(jetzt)];
-    const { gespielt } = lauf(felder, ENDE_A2 - 5000, ENDE_A2 + 6000);
+  it('@HT-033 Zeile 12: Wechsel Laptop → Handy im Spiel → weiter genau ein Ton, im Gleichtakt mit dem Monitor', () => {
+    const { gespielt } = lauf((jetzt) => [vomServer(jetzt)], ENDE_A2 - 5000, ENDE_A2 + 6000);
     expect(gespielt).toHaveLength(1);
     expect(Math.abs(gespielt[0].at - cockpitGrenze)).toBeLessThanOrEqual(1000);
     expect(cockpitTonSchweigt('feld-1', [])).toBe(false);
@@ -138,7 +137,7 @@ describe('@HT-033 Die vier Regeln entscheiden jede Kombination aus leitendem Ger
 
 describe('@HT-033 Zeile 7 im 1-s-Takt des Einbaus', () => {
   for (const versatzMs of TAKT_VERSAETZE) {
-    it(`@HT-033 Zeile 7, Versatz ${versatzMs} ms: F1 nach Server, F2 nach eigenem Stand, gleichzeitig = ein Ton`, () => {
+    it(`@HT-033 Zeile 7, Versatz ${versatzMs} ms: beide nach dem Stand am Server, gleichzeitig = ein Ton`, () => {
       expect(laufImTakt(zeile7Felder(), ENDE_A2 - 3000, ENDE_A2 + 6000, { versatzMs })).toHaveLength(1);
     });
   }
@@ -164,7 +163,7 @@ describe('@HT-009 Der Hallenton hängt nicht am Ton im Cockpit', () => {
 describe('@HT-011 Ohne Verbindung warnt der Lautsprecher und tönt nicht nach veraltetem Stand', () => {
   const verlorenUm = ENDE_A2 - 30_000;
 
-  it('@HT-011 errechnetes Ende erreicht, letzte Antwort älter als 3 s → kein Ton, Warnung „keine Verbindung“', () => {
+  it('@HT-011 errechnetes Ende erreicht, letzte Antwort älter als 5 s → kein Ton, Warnung „keine Verbindung“', () => {
     const felder = (jetzt: number) => [stand(laeuft11, CTX_11, server(jetzt - verlorenUm), T0)];
     expect(lauf(felder, ENDE_A2 - 2000, ENDE_A2 + 10_000).gespielt).toEqual([]);
     const plan = planeHallToene({ felder: felder(ENDE_A2), serverNow: ENDE_A2 }, LEERES_GEDAECHTNIS);
@@ -172,16 +171,20 @@ describe('@HT-011 Ohne Verbindung warnt der Lautsprecher und tönt nicht nach ve
     expect(plan.warnungen).toEqual([{ feldId: 'feld-1', grund: 'keineVerbindung' }]);
   });
 
-  it('@HT-011 Gegenprobe: letzte Antwort genau 3 s alt → der Ton kommt', () => {
-    const plan = planeHallToene({ felder: [stand(laeuft11, CTX_11, server(3000), T0)], serverNow: ENDE_A2 }, LEERES_GEDAECHTNIS);
+  it('@HT-011 letzte Antwort 4,9 s alt → der Ton kommt, keine Warnung', () => {
+    const plan = planeHallToene({ felder: [stand(laeuft11, CTX_11, server(4900), T0)], serverNow: ENDE_A2 }, LEERES_GEDAECHTNIS);
     expect(plan.toene).toHaveLength(1);
     expect(plan.warnungen).toEqual([]);
   });
 
-  it('@HT-011 ein vorab geplanter Ton nennt, ab wann die letzte Antwort spätestens stammen muss (3 s vor dem Ton)', () => {
+  it('@HT-011 letzte Antwort 5,1 s alt → kein Ton, Warnung „keine Verbindung“', () => {
+    const plan = planeHallToene({ felder: [stand(laeuft11, CTX_11, server(5100), T0)], serverNow: ENDE_A2 }, LEERES_GEDAECHTNIS);
+    expect(plan.toene).toEqual([]);
+    expect(plan.warnungen).toEqual([{ feldId: 'feld-1', grund: 'keineVerbindung' }]);
+  });
+
+  it('@HT-011 ein vorab geplanter Ton nennt, ab wann die letzte Antwort spätestens stammen muss (5 s vor dem Ton)', () => {
     const plan = planeHallToene({ felder: [stand(laeuft11, CTX_11, server(0), T0)], serverNow: ENDE_A2 - 60_000 }, LEERES_GEDAECHTNIS);
-    expect(plan.toene[0].antwortNoetigAb).toBe(plan.toene[0].at - 3000);
-    const eigen = planeHallToene({ felder: [stand(laeuft11, CTX_11, COCKPIT, T0)], serverNow: ENDE_A2 - 60_000 }, LEERES_GEDAECHTNIS);
-    expect(eigen.toene[0].antwortNoetigAb).toBeNull();
+    expect(plan.toene[0].antwortNoetigAb).toBe(plan.toene[0].at - 5000);
   });
 });

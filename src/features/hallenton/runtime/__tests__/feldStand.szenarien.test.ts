@@ -154,13 +154,13 @@ describe('@HT-011 Ohne Verbindung warnt der Lautsprecher und tönt nicht nach ve
     const vorher = lage.sb.abfragenAuf('match_events').length;
     const alter: number[] = [];
     const ergebnis = await probe(lage, ENDE_A2 + 6000, [
-      { um: ENDE_A2 - 10_000, tu: () => { alter.push(lage.stand()?.quelle.art === 'server' ? (lage.stand()?.quelle as { antwortAlterMs: number }).antwortAlterMs : -1); } },
-      { um: ENDE_A2, tu: () => { alter.push(lage.stand()?.quelle.art === 'server' ? (lage.stand()?.quelle as { antwortAlterMs: number }).antwortAlterMs : -1); } },
+      { um: ENDE_A2 - 10_000, tu: () => { alter.push(lage.stand()?.antwortAlterMs ?? -1); } },
+      { um: ENDE_A2, tu: () => { alter.push(lage.stand()?.antwortAlterMs ?? -1); } },
     ]);
     return { ...ergebnis, lage, verloren, alter, versuche: lage.sb.abfragenAuf('match_events').length - vorher };
   }
 
-  it('@HT-011 wenn das errechnete Ende erreicht ist und die letzte Antwort älter als 3 s ist, ertönt kein Ton', async () => {
+  it('@HT-011 wenn das errechnete Ende erreicht ist und die letzte Antwort älter als 5 s ist, ertönt kein Ton', async () => {
     const { gespielt, plaene } = await lauf();
     expect(gespielt).toEqual([]);
     expect(plaene[plaene.length - 1].warnungen).toEqual([{ feldId: 'field-1', grund: 'keineVerbindung' }]);
@@ -191,9 +191,9 @@ describe('@HT-034 Hält Tom ohne Netz kurz vor Schluss an, tönt der Lautspreche
 
   async function lauf() {
     const lage = lageImZweitenAbschnitt(ENDE_A2 - 20_000);
-    const beobachtet: { status?: string; quelle?: string } = {};
+    const beobachtet: { status?: string; alter?: number } = {};
     const ergebnis = await probe(lage, eigenesEnde + 10_000, [
-      { um: halt + 2000, tu: () => { beobachtet.status = lage.stand()?.state.status; beobachtet.quelle = lage.stand()?.quelle.art; } },
+      { um: halt + 2000, tu: () => { beobachtet.status = lage.stand()?.state.status; beobachtet.alter = lage.stand()?.antwortAlterMs; } },
       { um: netzZurueck, tu: () => lage.sende(CTX_11, [pause]) },
       { um: weiter, tu: () => lage.sende(CTX_11, [resume]) },
       { um: eigenesEnde, tu: () => lage.sende(CTX_11, [ende]) },
@@ -203,7 +203,8 @@ describe('@HT-034 Hält Tom ohne Netz kurz vor Schluss an, tönt der Lautspreche
 
   it('@HT-034 der Stand des Lautsprechers ist der Stand am Server: ohne Toms Pause, die Uhr läuft weiter', async () => {
     const { beobachtet } = await lauf();
-    expect(beobachtet).toEqual({ status: 'running', quelle: 'server' });
+    expect(beobachtet.status).toBe('running');
+    expect(beobachtet.alter).toBeLessThanOrEqual(1000);
   });
 
   it('@HT-034 der Abpfiff-Ton ertönt höchstens 1 s neben der 00:00 am Monitor; nach Rückkehr des Netzes kein zweiter Abpfiff-Ton', async () => {

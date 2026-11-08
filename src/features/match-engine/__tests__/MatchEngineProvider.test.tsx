@@ -212,6 +212,18 @@ describe('MatchEngineProvider', () => {
     await waitFor(() => expect(syncSpy).toHaveBeenCalled());
   });
 
+  it('@HT-010 (Hallenton H3b-4): misst die Uhr danach laufend weiter, mindestens alle 5 Minuten (Uhr der Lautsprecher-Laufzeit)', async () => {
+    const startSpy = vi.spyOn(ClockSync.prototype, 'start');
+    render(
+      <MatchEngineProvider>
+        <Probe onReady={() => undefined} />
+      </MatchEngineProvider>,
+    );
+    await waitFor(() => expect(startSpy).toHaveBeenCalled());
+    const [intervallMs] = startSpy.mock.calls[0];
+    expect(intervallMs === undefined || intervallMs <= 300_000).toBe(true); // ohne Angabe 60 s (ClockSync.start)
+  });
+
   it('I4: "online" misst neu, stoesst den Ausgang an UND laedt geladene Engine-Spiele nach', async () => {
     const syncSpy = vi.spyOn(ClockSync.prototype, 'sync');
     const kickSpy = vi.spyOn(OutboxSender.prototype, 'kick');

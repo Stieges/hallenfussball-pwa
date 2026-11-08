@@ -29,7 +29,7 @@ describe('k3-neu-1 – ein Abgleich der Uhr verschiebt die Frische der Meldung n
 });
 
 describe('k3-neu-2 – die Freigabe vor dem hörbaren Beginn, danach läuft der Ton durch (@HT-011, Regel 4)', () => {
-  const letzteAntwort = ENDE_A2 - 3100;
+  const letzteAntwort = ENDE_A2 - 5100;
   const quelle = (jetzt: number) => server(jetzt - Math.min(jetzt, letzteAntwort));
 
   it('@HT-011 Ausgabe 200 ms verzögert, die Antwort fehlt zum Ton → abgebrochen vor dem hörbaren Beginn, nichts klingt an', async () => {
