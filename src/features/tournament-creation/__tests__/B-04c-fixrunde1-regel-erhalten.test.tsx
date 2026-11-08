@@ -114,6 +114,8 @@ describe('B-04c Fixrunde 1 – Regel geht nicht verloren, Rückfall wie der Serv
     const ergebnis = validateAndParseTournamentImport(
       JSON.stringify({
         title: 'Import-Test',
+        date: '2026-11-28',
+        startTime: '09:00',
         teams: [{ id: 'a', name: 'Alpha' }],
         finalsConfig: {
           preset: 'top-4',
