@@ -1,12 +1,12 @@
 /**
  * B-44a2 Rahmenregel (@ZM-140): beide Kästen einheitlich mit dezentem Rahmen, kräftig bei Kontrast unter 3 : 1
  * (aus `components/monitor/liveBlockFrame.ts` hierher verschoben, Spielanzeige 2.2).
- * Dazu `mixHex` (Verlierer-Dämpfung, @ZM-156) und die Tokens `vestStripeShare` (@ZM-161) und `borderWidths`.
+ * Dazu `mixHex` (Verlierer-Dämpfung, @ZM-156) und die Tokens der Leibchen-Form `vest` (@ZM-161) und `borderWidths`.
  */
 import { describe, it, expect } from 'vitest';
 import { borderWidths, cssVars, displayLayout, monitorThemes } from '..';
 import { getContrastRatio } from '../display';
-import { getBlockFrame, getBlockFrames, mixHex } from '../displayColor';
+import { getBlockFrame, getBlockFrames, mixHex, overHex } from '../displayColor';
 import { palette } from '../colors/palette';
 
 const L = displayLayout.scoreArea;
@@ -90,9 +90,33 @@ describe('mixHex (B4: Anteil kommt als Zahl, nicht als „30%“)', () => {
   });
 });
 
+describe('overHex: halbdurchsichtige Fläche über dem Untergrund', () => {
+  it('rgba mit Deckkraft 0,05 weiß über Schwarz (#000000) hellt nur leicht auf; Deckkraft 1 und Hex bleiben, Ungültiges fällt auf den Untergrund', () => {
+    expect(overHex('rgba(255, 255, 255, 0.05)', '#000000')).toBe('#0D0D0D');
+    expect(overHex('rgba(10, 20, 30, 1)', '#FFFFFF')).toBe('#0A141E');
+    expect(overHex('#F5F5F5', '#000000')).toBe('#F5F5F5');
+    expect(overHex('keine Farbe', '#123456')).toBe('#123456');
+  });
+});
+
 describe('Tokens der Spielanzeige 2.2', () => {
-  it('@ZM-161 die Streifen der Weste sind 14 % je Seite breit (Mockup --vest: 14%)', () => {
+  it('Controller-Zusatz zu H3: die Ziffernregel steht fest bei 60 % der Kastenhöhe und 50 % der Kastenbreite (Wert, nicht gegen sich selbst)', () => {
+    expect(displayLayout.scoreArea.digitMaxOfBox).toEqual({ height: 0.6, width: 0.5 });
+  });
+
+  it('@ZM-161 die Streifen der Weste in flachen Köpfen sind 14 % je Seite breit (Mockup --vest: 14%)', () => {
     expect(displayLayout.scoreArea.vestStripeShare).toBe(0.14);
+  });
+
+  it('@ZM-161 Trainingsleibchen (Form E1): große und kleine Geometrie, Träger breiter als die Seitenkante, Hals symmetrisch und flacher im kleinen Kasten', () => {
+    const { large, small } = displayLayout.scoreArea.vest;
+    expect(large).toEqual({ edge: 20, strap: 28, armRise: 33, neckHalf: 38, neckDepth: 22 });
+    expect(small).toEqual({ edge: 18, strap: 27, armRise: 33, neckHalf: 41, neckDepth: 19 });
+    for (const geometry of [large, small]) {
+      expect(geometry.strap).toBeGreaterThan(geometry.edge);
+      expect(geometry.neckHalf).toBeLessThan(50);
+    }
+    expect(small.neckDepth).toBeLessThan(large.neckDepth);
   });
 
   it('borderWidths: thin 1, medium 2, strong 3 px; cssVars.borderWidth.thin bleibt derselbe Wert', () => {

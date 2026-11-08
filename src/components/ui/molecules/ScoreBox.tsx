@@ -1,8 +1,8 @@
 /**
  * ScoreBox – der Ergebniskasten einer Seite (Aufgabe 2.2 Spielanzeige, @ZM-140, @ZM-156, @ZM-160, @ZM-161).
  *
- * EIN Baustein für Monitor (`display`, `row`) und Spielkarte/Kopf (`compact`): Ziffer in der getragenen Farbe, bei Leibchen als
- * Weste (Mitte Leibchen, Streifen Trikot). Feste Plätze, die Größe hängt nie vom Zustand ab (@ZM-151): Ring als `outline` um
+ * EIN Baustein für Monitor (`display`, `row`), Cockpit und Spielkarte/Kopf (`compact`): Ziffer in der getragenen Farbe, bei Leibchen als
+ * Weste (Trainingsleibchen, @ZM-161: Grund Leibchenfarbe, die Trikotfarbe als eigene kleine Teile `VestPieces`, Rahmen darüber). Feste Plätze, die Größe hängt nie vom Zustand ab (@ZM-151): Ring als `outline` um
  * den Sieger, Pokal oben rechts, Leibchen-Zeichen oben links – beide absolut außerhalb der Ziffernfläche, nie über einer Ziffer.
  * Reine Anzeige: Farben kommen aus `resolveBoxColors`, Sieger/Pokal entscheidet der Aufrufer. `background` muss `#RRGGBB` sein
  * (die gedämpfte Verlierer-Farbe und der Ziffern-Kontrast werden daraus gerechnet).
@@ -11,6 +11,7 @@ import type { ReactElement } from 'react';
 import type { BoxFill } from '../../../core/models/scoreBoxColors';
 import { cssVars } from '../../../design-tokens';
 import { Icons } from '../Icons';
+import { VestPieces } from './VestPieces';
 import {
   boxStyle,
   digitAreaStyle,
@@ -21,10 +22,16 @@ import {
   needsStrongFrame,
   type FrameStrength,
   type ScoreBoxOutcome,
+  shownColorsOf,
+  vestFrameStyle,
+  vestLayerStyle,
+  vestSizeOf,
   type ScoreBoxSize,
 } from './scoreBoxStyle';
 
 const CUP_ICON_STROKE = 2.4;
+/** Ab diesem Stand hat die Zahl zwei Stellen */
+const TWO_DIGITS = 10;
 
 export interface ScoreBoxProps {
   /** `null` = keine Ziffer (Kindermodus, 3.2) */
@@ -49,6 +56,12 @@ export interface ScoreBoxProps {
   ariaLabel: string;
   /** Kinder: `${testId}-digits`, `${testId}-cup`, `${testId}-bib` */
   testId: string;
+  /** Seite des Spiels (`data-position`), z. B. für Messungen und Tests am Monitor */
+  position?: 'home' | 'away';
+  /** `img` (Vorgabe): das Bild mit Namen; `group` am Monitor, wo Zeichen (Zeitstrafen-Kreise) über dem Kasten liegen und selbst zugänglich bleiben */
+  role?: 'img' | 'group';
+  /** Kennung des Pokals, wenn sie von `${testId}-cup` abweichen soll (Monitor: `live-cup-home`) */
+  cupTestId?: string;
 }
 
 /** Leibchen-Zeichen (Weste, Mockup `#i-vest`). */
@@ -73,26 +86,36 @@ export function ScoreBox({
   frameStrength,
   ariaLabel,
   testId,
+  position,
+  role = 'img',
+  cupTestId,
 }: ScoreBoxProps): ReactElement {
   const marks = { background, textColor, ringColor };
   const frame = frameOf(fill, outcome, background, textColor, size, frameStrength);
   return (
     <span
-      role="img"
+      role={role}
       aria-label={ariaLabel}
       style={boxStyle({ fill, size, background, textColor, outcome, ringColor, frameStrength })}
       data-testid={testId}
+      {...(position !== undefined ? { 'data-position': position } : {})}
       data-fill={fill.kind}
       data-color={fill.kind === 'vest' ? fill.center : fill.color}
-      {...(fill.kind === 'vest' ? { 'data-stripes': fill.stripes } : {})}
+      {...(fill.kind === 'vest' ? { 'data-stripes': fill.stripes, 'data-frame-color': frame.color } : {})}
       {...(outcome !== undefined ? { 'data-outcome': outcome } : {})}
       data-digit-color={digitColor(fill, outcome, background)}
       data-frame={frameStrength ?? (needsStrongFrame(fill, background, outcome) ? 'strong' : 'subtle')}
       data-frame-width={frame.width}
     >
-      <span style={digitAreaStyle(size)}>
+      {fill.kind === 'vest' && (
+        <span style={vestLayerStyle()} aria-hidden="true" data-testid={`${testId}-vest`}>
+          <VestPieces size={vestSizeOf(size)} color={shownColorsOf(fill, outcome, background).stripes} />
+          <span style={vestFrameStyle(frame)} data-testid={`${testId}-vest-frame`} />
+        </span>
+      )}
+      <span style={digitAreaStyle(size, fill.kind === 'vest')}>
         {score !== null && (
-          <span style={digitsStyle(size)} data-monitor="stand" {...(size === 'cockpit' ? { 'data-ziffern': 'stand' } : {})} data-testid={`${testId}-digits`}>
+          <span style={digitsStyle(size, fill.kind === 'vest' && score >= TWO_DIGITS)} data-monitor="stand" {...(size === 'cockpit' ? { 'data-ziffern': 'stand' } : {})} data-testid={`${testId}-digits`}>
             {score}
           </span>
         )}
@@ -103,7 +126,7 @@ export function ScoreBox({
         </span>
       )}
       {cup && (
-        <span style={markStyle('cup', size, marks)} aria-hidden="true" data-testid={`${testId}-cup`}>
+        <span style={markStyle('cup', size, marks)} aria-hidden="true" data-testid={cupTestId ?? `${testId}-cup`}>
           <Icons.Trophy size="1em" strokeWidth={CUP_ICON_STROKE} />
         </span>
       )}

@@ -32,6 +32,25 @@ export function mixHex(hex: string, withHex: string, share: number): string {
   return `#${channel(mixed[0])}${channel(mixed[1])}${channel(mixed[2])}`;
 }
 
+/**
+ * Eine Fläche mit Deckkraft (`#RRGGBB` oder `rgba(r, g, b, a)`) über einem Untergrund `#RRGGBB`: die sichtbare Farbe als Hex. Für Flächen, die ihre Farbe
+ * als halbdurchsichtige Schicht tragen (Karten der App), wo der Kontrast gegen den tatsächlichen Hintergrund gerechnet werden muss. Ungültig → `underlay`.
+ */
+export function overHex(layer: string, underlay: string): string {
+  const rgba = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)$/.exec(layer);
+  if (rgba === null) {
+    return parseHex(layer) === null ? underlay : layer;
+  }
+  const base = parseHex(underlay);
+  if (base === null) {
+    return underlay;
+  }
+  const alpha = rgba[4] === undefined ? 1 : Number(rgba[4]);
+  const top = [Number(rgba[1]), Number(rgba[2]), Number(rgba[3])];
+  const mixed = top.map((value, i) => value * alpha + (base[i] ?? 0) * (1 - alpha));
+  return `#${channel(mixed[0] ?? 0)}${channel(mixed[1] ?? 0)}${channel(mixed[2] ?? 0)}`;
+}
+
 /** Rahmen eines Kastens (Breite und Farbe als CSS-Werte). */
 export interface BlockFrame {
   width: string;

@@ -44,7 +44,7 @@ describe('H6 Seitentausch im Cockpit, Monitor bleibt Heim links', () => {
     const gast = container.querySelector('[data-testid="live-block-away"]');
     expect(heim && gast).toBeTruthy();
     expect(heim!.compareDocumentPosition(gast!) & Node.DOCUMENT_POSITION_FOLLOWING, 'Heim steht links (vor Gast)').toBeTruthy();
-    expect(heim!.querySelector('div')).toHaveStyle({ backgroundColor: LILA });
+    expect(heim!.querySelector('[data-position="home"]')).toHaveAttribute('data-color', LILA);
     expect(container.querySelector('[data-testid="live-name-home"]')).toHaveTextContent('TSV Petting');
     expect(kasten.home.fill).toEqual({ kind: 'solid', color: LILA }); // das Cockpit hat die Kästen nicht verändert
   });

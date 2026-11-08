@@ -22,7 +22,7 @@ describe('@ZM-138 Vor dem Anpfiff: nächstes Spiel mit Anstoßzeit', () => {
         style={{}}
       />,
     );
-    expect(screen.getByText(/slides\.live\.nextMatch/)).toBeInTheDocument();
+    expect(screen.getByTestId('live-badge')).toHaveTextContent(/monitorTab\.nextMatch/); // Abzeichen links (@ZM-195)
     expect(screen.getByText(/14:20/)).toBeInTheDocument();
     expect(screen.getByText('DJK Berg')).toBeInTheDocument();
   });
@@ -37,7 +37,7 @@ describe('@ZM-138 Vor dem Anpfiff: nächstes Spiel mit Anstoßzeit', () => {
         style={{}}
       />,
     );
-    expect(screen.queryByText(/slides\.live\.nextMatch/)).toBeNull();
+    expect(screen.queryByText(/monitorTab\.nextMatch/)).toBeNull();
     expect(screen.queryByText(/Anstoß/)).toBeNull();
     expect(FIXTURE_MATCHES.some(m => m.matchStatus === 'running')).toBe(true);
   });

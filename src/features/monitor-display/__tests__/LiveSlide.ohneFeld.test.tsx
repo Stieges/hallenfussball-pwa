@@ -28,6 +28,6 @@ describe('Live-Folie ohne fieldId', () => {
     renderOhneFeld(matches);
     expect(screen.queryByText('DJK Berg')).toBeNull();
     expect(screen.queryByText('TuS Mitte', { selector: '[data-testid="live-name-away"] *' })).toBeNull();
-    expect(screen.queryByTestId('live-grid')).toBeNull();
+    expect(screen.queryByTestId('live-slide-area')).toBeNull(); // keine Live-Anzeige; höchstens die Folie „Nächstes Spiel“ des Felds 1
   });
 });
