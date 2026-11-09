@@ -21,6 +21,8 @@ export interface PublicViewFilterState {
   handleStatusChange: (status: StatusFilter) => void;
   handleTabChange: (tab: PublicNavTab) => void;
   handleShowOnlyMyTeamChange: (value: boolean) => void;
+  /** „Alle zeigen“ (@ZM-197): nimmt Phase, Status und „Nur Mein Team“ zurück, die Gruppen-Auswahl bleibt */
+  handleResetHiddenFilters: () => void;
   selectMyTeam: (teamId: string | null) => void;
 }
 
@@ -96,6 +98,14 @@ export function usePublicViewFilters(shareCode: string): PublicViewFilterState {
     updateUrlParams({ my: value ? '1' : null });
   }, [updateUrlParams, triggerHaptic]);
 
+  const handleResetHiddenFilters = useCallback(() => {
+    triggerHaptic('selection');
+    setSelectedPhase('all');
+    setSelectedStatus('all');
+    setShowOnlyMyTeam(false);
+    updateUrlParams({ p: null, s: null, my: null });
+  }, [updateUrlParams, triggerHaptic]);
+
   // Load "Mein Team" from localStorage
   useEffect(() => {
     const stored = localStorage.getItem(getMyTeamStorageKey(shareCode));
@@ -131,6 +141,7 @@ export function usePublicViewFilters(shareCode: string): PublicViewFilterState {
     handleStatusChange,
     handleTabChange,
     handleShowOnlyMyTeamChange,
+    handleResetHiddenFilters,
     selectMyTeam,
   };
 }

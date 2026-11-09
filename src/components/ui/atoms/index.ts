@@ -20,3 +20,5 @@ export { StrafKreis } from './StrafKreis';
 export type { StrafKreisProps } from './StrafKreis';
 export { ToggleSwitch } from './ToggleSwitch';
 export type { ToggleSwitchProps } from './ToggleSwitch';
+export { ChipButton } from './ChipButton';
+export type { ChipButtonProps } from './ChipButton';
