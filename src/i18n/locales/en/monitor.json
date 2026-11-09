@@ -97,6 +97,9 @@
       "scorerOwnGoals": "Own goals for {{team}}"
     }
   },
+  "verbindung": {
+    "seit": "No connection since {{time}}"
+  },
   "dauerbetrieb": {
     "wakeLockHint": "Screen may turn off – check power saving"
   },

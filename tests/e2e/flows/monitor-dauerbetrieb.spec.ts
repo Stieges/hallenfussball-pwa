@@ -199,7 +199,7 @@ async function messeLiveFolie(page: Page, namen: string[], vorgabe: string) {
       bloecke.push(box(el, `Stand ${el.getAttribute('data-position')}`));
     });
     teams.forEach((t) => bloecke.push(box(t.el, `Team ${t.name.slice(0, 12)}`)));
-    const uhr = leaf(/^\d{2}:\d{2}/);
+    const uhr = leaf(/^\d{1,2}:\d{2}/);
     if (uhr) { bloecke.push(box(uhr, 'Uhr')); }
     const hinweis = document.querySelector('[data-testid="monitor-wakelock-hint"]');
     if (hinweis) { bloecke.push(box(hinweis, 'Hinweis')); }

@@ -1,7 +1,7 @@
 /**
  * R5 PR 2 – Uhr und Zeitbalken am Hallenmonitor (Live-Folie, echte deutsche Texte). Testwerte aus dem Gherkin:
  * @ZM-176 (Uhr folgt dem steuernden Gerät, ≤ 1 s), @ME-031 (Rechneruhr geht 7 Minuten nach → 6:00 ± 1 s),
- * @ZM-084 (Pause bei 06:41, Weiter, „Zeit abgelaufen“ über der Uhr), @ZM-166 (Grundriss je Zeile), @ZM-165 (Höhe/Breite),
+ * @ZM-084 (Pause bei 6:41, Weiter, „Zeit abgelaufen“ über der Uhr), @ZM-166 (Grundriss je Zeile), @ZM-165 (Höhe/Breite),
  * @ZM-085 (ohne neue Antwort bis 0:00, nie darunter), @ZM-180 (beendet bleibt beendet). Plan R5 PR 2, Tests 1, 3, 4, 5, 7.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -81,41 +81,41 @@ beforeEach(() => { vi.useFakeTimers(); });
 afterEach(() => { vi.useRealTimers(); });
 
 describe('@ZM-176 @ME-031 Die Uhr folgt der Serverzeit, nicht der Uhr des Hallen-Rechners (Test 1)', () => {
-  it('@ME-031 Rechneruhr geht 7 Minuten nach, Spiel 7 läuft seit 4:00, Halbzeit 10 Minuten: Restzeit 06:00 (± 0)', () => {
+  it('@ME-031 Rechneruhr geht 7 Minuten nach, Spiel 7 läuft seit 4:00, Halbzeit 10 Minuten: Restzeit 6:00 (± 0)', () => {
     vi.setSystemTime(SERVER - 7 * MIN);
     const uhr = new MonitorServerClock();
     // Antwort von display_tournament: 80 ms unterwegs, Server stand dabei auf SERVER
     uhr.observe(SERVER, Date.now() - 80, Date.now());
     zeige(turnier(spiel7({ status: 'running', section: 1, gespieltMs: 0, anchorAt: SERVER - 4 * MIN, sectionSeconds: 600 }), 'immer-durchlaufend', 20), () => uhr.nowMs());
-    expect(uhrText()).toBe('06:00');
+    expect(uhrText()).toBe('6:00');
   });
 
-  it('@ZM-176 Anker vom steuernden Gerät (Restzeit 4:00 bei t0), Monitor-Rechner geht 7 Minuten vor: 2 s später zeigt er 03:58', () => {
+  it('@ZM-176 Anker vom steuernden Gerät (Restzeit 4:00 bei t0), Monitor-Rechner geht 7 Minuten vor: 2 s später zeigt er 3:58', () => {
     vi.setSystemTime(SERVER + 2000 + 7 * MIN);
     const uhr = new MonitorServerClock();
     uhr.observe(SERVER + 2000, Date.now() - 40, Date.now());
     zeige(turnier(spiel7({ status: 'running', section: 1, gespieltMs: 120_000, anchorAt: SERVER })), () => uhr.nowMs());
-    expect(uhrText()).toBe('03:58');
+    expect(uhrText()).toBe('3:58');
   });
 });
 
 describe('@ZM-084 Pause und Weiter (Test 3)', () => {
-  it('Tom drückt bei 06:41 „Pause“: die Uhr steht bei 06:41, über der Uhr „angehalten“, das Abzeichen sagt „Pause“; „Weiter“ → läuft ab 06:41', () => {
+  it('@ZM-199 Tom drückt bei 6:41 „Pause“: die Uhr steht bei 6:41, über der Uhr „angehalten“, das Abzeichen sagt „Pause“; „Weiter“ → läuft ab 6:41', () => {
     vi.setSystemTime(SERVER);
     const lange = { sectionSeconds: 600 };
     const angehalten = spiel7({ status: 'paused', section: 1, gespieltMs: 199_000, anchorAt: null, ...lange });
     const { neu } = zeige(turnier(angehalten, 'immer-durchlaufend', 20), () => Date.now());
-    expect(uhrText()).toBe('06:41');
+    expect(uhrText()).toBe('6:41');
     expect(ueberDerUhr()).toBe('angehalten');
     expect(screen.getByTestId('live-badge')).toHaveTextContent('Pause');
     act(() => { vi.advanceTimersByTime(5000); });
-    expect(uhrText()).toBe('06:41');
+    expect(uhrText()).toBe('6:41');
 
     neu(turnier(spiel7({ status: 'running', section: 1, gespieltMs: 199_000, anchorAt: Date.now(), ...lange }), 'immer-durchlaufend', 20));
-    expect(uhrText()).toBe('06:41');
+    expect(uhrText()).toBe('6:41');
     expect(ueberDerUhr()).toBe('Restzeit');
     act(() => { vi.advanceTimersByTime(1100); });
-    expect(uhrText()).toBe('06:40');
+    expect(uhrText()).toBe('6:40');
   });
 });
 
@@ -123,11 +123,11 @@ describe('Takt an der Sekundengrenze (Test 4)', () => {
   it('Serverzeit x.900 nach dem letzten Wechsel der Spieluhr: die Anzeige wechselt höchstens 150 ms nach dem Sekundenwechsel', () => {
     vi.setSystemTime(SERVER + 900);
     zeige(turnier(spiel7({ status: 'running', section: 1, gespieltMs: 60_000, anchorAt: SERVER })), () => Date.now());
-    expect(uhrText()).toBe('05:00');
+    expect(uhrText()).toBe('5:00');
     act(() => { vi.advanceTimersByTime(99); });
-    expect(uhrText()).toBe('05:00');
+    expect(uhrText()).toBe('5:00');
     act(() => { vi.advanceTimersByTime(150); });
-    expect(uhrText()).toBe('04:59');
+    expect(uhrText()).toBe('4:59');
   });
 });
 
@@ -188,14 +188,14 @@ describe('@ZM-165 Der Zeitbalken ist aus der Halle gut zu sehen', () => {
 });
 
 describe('@ZM-085 Ohne neue Antwort zählt die Uhr bis 0:00 und nie darunter (Test 7)', () => {
-  it('Restzeit 0:45, danach 5 Minuten keine Antwort: 00:00, „Zeit abgelaufen“, Balken leer', () => {
+  it('Restzeit 0:45, danach 5 Minuten keine Antwort: 0:00, „Zeit abgelaufen“, Balken leer', () => {
     vi.setSystemTime(SERVER);
     zeige(turnier(spiel7({ status: 'running', section: 2, gespieltMs: 315_000, anchorAt: SERVER })), () => Date.now());
-    expect(uhrText()).toBe('00:45');
+    expect(uhrText()).toBe('0:45');
     act(() => { vi.advanceTimersByTime(46_000); });
-    expect(uhrText()).toBe('00:00');
+    expect(uhrText()).toBe('0:00');
     act(() => { vi.advanceTimersByTime(5 * MIN); });
-    expect(uhrText()).toBe('00:00');
+    expect(uhrText()).toBe('0:00');
     expect(ueberDerUhr()).toBe('Zeit abgelaufen');
     expect(screen.getByTestId('monitor-zeitbalken')).toHaveAttribute('data-anteil', '0.000');
   });
