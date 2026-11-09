@@ -168,6 +168,7 @@ test.describe('@ZM-196 Hallencup Nord: Mama Petra hat das Team mit dem langen Na
 
   test('@ZM-196 Spiel 7 und 8 laufen, mit Block: nach einmal Wischen liegt die erste Spielzeile ganz im Bild', async ({ page }) => {
     await oeffne(page, { ...HALLENCUP_LAUFEN, team: LANGES_TEAM });
+    await expect(tid(page, 'public-current').locator('[data-testid^="public-current-card-"]')).toHaveCount(2);
     await expect(tid(page, 'my-team-name')).toHaveText(LANGER_NAME);
     erwarteGanzImBild(await ersteZeileNachWischen(page));
   });

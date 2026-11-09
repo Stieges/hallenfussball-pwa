@@ -21,6 +21,7 @@ vi.mock('../../features/public-view/defaultPublicSource', async () => {
 });
 
 import { LiveViewScreen } from '../LiveViewScreen';
+import { slotTeamId } from '../../core/models/matchSlot';
 import { RepositoryProvider } from '../../core/contexts/RepositoryContext';
 import { fPAUSE, fZEIT, GAME, NORD } from '../../core/view/__fixtures__/hallencupNord';
 
@@ -135,7 +136,15 @@ describe('@ZM-175 Mein Team steht oben als Block, Spielplan und Tabelle bleiben 
 
   it.fails('@ZM-175 @ZM-201 C-ZUSCHAUER-WEG-ZUM-SPIELPLAN: zeigt der Block das nächste Spiel eines Teams mit bestätigten Leibchen, steht die Weste dort wie in der Karte „Als Nächstes“', async () => {
     mitTeam();
-    await zeige((await fZEIT()).tournament);
+    const cup = await fZEIT();
+    // Gegeben: das nächste Spiel von FC Nord (kein Spiel läuft) hat bestätigte Leibchen – `match.kit.bibSide` auf der Seite von FC Nord (@ZM-201, @W3-028)
+    const naechstes = cup.tournament.matches.find((m) => m.matchStatus !== 'finished' && (slotTeamId(m.slotA) === NORD || slotTeamId(m.slotB) === NORD));
+    if (naechstes === undefined) { throw new Error('Fixture: FC Nord hat ein weiteres Spiel'); }
+    const bibSide = slotTeamId(naechstes.slotA) === NORD ? ('a' as const) : ('b' as const);
+    const matches = cup.tournament.matches.map((m) => (m.id === naechstes.id ? { ...m, kit: { bibSide } } : m));
+    // Trikotfarben der beiden Teams (vor dem Anpfiff tragen die Kästen die Teamfarbe, die Weste braucht sie für Streifen und Mitte)
+    const teams = cup.tournament.teams.map((t) => (t.id === NORD ? { ...t, colors: { primary: '#1565C0' } } : t.name === 'DJK Berg' ? { ...t, colors: { primary: '#C62828' } } : t));
+    await zeige({ ...cup.tournament, matches, teams });
     const block = await screen.findByTestId('my-team-bar');
     expect(block.querySelector('[data-testid$="-bib"], [data-fill="vest"]')).not.toBeNull();
   });
