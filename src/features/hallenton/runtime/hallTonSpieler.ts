@@ -3,9 +3,8 @@
  *
  * - `aktivieren()` nur aus einer Nutzergeste („Ton aktivieren“): ruft `resume()` sofort, ohne vorheriges `await`.
  *   Ohne Freigabe: Zustand `not_activated` (@HT-012).
- * - `laden()`: Hupen `horn-1|2|3` aus `/sounds/horn-N.mp3` (IDs wie `PRESET_SOUNDS` in `useMatchSound`) oder eigener Ton
- *   über die öffentliche Storage-Adresse (nur `https:`, kein `blob:`/`data:` – CSP). Immer per `fetch` + `decodeAudioData`.
- *   Eigener Ton nicht ladbar oder länger als 5 s → „Hupe 1“ und Zustand `custom_sound_failed` (@HT-028 Zeile 4).
+ * - `laden()`: Töne der Tonwahl über `hallTonLader.ts` (Hupen, eigener Ton, Rückfall auf „Hupe 1“, @HT-028 Zeile 4); bei einem
+ *   eigenen Ton, der nicht ladbar oder länger als 5 s ist, Zustand `custom_sound_failed`.
  * - `planen(id, art, t)`: `AudioBufferSourceNode.start(t)` → Lautstärke (`GainNode`) → Begrenzer (`DynamicsCompressorNode`)
  *   → Ausgang, harter Stopp nach 5 s. Dieselbe Kennung ersetzt den alten Ton.
  * - Lautstärke je Ton (auch Torhymne, Regler `tor`) und Stumm je Gerät in `localStorage` (`hallenton:lautstaerke`,
@@ -14,19 +13,14 @@
  */
 import type { AudioKontext, AudioPuffer, GainKnoten, KompressorKnoten, QuellKnoten } from './webAudioTypen';
 import { browserSpeicher, gespeicherteLautstaerke, lies, schreib, LAUTSTAERKE_SCHLUESSEL, STUMM_SCHLUESSEL, type ReglerArt, type Speicher, type TonArt } from './tonEinstellungen';
-import { erzeugeTorhymnenAusgabe, istHttps, type TorhymnenAusgabe } from './torhymnenAusgabe';
+import { erzeugeHallTonLader, HART_STOPP_SEK, type LadeStand, type TonWahl } from './hallTonLader';
+import { erzeugeTorhymnenAusgabe, type TorhymnenAusgabe } from './torhymnenAusgabe';
 
 export type { AudioKontext, AudioPuffer, AudioZiel, GainKnoten, KompressorKnoten, QuellKnoten } from './webAudioTypen';
 export { LAUTSTAERKE_SCHLUESSEL, STUMM_SCHLUESSEL, type ReglerArt, type Speicher, type TonArt } from './tonEinstellungen';
 
-export type HupenId = 'horn-1' | 'horn-2' | 'horn-3';
-export type TonWahl = HupenId | { eigeneUrl: string };
+export { HART_STOPP_SEK, type HupenId, type LadeStand, type TonWahl } from './hallTonLader';
 export type SpielerZustand = 'not_activated' | 'volume_zero' | 'custom_sound_failed' | 'ready';
-export type LadeStand = 'geladen' | 'rueckfall' | 'fehlt';
-
-export const HART_STOPP_SEK = 5;
-const HUPEN_URL: Record<HupenId, string> = { 'horn-1': '/sounds/horn-1.mp3', 'horn-2': '/sounds/horn-2.mp3', 'horn-3': '/sounds/horn-3.mp3' };
-const ARTEN: readonly TonArt[] = ['abpfiff', 'halbzeit'];
 
 export interface HallTonSpieler {
   aktivieren(): Promise<boolean>;
@@ -71,7 +65,6 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
   let ladeRunde = 0;
   let jetztZaehler = 0;
   let letzterZustand: SpielerZustand = 'not_activated';
-  const hupen = new Map<HupenId, Promise<AudioPuffer | null>>();
   const geplant = new Map<string, Geplant>();
   const zuhoerer = new Set<(zustand: SpielerZustand) => void>();
 
@@ -118,44 +111,14 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
     return begrenzerWert;
   };
 
-  const dekodiere = async (url: string): Promise<AudioPuffer | null> => {
-    try {
-      return await kontext().decodeAudioData(await ladeDaten(url));
-    } catch {
-      return null;
-    }
-  };
-
-  const hupe = (id: HupenId): Promise<AudioPuffer | null> => {
-    const vorhanden = hupen.get(id);
-    if (vorhanden) {
-      return vorhanden;
-    }
-    const laden = dekodiere(HUPEN_URL[id]).then((p) => {
-      if (!p) {
-        hupen.delete(id); // beim nächsten Laden erneut versuchen
-      }
-      return p;
-    });
-    hupen.set(id, laden);
-    return laden;
-  };
-
-  const eigenerTon = async (url: string): Promise<AudioPuffer | null> => {
-    if (!istHttps(url)) {
-      return null;
-    }
-    const p = await dekodiere(url);
-    return p && p.duration <= HART_STOPP_SEK ? p : null;
-  };
-
   const trennen = (eintrag: Geplant): void => {
     eintrag.quelle.disconnect();
     eintrag.gain.disconnect();
   };
 
+  const lader = erzeugeHallTonLader({ kontext, ladeDaten });
   const hymnen = erzeugeTorhymnenAusgabe({
-    kontext, begrenzer, dekodiere, andereToene: () => geplant.values(), lautstaerke: () => lautstaerke.tor,
+    kontext, begrenzer, dekodiere: lader.dekodiere, andereToene: () => geplant.values(), lautstaerke: () => lautstaerke.tor,
     darf: () => aktiviert && kontextWert?.state === 'running' && !stumm && lautstaerke.tor > 0, // ohne geladenen Abpfiff-Ton
   });
 
@@ -206,22 +169,7 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
   const laden = async (toene: Record<TonArt, TonWahl>): Promise<Record<TonArt, LadeStand>> => {
     letzteWahl = toene;
     const runde = ++ladeRunde;
-    const rueckfall = await hupe('horn-1');
-    const neuePuffer: Record<TonArt, AudioPuffer | null> = { abpfiff: null, halbzeit: null };
-    const neuFehlt: Record<TonArt, boolean> = { abpfiff: false, halbzeit: false };
-    const stand: Record<TonArt, LadeStand> = { abpfiff: 'fehlt', halbzeit: 'fehlt' };
-    for (const art of ARTEN) {
-      const wahl = toene[art];
-      const geladen = typeof wahl === 'string' ? await hupe(wahl) : await eigenerTon(wahl.eigeneUrl);
-      if (geladen) {
-        neuePuffer[art] = geladen;
-        stand[art] = 'geladen';
-      } else if (typeof wahl !== 'string') {
-        neuFehlt[art] = true;
-        neuePuffer[art] = rueckfall;
-        stand[art] = rueckfall ? 'rueckfall' : 'fehlt';
-      }
-    }
+    const { puffer: neuePuffer, eigenerTonFehlt: neuFehlt, stand } = await lader.ladeWahl(toene);
     if (runde === ladeRunde) {
       puffer = neuePuffer;
       eigenerTonFehlt = neuFehlt;
