@@ -5,14 +5,22 @@
  *   Neuladen weiterläuft (dann „Ton aktivieren“ nötig, @HT-013); alle Tabs sehen sie (`storage`-Ereignis).
  * - Ein Spieler je Tab (ein `AudioContext`), erst beim ersten Bedarf erzeugt; normale Geräte haben keinen.
  * - „Schlafen gelegt“ (`document.wasDiscarded`) gilt ab dem Laden bis zum ersten erfolgreichen „Ton aktivieren“ (@HT-037).
+ * - H4-1: Geräteweit über die Tabs (`localStorage` + `storage`-Ereignis, Muster wie `hallenton:felder`): die Abgelöst-Marke
+ *   (`hallenton:abgeloest`, @HT-015), der Fehlergrund des Lebenszeichens (`hallenton:lebenszeichen-fehler`, @HT-012, @HT-041)
+ *   und der Anstoß „erneut versuchen“ (`hallenton:erneut`).
  */
 import { lies, schreib } from './runtime/tonEinstellungen';
 import { browserKanalSpeicher } from './runtime/lautsprecherKanal';
 import { erzeugeBrowserHallTonSpieler, type HallTonSpieler } from './runtime/hallTonSpieler';
 import type { HallFehlerGrund } from '../../core/repositories/hallentonRpc';
 import type { HallLautsprecherLaufzeit } from './runtime/HallLautsprecherLaufzeit';
+import type { FeldVerlust } from './runtime/lautsprecherLebenszeichen';
 
 export const GERAET_SCHLUESSEL = 'hallenton:geraet';
+export const ABGELOEST_SCHLUESSEL = 'hallenton:abgeloest';
+export const FEHLER_SCHLUESSEL = 'hallenton:lebenszeichen-fehler';
+export const ERNEUT_SCHLUESSEL = 'hallenton:erneut';
+const FEHLER_GRUENDE: readonly HallFehlerGrund[] = ['kein_recht', 'ungueltig', 'turnier_beendet', 'netz', 'antwort_unbekannt'];
 
 export interface Einschaltung {
   turnierId: string;
@@ -20,14 +28,28 @@ export interface Einschaltung {
   name: string;
 }
 
+/**
+ * Spur eines Verlusts (@HT-015): welche Felder das Gerät verloren hat – je Feld `abgeloest` (von einem anderen Gerät übernommen)
+ * oder `abgemeldet` (keine Zuordnung mehr) – und wann (Serverzeit, ms). Den Text dazu baut H4-9.
+ */
+export interface AbgeloestMarke {
+  turnierId: string;
+  felder: readonly FeldVerlust[];
+  um: number;
+}
+
 export interface GeraetStand {
   einschaltung: Einschaltung | null;
   laufzeit: HallLautsprecherLaufzeit | null;
   /** Fehlergrund des letzten Lebenszeichens (z. B. `ungueltig`, `kein_recht`, `netz`); `null` nach Erfolg (H3b-3 K2). */
   lebenszeichenFehler: HallFehlerGrund | null;
+  /** Das Gerät wurde für Felder abgelöst und hat es noch nicht „verstanden“ (@HT-015); `null` = keine Marke. */
+  abgeloest: AbgeloestMarke | null;
 }
 
 const zuhoerer = new Set<() => void>();
+const erneutHoerer = new Set<() => void>();
+let erneutZaehler = 0;
 let stand: GeraetStand | null = null;
 let spieler: HallTonSpieler | null = null;
 let geschlafen = typeof document !== 'undefined' && (document as Document & { wasDiscarded?: boolean }).wasDiscarded === true;
@@ -51,6 +73,40 @@ function gespeichert(): Einschaltung | null {
   }
 }
 
+function istVerlust(roh: unknown): roh is FeldVerlust {
+  const v = roh as Partial<FeldVerlust> | null;
+  return typeof v === 'object' && v !== null && Number.isInteger(v.feld) && (v.feld ?? 0) > 0 && (v.art === 'abgeloest' || v.art === 'abgemeldet');
+}
+
+function gespeicherteMarke(): AbgeloestMarke | null {
+  try {
+    const roh: unknown = JSON.parse(lies(browserKanalSpeicher(), ABGELOEST_SCHLUESSEL) ?? 'null');
+    if (!roh || typeof roh !== 'object') {
+      return null;
+    }
+    const m = roh as Partial<AbgeloestMarke>;
+    const felder = Array.isArray(m.felder) && m.felder.every(istVerlust) ? m.felder : null;
+    return typeof m.turnierId === 'string' && typeof m.um === 'number' && Number.isFinite(m.um) && felder && felder.length > 0
+      ? { turnierId: m.turnierId, felder, um: m.um }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function gespeicherterFehler(): HallFehlerGrund | null {
+  const roh = lies(browserKanalSpeicher(), FEHLER_SCHLUESSEL);
+  return FEHLER_GRUENDE.find((g) => g === roh) ?? null;
+}
+
+function loesche(schluessel: string): void {
+  try {
+    browserKanalSpeicher()?.removeItem(schluessel);
+  } catch {
+    // gesperrt: gilt bis zum Neuladen
+  }
+}
+
 function melden(neu: GeraetStand): void {
   stand = neu;
   for (const fn of [...zuhoerer]) {
@@ -59,13 +115,17 @@ function melden(neu: GeraetStand): void {
 }
 
 function beiSpeicher(ereignis: StorageEvent): void {
-  if (ereignis.key === GERAET_SCHLUESSEL || ereignis.key === null) {
-    melden({ ...geraetStand(), einschaltung: gespeichert() });
+  const alle = ereignis.key === null;
+  if (ereignis.key === ERNEUT_SCHLUESSEL || alle) {
+    erneutAnstossen();
+  }
+  if (alle || ereignis.key === GERAET_SCHLUESSEL || ereignis.key === ABGELOEST_SCHLUESSEL || ereignis.key === FEHLER_SCHLUESSEL) {
+    melden({ ...geraetStand(), einschaltung: gespeichert(), abgeloest: gespeicherteMarke(), lebenszeichenFehler: gespeicherterFehler() });
   }
 }
 
 export function geraetStand(): GeraetStand {
-  stand ??= { einschaltung: gespeichert(), laufzeit: null, lebenszeichenFehler: null };
+  stand ??= { einschaltung: gespeichert(), laufzeit: null, lebenszeichenFehler: gespeicherterFehler(), abgeloest: gespeicherteMarke() };
   return stand;
 }
 
@@ -85,25 +145,79 @@ export function abonniereGeraet(fn: () => void): () => void {
 export function setzeEinschaltung(einschaltung: Einschaltung | null): void {
   const speicher = browserKanalSpeicher();
   if (einschaltung === null) {
-    try {
-      speicher?.removeItem(GERAET_SCHLUESSEL);
-    } catch {
-      // gesperrt: gilt bis zum Neuladen
-    }
-  } else {
-    schreib(speicher, GERAET_SCHLUESSEL, JSON.stringify(einschaltung));
+    loesche(GERAET_SCHLUESSEL);
+    loesche(FEHLER_SCHLUESSEL); // kein Lautsprecher mehr: ein alter Grund gehört nicht zum nächsten Einschalten
+    melden({ ...geraetStand(), einschaltung, lebenszeichenFehler: null });
+    return;
   }
+  schreib(speicher, GERAET_SCHLUESSEL, JSON.stringify(einschaltung));
   melden({ ...geraetStand(), einschaltung });
 }
 
 export function setzeLaufzeit(laufzeit: HallLautsprecherLaufzeit | null): void {
-  melden({ ...geraetStand(), laufzeit, lebenszeichenFehler: null });
+  melden({ ...geraetStand(), laufzeit });
 }
 
+/** Fehlergrund des Lebenszeichens für alle Tabs des Geräts (@HT-012, @HT-041); `null` nach einem Erfolg. */
 export function setzeLebenszeichenFehler(grund: HallFehlerGrund | null): void {
-  if (geraetStand().lebenszeichenFehler !== grund) {
-    melden({ ...geraetStand(), lebenszeichenFehler: grund });
+  if (geraetStand().lebenszeichenFehler === grund) {
+    return;
   }
+  if (grund === null) {
+    loesche(FEHLER_SCHLUESSEL);
+  } else {
+    schreib(browserKanalSpeicher(), FEHLER_SCHLUESSEL, grund);
+  }
+  melden({ ...geraetStand(), lebenszeichenFehler: grund });
+}
+
+/**
+ * @HT-015: Spur der Ablösung vor dem Löschen der Rolle; weitere Ablösungen desselben Turniers kommen dazu. `um` = Serverzeit.
+ * Bleibt, bis das Gerät neu eingeschaltet wird oder `abgeloestVerstanden()` gerufen wird.
+ */
+export function merkeAbloesung(turnierId: string, felder: readonly FeldVerlust[], um: number): void {
+  const alt = geraetStand().abgeloest;
+  // je Feld gilt die jüngste Art
+  const jeFeld = new Map((alt?.turnierId === turnierId ? alt.felder : []).map((v) => [v.feld, v] as const));
+  for (const v of felder) {
+    jeFeld.set(v.feld, v);
+  }
+  const alle = [...jeFeld.values()].sort((a, b) => a.feld - b.feld);
+  if (alle.length === 0) {
+    return;
+  }
+  const marke: AbgeloestMarke = { turnierId, felder: alle, um };
+  schreib(browserKanalSpeicher(), ABGELOEST_SCHLUESSEL, JSON.stringify(marke));
+  melden({ ...geraetStand(), abgeloest: marke });
+}
+
+/** Die Turnierleitung hat den Verlust gesehen („von einem anderen Gerät übernommen“ bzw. „abgemeldet“, H4-9) oder schaltet neu ein: Marke weg, in allen Tabs. */
+export function abgeloestVerstanden(): void {
+  loesche(ABGELOEST_SCHLUESSEL);
+  melden({ ...geraetStand(), abgeloest: null });
+}
+
+function erneutAnstossen(): void {
+  for (const fn of [...erneutHoerer]) {
+    fn();
+  }
+}
+
+/** Die Laufzeit eines Tabs hört auf „erneut versuchen“ (Neu-Anmeldung oder Taste, N2). */
+export function beiErneutVersuchen(fn: () => void): () => void {
+  erneutHoerer.add(fn);
+  return () => {
+    erneutHoerer.delete(fn);
+  };
+}
+
+/** Ein „still“ nach `kein_recht` beenden und neu melden; `geraeteweit`: auch in den anderen Tabs (Taste), nicht bei der Neu-Anmeldung dieses Tabs. */
+export function erneutVersuchen(geraeteweit = true): void {
+  if (geraeteweit) {
+    erneutZaehler += 1;
+    schreib(browserKanalSpeicher(), ERNEUT_SCHLUESSEL, `${Date.now()}-${erneutZaehler}`);
+  }
+  erneutAnstossen();
 }
 
 /** Der Spieler dieses Tabs (ein `AudioContext`). */
@@ -126,4 +240,5 @@ export function __setzeGeraetFuerTests(neu: { spieler?: HallTonSpieler | null; g
   spieler = neu.spieler ?? null;
   geschlafen = neu.geschlafen ?? false;
   zuhoerer.clear();
+  erneutHoerer.clear();
 }

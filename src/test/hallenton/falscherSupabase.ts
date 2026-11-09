@@ -45,6 +45,8 @@ export class FalscherSupabase {
   /** Antworten weiterer Funktionen (H3b-2b, z. B. `hall_speaker_assign`) und alle Aufrufe mit Argumenten. */
   readonly rpcDaten: Record<string, unknown> = {};
   readonly rpcLog: Array<{ fn: string; args: unknown }> = [];
+  /** H4-1: Funktion → Fehlercode der Datenbank (z. B. `hall_speaker_heartbeat` → '42501' = kein Recht), solange gesetzt. */
+  readonly rpcFehler: Record<string, string> = {};
 
   rpc(fn: string, args?: unknown) {
     this.rpcAufrufe += 1;
@@ -52,6 +54,9 @@ export class FalscherSupabase {
     const ergebnis = (): { data: unknown; error: unknown } => {
       if (fn === 'is_real_account') {
         return { data: this.echtesKonto, error: null };
+      }
+      if (Object.hasOwn(this.rpcFehler, fn)) {
+        return { data: null, error: { code: this.rpcFehler[fn], message: fn } };
       }
       return Object.hasOwn(this.rpcDaten, fn) ? { data: this.rpcDaten[fn], error: null } : { data: null, error: { code: 'PGRST202', message: fn } };
     };

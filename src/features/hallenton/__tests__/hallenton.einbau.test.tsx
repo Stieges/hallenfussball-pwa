@@ -172,7 +172,7 @@ describe('k4-neu-2 – „Anhören“ mit der Tonwahl des Turniers (@HT-023)', (
   it('@HT-023 ein Gerät ohne Lautsprecher-Funktion: „Anhören“ lädt die Abpfiff-Hupe des Turniers (Hupe 3), nicht nur Hupe 1', async () => {
     turnier.wert = { matches: [], matchCockpitSettings: { soundId: 'horn-3' } };
     const { result } = renderHook(() => useHallLautsprecher(TID));
-    let gespielt = false;
+    let gespielt: boolean | 'belegt' = false;
     await act(async () => { gespielt = await result.current.hierAnhoeren('abpfiff'); });
     expect(gespielt).toBe(true);
     expect(geladen).toContain('/sounds/horn-3.mp3');
@@ -381,7 +381,7 @@ describe('Fixrunde 1 – W3, K5, K6', () => {
     turnier.wert = { matches: [], matchCockpitSettings: { soundId: 'horn-3' } };
     falsch.haengendeRpcs.add('hall_sound_status');
     const { result } = renderHook(() => useHallLautsprecher(TID));
-    let gespielt = false;
+    let gespielt: boolean | 'belegt' = false;
     await act(async () => { gespielt = await result.current.hierAnhoeren('abpfiff'); });
     expect(gespielt).toBe(true);
     expect(geladen).toContain('/sounds/horn-3.mp3');
