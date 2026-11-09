@@ -19,7 +19,7 @@
  * @see MONITOR-KONFIGURATOR-UMSETZUNGSPLAN-v2.md P1-10 bis P1-12
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
 import { displayLayout, monitorThemes } from '../../design-tokens';
 import type { TournamentMonitor } from '../../types/monitor';
 import { LOCAL_FALLBACK_POLL_MS, PERFORMANCE_PROFILES, calculateCacheStatus } from '../../types/monitor';
@@ -27,12 +27,12 @@ import { useTranslation, I18nextProvider } from 'react-i18next';
 import { ANZEIGE_SPRACHE, anzeigeI18n } from '../../i18n/anzeigeSprache';
 import { GoalAnimation, CardAnimation } from '../../components/monitor';
 import { WakeLockNotice } from '../../components/monitor/WakeLockNotice';
+import { ConnectionNotice } from '../../components/monitor/ConnectionNotice';
 import { useWakeLock } from '../../hooks/useWakeLock';
-import { vollbildUmschalten } from './vollbild';
 import { useBildrand } from './useBildrand';
-import { istCacheTaste, istEingabeZiel, istHinweisFolie, istVollbildTaste } from './monitorDauerbetrieb';
+import { istHinweisFolie } from './monitorDauerbetrieb';
 import { useWakeLockHinweis } from './useWakeLockHinweis';
-import { useIdleCursor, useTastenAbfang, useWakeLockNachEingabe } from './useMonitorDauerbetrieb';
+import { useIdleCursor, useMonitorTasten, useTastenAbfang, useWakeLockNachEingabe } from './useMonitorDauerbetrieb';
 import {
   alleUebersprungen, liveSpielLaeuft, selectDisplayableSlides, SPIELPLAN_FALLBACK_SLIDE, ZUSCHAUER_QR_SLIDE, type SlideProgram,
 } from './slideProgramme';
@@ -46,7 +46,7 @@ import { NowSourceContext } from '../../components/schedule/useTickingNow';
 import { useSlideshow } from './useSlideshow';
 import { useReloadGate } from './useReloadGate';
 import { fieldIdToNumber, getPerformanceSettings, resolveTheme } from './monitorDisplayHelpers';
-import { createMonitorSource, type DisplayOrigin } from './monitorDataSource';
+import { createMonitorSource, type DisplayOrigin, type MonitorDataSource } from './monitorDataSource';
 import { useMonitorDisplayData } from './useMonitorDisplayData';
 import { useMonitorHeartbeat } from './useMonitorHeartbeat';
 import { SlideRenderer } from './slides/SlideRenderer';
@@ -63,6 +63,8 @@ import { containerStyle } from './components/monitorStyles';
 interface MonitorDisplayPageProps {
   tournamentId: string;
   monitorId: string;
+  /** Nur für Prüfstände (Playwright-Harness): eine eingespeiste Datenquelle statt der Server-Anbindung. */
+  dataSource?: MonitorDataSource;
 }
 
 /**
@@ -79,23 +81,25 @@ const monitorPollIntervalMs = (m: TournamentMonitor | null, origin: DisplayOrigi
 function MonitorDisplayPageContent({
   tournamentId,
   monitorId,
+  dataSource,
 }: MonitorDisplayPageProps) {
   // Datenquelle (stabil je Ziel) und Abruf-/Zustandsregeln in den Bausteinen (B-16b2)
   const displaySource = useMemo(
-    () => createMonitorSource(tournamentId, monitorId),
-    [tournamentId, monitorId]
+    () => dataSource ?? createMonitorSource(tournamentId, monitorId),
+    [dataSource, tournamentId, monitorId]
   );
   const {
-    tournament, monitor, origin, loading, error, lastFetch, goalEvent, cardEvent, clearGoalEvent, clearCardEvent,
+    tournament, monitor, origin, loading, error, lastFetch, goalEvent, cardEvent, verbindung, clearGoalEvent, clearCardEvent,
   } = useMonitorDisplayData(
     displaySource,
     { tournamentId, monitorId },
     monitorPollIntervalMs
   );
-  const [showCacheIndicator, setShowCacheIndicator] = useState(false);
   const { t } = useTranslation('monitor');
   const cursorRuht = useIdleCursor();
   useTastenAbfang();
+  // Tasten „f“ = Vollbild, „c“ = Cache-Anzeige (B-17, @ME-022; Pfeile und Leertaste ohne Wirkung)
+  const showCacheIndicator = useMonitorTasten();
 
   // Jetzt in Serverzeit (R5 PR 2, @ZM-176): Ansicht, Folienregeln und Uhr rechnen nie mit der Uhr des Hallen-Rechners allein
   const serverJetzt = useCallback(() => displaySource.nowMs?.() ?? Date.now(), [displaySource]);
@@ -192,27 +196,6 @@ function MonitorDisplayPageContent({
   useMonitorHeartbeat(monitor?.id ?? null, tournament?.id ?? null, slideState.currentIndex, cacheStatus.status, wakeLock.status);
 
   // ==========================================================================
-  // KEYBOARD (f = Vollbild, c = Cache-Anzeige; Pfeile und Leertaste ohne Wirkung, @ME-022;
-  // Escape und Backspace verlassen die Seite nicht, siehe useTastenAbfang)
-  // ==========================================================================
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (istEingabeZiel(e.target)) { return; }
-      if (istVollbildTaste(e)) {
-        vollbildUmschalten();
-        return;
-      }
-      if (istCacheTaste(e)) {
-        setShowCacheIndicator(s => !s);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  // ==========================================================================
   // RENDER
   // ==========================================================================
 
@@ -267,6 +250,10 @@ function MonitorDisplayPageContent({
         )}
         {hinweisZeigt && (
           <WakeLockNotice text={t('dauerbetrieb.wakeLockHint')} themeColors={monitorThemes[resolveTheme(monitor.theme)]} />
+        )}
+        {/* Eingefrorene Verbindung (@ZM-085, @ME-030): nur ein Symbol mit Ausrufezeichen in der Ecke unten rechts, ohne Text, bis wieder eine Antwort kommt */}
+        {verbindung !== null && (
+          <ConnectionNotice standMs={verbindung.standMs} themeColors={monitorThemes[resolveTheme(monitor.theme)]} />
         )}
       </div>
 

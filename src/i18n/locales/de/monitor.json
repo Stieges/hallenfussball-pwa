@@ -97,6 +97,9 @@
       "scorerOwnGoals": "Eigentore für {{team}}"
     }
   },
+  "verbindung": {
+    "seit": "Keine Verbindung seit {{time}}"
+  },
   "dauerbetrieb": {
     "wakeLockHint": "Bildschirm kann ausgehen – Energiesparen prüfen"
   },
