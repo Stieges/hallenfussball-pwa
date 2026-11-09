@@ -17,7 +17,12 @@ async function abschluss({ asRole }: StepContext): Promise<void> {
   await ownerPage.getByTestId('tournament-finish-open').click({ timeout: SOLL_TIMEOUT_MS });
   // Soll-Wirkung: der Endstand ist fest (Finalrunde: Teil F), der Dialog bietet das Abschließen an – danach ist das Turnier abgeschlossen
   const dialog = ownerPage.getByTestId('finish-dialog');
-  await expect(dialog.getByTestId('tournament-finish-confirm'), 'Abschluss möglich (nicht „Endstand ist noch vorläufig“)').toBeVisible({ timeout: SOLL_TIMEOUT_MS });
+  // Wie N7b: erst wenn die Prüfung durch ist („bereit“ oder eine Ablehnung); die Taste „Abschließen“ gibt es schon im Stand „wird geprüft“ (gesperrt).
+  const bereit = dialog.getByTestId('finish-ready');
+  const abgelehnt = dialog.getByTestId('finish-error');
+  await expect(bereit.or(abgelehnt).first(), 'Prüfung des Abschlusses ist durch').toBeVisible({ timeout: 15_000 });
+  expect(await abgelehnt.count(), `Abschluss möglich, nicht abgelehnt: ${(await abgelehnt.count()) > 0 ? (await abgelehnt.first().innerText()).replace(/\s+/g, ' ') : ''}`).toBe(0);
+  await expect(dialog.getByTestId('tournament-finish-confirm'), 'Abschluss möglich (nicht „Endstand ist noch vorläufig“)').toBeEnabled({ timeout: SOLL_TIMEOUT_MS });
   await dialog.getByTestId('tournament-finish-confirm').click();
   try {
     await expect.poll(async () => (await getRows<{ lifecycle_status: string }>(`tournaments?id=eq.${TURNIERTAG_ID}&select=lifecycle_status`, 'Zustand des Turniers'))[0]?.lifecycle_status, {
