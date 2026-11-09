@@ -8,7 +8,7 @@ EINGABE=$(cat)
 AUS=$(printf '%s' "$EINGABE" | python3 "$DIR/slot-zaehler.py" reset 2>&1)
 RC=$?
 if [ $RC -ne 0 ]; then
-    MSG=$(printf '%s' "$AUS" | tail -n 1 | tr -d '"\\' | cut -c1-300)
+    MSG=$(printf '%s' "$AUS" | tail -n 1 | tr -d '"\\[:cntrl:]' | cut -c1-300)
     printf '{"systemMessage":"Slot-Hook defekt (%s), Start trotzdem zugelassen: %s"}\n' "reset" "$MSG"
     exit 0
 fi

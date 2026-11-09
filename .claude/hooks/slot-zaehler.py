@@ -17,7 +17,7 @@ import sys
 from datetime import datetime, timezone
 
 VORGABE = {"slots": 2, "opus": 1}
-ZWECK = re.compile(r"review|ursache", re.IGNORECASE)  # „Ursachensuche“ enthält „ursache“
+ZWECK = re.compile(r"\b(review|ursache)", re.IGNORECASE)  # Wortanfang; „Ursachensuche“ enthält „ursache“
 VERWAIST_SEK = 6 * 3600       # Eintrag älter als 6 h gilt als verwaist (Absturz o. Ä.)
 UNBEANSPRUCHT_SEK = 10 * 60   # zugelassen, aber nie gestartet (anderer Hook/Rechte lehnten ab)
 
@@ -150,8 +150,11 @@ def start(ereignis):
     ti = ereignis.get("tool_input") or {}
     modell = str(ti.get("model") or "")
     beschr = str(ti.get("description") or "")
-    prompt = str(ti.get("prompt") or "")
-    ist_opus = "opus" in modell.lower()
+    art = str(ti.get("subagent_type") or "")
+    # Opus ist, wer es sein kann: ausdrücklich opus, ohne model (erbt das Sitzungsmodell),
+    # „inherit“, oder ein Fork (läuft auf dem Modell des Elternteils, `model` wird ignoriert).
+    ist_opus = (not modell.strip()) or "opus" in modell.lower() or modell.strip().lower() == "inherit" \
+        or art.lower() == "fork"
     slots, opus, hinweis = grenze_lesen(grenze_datei)
     with Zaehlung(agenten_datei) as z:
         laufend = z.eintraege
@@ -162,10 +165,11 @@ def start(ereignis):
                 f"Laufend: {beschreibe(laufend)}. Erst warten, bis einer fertig ist."
             )
         if ist_opus:
-            if not ZWECK.search(beschr) and not ZWECK.search(prompt):
+            if not ZWECK.search(beschr):
                 return abweisen(
-                    "Opus ist nur für Reviews und Ursachensuche zulässig: Weder description noch prompt "
-                    f"nennen „review“ oder „ursache“. {grenzinfo} Nimm sonst sonnet/haiku."
+                    "Opus (auch ohne model oder als Fork) ist nur für Reviews und Ursachensuche zulässig: "
+                    f"Die description nennt weder „review“ noch „ursache“. {grenzinfo} "
+                    "Gib `model: sonnet` oder `haiku` an, wenn es kein Review oder keine Ursachensuche ist."
                 )
             opus_laufend = [e for e in laufend if e.get("opus")]
             if len(opus_laufend) >= opus:

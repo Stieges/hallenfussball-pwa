@@ -24,8 +24,12 @@ Logik: `slot-zaehler.py`. Test: `bash .claude/hooks/test/slot-hook.test.sh`.
 ## Regeln
 
 - Sind schon `slots` Agenten eingetragen, wird der Start abgewiesen (Begründung nennt Grenze und laufende Einträge).
-- `model: opus` (jede Schreibweise, die „opus“ enthält) nur, wenn `description` oder `prompt` „review“ oder „ursache“
-  (damit auch „Ursachensuche“) nennt, ohne Groß/Klein, und weniger als `opus` Opus-Agenten laufen.
+- **Opus** ist ein Start, wenn `model` „opus“ enthält, **fehlt** oder `inherit` ist (der Agent erbt das Sitzungsmodell),
+  oder wenn `subagent_type` `fork` ist (ein Fork läuft auf dem Modell des Elternteils, `model` wird ignoriert).
+  Opus ist nur zulässig, wenn die **`description`** (nicht der `prompt`) ein Wort mit Anfang „review“ oder „ursache“
+  nennt (Wortanfang, ohne Groß/Klein; „Ursachensuche“ und „Code-Review“ zählen) und weniger als `opus` Opus-Agenten laufen.
+  Wer kein Review und keine Ursachensuche startet, gibt `model: sonnet` oder `haiku` an.
+- **Absprache, nicht Schloss:** Absichtlich falsche Zweck-Wörter verhindert der Wächter nicht.
 - Alle Agenten-Typen zählen gleich (`fork`, `Explore`, `general-purpose` …).
 
 ## Welche Felder die Ereignisse liefern (Quelle: code.claude.com/docs/en/hooks, Stand 2026-11-09)
@@ -49,13 +53,15 @@ Logik: `slot-zaehler.py`. Test: `bash .claude/hooks/test/slot-hook.test.sh`.
 ## Bekannte Grenzen
 
 - Fortsetzen per `SendMessage` läuft nicht über `Agent` und wird **nicht gezählt**.
-- Ohne `model` im Aufruf erbt der Agent das Modell der Sitzung; ist das Opus, zählt er nicht als Opus.
 - Einträge werden nach 6 h als verwaist verworfen; zugelassene, aber nie gestartete (z. B. von Rechteprüfung
   abgelehnte) nach 10 Minuten ohne SubagentStart.
 - Das Skript ist ein Wächter, kein Schloss: bei eigenem Fehler (kaputtes JSON, fehlendes `python3`) meldet es eine
   Warnung per `systemMessage` und lässt den Start zu.
-- Die Zähldatei gilt pro Projektverzeichnis (`CLAUDE_PROJECT_DIR`), nicht über mehrere Sitzungen hinweg gemeinsam
-  genutzter Worktrees hinweg.
+- Die Zähldatei gilt pro Projektverzeichnis (`CLAUDE_PROJECT_DIR`); Sitzungen in anderen Worktrees zählen getrennt.
+- Eine neue Sitzung im selben Projektverzeichnis (SessionStart) leert die Zählung einer noch laufenden Sitzung.
+- Interne Agenten (z. B. `/btw`) können in der Lücke zwischen PreToolUse und SubagentStart einen offenen Eintrag übernehmen.
+- Ein von der Rechteprüfung abgelehnter Start belegt seinen Slot für 10 Minuten.
+- Ein Agent ohne `model`, dessen Agententyp ein eigenes Modell festlegt, zählt vorsichtshalber als Opus.
 
 ## So ändert Daniel die Grenze
 

@@ -13,11 +13,12 @@ fail() { N=$((N+1)); FAILS=$((FAILS+1)); echo "FAIL $N - $1"; }
 zaehler() { jq '.agenten | length' "$SLOT_AGENTEN_DATEI" 2>/dev/null || echo "?"; }
 neu() { rm -f "$SLOT_AGENTEN_DATEI" "$SLOT_GRENZE_DATEI"; }
 # start <model|-> <description> [prompt] [tool_use_id]  -> Ausgabe des Hooks
+# Agententyp über die Variable ART (Vorgabe general-purpose), z. B. ART=fork start sonnet "..."
 start() {
   local m="$1" d="$2" p="${3:-Aufgabe}" id="${4:-toolu_$RANDOM}"
-  jq -nc --arg m "$m" --arg d "$d" --arg p "$p" --arg id "$id" \
+  jq -nc --arg a "${ART:-general-purpose}" --arg m "$m" --arg d "$d" --arg p "$p" --arg id "$id" \
     '{hook_event_name:"PreToolUse",tool_name:"Agent",tool_use_id:$id,
-      tool_input:({description:$d,prompt:$p,subagent_type:"general-purpose"} + (if $m=="-" then {} else {model:$m} end))}' \
+      tool_input:({description:$d,prompt:$p,subagent_type:$a} + (if $m=="-" then {} else {model:$m} end))}' \
     | bash "$HOOKS/agent-start-pruefen.sh"
 }
 claim() { jq -nc --arg a "$1" '{hook_event_name:"SubagentStart",agent_id:$a,agent_type:"general-purpose"}' | bash "$HOOKS/agent-start-erfasst.sh"; }
@@ -36,13 +37,28 @@ echo "# Fall 2: Opus ohne Zweck abgewiesen"; neu
 O=$(start opus "Implementiere Feature X" "Baue das Feature"); abgewiesen "$O" && [ "$(zaehler)" = "?" -o "$(zaehler)" = 0 ] \
   && ok "Opus ohne Zweck abgewiesen, nichts eingetragen" || fail "Opus ohne Zweck ($O)"
 
+neu; O=$(start - "Implementiere Feature X" "Baue das Feature"); abgewiesen "$O" \
+  && echo "$O" | jq -e '.hookSpecificOutput.permissionDecisionReason | contains("model: sonnet")' >/dev/null \
+  && ok "ohne model und ohne Zweck abgewiesen (zählt als Opus), Hinweis auf model: sonnet" || fail "ohne model, ohne Zweck ($O)"
+neu; O=$(ART=fork start sonnet "Implementiere Feature X"); abgewiesen "$O" && ok "Fork mit model sonnet und ohne Zweck abgewiesen" || fail "Fork sonnet ohne Zweck ($O)"
+neu; O=$(start sonnet "Implementiere" "danach Opus-Review"); zugelassen "$O" && ok "Sonnet braucht keinen Zweck" || fail "Sonnet ohne Zweck ($O)"
+neu; O=$(start opus "Analyse" "danach Opus-Review und Ursachensuche"); abgewiesen "$O" && ok "Zweck nur im prompt genügt nicht (nur description zählt)" || fail "Zweck im prompt ($O)"
+neu; O=$(start opus "Nachprüfung" "x"); abgewiesen "$O" && ok "Wortanfang: „Nachprüfung“ ohne review/ursache abgewiesen" || fail "Wortanfang ($O)"
+neu; O=$(start opus "Code-Review"); zugelassen "$O" && ok "„Code-Review“ (Wortanfang nach Bindestrich) zugelassen" || fail "Code-Review ($O)"
+
 echo "# Fall 3: Opus mit review zugelassen, zweiter Opus abgewiesen"; neu
 O1=$(start opus "Opus-REVIEW von PR 493"); O2=$(start opus "Ursachensuche für rote Tests")
 zugelassen "$O1" && ok "Opus mit „Review“ (Großschreibung egal) zugelassen" || fail "Opus review ($O1)"
 abgewiesen "$O2" && echo "$O2" | jq -e '.hookSpecificOutput.permissionDecisionReason | contains("Opus-Grenze")' >/dev/null \
   && ok "zweiter Opus abgewiesen (Opus-Grenze)" || fail "zweiter Opus ($O2)"
 S=$(start sonnet "normal"); zugelassen "$S" && ok "Sonnet neben Opus zugelassen (Slot 2 von 2)" || fail "Sonnet neben Opus ($S)"
-neu; P=$(start opus "Analyse" "Bitte eine Ursachensuche durchführen"); zugelassen "$P" && ok "Zweck im prompt genügt" || fail "Zweck im prompt ($P)"
+neu; M=$(start - "Review von PR 493"); zugelassen "$M" && [ "$(jq -r '.agenten[0].opus' "$SLOT_AGENTEN_DATEI")" = true ] \
+  && ok "ohne model mit Review zugelassen und als Opus gezählt" || fail "ohne model mit Review ($M)"
+M2=$(start opus "Zweites Review"); abgewiesen "$M2" && ok "Opus belegt durch Aufruf ohne model -> zweiter Opus abgewiesen" || fail "zweiter Opus nach model-los ($M2)"
+neu; F=$(ART=fork start sonnet "Fork für Ursachensuche"); zugelassen "$F" && [ "$(jq -r '.agenten[0].opus' "$SLOT_AGENTEN_DATEI")" = true ] \
+  && ok "Fork mit model sonnet zählt als Opus" || fail "Fork zählt als Opus ($F)"
+F2=$(start opus "Review PR"); abgewiesen "$F2" && ok "Fork belegt den Opus-Slot (Opus-Grenze)" || fail "Opus nach Fork ($F2)"
+F3=$(start sonnet "Umsetzung"); zugelassen "$F3" && ok "Sonnet neben Fork-Opus zugelassen" || fail "Sonnet neben Fork ($F3)"
 
 echo "# Fall 4: Stop senkt den Zähler"; neu
 start sonnet "A" "x" t1 >/dev/null; start sonnet "B" "x" t2 >/dev/null; claim ag-1 >/dev/null; claim ag-2 >/dev/null
@@ -78,6 +94,11 @@ echo '{"agenten":"unsinn"}' > "$SLOT_AGENTEN_DATEI"; zugelassen "$(start sonnet 
 OLD=$(date -u -v-7H +%Y-%m-%dT%H:%M:%S+00:00 2>/dev/null || date -u -d '7 hours ago' +%Y-%m-%dT%H:%M:%S+00:00)
 echo "{\"agenten\":[{\"ts\":\"$OLD\",\"agent_id\":\"x\"},{\"ts\":\"$OLD\",\"agent_id\":\"y\"}]}" > "$SLOT_AGENTEN_DATEI"
 zugelassen "$(start sonnet a)" && ok "verwaiste Einträge (>6 h) zählen nicht" || fail "verwaist"
+OLD11=$(date -u -v-11M +%Y-%m-%dT%H:%M:%S+00:00 2>/dev/null || date -u -d '11 minutes ago' +%Y-%m-%dT%H:%M:%S+00:00)
+echo "{\"agenten\":[{\"ts\":\"$OLD11\",\"agent_id\":null},{\"ts\":\"$OLD11\",\"agent_id\":null}]}" > "$SLOT_AGENTEN_DATEI"
+zugelassen "$(start sonnet a)" && zugelassen "$(start sonnet b)" && ok "unbeanspruchte Einträge (agent_id null) älter als 10 min zählen nicht mehr" || fail "unbeanspruchte >10 min"
+echo "{\"agenten\":[{\"ts\":\"$OLD11\",\"agent_id\":\"a1\"},{\"ts\":\"$OLD11\",\"agent_id\":\"a2\"}]}" > "$SLOT_AGENTEN_DATEI"
+abgewiesen "$(start sonnet a)" && ok "beanspruchte Einträge (laufende Agenten) gleichen Alters zählen weiter" || fail "beanspruchte >10 min"
 echo '{"hook_event_name":"SessionStart"}' | bash "$HOOKS/slot-zuruecksetzen.sh" >/dev/null
 [ "$(zaehler)" = 0 ] && ok "SessionStart setzt die Zähldatei zurück" || fail "Reset"
 

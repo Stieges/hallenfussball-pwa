@@ -47,7 +47,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/agent-start-pruefen.sh"
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/agent-start-pruefen.sh"
           }
         ]
       }
@@ -80,7 +80,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/agent-start-erfasst.sh"
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/agent-start-erfasst.sh"
           }
         ]
       }
@@ -91,7 +91,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/agent-ende.sh"
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/agent-ende.sh"
           }
         ]
       }
@@ -102,7 +102,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/slot-zuruecksetzen.sh"
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/slot-zuruecksetzen.sh"
           }
         ]
       }
