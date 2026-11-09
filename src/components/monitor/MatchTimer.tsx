@@ -17,7 +17,7 @@ import type { MonitorTheme } from '../../types/monitor';
 import type { MatchStatus } from '../../hooks/useLiveMatches';
 import { useMonitorTheme } from '../../hooks';
 import { DEFAULT_CLOCK_MODE, type ClockMode } from '../../core/match/clockDisplay';
-import { monitorUhrMitSperre, monitorUhrOf, type MatchView, type MonitorUhrEingabe, type MonitorUhrModell, type MonitorUhrText } from '../../core/view';
+import { formatRemaining, monitorUhrMitSperre, monitorUhrOf, type MatchView, type MonitorUhrEingabe, type MonitorUhrModell, type MonitorUhrText } from '../../core/view';
 import { NowSourceContext } from '../schedule/useTickingNow';
 import { cachedElapsedSeconds } from '../schedule/matchResult';
 import { ZeitBalken } from '../ui/atoms/ZeitBalken';
@@ -69,12 +69,6 @@ const TEXT_KEY: Record<MonitorUhrText, UhrTextKey> = {
   verlaengerung: 'overtime',
   zeitAbgelaufen: 'ended',
 };
-
-function formatTime(totalSeconds: number): string {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = Math.floor(totalSeconds % 60);
-  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-}
 
 function eingabeOf(props: MatchTimerProps, nowMs: number): MonitorUhrEingabe {
   const { uhr } = props;
@@ -131,7 +125,7 @@ export const MatchTimer: React.FC<MatchTimerProps> = (props) => {
       </div>
       {uhr?.restSekunden !== undefined && uhr.restSekunden !== null && (
         <div style={clockBoxStyle(size)} data-testid="monitor-clock" data-phase={uhr.schlussphase ? 'schlussphaseAngehalten' : uhr.text === 'zeitAbgelaufen' ? 'abgelaufen' : 'normal'}>
-          <span style={timeStyle(stufe, themeColors, uhr.schlussphase)} data-monitor="uhr">{formatTime(uhr.restSekunden)}</span>
+          <span style={timeStyle(stufe, themeColors, uhr.schlussphase)} data-monitor="uhr">{formatRemaining(uhr.restSekunden)}</span>
         </div>
       )}
       {showProgress && uhr?.balken && (

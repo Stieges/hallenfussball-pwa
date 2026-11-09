@@ -13,7 +13,7 @@ export const displayList = {
     team: '3.6vh',
     /** Tabellenkopf und Seitenhinweis (mindestens 3 % der Bildhöhe) */
     head: '3vh',
-    /** Eine Stufe für „(war hh:mm)“ neben der Uhrzeit und die Bezeichnung als Zwischenzeile über der Zeilenkarte („Halbfinale 1“): Lesetext-Stufe der Zeile (nah-Untergrenze 3,6 %); @ZP-046 verlangt mehr, Befund C-MONITOR-URSPRUENGLICH-ZU-KLEIN */
+    /** Eine Stufe für „(war hh:mm)“ neben der Uhrzeit und die Bezeichnung als Zwischenzeile über der Zeilenkarte („Halbfinale 1“): Lesetext-Stufe der Zeile (nah-Untergrenze 3,6 %, @ZP-046: mindestens die kleinste erlaubte Monitor-Schrift) */
     timeNote: '3.6vh',
     /** Uhrzeit der Zeile (gültige, neue Uhrzeit): deutlich größer als der Zusatz „(war hh:mm)“ (@ZM-188, @ZP-046) */
     time: '4.4vh',

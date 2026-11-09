@@ -20,9 +20,11 @@ import {
   applyDelta,
   applyFetchError,
   initialDisplayState,
+  istAntwort,
   type MonitorDisplayState,
 } from './monitorDisplayState';
 import { boundFieldNumbers, cardIdsOf, detectOverlays } from './monitorOverlays';
+import { useMonitorVerbindung, type MonitorVerbindung } from './useMonitorVerbindung';
 
 /** Kleinster Abstand zwischen zwei Abruf-Beginnen (Plan R5 § 6 Risiko 2/3). */
 export const MIN_FETCH_GAP_MS = 250;
@@ -37,6 +39,8 @@ export interface MonitorDisplayData extends MonitorDisplayState {
   goalEvent: GoalEventInfo | null;
   /** Karten-Einblendung, die gerade dran ist. */
   cardEvent: CardEventInfo | null;
+  /** Eingefrorene Verbindung (30 Sekunden ohne Antwort, @ME-030): Zeitpunkt der letzten Antwort für das Symbol; sonst `null`. */
+  verbindung: MonitorVerbindung | null;
   clearGoalEvent: () => void;
   clearCardEvent: () => void;
 }
@@ -60,6 +64,7 @@ export function useMonitorDisplayData(
     lastFetch: Date.now(),
   }));
   const [overlays, setOverlays] = useState<Overlays>({ goals: [], cards: [] });
+  const { verbindung, antwort, zuruecksetzen } = useMonitorVerbindung();
 
   // Refs: die Callbacks lesen den jeweils aktuellen Stand, ohne von ihm abzuhängen (sonst setzt jeder
   // Poll mit neuen Objekten das Intervall neu – C-MON-TAKT-STEHT).
@@ -98,10 +103,11 @@ export function useMonitorDisplayData(
     seenCardsRef.current = null;
     lastStartRef.current = Number.NEGATIVE_INFINITY; // neues Ziel lädt sofort (keine Drossel)
     setOverlays({ goals: [], cards: [] });
+    zuruecksetzen();
     if (stateRef.current.hasData) {
       commit({ ...stateRef.current, hasData: false });
     }
-  }, [tournamentId, monitorId, commit]);
+  }, [tournamentId, monitorId, commit, zuruecksetzen]);
 
   /** Eindeutiger Zeitstempel je Einblendung (die Einblendungen erkennen Dopplungen daran). */
   const stamp = useCallback(() => {
@@ -130,6 +136,7 @@ export function useMonitorDisplayData(
     lastStartRef.current = Date.now();
     try {
       const delta = await source.fetch(versionRef.current);
+      if (mountedRef.current && istAntwort(delta)) { antwort(source.nowMs?.() ?? Date.now()); }
       // B-19b (@ME-032): eine unlesbare Antwort ist eine neue, inkompatible Version → sofort neu laden.
       if (delta.kind === 'unreadable') { requestUrgentReload(); }
       if (delta.kind === 'snapshot') { versionRef.current = delta.version; }
@@ -153,7 +160,7 @@ export function useMonitorDisplayData(
         requestRef.current();
       }
     }
-  }, [source, tournamentId, monitorId, commit, noteOverlays]);
+  }, [source, tournamentId, monitorId, commit, noteOverlays, antwort]);
 
   /** Abruf anstoßen: sofort, oder nach dem laufenden (genau einmal), oder nach Ablauf der Mindest-Lücke. */
   const request = useCallback(() => {
@@ -214,6 +221,7 @@ export function useMonitorDisplayData(
     ...state,
     goalEvent: overlays.goals[0] ?? null,
     cardEvent: overlays.cards[0] ?? null,
+    verbindung,
     clearGoalEvent,
     clearCardEvent,
   };

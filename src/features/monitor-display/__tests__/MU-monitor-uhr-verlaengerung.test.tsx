@@ -4,7 +4,7 @@
  * (wie `viewDurationSeconds`); in der Finalrunde die eigene Dauer (`finalRoundGameDuration`).
  *
  * Pflichttests (vor dem Fix rot):
- *   - @ZM-039 @ZM-139 Verlängerung läuft: Restzeit 3:40, nie „00:00 – Ergebnis folgt“
+ *   - @ZM-039 @ZM-139 Verlängerung läuft: Restzeit 3:40, nie „0:00 – Ergebnis folgt“
  *   - @ZM-139 Finalrundenspiel mit eigener Dauer (12 Min.) rechnet mit 12 Minuten
  *   - @ZM-039 Verlängerung nach Überlauf (Anpfiff bei 10:45) zählt ab dem Anpfiff
  * Gegenbeispiele (grün):
@@ -104,13 +104,13 @@ function renderLive(tournament: Tournament) {
 }
 
 describe('@ZM-039 @ZM-139 Monitor-Uhr in der Verlängerung (Paket MU)', () => {
-  it('@ZM-039 @ZM-139 Verlängerung läuft (Platz 3, 2:2, seit 1:20): der Monitor zeigt die Restzeit 3:40, nie „00:00 – Ergebnis folgt“', () => {
+  it('@ZM-039 @ZM-139 Verlängerung läuft (Platz 3, 2:2, seit 1:20): der Monitor zeigt die Restzeit 3:40, nie „0:00 – Ergebnis folgt“', () => {
     const match = spiel({ ...PLATZ_3, ...laufend({ uhrSek: 680, phase: 'overtime', beginnSek: 600, section: 2, abschnittSek: 300 }) });
     const tournament = turnier(match, { finalRoundGameDuration: 10 });
 
     expect(liveMatchOf(match, tournament).durationSeconds).toBe(900);
     renderLive(tournament);
-    expect(screen.getByText('03:40')).toBeInTheDocument();
+    expect(screen.getByText('3:40')).toBeInTheDocument();
     expect(screen.queryByText(/Ergebnis folgt/)).toBeNull();
   });
 
@@ -120,7 +120,7 @@ describe('@ZM-039 @ZM-139 Monitor-Uhr in der Verlängerung (Paket MU)', () => {
 
     expect(liveMatchOf(match, tournament).durationSeconds).toBe(720);
     renderLive(tournament);
-    expect(screen.getByText('01:50')).toBeInTheDocument();
+    expect(screen.getByText('1:50')).toBeInTheDocument();
     expect(screen.queryByText(/Ergebnis folgt/)).toBeNull();
   });
 
@@ -130,11 +130,11 @@ describe('@ZM-039 @ZM-139 Monitor-Uhr in der Verlängerung (Paket MU)', () => {
 
     expect(liveMatchOf(match, tournament).durationSeconds).toBe(945);
     renderLive(tournament);
-    expect(screen.getByText('03:40')).toBeInTheDocument();
+    expect(screen.getByText('3:40')).toBeInTheDocument();
     expect(screen.queryByText(/Ergebnis folgt/)).toBeNull();
   });
 
-  it('@ZM-039 @ZM-040 Verlängerung angehalten bei Restzeit 3:40: die Dauer bleibt die Verlängerungs-Dauer (900), die Anzeige steht bei 03:40, nie „Ergebnis folgt“', () => {
+  it('@ZM-039 @ZM-040 Verlängerung angehalten bei Restzeit 3:40: die Dauer bleibt die Verlängerungs-Dauer (900), die Anzeige steht bei 3:40, nie „Ergebnis folgt“', () => {
     const match = spiel({
       ...PLATZ_3,
       // Cache-Status 'paused' fehlt im TS-Typ (C-MATCHSTATUS-OHNE-PAUSED), wie im Cache geschrieben
@@ -159,7 +159,7 @@ describe('@ZM-039 @ZM-139 Monitor-Uhr in der Verlängerung (Paket MU)', () => {
 
     expect(liveMatchOf(match, tournament).durationSeconds).toBe(900);
     renderLive(tournament);
-    expect(screen.getByText('03:40')).toBeInTheDocument();
+    expect(screen.getByText('3:40')).toBeInTheDocument();
     expect(screen.queryByText(/Ergebnis folgt/)).toBeNull();
   });
 
