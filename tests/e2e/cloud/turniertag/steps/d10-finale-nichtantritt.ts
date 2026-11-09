@@ -14,34 +14,28 @@
 import { expect } from '@playwright/test';
 import { getLocalServiceRoleClient } from '../../helpers';
 import { E2E_TURNIERTAG_SHARE_CODE } from '../../testData';
-import { expectPageAnchor, fetchTurniertagBracket, fetchTurniertagTeams, findFinalByLabel, openTurniertagPath, SOLL_TIMEOUT_MS, vorbedingung } from './shared';
+import { expectPageAnchor, fetchTurniertagBracket, findFinalByLabel, openTurniertagPath, SOLL_TIMEOUT_MS, vorbedingung } from './shared';
 import { appendOwner, eventOf, regularResultEvents } from './playViaRpc';
 import type { StepContext, TurniertagStep } from './types';
 
 /**
- * Vorbedingung: Olli trägt Halbfinale 2 mit 2:1 im Spielplan ein (Schnelleingabe der Spielkarte). Nur dieser Weg lässt die App die Folgespiele
+ * Vorbedingung: Olli trägt Halbfinale 2 mit 2:1 in der Finalrunden-Tabelle des Spielplans ein. Nur dieser Weg lässt die App die Folgespiele
  * besetzen: die K.-o.-Auflösung läuft im Gerät, das den Eintrag abgeschickt hat (`useKoResolutionAfterAck`), nicht am Server. Ein Ergebnis über die
  * Server-Funktion allein besetzt Platz 3 und Finale nie (Befund C-KO-SIEGER-RUECKT-NICHT-AM-SERVER).
  */
 async function halbfinale2(asRole: StepContext['asRole']): Promise<void> {
   const hf2 = findFinalByLabel((await fetchTurniertagBracket()).finals, '2. Halbfinale');
   expect(hf2.team_a_id && hf2.team_b_id, 'Halbfinale 2 ist besetzt (hängt an D8)').toBeTruthy();
-  const namen = new Map((await fetchTurniertagTeams()).map((t) => [t.id, t.name]));
-  const heim = namen.get(hf2.team_a_id ?? '') ?? '';
-  const gast = namen.get(hf2.team_b_id ?? '') ?? '';
   const olli = await asRole('owner');
   await openTurniertagPath(olli, '/schedule');
   await expectPageAnchor(olli.locator('[data-testid="filter-phase"]'), 'Spielplan der Turnierleitung');
-  // Heim und Gast zusammen: ein Halbfinale ist die einzige Karte mit dieser Paarung (die Teams kommen aus verschiedenen Gruppen).
-  const karte = olli.locator('[data-match-card]').filter({ hasText: heim }).filter({ hasText: gast });
-  await karte.getByText(heim).first().click({ timeout: SOLL_TIMEOUT_MS * 3 });
-  await olli.getByTestId('match-action-enterResult').click();
-  const eingabe = karte.getByTestId('quick-score-expand');
-  await expect(eingabe, 'Schnelleingabe von Halbfinale 2').toBeVisible({ timeout: SOLL_TIMEOUT_MS });
-  await eingabe.getByLabel(`${heim} Tor hinzufügen`).click();
-  await eingabe.getByLabel(`${heim} Tor hinzufügen`).click();
-  await eingabe.getByLabel(`${gast} Tor hinzufügen`).click();
-  await eingabe.getByTestId('quick-score-save-btn').click();
+  // Die Finalrunden-Tabelle des Spielplans hat je Spiel zwei Tore-Felder und „Ergebnis speichern“ (wie D5d).
+  const heim = olli.locator(`[data-testid="match-score-input-${hf2.id}-home"]`);
+  const gast = olli.locator(`[data-testid="match-score-input-${hf2.id}-away"]`);
+  await expect(heim, 'Tore-Feld von Halbfinale 2').toBeVisible({ timeout: SOLL_TIMEOUT_MS * 3 });
+  await heim.pressSequentially('2');
+  await gast.pressSequentially('1');
+  await olli.locator(`[data-testid="match-score-save-${hf2.id}"]`).click();
   await expect.poll(async () => {
     const m = findFinalByLabel((await fetchTurniertagBracket()).finals, '2. Halbfinale');
     return [m.match_status, m.score_a, m.score_b];
