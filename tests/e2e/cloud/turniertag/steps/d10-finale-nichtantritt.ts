@@ -45,6 +45,10 @@ async function halbfinale2(asRole: StepContext['asRole']): Promise<void> {
 async function nichtantritt({ anonPage, asRole }: StepContext): Promise<void> {
   await vorbedingung('Halbfinale 2 im Spielplan mit 2:1 eintragen', () => halbfinale2(asRole));
   // Die App besetzt Platz 3 und das Finale aus den beiden Halbfinal-Ergebnissen (@TM-052): im Gerät, danach in der Cloud.
+  // Achtung, Ursache der Besetzung: Der Sieger von Halbfinale 1 steht nur deshalb im Finale (und der Verlierer im Spiel um Platz 3), weil der
+  // Spielplan-Eintrag von Halbfinale 2 die GANZE Klammer neu auflöst (`slotUpdatesAfterResult` → `resolveBracketAfterPlayoffMatch`, über `enqueueKo`),
+  // nicht weil Halbfinale 1 (D9, Strafstoßschießen im Cockpit-Weg) sein Weiterrücken selbst ausgelöst hätte. Davor war das Finale leer (D9d, Befund
+  // C-KO-SIEGER-RUECKT-NICHT-AM-SERVER). Diese Besetzung ist darum kein Beleg für @TM-052 aus D9.
   await expect.poll(async () => {
     const { finals: spiele } = await fetchTurniertagBracket();
     return ['Spiel um Platz 3', 'Finale'].map((name) => { const m = findFinalByLabel(spiele, name); return Boolean(m.team_a_id && m.team_b_id); });
