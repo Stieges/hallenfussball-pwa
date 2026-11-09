@@ -1,22 +1,24 @@
 /**
  * D14 Sicherung mit Spiel-Einträgen (@TE-002, C-BACKUP-EREIGNISSE). Besitzer: B-34. Das PDF (Record drucken) ist gebaut und hat eigene Tests.
- * Besitzer: B-28a/B-34 -- Soll-Marker: die Turnierleitung lädt unter "Exporte" die Sicherung des
- * Turniers herunter (`backup-download-button`).
+ * Besitzer: B-28a/B-34 -- Soll: die Turnierleitung lädt unter "Exporte" mit „Backup herunterladen“ die Sicherung des
+ * Turniers herunter; sie enthält alle Ereignisse (heute nur das Turnierobjekt, daher rot).
  */
 import { readFile } from 'node:fs/promises';
 import { expect } from '@playwright/test';
 import { fetchEngineRows } from '../../engineHelpers';
-import { expectPageAnchor, expectSollMarker, fetchTurniertagBracket, openTurniertagPath, SOLL_TIMEOUT_MS, TURNIERTAG_ID } from './shared';
+import { expectPageAnchor, fetchTurniertagBracket, openTurniertagPath, SOLL_TIMEOUT_MS, TURNIERTAG_ID } from './shared';
 import type { StepContext, TurniertagStep } from './types';
 
 async function pdfSicherung({ asRole }: StepContext): Promise<void> {
   const ownerPage = await asRole('owner');
   await openTurniertagPath(ownerPage, '/admin/exports');
   await expectPageAnchor(ownerPage.getByText('Exporte', { exact: true }).first(), 'Admin-Kategorie Exporte');
-  await expectSollMarker(ownerPage, 'backup-download-button');
+  // Die Taste hat keine eigene Kennung (die erfundene „backup-download-button“ gibt es nicht), sie heißt „Backup herunterladen“.
+  const sicherung = ownerPage.getByRole('button', { name: /Backup herunterladen/ });
+  await expect(sicherung, 'Taste „Backup herunterladen“').toBeVisible({ timeout: SOLL_TIMEOUT_MS });
   // Soll-Wirkung: der Klick lädt eine nicht leere Sicherung herunter, die dieses Turnier enthält.
   const download = ownerPage.waitForEvent('download', { timeout: SOLL_TIMEOUT_MS });
-  await ownerPage.locator('[data-testid="backup-download-button"]').click();
+  await sicherung.click();
   const path = await (await download).path();
   const inhalt = await readFile(path, 'utf8');
   expect(inhalt.length, 'Sicherung ist nicht leer').toBeGreaterThan(0);

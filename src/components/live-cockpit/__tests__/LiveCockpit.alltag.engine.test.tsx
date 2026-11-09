@@ -82,13 +82,19 @@ describe('@SL-042 Ein Tor für das falsche Team wird zurückgenommen und neu erf
 });
 
 describe('@SL-050 Das bereitstehende Spiel pfeift ein Tipp an, auch vor seiner Uhrzeit', () => {
-  // Spiel 13 steht um 15:30 an, es ist 15:14 (Ortszeit des Turniers, Europe/Berlin; November = MEZ = UTC+1)
+  // Spiel 13 steht um 15:30 an, es ist 15:14 (Ortszeit des Turniers, Europe/Berlin; November = MEZ = UTC+1).
+  // Beide Zeitpunkte sind feste UTC-Zeitpunkte, damit der Test in jeder Zeitzone des Rechners dasselbe prüft.
+  const VIERZEHN_UHR_VIERZEHN_UTC = Date.UTC(2026, 10, 14, 14, 14);
+  const ANSTOSS_UTC = new Date(Date.UTC(2026, 10, 14, 14, 30));
   const TURNIER: Partial<Tournament> = {
     startDate: '2026-11-14',
     date: '2026-11-14',
-    matches: [{ ...harnessTournament.matches[0], scheduledTime: new Date(2026, 10, 14, 15, 30) }],
+    matches: [{ ...harnessTournament.matches[0], scheduledTime: ANSTOSS_UTC }],
   };
-  const VIERZEHN_UHR_VIERZEHN_UTC = Date.UTC(2026, 10, 14, 14, 14);
+
+  it('@SL-050 Lage: der Anstoß liegt nach „jetzt“ (Spiel steht vor seiner Uhrzeit bereit)', () => {
+    expect(ANSTOSS_UTC.getTime()).toBeGreaterThan(VIERZEHN_UHR_VIERZEHN_UTC);
+  });
 
   it('@SL-050 es ist 15:14, Anstoß wäre 15:30: ein Tipp auf Anpfiff → das Spiel läuft, der Anpfiff steht bei 15:14', async () => {
     vi.setSystemTime(VIERZEHN_UHR_VIERZEHN_UTC);
@@ -97,7 +103,8 @@ describe('@SL-050 Das bereitstehende Spiel pfeift ein Tipp an, auch vor seiner U
 
     const knopf = await screen.findByTestId('match-start-button');
     expect(knopf).toBeEnabled();
-    expect(screen.getByTestId('scoreboard-clock')).toHaveTextContent('15:30'); // das Spiel steht noch vor seiner Uhrzeit bereit
+    // das Spiel steht noch vor seiner Uhrzeit bereit; das Cockpit zeigt sie in der Ortszeit des Geräts (in Berlin: 15:30)
+    expect(screen.getByTestId('scoreboard-clock')).toHaveTextContent(ANSTOSS_UTC.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }));
     await user.click(knopf);
 
     await waitFor(() => expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('Live'));
