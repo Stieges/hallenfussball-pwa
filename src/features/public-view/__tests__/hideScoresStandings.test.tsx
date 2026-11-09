@@ -4,7 +4,7 @@
  * Gemockt nur die Datenquellen (wie LiveViewScreen.scenarios.test.tsx); die Screen-Logik ist echt.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { Tournament } from '../../../types/tournament';
 import { buildLiveViewTournament, SHARE_CODE } from '../../../screens/__tests__/liveViewFixture';
@@ -105,7 +105,9 @@ describe('W2A-031 Zuschauer-Seite: hideScoresForPublic blendet Stände, Tabellen
     const t = buildLiveViewTournament({ hideScoresForPublic: true });
     const { container } = await renderWith(t);
 
-    const list = container.querySelector('.participants-and-groups');
+    // Teilnehmer eingeklappt (@ZM-196): erst aufklappen; sie stehen nach Namen, nichts Wertendes
+    fireEvent.click(screen.getByTestId('public-participants-toggle'));
+    const list = container.querySelector('[data-testid="public-participants-list"]');
     expect(list).not.toBeNull();
     expect(list?.querySelectorAll('li')).toHaveLength(8);
     expect(list?.textContent).toContain('FC Nord');
@@ -116,16 +118,19 @@ describe('W2A-031 Zuschauer-Seite: hideScoresForPublic blendet Stände, Tabellen
     const t = buildLiveViewTournament({ hideScoresForPublic: false, hideRankingsForPublic: false });
     const { container } = await renderWith(t);
 
-    expect(container.querySelector('.participants-and-groups')?.querySelectorAll('li')).toHaveLength(8);
+    fireEvent.click(screen.getByTestId('public-participants-toggle'));
+    expect(container.querySelector('[data-testid="public-participants-list"]')?.querySelectorAll('li')).toHaveLength(8);
     expect(container.querySelectorAll('.standings-table tbody tr').length).toBeGreaterThan(0);
   });
 
-  it('Fix 1 Gegenbeispiel 2: hideRankingsForPublic ohne Kindermodus bleibt wie vorher (Gruppenkästen ohne Teams)', async () => {
+  it('Fix 1 Gegenbeispiel 2: hideRankingsForPublic ohne Kindermodus – die Teilnehmerliste steht nach Namen da, die Tabellen haben keine Zeilen', async () => {
     const t = buildLiveViewTournament({ hideScoresForPublic: false, hideRankingsForPublic: true });
     const { container } = await renderWith(t);
 
-    // Gruppenkästen bleiben wie vorher, aber ohne Teamnamen (standings = [])
-    expect(container.querySelectorAll('.participants-and-groups li')).toHaveLength(0);
+    // Die Teilnehmerliste ist nach Namen sortiert und nichts Wertendes (@ZM-196): sie steht auch bei ausgeschalteten Tabellen
+    fireEvent.click(screen.getByTestId('public-participants-toggle'));
+    expect(container.querySelectorAll('[data-testid="public-participants-list"] li')).toHaveLength(8);
+    expect(container.querySelectorAll('.standings-table tbody tr')).toHaveLength(0);
   });
 
   it('hideRankingsForPublic ohne Kindermodus: keine Tabellenzeilen (kein Team, keine Punkte) auf /live; Gegenbeispiel ohne Schalter: Zeilen da', async () => {

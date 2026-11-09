@@ -31,8 +31,6 @@ import {
   publicSchedule,
   publicMatches,
   visibleStandings,
-  uniqueGroups,
-  myTeamName,
   standingsTabAvailable,
   effectiveNavTab,
 } from '../features/public-view/publicScheduleFilters';
@@ -42,12 +40,10 @@ import { PublicInfoTab } from '../features/public-view/components/PublicInfoTab'
 import { PublicConnectionHint } from '../features/public-view/components/PublicConnectionHint';
 import { showsFinalStandings, showsKidsEnded } from '../features/public-view/showsFinalStandings';
 import { PublicFinalStandingsBlock } from '../features/public-view/components/PublicFinalStandings';
-import { MyTeamBar } from '../features/public-view/components/MyTeamBar';
 import { PublicPdfRow } from '../features/public-view/components/PublicPdfRow';
 import { PublicPageHeader } from '../features/public-view/components/PublicPageHeader';
+import { PublicWegBlock } from '../features/public-view/components/PublicWegBlock';
 import { PublicCurrentBlock } from '../features/public-view/components/PublicCurrentBlock';
-import { PublicFilterBar } from '../features/public-view/components/PublicFilterBar';
-import { TeamSelectorDialog } from '../features/public-view/components/TeamSelectorDialog';
 
 export interface LiveViewScreenProps {
   shareCode: string;
@@ -75,9 +71,9 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
     handleStatusChange,
     handleTabChange,
     handleShowOnlyMyTeamChange,
+    handleResetHiddenFilters,
     selectMyTeam,
   } = usePublicViewFilters(shareCode);
-  const { showOnlyMyTeam, myTeamId, selectedGroup, selectedPhase, selectedStatus } = filters;
 
 
   // Die gemeinsame Ansicht der Zuschauer (A-36c): Status, Seitentexte, Endstand und Sichtbarkeit nur von hier
@@ -105,8 +101,6 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
   const tab = effectiveNavTab(activeTab, view.rules);
   const filteredSchedule = publicSchedule(schedule, view, filters);
   const filteredStandings = visibleStandings(view.rules, currentStandings);
-  const myTeamLabel = myTeamName(tournament, myTeamId);
-  const groups = uniqueGroups(tournament);
   const finalShown = showsFinalStandings(view, finalStandings);
   const ended = finalShown || showsKidsEnded(tournament, view);
   const currentMatches = publicMatches(tournament, view.rules);
@@ -136,7 +130,7 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
       </div>
 
       <div style={{ ...publicPageContentStyle, transform: `translateY(${pullDistance}px)`, transition: pullDistance > 0 ? 'none' : 'transform 0.3s ease' }}>
-        <PublicPageHeader tournament={tournament} shareCode={shareCode} ended={ended} />
+        <PublicPageHeader tournament={tournament} ended={ended} />
 
         {/* Ohne Netz bleibt der letzte Stand stehen, mit Hinweis (B-15, @ZM-032) */}
         {connectionHint !== null && (
@@ -157,37 +151,21 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
         {/* „Als PDF“ (@BM-057, @BM-041): mit Endstand direkt darunter, sonst unter dem Spielplan */}
         {tab !== 'settings' && finalShown && pdfRow}
 
-        {/* "Mein Team" Bar - only on schedule tab */}
+        {/* Der Weg zum Spielplan: Mein Team, Filterzeile, eingeklappte Teilnehmer (@ZM-196) */}
         {tab === 'schedule' && (
-          <MyTeamBar
-            myTeamLabel={myTeamLabel}
-            myTeamId={myTeamId}
-            showOnlyMyTeam={showOnlyMyTeam}
-            onShowOnlyMyTeamChange={handleShowOnlyMyTeamChange}
-            onOpenTeamSelector={() => setShowTeamSelector(true)}
-          />
-        )}
-
-        {/* Filter Bar - only on schedule tab */}
-        {tab === 'schedule' && (
-          <PublicFilterBar
-            groups={groups}
-            selectedGroup={selectedGroup}
-            selectedPhase={selectedPhase}
-            selectedStatus={selectedStatus}
+          <PublicWegBlock
+            tournament={tournament}
+            view={view}
+            standings={currentStandings}
+            filters={filters}
+            showTeamSelector={showTeamSelector}
+            onShowTeamSelector={setShowTeamSelector}
+            onSelectTeam={selectMyTeam}
             onGroupChange={handleGroupChange}
             onPhaseChange={handlePhaseChange}
             onStatusChange={handleStatusChange}
-          />
-        )}
-
-        {/* Team Selector Modal */}
-        {showTeamSelector && (
-          <TeamSelectorDialog
-            teams={tournament.teams}
-            myTeamId={myTeamId}
-            onSelectTeam={selectMyTeam}
-            onClose={() => setShowTeamSelector(false)}
+            onResetHidden={handleResetHiddenFilters}
+            onOnlyMineChange={handleShowOnlyMyTeamChange}
           />
         )}
 
@@ -195,7 +173,7 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
         {tab === 'schedule' && (
           <>
             {/* Schedule Display */}
-            <Card>
+            <Card style={{ padding: cssVars.spacing.sm }}>
               <ScheduleDisplay
                 schedule={filteredSchedule}
                 view={view}
@@ -206,6 +184,8 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
                 currentMatches={currentMatches}
                 tournamentTeams={tournament.teams}
                 showTournamentHeader={false}
+                showParticipants={false}
+                compact
                 editable={false}
               />
             </Card>

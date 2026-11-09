@@ -68,7 +68,8 @@ test.describe('@RE-001 Einstieg frei, Impressum und Datenschutz überall', () =>
   for (const g of GERAETE) {
     test(`@RE-001 Zuschauer-Seite beim ersten Besuch, ${g.name}: kein Dialog, Spielplan sofort sichtbar, Fuß mit beiden Links`, async ({ page }) => {
       await oeffne(page, g, '/#/live/MESS26');
-      const erste = page.getByRole('heading', { name: 'Teilnehmer' });
+      // Der erste Block unter dem Kopf ist seit @ZM-196 die eingeklappte Zeile „Teilnehmer (8)“
+      const erste = page.getByTestId('public-participants-toggle');
       await expect(erste).toBeVisible({ timeout: 25000 });
       await expect(page.locator('[role="dialog"], [aria-modal="true"]')).toHaveCount(0);
       expect(await page.evaluate(() => window.localStorage.getItem('app:consent'))).toBeNull();

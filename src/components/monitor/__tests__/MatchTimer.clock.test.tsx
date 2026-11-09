@@ -17,10 +17,10 @@ import de from '../../../i18n/locales/de/monitor.json';
 const nowIso = () => new Date().toISOString();
 
 describe('@ZM-139 MatchTimer zeigt Restzeit', () => {
-  it('Spiel 11: 6-Minuten-Abschnitt bei gespielten 4:10 zeigt 01:50 und nicht 04:10', () => {
+  it('@ZM-199 Spiel 11: 6-Minuten-Abschnitt bei gespielten 4:10 zeigt 1:50 und nicht 4:10', () => {
     render(<MatchTimer elapsedSeconds={250} durationSeconds={360} status="PAUSED" timerElapsedSeconds={250} />);
-    expect(screen.getByTestId('monitor-clock')).toHaveTextContent('01:50');
-    expect(screen.queryByText('04:10')).toBeNull();
+    expect(screen.getByTestId('monitor-clock')).toHaveTextContent('1:50');
+    expect(screen.queryByText('4:10')).toBeNull();
   });
 });
 
@@ -57,9 +57,9 @@ describe('@ZM-137 Uhr-Hervorhebung und Hinweise', () => {
     expect(screen.getByTestId('monitor-clock')).toHaveAttribute('data-phase', 'normal');
   });
 
-  it('nach Ablauf ohne Abpfiff (RUNNING): 00:00 und „Zeit abgelaufen“, nie Nachspielzeit', () => {
+  it('nach Ablauf ohne Abpfiff (RUNNING): 0:00 und „Zeit abgelaufen“, nie Nachspielzeit', () => {
     render(<MatchTimer elapsedSeconds={400} durationSeconds={360} status="RUNNING" timerStartTime={nowIso()} timerElapsedSeconds={400} />);
-    expect(screen.getByTestId('monitor-clock')).toHaveTextContent('00:00');
+    expect(screen.getByTestId('monitor-clock')).toHaveTextContent('0:00');
     expect(screen.getByText(/liveMatch\.clock\.ended/)).toBeInTheDocument();
     expect(screen.queryByText('Nachspielzeit')).toBeNull();
   });
@@ -77,7 +77,7 @@ describe('@ZM-137 Uhr-Hervorhebung und Hinweise', () => {
 
   it('keine Eskalation: kein Sekundenbruchteil in der Schlussphase (Gegenbeispiel zu 10-s-Countdown)', () => {
     render(<MatchTimer elapsedSeconds={355} durationSeconds={360} status="PAUSED" timerElapsedSeconds={355} />);
-    expect(screen.getByTestId('monitor-clock')).toHaveTextContent(/^00:05$/);
+    expect(screen.getByTestId('monitor-clock')).toHaveTextContent(/^0:05$/);
   });
 });
 
@@ -94,7 +94,7 @@ describe('Monitor-Uhr: Texte und weitere Zustände', () => {
     expect(screen.getByTestId('clock-label')).toHaveTextContent('liveMatch.clock.stopped');
   });
 
-  it('Start: 00:00 Restzeit bei gespielten 0 Sekunden wird als volle Abschnittslänge gezeigt', () => {
+  it('Start: 0:00 Restzeit bei gespielten 0 Sekunden wird als volle Abschnittslänge gezeigt', () => {
     render(<MatchTimer elapsedSeconds={0} durationSeconds={600} status="NOT_STARTED" />);
     expect(screen.getByTestId('monitor-clock')).toHaveTextContent('10:00');
   });
@@ -122,7 +122,7 @@ describe('H1 Hinweis lesbar, M2 neutrale Hervorhebung, M3 abgelaufen nicht Rot',
 
   it('M3: abgelaufene Uhr ist nicht in der Überzeit-Rotfarbe', () => {
     render(<MatchTimer elapsedSeconds={400} durationSeconds={360} status="RUNNING" timerStartTime={nowIso()} timerElapsedSeconds={400} />);
-    const span = screen.getByText('00:00');
+    const span = screen.getByText('0:00');
     expect(span).not.toHaveStyle({ color: monitorThemes.dark.timerOvertime });
   });
 });
@@ -133,11 +133,11 @@ describe('H5 Uhr tickt und berücksichtigt timerStartTime', () => {
     try {
       vi.setSystemTime(new Date('2026-10-15T10:00:00Z'));
       render(<MatchTimer elapsedSeconds={0} durationSeconds={360} status="RUNNING" timerStartTime={new Date().toISOString()} timerElapsedSeconds={0} />);
-      expect(screen.getByTestId('monitor-clock')).toHaveTextContent('06:00');
+      expect(screen.getByTestId('monitor-clock')).toHaveTextContent('6:00');
       act(() => { vi.advanceTimersByTime(30_000); });
-      expect(screen.getByTestId('monitor-clock')).toHaveTextContent('05:30');
+      expect(screen.getByTestId('monitor-clock')).toHaveTextContent('5:30');
       act(() => { vi.advanceTimersByTime(5_000); });
-      expect(screen.getByTestId('monitor-clock')).toHaveTextContent('05:25');
+      expect(screen.getByTestId('monitor-clock')).toHaveTextContent('5:25');
     } finally {
       vi.useRealTimers();
     }
@@ -148,7 +148,7 @@ describe('H5 Uhr tickt und berücksichtigt timerStartTime', () => {
     try {
       vi.setSystemTime(new Date('2026-10-15T10:00:00Z'));
       render(<MatchTimer elapsedSeconds={0} durationSeconds={360} status="RUNNING" timerStartTime={new Date(Date.now() - 90_000).toISOString()} timerElapsedSeconds={0} />);
-      expect(screen.getByTestId('monitor-clock')).toHaveTextContent('04:30');
+      expect(screen.getByTestId('monitor-clock')).toHaveTextContent('4:30');
     } finally {
       vi.useRealTimers();
     }
@@ -160,7 +160,7 @@ describe('H5 Uhr tickt und berücksichtigt timerStartTime', () => {
       vi.setSystemTime(new Date('2026-10-15T10:00:00Z'));
       render(<MatchTimer elapsedSeconds={60} durationSeconds={360} status="PAUSED" timerElapsedSeconds={60} />);
       act(() => { vi.advanceTimersByTime(20_000); });
-      expect(screen.getByTestId('monitor-clock')).toHaveTextContent('05:00');
+      expect(screen.getByTestId('monitor-clock')).toHaveTextContent('5:00');
     } finally {
       vi.useRealTimers();
     }

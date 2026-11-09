@@ -27,6 +27,8 @@ export function StandingsTable({ rows, themeColors, tie }: StandingsTableProps) 
     alignItems: 'center',
   } as const;
   const number = { textAlign: 'center' } as const;
+  // @ZM-198: Vor dem ersten gespielten Spiel der Tabelle steht bei allen Teams „–“ statt „1“ (die Reihenfolge bleibt die der Teilnehmerliste)
+  const ohnePlatz = rows.every((row) => row.played === 0);
   return (
     <div style={{
       width: '100%',
@@ -70,7 +72,7 @@ export function StandingsTable({ rows, themeColors, tie }: StandingsTableProps) 
               color: themeColors.text,
             }}
           >
-            <div style={{ fontWeight: cssVars.fontWeights.semibold }}>{row.place ?? idx + 1}</div>
+            <div style={{ fontWeight: cssVars.fontWeights.semibold }}>{ohnePlatz ? '–' : row.place ?? idx + 1}</div>
             <div data-teamname style={{ fontSize: displayList.fontSizes.team, minWidth: 0, overflowWrap: 'break-word' }}>
               {monitorTeamName(row.team.name)}
               {mark !== undefined && <MonitorTieMark mark={mark} themeColors={themeColors} />}

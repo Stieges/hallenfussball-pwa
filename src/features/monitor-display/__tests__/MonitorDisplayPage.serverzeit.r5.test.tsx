@@ -47,14 +47,14 @@ const turnier = attachMonitor(
 afterEach(() => { vi.useRealTimers(); });
 
 describe('@ME-031 @ZM-176 Monitor-Seite: Restzeit in Serverzeit', () => {
-  it('die Uhr des Hallen-Rechners geht 7 Minuten nach: die Live-Folie zeigt 06:00, nicht 10:00', async () => {
+  it('die Uhr des Hallen-Rechners geht 7 Minuten nach: die Live-Folie zeigt 6:00, nicht 10:00', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(SERVER - 7 * 60_000);
     getForDisplay.mockResolvedValue({ kind: 'full', version: 1, serverNowMs: SERVER, tournament: turnier });
     render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await waitFor(() => expect(screen.getByTestId('monitor-clock')).toBeInTheDocument());
     // Laufzeit der Antwort im Test ≈ 0 ms: Abweichung höchstens 1 s
-    expect(['06:00', '05:59']).toContain(screen.getByTestId('monitor-clock').textContent);
+    expect(['6:00', '5:59']).toContain(screen.getByTestId('monitor-clock').textContent);
     expect(screen.getByTestId('clock-label')).toHaveTextContent('Restzeit');
   });
 });

@@ -259,6 +259,8 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
         localRepo: LocalStorageRepository = new LocalStorageRepository(),
         timers?: QueueTimers,
         accountId?: string,
+        /** @FU-122: `false` = erst `start()` startet die Queue (siehe `MutationQueueConfig.autoStart`). */
+        autoStart = true,
     ) {
         const storageKey = accountScopedKey(LEGACY_QUEUE_KEY, accountId);
         const failedStorageKey = accountScopedKey(LEGACY_FAILED_KEY, accountId);
@@ -277,6 +279,7 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
             storageKey,
             failedStorageKey,
             sentryFeature: 'sync',
+            autoStart,
             ...(timers ? { timers } : {}),
             // Unknown-type items are rejected at load exactly like schema-invalid
             // ones (see GenericMutationQueue.isKnownType doc) — restores 1:1

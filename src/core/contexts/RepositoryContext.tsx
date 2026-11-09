@@ -85,7 +85,9 @@ export const RepositoryProvider: React.FC<{ children: React.ReactNode; user: Rep
         if (canUseSupabase) {
             try {
                 const supabaseTournamentRepo = new SupabaseRepository();
-                const offlineTournamentRepo = new OfflineRepository(localTournamentRepo, supabaseTournamentRepo, userId);
+                // @FU-122 (C-DOPPELTE-SENDUNG-NACH-NEULADEN): React ruft diese Fabrik mehrfach auf und verwirft Ergebnisse
+                // (StrictMode). Die Warteschlange startet deshalb erst im Effekt unten, nur für das übernommene Repo.
+                const offlineTournamentRepo = new OfflineRepository(localTournamentRepo, supabaseTournamentRepo, userId, { autoStartQueue: false });
 
                 // Create Supabase live match repo
                 const supabaseLiveMatchRepo = new SupabaseLiveMatchRepository();
@@ -134,6 +136,9 @@ export const RepositoryProvider: React.FC<{ children: React.ReactNode; user: Rep
             previous.dispose();
         }
         activeQueueRef.current = queue;
+        // @FU-122: nur das übernommene Repo startet seine Queue (verworfene Fabrik-Ergebnisse senden nie); start() wirkt je
+        // Instanz einmal, ein zweiter Effekt-Lauf im StrictMode ändert nichts.
+        queue?.start();
         // Review A-11 A4 (@FU-098): Rechte-Frage erkennt „angelegt, noch nicht in der Cloud“ über das Konto-Repo.
         const repo = value.tournamentRepository;
         setActiveTournamentSyncSource(repo instanceof OfflineRepository

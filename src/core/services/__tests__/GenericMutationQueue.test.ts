@@ -445,3 +445,69 @@ describe('GenericMutationQueue dispose/online (A-06d)', () => {
     expect(execute2).toHaveBeenCalled();
   });
 });
+
+// =============================================================================
+// @FU-122 (C-DOPPELTE-SENDUNG-NACH-NEULADEN): Start erst auf Zuruf
+// =============================================================================
+
+describe('@FU-122 autoStart: false – die Queue sendet erst nach start()', () => {
+  function queueWithStoredItem(execute: ReturnType<typeof vi.fn>): GenericMutationQueue<TestType> {
+    mockStorage.set('start_queue_v1', JSON.stringify([{ id: 'w1', type: 'SAVE_THING', payload: { id: 'a' }, timestamp: 1, retryCount: 0 }]));
+    const queue = new GenericMutationQueue<TestType>({
+      storageKey: 'start_queue_v1',
+      failedStorageKey: 'start_queue_failed_v1',
+      execute: execute as unknown as (item: GenericMutationItem<TestType>) => Promise<void>,
+      coalesceKey: () => null,
+      sentryFeature: 'sync',
+      autoStart: false,
+    });
+    created.push(queue);
+    return queue;
+  }
+
+  async function settle(): Promise<void> {
+    for (let i = 0; i < 10; i++) { await Promise.resolve(); }
+  }
+
+  it('@FU-122 ohne start(): kein Versand, auch nicht beim online-Ereignis', async () => {
+    const execute = vi.fn().mockResolvedValue(undefined);
+    queueWithStoredItem(execute);
+    window.dispatchEvent(new Event('online'));
+    await settle();
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('@FU-122 start() zweimal (StrictMode-Effekt): der gespeicherte Eintrag geht genau einmal raus', async () => {
+    const execute = vi.fn().mockResolvedValue(undefined);
+    const queue = queueWithStoredItem(execute);
+    queue.start();
+    queue.start();
+    await settle();
+    window.dispatchEvent(new Event('online'));
+    await settle();
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(queue.getPendingCount()).toBe(0);
+  });
+
+  it('@FU-122 nach dispose() meldet start() keinen online-Zuhörer an', () => {
+    const queue = queueWithStoredItem(vi.fn().mockResolvedValue(undefined));
+    const addSpy = vi.spyOn(window, 'addEventListener');
+    try {
+      queue.dispose();
+      queue.start();
+      expect(addSpy.mock.calls.filter(([type]) => type === 'online')).toHaveLength(0);
+    } finally {
+      addSpy.mockRestore();
+    }
+  });
+
+  it('@FU-122 Gegenbeispiel: nach dispose() startet start() nichts mehr', async () => {
+    const execute = vi.fn().mockResolvedValue(undefined);
+    const queue = queueWithStoredItem(execute);
+    queue.dispose();
+    queue.start();
+    window.dispatchEvent(new Event('online'));
+    await settle();
+    expect(execute).not.toHaveBeenCalled();
+  });
+});
