@@ -64,6 +64,9 @@ describe('@ZM-196 @ZM-197 PublicFilterRow', () => {
     const { rerender } = render(<PublicFilterRow {...props} />);
     expect(screen.getByTestId('public-group-chips')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Alle' })).toHaveAttribute('aria-pressed', 'true');
+    // Gegenbeispiel: eine Gruppe (oder keine) – keine Gruppen-Auswahl
+    rerender(<PublicFilterRow {...props} groups={['A']} />);
+    expect(screen.queryByTestId('public-group-chips')).toBeNull();
     rerender(<PublicFilterRow {...props} groups={[]} />);
     expect(screen.queryByTestId('public-group-chips')).toBeNull();
     expect(screen.getByTestId('public-filter-button').textContent).toBe('Filter');

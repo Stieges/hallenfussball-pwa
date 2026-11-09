@@ -22,7 +22,7 @@ vi.mock('../../features/public-view/defaultPublicSource', async () => {
 
 import { LiveViewScreen } from '../LiveViewScreen';
 import { RepositoryProvider } from '../../core/contexts/RepositoryContext';
-import { fPAUSE, fZEIT, NORD } from '../../core/view/__fixtures__/hallencupNord';
+import { fPAUSE, fZEIT, GAME, NORD } from '../../core/view/__fixtures__/hallencupNord';
 
 vi.unmock('i18next'); vi.unmock('react-i18next');
 await (await import('../../test/realDeI18n')).initRealDeI18n();
@@ -113,5 +113,44 @@ describe('@ZM-197 Ein Filter hinter der Taste „Filter“ bleibt sichtbar, sola
     fireEvent.click(screen.getByRole('button', { name: 'Fertig' }));
     expect(screen.getByTestId('public-filter-button').textContent).toBe('Filter (1)');
     expect(within(screen.getByTestId('public-filter-note')).getByText('Live')).toBeInTheDocument();
+  });
+});
+
+// @ZM-175 – Zeilen, die der Block „Mein Team“ heute (noch) nicht erfüllt. Rot ohne Fix (it.fails), Befund C-ZUSCHAUER-WEG-ZUM-SPIELPLAN:
+// „Ihr pfeift“ und die Weste brauchen Daten, die die öffentliche Ansicht noch nicht liefert (Schiri-Zuordnung, Leibchen im Block), die
+// Markierungen sind nicht Teil des Pakets „Schneller zum Spielplan“.
+describe('@ZM-175 Mein Team steht oben als Block, Spielplan und Tabelle bleiben vollständig – noch nicht erfüllte Zeilen', () => {
+  const mitTeam = (): void => {
+    vi.mocked(localStorage.getItem).mockImplementation((key: string) => (key === `live:${SHARE}:myTeam` ? NORD : null));
+  };
+
+  it.fails('@ZM-175 C-ZUSCHAUER-WEG-ZUM-SPIELPLAN: der Block nennt „Ihr pfeift: Spiel 9 um 14:40“, wenn das Team Spiel 9 pfeift (Teams pfeifen selbst)', async () => {
+    mitTeam();
+    const cup = await fZEIT();
+    const spiel9 = cup.tournament.matches[GAME[9]];
+    const matches = cup.tournament.matches.map((m) => (m.id === spiel9.id ? { ...m, referee: 1 } : m));
+    await zeige({ ...cup.tournament, matches, refereeConfig: { mode: 'teams' } });
+    expect((await screen.findByTestId('my-team-bar')).textContent).toMatch(/Ihr pfeift: Spiel 9 um 14:40/);
+  });
+
+  it.fails('@ZM-175 @ZM-201 C-ZUSCHAUER-WEG-ZUM-SPIELPLAN: zeigt der Block das nächste Spiel eines Teams mit bestätigten Leibchen, steht die Weste dort wie in der Karte „Als Nächstes“', async () => {
+    mitTeam();
+    await zeige((await fZEIT()).tournament);
+    const block = await screen.findByTestId('my-team-bar');
+    expect(block.querySelector('[data-testid$="-bib"], [data-fill="vest"]')).not.toBeNull();
+  });
+
+  it.fails('@ZM-175 C-ZUSCHAUER-WEG-ZUM-SPIELPLAN: im Spielplan sind die Spiele des gewählten Teams markiert', async () => {
+    mitTeam();
+    const c = await zeige((await fZEIT()).tournament);
+    await screen.findByTestId('my-team-name');
+    expect(c.querySelectorAll('.schedule-display [data-my-team="true"]').length).toBeGreaterThan(0);
+  });
+
+  it.fails('@ZM-175 C-ZUSCHAUER-WEG-ZUM-SPIELPLAN: in der Tabelle ist die Zeile des gewählten Teams markiert', async () => {
+    mitTeam();
+    const c = await zeige((await fZEIT()).tournament, '?tab=standings');
+    await screen.findByTestId('my-team-name').catch(() => null);
+    expect(c.querySelectorAll('.standings-table [data-my-team="true"]').length).toBeGreaterThan(0);
   });
 });

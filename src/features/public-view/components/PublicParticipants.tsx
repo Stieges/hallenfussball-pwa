@@ -46,7 +46,7 @@ export function PublicParticipants({ teams }: PublicParticipantsProps): ReactEle
   const showTitles = groups.length > 1;
   return (
     <div style={boxStyle} data-testid="public-participants">
-      <button type="button" style={toggleStyle} aria-expanded={open} aria-controls="public-participants-list" onClick={() => setOpen(!open)} data-testid="public-participants-toggle">
+      <button type="button" style={toggleStyle} aria-expanded={open} aria-controls={open ? 'public-participants-list' : undefined} onClick={() => setOpen(!open)} data-testid="public-participants-toggle">
         <span>
           {t('participants.toggle', { n: teams.length })}
           <span style={srOnly}>, {open ? t('participants.expandedSr') : t('participants.collapsedSr')}</span>

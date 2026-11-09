@@ -6,6 +6,7 @@
 import type { CSSProperties, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
+import { ChipButton } from '../../../components/ui/atoms/ChipButton';
 import { BottomSheet } from '../../../components/ui/BottomSheet';
 import { DialogActions } from '../../../components/ui/molecules/DialogActions';
 import type { PhaseFilter, StatusFilter } from '../publicScheduleFilters';
@@ -24,27 +25,9 @@ export interface PublicFilterSheetProps {
 const groupStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm, marginBottom: cssVars.spacing.md };
 const headingStyle: CSSProperties = { margin: 0, fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textSecondary };
 const optionsStyle: CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: cssVars.spacing.sm };
-const optionStyle = (active: boolean): CSSProperties => ({
-  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: cssVars.spacing.xs,
-  minHeight: cssVars.touchTargets.minimum, padding: `0 ${cssVars.spacing.md}`,
-  borderRadius: cssVars.borderRadius.full,
-  border: `${active ? cssVars.borderWidth.medium : cssVars.borderWidth.thin} solid ${active ? cssVars.colors.primary : cssVars.colors.borderControl}`,
-  background: active ? cssVars.colors.primaryLight : cssVars.colors.background,
-  color: cssVars.colors.textPrimary,
-  fontSize: cssVars.fontSizes.md,
-  fontWeight: active ? cssVars.fontWeights.bold : cssVars.fontWeights.normal,
-  cursor: 'pointer',
-});
+/** Auswahlfelder im Blatt: Pille, gewählt getönt mit Häkchen und kräftigem Rand, mindestens 44 Bildpunkte (@OB-022). */
+const OPTION = { look: 'tint', radius: 'full', size: 'minimum', borderSelected: 'medium', idleWeight: 'normal' } as const;
 const liveDotStyle: CSSProperties = { width: cssVars.spacing.sm, height: cssVars.spacing.sm, borderRadius: cssVars.borderRadius.full, background: cssVars.colors.statusLive, flex: 'none' };
-
-/** Häkchen vor dem Wort der gewählten Option: die Wahl steht nie nur in der Farbe. */
-function Check(): ReactElement {
-  return (
-    <svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-      <path d="M5 12.5l4.5 4.5L19 7.5" />
-    </svg>
-  );
-}
 
 interface OptionGroupProps<V extends string> {
   title: string;
@@ -60,11 +43,10 @@ function OptionGroup<V extends string>({ title, name, options, selected, onSelec
       <h3 style={headingStyle}>{title}</h3>
       <div style={optionsStyle}>
         {options.map((o) => (
-          <button key={o.value} type="button" style={optionStyle(selected === o.value)} aria-pressed={selected === o.value} onClick={() => onSelect(o.value)} data-testid={`public-filter-opt-${name}-${o.value}`}>
-            {selected === o.value && <Check />}
+          <ChipButton key={o.value} {...OPTION} selected={selected === o.value} onClick={() => onSelect(o.value)} data-testid={`public-filter-opt-${name}-${o.value}`}>
             {o.live === true && <span style={liveDotStyle} aria-hidden="true" />}
             {o.label}
-          </button>
+          </ChipButton>
         ))}
       </div>
     </div>

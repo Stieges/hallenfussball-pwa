@@ -29,10 +29,7 @@
     "stale": "Last update {{time}} – no connection"
   },
   "myTeam": {
-    "label": "My team:",
-    "none": "Not selected",
     "onlyMine": "Only mine",
-    "change": "Change",
     "choose": "Choose team",
     "title": "My team",
     "next": "Up next",
@@ -49,11 +46,7 @@
     "none": "No team (show all)"
   },
   "filter": {
-    "group": "Group:",
-    "phase": "Phase:",
-    "status": "Status:",
     "all": "All",
-    "live": "🔴 Live",
     "button": "Filter",
     "buttonCount": "Filter ({{n}})",
     "buttonAria": "Filter, {{n}} selected",

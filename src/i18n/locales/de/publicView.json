@@ -29,10 +29,7 @@
     "stale": "Stand von {{time}} – keine Verbindung"
   },
   "myTeam": {
-    "label": "Mein Team:",
-    "none": "Nicht ausgewählt",
     "onlyMine": "Nur meine",
-    "change": "Ändern",
     "choose": "Team wählen",
     "title": "Mein Team",
     "next": "Als Nächstes",
@@ -49,11 +46,7 @@
     "none": "Kein Team (alle anzeigen)"
   },
   "filter": {
-    "group": "Gruppe:",
-    "phase": "Phase:",
-    "status": "Status:",
     "all": "Alle",
-    "live": "🔴 Live",
     "button": "Filter",
     "buttonCount": "Filter ({{n}})",
     "buttonAria": "Filter, {{n}} gewählt",

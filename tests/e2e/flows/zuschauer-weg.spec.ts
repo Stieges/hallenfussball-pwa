@@ -3,12 +3,14 @@
  *
  * Saaten: `hallencup-messlauf` (Code MESS26: 2 Gruppen + Finalrunde, 8 Teams, Heim des Finales ist „Sportgemeinschaft Fußballfreunde
  * Nordheim-Süd 1921“) und `nikolaus-gleichstand` (Code NIKO26: Jeder gegen jeden, 6 Teams, keine Gruppen, keine Finalrunde).
- * „Nach einmal Wischen“: die Seite um die sichtbare Höhe ohne die feste Reiterleiste (Bildschirmhöhe − Leiste) nach oben schieben;
- * danach liegt die erste Spielzeile ganz im Bild, nicht unter der Leiste.
+ * @ZM-196 gilt mit „Gegeben …, Spiel 7 und Spiel 8 laufen“: die Abnahmefälle bauen die Saat im Speicher so um (`mitZweiLaufenden`, bei
+ * Nikolaus mit zweitem Feld). „Nach einmal Wischen“ wird wörtlich gemessen: `scrollTo(0, Bildschirmhöhe − Reiterleiste)`, danach liegt
+ * die erste Spielzeile ganz im Bild (oben ≥ 0, unten ≤ Oberkante der Reiterleiste).
  */
 import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
 import { neuLaden } from '../helpers/neuLaden';
+import { mitZweiLaufenden } from '../helpers/zweiLaufende';
 // @ts-expect-error – .mjs ohne Typen; derselbe Lader wie bei `npm run visual:metrics --saat`
 import { installiereSaat, leseSaat } from '../../../scripts/visual-metrics/saat/lader.mjs';
 
@@ -16,12 +18,12 @@ const HANDY = { width: 360, height: 640 };
 const LANGES_TEAM = '00000001-0000-4000-8000-000000000001';
 const LANGER_NAME = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921';
 
-interface Optionen { saat?: string; code?: string; query?: string; team?: string }
+interface Optionen { saat?: string; saatDaten?: unknown; code?: string; query?: string; team?: string }
 
 async function oeffne(page: Page, o: Optionen = {}): Promise<void> {
   const code = o.code ?? 'MESS26';
   await page.setViewportSize(HANDY);
-  await installiereSaat(page.context(), leseSaat(o.saat ?? 'hallencup-messlauf'));
+  await installiereSaat(page.context(), o.saatDaten ?? leseSaat(o.saat ?? 'hallencup-messlauf'));
   if (o.team !== undefined) {
     await page.context().addInitScript((w: { key: string; id: string }) => { localStorage.setItem(w.key, w.id); }, { key: `live:${code}:myTeam`, id: o.team });
   }
@@ -34,29 +36,35 @@ const ersteKarte = (page: Page) => page.locator('.schedule-display [data-match-c
 
 const tid = (page: Page, id: string) => page.locator(`[data-testid="${id}"]`);
 
-/**
- * Erste Spielzeile (Karte im Spielplan) nach einmal Wischen: Die Seite wird höchstens um die sichtbare Höhe (Bildschirmhöhe ohne die
- * feste Reiterleiste) nach oben geschoben, und zwar so weit, dass die Zeile mit etwas Luft oben im Bild steht. Liegt sie schon höher
- * (kurzer Kopf, Nikolaus), genügt ein kürzeres Wischen. `wisch` ist der geschobene Weg; `oben`/`unten` die Lage der Zeile danach.
- */
-async function ersteZeileNachWischen(page: Page): Promise<{ oben: number; unten: number; leiste: number; hoehe: number; wisch: number; sichtbar: number }> {
-  const vorher = await ersteKarte(page).boundingBox();
-  if (vorher === null) { throw new Error('keine sichtbare Spielkarte im Spielplan'); }
-  const mass = await page.evaluate((zeilenOben) => {
+/** Abnahme-Saaten: „Spiel 7 und Spiel 8 laufen“ (Hallencup Nord; Nikolaus mit zweitem Feld). */
+const HALLENCUP_LAUFEN = { saatDaten: mitZweiLaufenden('hallencup-messlauf', 'hallencup-messlauf') };
+const NIKOLAUS_LAUFEN = { saatDaten: mitZweiLaufenden('nikolaus-gleichstand', 'nikolaus-gleichstand'), code: 'NIKO26' };
+
+interface Wischmass { oben: number; unten: number; leiste: number; hoehe: number; wisch: number; sichtbar: number }
+
+/** @ZM-196 wörtlich: einmal um die sichtbare Höhe (Bildschirmhöhe ohne die feste Reiterleiste) wischen, dann die erste sichtbare Spielzeile messen. */
+async function ersteZeileNachWischen(page: Page): Promise<Wischmass> {
+  const mass = await page.evaluate(() => {
     const nav = document.querySelector('nav')!.getBoundingClientRect();
     const sichtbar = window.innerHeight - nav.height;
-    const ziel = Math.max(0, Math.min(sichtbar, zeilenOben + window.scrollY - 8));
-    window.scrollTo(0, ziel);
+    window.scrollTo(0, sichtbar);
     return { sichtbar, leiste: nav.top, wisch: window.scrollY };
-  }, vorher.y);
+  });
   const box = await ersteKarte(page).boundingBox();
   if (box === null) { throw new Error('keine sichtbare Spielkarte nach dem Wischen'); }
   return { oben: box.y, unten: box.y + box.height, leiste: mass.leiste, hoehe: box.height, wisch: mass.wisch, sichtbar: mass.sichtbar };
 }
 
+function erwarteGanzImBild(m: Wischmass): void {
+  expect(m.hoehe, 'Messmittel: sichtbare Karte gefunden').toBeGreaterThan(0);
+  expect(m.wisch, 'genau um die sichtbare Höhe gewischt').toBe(m.sichtbar);
+  expect(m.oben).toBeGreaterThanOrEqual(0);
+  expect(m.unten).toBeLessThanOrEqual(m.leiste);
+}
+
 test.describe('@ZM-196 Hallencup Nord (2 Gruppen + Finalrunde): kein Team gewählt', () => {
   test('@ZM-196 Reihenfolge: Kopf, Mein Team (eine Zeile), Filterzeile, Teilnehmer (8), dann der Spielplan; kein zweiter Kopf, kein Code im Seitenkopf', async ({ page }) => {
-    await oeffne(page);
+    await oeffne(page, HALLENCUP_LAUFEN);
     const lage = await page.evaluate(() => {
       const q = (s: string) => document.querySelector(s)!;
       const folge = (a: Element, b: Element) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
@@ -82,13 +90,10 @@ test.describe('@ZM-196 Hallencup Nord (2 Gruppen + Finalrunde): kein Team gewäh
     await expect(tid(page, 'public-filter-button')).toHaveText('Filter');
   });
 
-  test('@ZM-196 nach einmal Wischen um die sichtbare Höhe liegt die erste Spielzeile ganz im Bild, nicht unter der Reiterleiste', async ({ page }) => {
-    await oeffne(page);
-    const m = await ersteZeileNachWischen(page);
-    expect(m.hoehe, 'Messmittel: sichtbare Karte gefunden').toBeGreaterThan(0);
-    expect(m.wisch, 'ein Wischen: höchstens die sichtbare Höhe').toBeLessThanOrEqual(m.sichtbar);
-    expect(m.oben).toBeGreaterThanOrEqual(0);
-    expect(m.unten).toBeLessThanOrEqual(m.leiste);
+  test('@ZM-196 Spiel 7 und 8 laufen: nach einmal Wischen um die sichtbare Höhe liegt die erste Spielzeile ganz im Bild, nicht unter der Reiterleiste', async ({ page }) => {
+    await oeffne(page, HALLENCUP_LAUFEN);
+    await expect(tid(page, 'public-current').locator('[data-testid^="public-current-card-"]')).toHaveCount(2);
+    erwarteGanzImBild(await ersteZeileNachWischen(page));
   });
 
   test('@OB-022 @ZM-196 Tippziele: „Team wählen“, „Filter“, Gruppen-Chips und die Teilnehmer-Zeile mindestens 44 Bildpunkte', async ({ page }) => {
@@ -108,6 +113,36 @@ test.describe('@ZM-196 Hallencup Nord (2 Gruppen + Finalrunde): kein Team gewäh
     await tid(page, 'public-participants-toggle').click();
     const breite = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(breite).toBeLessThanOrEqual(HANDY.width);
+  });
+});
+
+test.describe('@ZM-196 Aber-Zeile: passen nicht alle Gruppen in die Zeile, wischt die Gruppen-Auswahl, die Taste „Filter“ bleibt sichtbar', () => {
+  /** Hallencup mit vier Gruppen (A bis D, je zwei Teams): die Chips „Alle · A · B · C · D“ sind breiter als die Zeile. */
+  function vierGruppen(): unknown {
+    const saat = JSON.parse(JSON.stringify(leseSaat('hallencup-messlauf'))) as { datenbanken: Array<{ eintraege: { tournaments?: Array<{ teams: Array<{ group?: string }> }> } }> };
+    const teams = saat.datenbanken[0].eintraege.tournaments?.[0]?.teams ?? [];
+    teams.forEach((t, i) => { t.group = ['A', 'B', 'C', 'D'][Math.floor(i / 2)]; });
+    return saat;
+  }
+
+  test('@ZM-196 vier Gruppen bei 360 px: die Chip-Reihe ist breiter als ihr Ausschnitt und wischt, „Filter“ liegt ganz im Bild, der letzte Chip ist erreichbar', async ({ page }) => {
+    await oeffne(page, { saatDaten: vierGruppen() });
+    const m = await page.evaluate(() => {
+      const reihe = document.querySelector<HTMLElement>('[data-testid="public-group-chips"]')!;
+      const taste = document.querySelector('[data-testid="public-filter-button"]')!.getBoundingClientRect();
+      const davor = { breit: reihe.scrollWidth, sichtbar: reihe.clientWidth };
+      reihe.scrollLeft = reihe.scrollWidth;
+      const letzter = document.querySelector('[data-testid="public-group-chip-D"]')!.getBoundingClientRect();
+      const ausschnitt = reihe.getBoundingClientRect();
+      return { davor, tasteLinks: taste.left, tasteRechts: taste.right, tasteHoehe: taste.height, letzterRechts: letzter.right, ausschnittRechts: ausschnitt.right, seite: document.documentElement.scrollWidth };
+    });
+    expect(m.davor.breit).toBeGreaterThan(m.davor.sichtbar);
+    expect(m.tasteLinks).toBeGreaterThanOrEqual(0);
+    expect(m.tasteRechts).toBeLessThanOrEqual(HANDY.width);
+    expect(m.tasteHoehe).toBeGreaterThanOrEqual(44);
+    expect(m.letzterRechts, 'letzter Chip nach dem Wischen im Ausschnitt').toBeLessThanOrEqual(m.ausschnittRechts + 1);
+    expect(m.seite, 'kein waagrechtes Scrollen der Seite').toBeLessThanOrEqual(HANDY.width);
+    await expect(tid(page, 'public-filter-button')).toBeVisible();
   });
 });
 
@@ -131,13 +166,10 @@ test.describe('@ZM-196 Hallencup Nord: Mama Petra hat das Team mit dem langen Na
     await expect(tid(page, 'my-team-table')).toContainText(/Platz \d in Gruppe [A-Z]+ · \d+ Punkte/);
   });
 
-  test('@ZM-196 mit Block: nach einmal Wischen liegt die erste Spielzeile ganz im Bild', async ({ page }) => {
-    await oeffne(page, { team: LANGES_TEAM });
-    const m = await ersteZeileNachWischen(page);
-    expect(m.hoehe, 'Messmittel: sichtbare Karte gefunden').toBeGreaterThan(0);
-    expect(m.wisch, 'ein Wischen: höchstens die sichtbare Höhe').toBeLessThanOrEqual(m.sichtbar);
-    expect(m.oben).toBeGreaterThanOrEqual(0);
-    expect(m.unten).toBeLessThanOrEqual(m.leiste);
+  test('@ZM-196 Spiel 7 und 8 laufen, mit Block: nach einmal Wischen liegt die erste Spielzeile ganz im Bild', async ({ page }) => {
+    await oeffne(page, { ...HALLENCUP_LAUFEN, team: LANGES_TEAM });
+    await expect(tid(page, 'my-team-name')).toHaveText(LANGER_NAME);
+    erwarteGanzImBild(await ersteZeileNachWischen(page));
   });
 });
 
@@ -155,13 +187,30 @@ test.describe('@ZM-196 Nikolaus-Turnier (Jeder gegen jeden, 6 Teams)', () => {
     await expect(tid(page, 'public-filter-group-phase')).toHaveCount(0);
   });
 
-  test('@ZM-196 nach einmal Wischen um die sichtbare Höhe (ohne Reiterleiste) liegt die erste Spielzeile ganz im Bild', async ({ page }) => {
+  test('@ZM-196 Spiel 7 und 8 laufen (zweites Feld): nach einmal Wischen um die sichtbare Höhe liegt die erste Spielzeile ganz im Bild', async ({ page }) => {
+    await oeffne(page, NIKOLAUS_LAUFEN);
+    await expect(tid(page, 'public-current').locator('[data-testid^="public-current-card-"]')).toHaveCount(2);
+    erwarteGanzImBild(await ersteZeileNachWischen(page));
+  });
+
+  // Zusatzfall, KEIN Abnahmefall von @ZM-196: Nikolaus am Ende (nichts läuft, Kopf „Zuletzt beendet“) – der Kopf ist kürzer, die erste Zeile
+  // liegt höher. Wörtlich gewischt verschwindet sie ein Stück über dem oberen Rand; geprüft wird nur, dass sie mit höchstens einem Wischen
+  // um die sichtbare Höhe ganz im Bild stehen kann.
+  test('Zusatzfall Nikolaus ohne laufendes Spiel (Kopf „Zuletzt beendet“): die erste Spielzeile ist mit einem Wischen höchstens um die sichtbare Höhe ganz im Bild erreichbar', async ({ page }) => {
     await oeffne(page, NIKO);
-    const m = await ersteZeileNachWischen(page);
-    expect(m.hoehe, 'Messmittel: sichtbare Karte gefunden').toBeGreaterThan(0);
-    expect(m.wisch, 'ein Wischen: höchstens die sichtbare Höhe').toBeLessThanOrEqual(m.sichtbar);
-    expect(m.oben).toBeGreaterThanOrEqual(0);
-    expect(m.unten).toBeLessThanOrEqual(m.leiste);
+    const vorher = await ersteKarte(page).boundingBox();
+    if (vorher === null) { throw new Error('keine sichtbare Spielkarte'); }
+    const m = await page.evaluate((zeilenOben) => {
+      const nav = document.querySelector('nav')!.getBoundingClientRect();
+      const sichtbar = window.innerHeight - nav.height;
+      window.scrollTo(0, Math.max(0, Math.min(sichtbar, zeilenOben + window.scrollY - 8)));
+      return { sichtbar, leiste: nav.top, wisch: window.scrollY };
+    }, vorher.y);
+    const box = await ersteKarte(page).boundingBox();
+    expect(box).not.toBeNull();
+    expect(m.wisch).toBeLessThanOrEqual(m.sichtbar);
+    expect(box?.y ?? -1).toBeGreaterThanOrEqual(0);
+    expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(m.leiste);
   });
 });
 

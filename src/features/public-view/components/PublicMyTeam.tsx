@@ -7,6 +7,7 @@
 import type { CSSProperties, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
+import { ChipButton } from '../../../components/ui/atoms/ChipButton';
 import { Button } from '../../../components/ui/Button';
 import type { MyTeamFacts } from '../publicMyTeamFacts';
 
@@ -41,15 +42,6 @@ const nameStyle: CSSProperties = { margin: 0, fontSize: cssVars.fontSizes.lg, fo
 const listStyle: CSSProperties = { margin: 0, display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr)', columnGap: cssVars.spacing.md, rowGap: cssVars.spacing.xs, paddingTop: cssVars.spacing.sm, paddingLeft: cssVars.spacing.xs, borderTop: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}` };
 const termStyle: CSSProperties = { fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary };
 const valueStyle: CSSProperties = { margin: 0, fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary, overflowWrap: 'break-word', minWidth: 0 };
-
-const onlyMineStyle = (active: boolean): CSSProperties => ({
-  minHeight: cssVars.touchTargets.minimum, alignSelf: 'flex-start', padding: `0 ${cssVars.spacing.md}`,
-  borderRadius: cssVars.borderRadius.full,
-  border: `${cssVars.borderWidth.thin} solid ${active ? cssVars.colors.primary : cssVars.colors.borderControl}`,
-  background: active ? cssVars.colors.primary : cssVars.colors.background,
-  color: active ? cssVars.colors.background : cssVars.colors.textPrimary,
-  fontSize: cssVars.fontSizes.sm, fontWeight: active ? cssVars.fontWeights.bold : cssVars.fontWeights.normal, cursor: 'pointer',
-});
 
 export function PublicMyTeam({ teamName, facts, onOpenSelector, onlyMine, onOnlyMineChange }: PublicMyTeamProps): ReactElement {
   const { t } = useTranslation('publicView');
@@ -88,9 +80,11 @@ export function PublicMyTeam({ teamName, facts, onOpenSelector, onlyMine, onOnly
           </>
         )}
       </dl>
-      <button type="button" style={onlyMineStyle(onlyMine)} aria-pressed={onlyMine} onClick={() => onOnlyMineChange(!onlyMine)} data-testid="my-team-only-mine">
-        {t('myTeam.onlyMine')}
-      </button>
+      <div style={{ alignSelf: 'flex-start' }}>
+        <ChipButton look="fill" radius="full" size="minimum" fontSize="sm" idleWeight="normal" selected={onlyMine} onClick={() => onOnlyMineChange(!onlyMine)} data-testid="my-team-only-mine">
+          {t('myTeam.onlyMine')}
+        </ChipButton>
+      </div>
     </div>
   );
 }

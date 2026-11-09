@@ -7,6 +7,7 @@
 import type { CSSProperties, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
+import { ChipButton } from '../../../components/ui/atoms/ChipButton';
 
 export interface PublicFilterRowProps {
   groups: string[];
@@ -25,19 +26,8 @@ const rowStyle: CSSProperties = { display: 'flex', alignItems: 'center', justify
 const groupsStyle: CSSProperties = { display: 'flex', alignItems: 'center', gap: cssVars.spacing.xs, minWidth: 0, overflowX: 'auto', flex: '1 1 auto' };
 const labelStyle: CSSProperties = { fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, flex: 'none', paddingRight: cssVars.spacing.xs };
 
-/** Rund, 44 × 44 Bildpunkte, mit Rand (3 : 1); gewählt in der Hauptfarbe mit Wort, nie nur Farbe. */
-const chipStyle = (active: boolean): CSSProperties => ({
-  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none',
-  minHeight: cssVars.touchTargets.minimum, minWidth: cssVars.touchTargets.minimum,
-  padding: `0 ${cssVars.spacing.sm}`,
-  borderRadius: cssVars.borderRadius.full,
-  border: `${cssVars.borderWidth.thin} solid ${active ? cssVars.colors.primary : cssVars.colors.borderControl}`,
-  background: active ? cssVars.colors.primary : cssVars.colors.background,
-  color: active ? cssVars.colors.background : cssVars.colors.textPrimary,
-  fontSize: cssVars.fontSizes.md,
-  fontWeight: active ? cssVars.fontWeights.bold : cssVars.fontWeights.normal,
-  cursor: 'pointer',
-});
+/** Gruppen-Chips: rund, 44 × 44 Bildpunkte, gewählt in der Hauptfarbe gefüllt (@OB-022). */
+const CHIP = { look: 'fill', radius: 'full', size: 'minimum', padX: 'sm', idleWeight: 'normal' } as const;
 
 const filterButtonStyle = (set: boolean): CSSProperties => ({
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: cssVars.spacing.xs, flex: 'none',
@@ -69,22 +59,21 @@ export function PublicFilterRow({ groups, selectedGroup, hiddenCount, sheetOpen,
       {groups.length > 1 && (
         <div style={groupsStyle} role="group" aria-label={t('filter.groupLabel')} data-testid="public-group-chips">
           <span style={labelStyle}>{t('filter.groupLabel')}</span>
-          <button type="button" style={chipStyle(selectedGroup === null)} aria-pressed={selectedGroup === null} onClick={() => onGroupChange(null)} data-testid="public-group-chip-all" data-overlap-ok={WISCHBEREICH}>
+          <ChipButton {...CHIP} selected={selectedGroup === null} onClick={() => onGroupChange(null)} data-testid="public-group-chip-all" data-overlap-ok={WISCHBEREICH}>
             {t('filter.all')}
-          </button>
+          </ChipButton>
           {groups.map((group) => (
-            <button
+            <ChipButton
               key={group}
-              type="button"
-              style={chipStyle(selectedGroup === group)}
-              aria-pressed={selectedGroup === group}
+              {...CHIP}
+              selected={selectedGroup === group}
               aria-label={t('filter.groupAria', { group })}
               onClick={() => onGroupChange(group)}
               data-testid={`public-group-chip-${group}`}
               data-overlap-ok={WISCHBEREICH}
             >
               {group}
-            </button>
+            </ChipButton>
           ))}
         </div>
       )}
