@@ -183,6 +183,8 @@ export const E2E_MONUHR_MONITOR_ID = e2eUuid('monitor:engine-cup:MONUHR:feld-1')
 /** @ZM-182/@ZM-184: Feld-Monitor (Live-Folie Feld 1) und fester Share-Code der Zuschauer-Seite für die Zeitstrafe. */
 export const E2E_MONZEITSTRAFE_MONITOR_ID = e2eUuid('monitor:engine-cup:MONZEITSTRAFE:feld-1');
 export const E2E_MONZEITSTRAFE_SHARE_CODE = 'E2EZST';
+/** @SL-047: Feld-Monitor (Live-Folie Feld 1) für „Ohne Netz zurückgenommen“ (ohne-netz-ruecknahme.cloud.spec.ts). */
+export const E2E_MONRUECKNAHME_MONITOR_ID = e2eUuid('monitor:engine-cup:MONRUECKNAHME:feld-1');
 
 /**
  * Fixrunde 2 (N3, Ruling AA; vorher Fixrunde 1/I2/Ruling V, damals noch am Entwurf-Cup):

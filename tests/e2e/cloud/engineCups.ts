@@ -125,6 +125,8 @@ export const E2E_ENGINE_CUPS = [
   // @ZM-182/@ZM-183/@ZM-184/@ZM-192: Zeitstrafe am Monitor und auf der Zuschauer-Seite über die echte Server-Antwort
   // (monitor-zeitstrafe.cloud.spec.ts); öffentlich mit festem Share-Code, der Test schaltet die Zuschauer-Schalter um.
   runningCup('MONZEITSTRAFE'),
+  // @SL-047: Tor und Rücknahme ohne Netz, danach am Hallenmonitor über die echte Server-Antwort (ohne-netz-ruecknahme.cloud.spec.ts).
+  runningCup('MONRUECKNAHME'),
   runningCup('SPIELPLANKANAL'),
   runningCup('SPIELPLANHELFER'),
   finishedCup('SCHREIBWEG'),
