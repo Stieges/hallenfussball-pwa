@@ -20,6 +20,12 @@
     "endedKids": "Tournament over – thanks for playing",
     "scheduleTitle": "Schedule"
   },
+  "current": {
+    "live": "Playing now",
+    "next": "Up next",
+    "last": "Last finished",
+    "match": "Match {{number}}"
+  },
   "connection": {
     "stale": "Last update {{time}} – no connection"
   },

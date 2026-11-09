@@ -20,6 +20,12 @@
     "endedKids": "Turnier beendet – danke fürs Mitspielen",
     "scheduleTitle": "Spielplan"
   },
+  "current": {
+    "live": "Läuft gerade",
+    "next": "Als Nächstes",
+    "last": "Zuletzt beendet",
+    "match": "Spiel {{number}}"
+  },
   "connection": {
     "stale": "Stand von {{time}} – keine Verbindung"
   },

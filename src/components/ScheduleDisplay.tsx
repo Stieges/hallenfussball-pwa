@@ -52,6 +52,11 @@ interface ScheduleDisplayProps {
   elapsedSeconds?: (matchId: string) => number | undefined; // gespielte Sekunden; sonst aus `currentMatches`
   /** Optional: Current matches with live scores (overrides schedule scores) */
   currentMatches?: Match[];
+  /**
+   * Turnierkarte (Titel, Datum, Info-Box) über dem Spielplan, Vorgabe true. Die Zuschauer-Seite blendet sie aus: Titel und Datum
+   * stehen dort schon im Seitenkopf (@ZM-141, Paket Z2 – ein Turnier-Kopf, nicht zwei).
+   */
+  showTournamentHeader?: boolean;
   /** Zeige QR-Code für Live-Tracking */
   showQRCode?: boolean;
   /** QR-Code URL */
@@ -105,6 +110,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   locale,
   elapsedSeconds,
   currentMatches,
+  showTournamentHeader = true,
   showQRCode = false,
   qrCodeUrl,
   logoUrl,
@@ -200,13 +206,15 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
     <ViewTimeNotes view={view}>
     <div style={containerStyle} className="schedule-display">
       {/* Tournament Header - Hidden on Desktop as info is in Top Nav */}
-      <div className="md:hidden">
-        <TournamentHeader
-          schedule={schedule}
-          logoUrl={logoUrl}
-          qrCodeUrl={showQRCode ? qrCodeUrl : undefined}
-        />
-      </div>
+      {showTournamentHeader && (
+        <div className="md:hidden">
+          <TournamentHeader
+            schedule={schedule}
+            logoUrl={logoUrl}
+            qrCodeUrl={showQRCode ? qrCodeUrl : undefined}
+          />
+        </div>
+      )}
 
       {/* Participants (only for group tournaments) */}
       {hasGroups && (

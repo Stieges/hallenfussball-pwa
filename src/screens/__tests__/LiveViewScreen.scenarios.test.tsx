@@ -49,6 +49,11 @@ function LocationProbe() {
   return <output data-testid="loc" style={{ display: 'none' }}>{location.search}</output>;
 }
 
+/** Die gefilterte Spielliste (Karte unter Kopfblock, „Mein Team“ und Filter). */
+function spielliste(): HTMLElement {
+  return document.querySelector<HTMLElement>('.schedule-display')!;
+}
+
 function currentSearch(): URLSearchParams {
   return new URLSearchParams(screen.getByTestId('loc').textContent ?? '');
 }
@@ -262,8 +267,10 @@ describe('Zuschauer-Seite (LiveViewScreen) – Charakterisierung', () => {
       const t = buildLiveViewTournament({ hideRankingsForPublic: true });
       await renderWith(t, '?my=1');
       expect(screen.getAllByText('SV Süd').length).toBeGreaterThan(0);
+      // Der Kopfblock oben folgt keinem Filter (@ZM-141); gefiltert ist die Spielliste darunter
+      const liste = within(spielliste());
       for (const name of GROUP_B_TEAMS) {
-        expect(screen.queryByText(name)).toBeNull();
+        expect(liste.queryByText(name)).toBeNull();
       }
     });
 
@@ -276,8 +283,9 @@ describe('Zuschauer-Seite (LiveViewScreen) – Charakterisierung', () => {
       expect(localStorage.setItem).toHaveBeenCalledWith(MY_TEAM_KEY, TEAM_IDS.nord);
       fireEvent.click(screen.getByRole('button', { name: /Nur meine/ }));
       expect(currentSearch().get('my')).toBe('1');
+      const liste = within(spielliste());
       for (const name of GROUP_B_TEAMS) {
-        expect(screen.queryByText(name)).toBeNull();
+        expect(liste.queryByText(name)).toBeNull();
       }
     });
 

@@ -190,7 +190,8 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   }, [view, matches]);
   const kastenOf = (matchId: string): MatchView['boxes'] | undefined => {
     const shown = view?.byId.get(matchId);
-    return view?.rules.results === true && shown !== undefined && (shown.isLive || nextIds.has(matchId)) ? shown.boxes : undefined;
+    // Laufendes Spiel nur mit eingeschaltetem Live-Stand: sonst „laufendes Spiel ohne Stand“ (@ZM-116, Zone 1 „Beim Öffnen“)
+    return view?.rules.results === true && shown !== undefined && (shown.isLive ? view.rules.liveScore : nextIds.has(matchId)) ? shown.boxes : undefined;
   };
 
   // Spielseiten: Namen immer aus der Ansicht (Slots, aktuelle Teams; @TM-015), nie aus gespeichertem Anzeigetext
