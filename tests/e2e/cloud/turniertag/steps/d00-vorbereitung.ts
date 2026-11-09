@@ -92,8 +92,16 @@ async function kopieFuersProben({ browser }: StepContext): Promise<void> {
 async function anmeldenTurniertag({ anonPage }: StepContext): Promise<void> {
   await anonPage.goto('/#/login');
   await expectPageAnchor(anonPage.locator('input[type="email"]').first(), 'Anmeldeseite');
-  // @AN-005 / @AN-015: die Anmeldeseite bietet kein Registrieren und nur Wege an, die es gibt.
-  await expect(anonPage.getByRole('link', { name: /registrieren/i }), 'kein Registrieren-Link').toHaveCount(0, { timeout: SOLL_TIMEOUT_MS });
+  // @AN-005: die Anmeldeseite bietet kein Registrieren an. „Registrieren“ ist heute eine Taste (`login-register-link`, ein <button>), kein Link:
+  // eine Suche nur nach der Rolle „link“ wäre fälschlich grün.
+  const registrieren = anonPage.getByTestId('login-register-link')
+    .or(anonPage.getByRole('link', { name: /registrieren/i }))
+    .or(anonPage.getByRole('button', { name: /registrieren/i }));
+  await expect(registrieren, 'kein Registrieren (weder Taste noch Link)').toHaveCount(0, { timeout: SOLL_TIMEOUT_MS });
+  // @AN-015: nur Anmeldewege, die es gibt: keine Anmeldung per E-Mail-Link („Magic Link“) und kein „Konto zusammenführen“. Die Anmeldung mit Google steht im
+  // Szenario unter der Bedingung „vom Betreiber in der Produktion getestet“; der Testlauf kennt diese Bedingung nicht und prüft sie deshalb nicht.
+  await expect(anonPage.getByRole('button', { name: /magic link|e-mail-link/i }), 'keine Anmeldung per E-Mail-Link').toHaveCount(0, { timeout: SOLL_TIMEOUT_MS });
+  await expect(anonPage.getByRole('button', { name: /zusammenführen/i }), 'kein „Konto zusammenführen“').toHaveCount(0, { timeout: SOLL_TIMEOUT_MS });
   await expect(anonPage.getByRole('button', { name: /passwort vergessen/i }), 'kein "Passwort vergessen" ohne Mailversand (@AN-010)').toHaveCount(0, { timeout: SOLL_TIMEOUT_MS });
   // C-SITZUNG-STILL: langsames Netz beim Start meldet "Sitzung abgelaufen" ehrlich statt still abzumelden.
   await expectSollMarker(anonPage, 'session-expired-notice');

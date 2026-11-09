@@ -149,7 +149,7 @@ describe('B – Verschieben mit Vorschau (Hallencup Ost, 15:05)', () => {
     expect(plan.error?.maxMinutes).toBe(10);
   });
 
-  it('@ZP-006/@ZP-007/@ZP-009 ohne Verschieben ändert sich keine Uhrzeit (0 Minuten = keine Änderung)', () => {
+  it('@ZP-006/@ZP-009 ohne Verschieben ändert sich keine Uhrzeit (0 Minuten = keine Änderung)', () => {
     const { matches, statusOf } = hallencup({ s13: 'beendet' });
     const plan = planShift(matches, { from: { kind: 'time', at: at('15:15') }, minutes: 0 }, RULES, { now: at('15:22'), statusOf });
     expect(plan.changes).toEqual([]);
