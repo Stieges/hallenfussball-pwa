@@ -52,9 +52,19 @@ describe('takeRecent (M10/U5): Sidebar-Zeitfenster', () => {
     expect(takeRecent([...base, entry('rNeu', 25, true)], 1).map((e) => e.event.id)).toContain('rNeu');
   });
 
-  it('ohne gezeigte wirksame Einträge erscheinen keine Zurückgenommenen', () => {
-    const entries = [entry('r1', 30, true), entry('r2', 20, true)];
-    expect(takeRecent(entries, 10)).toEqual([]);
+  it('@SL-107 ohne wirksame Einträge (Tor und Foul beide zurückgenommen) stehen beide Zurückgenommenen in der Liste', () => {
+    const entries = [entry('r1', 200, true), entry('r2', 180, true)];
+    expect(takeRecent(entries, 10).map((e) => e.event.id)).toEqual(['r1', 'r2']);
+  });
+
+  it('@SL-107 wurde nichts abgeschnitten (weniger wirksame als das Limit), stehen auch ältere Zurückgenommene da', () => {
+    const entries = [entry('e2', 30), entry('r1', 10, true), entry('e1', 20)];
+    expect(takeRecent(entries, 10).map((e) => e.event.id)).toEqual(['e2', 'r1', 'e1']);
+  });
+
+  it('Gegenbeispiel: ist das Limit erreicht, bleibt das Zeitfenster – ältere Zurückgenommene fallen weg', () => {
+    const entries = [entry('e2', 30), entry('e1', 20), entry('rAlt', 10, true)];
+    expect(takeRecent(entries, 2).map((e) => e.event.id)).toEqual(['e2', 'e1']);
   });
 
   it('Zurückgenommene verdrängen keine wirksamen Einträge', () => {

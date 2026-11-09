@@ -49,10 +49,11 @@ export function mergeProtocol(
 }
 
 /** M2/M10: Sidebar-Limit in Anzeige-Reihenfolge (neueste zuerst). Zaehlt nur wirksame
- *  Eintraege — zurueckgenommene verdraengen keine. U5: Zurueckgenommene erscheinen nur
- *  im Zeitfenster der gezeigten wirksamen Eintraege, sichtbar ab dem Zeitstempel des
- *  aeltesten gezeigten wirksamen Eintrags (>=). Ohne gezeigte wirksame Eintraege
- *  erscheinen keine Zurueckgenommenen. Reihenfolge bleibt stabil. */
+ *  Eintraege — zurueckgenommene verdraengen keine. U5: Ist das Limit erreicht, erscheinen
+ *  Zurueckgenommene nur im Zeitfenster der gezeigten wirksamen Eintraege, sichtbar ab dem
+ *  Zeitstempel des aeltesten gezeigten wirksamen Eintrags (>=). Wurde nichts abgeschnitten
+ *  (weniger wirksame Eintraege als das Limit, auch gar keine), gibt es kein Fenster: dann
+ *  stehen alle Zurueckgenommenen da (@SL-107: Foul und Tor beide zurueckgenommen). Reihenfolge bleibt stabil. */
 export function takeRecent(entries: readonly ProtocolEntry[], maxEffective: number): ProtocolEntry[] {
   const shownEffective: ProtocolEntry[] = [];
   for (const entry of entries) {
@@ -60,8 +61,11 @@ export function takeRecent(entries: readonly ProtocolEntry[], maxEffective: numb
       shownEffective.push(entry);
     }
   }
+  if (shownEffective.length < maxEffective) {
+    return [...entries];
+  }
   if (shownEffective.length === 0) {
-    return [];
+    return []; // Limit 0: es soll nichts gezeigt werden
   }
   let cutoff = shownEffective[0].event.timestampSeconds;
   for (const entry of shownEffective) {
