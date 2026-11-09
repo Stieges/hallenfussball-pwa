@@ -104,9 +104,8 @@ describe('Daumenleiste am Handy: fünf Plätze (Entscheidung A2)', () => {
 });
 
 describe('Rückgängig mit 1-s-Sperre (@SL-108, @SL-107)', () => {
-  async function torUndFoul(user: ReturnType<typeof userEvent.setup>, frueherFoulHeim = false): Promise<void> {
+  async function torUndFoul(user: ReturnType<typeof userEvent.setup>): Promise<void> {
     await starte(user);
-    if (frueherFoulHeim) { zu(60_000); await user.click(screen.getByTestId('foul-button-home')); } // bleibt gültig: hält die Liste der Einträge nicht leer
     zu(180_000);
     await user.click(screen.getByTestId('foul-button-away'));
     zu(200_000);
@@ -140,9 +139,7 @@ describe('Rückgängig mit 1-s-Sperre (@SL-108, @SL-107)', () => {
     expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul · 0');
   });
 
-  // Befund C-COCKPIT-LISTE-OHNE-GUELTIGE-EINTRAEGE: `takeRecent` (U5, protocolEntries.ts) blendet zurückgenommene Einträge aus, wenn kein
-  // gültiger Eintrag übrig ist. Im Gherkin-Fall (nur Foul und Tor, beide zurückgenommen) bleibt die Liste daher leer. Ziel LT-4 / 4.1.
-  it.fails('@SL-107 wörtlich: nur Foul und Tor erfasst, zweimal Rückgängig → die Liste zeigt das Tor und das Foul als zurückgenommen (Befund C-COCKPIT-LISTE-OHNE-GUELTIGE-EINTRAEGE, Ziel LT-4)', async () => {
+  it('@SL-107 wörtlich: Foul 3:00 und Tor 3:20 erfasst, zweimal Rückgängig im Abstand von 3 s → 0:0, die Liste zeigt das Tor und das Foul als zurückgenommen', async () => {
     const user = userEvent.setup();
     render(<Harness />); await torUndFoul(user);
     fireEvent.click(screen.getByTestId('match-undo-button'));
@@ -150,27 +147,16 @@ describe('Rückgängig mit 1-s-Sperre (@SL-108, @SL-107)', () => {
     zu(208_000);
     fireEvent.click(screen.getByTestId('match-undo-button'));
     await waitFor(() => expect(retractCount()).toBe(2));
-    expect(await screen.findAllByTestId('event-row-retracted', {}, { timeout: 500 })).toHaveLength(2);
-  });
-
-  it('@SL-107 Zusatzfall (nicht das Gherkin-Beispiel): mit einem früheren, gültigen Eintrag zeigt die Liste Tor und Foul als zurückgenommen', async () => {
-    const user = userEvent.setup();
-    render(<Harness />); await torUndFoul(user, true);
-    fireEvent.click(screen.getByTestId('match-undo-button'));
-    await waitFor(() => expect(retractCount()).toBe(1));
-    zu(208_000);
-    fireEvent.click(screen.getByTestId('match-undo-button'));
-    await waitFor(() => expect(retractCount()).toBe(2));
+    expect(screen.getByTestId('scoreboard-score')).toHaveTextContent('0:0');
     const zeilen = await screen.findAllByTestId('event-row-retracted');
     expect(zeilen).toHaveLength(2);
     expect(zeilen.map((z) => z.textContent).join(' ')).toMatch(/Tor/i);
     expect(zeilen.map((z) => z.textContent).join(' ')).toMatch(/Foul/i);
-    expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul · 1');
   });
 
   it('@SL-107 Gegenbeispiel: ohne Rückgängig steht kein Eintrag als zurückgenommen in der Liste', async () => {
     const user = userEvent.setup();
-    render(<Harness />); await torUndFoul(user, true);
+    render(<Harness />); await torUndFoul(user);
     expect(screen.queryAllByTestId('event-row-retracted')).toHaveLength(0);
   });
 });
