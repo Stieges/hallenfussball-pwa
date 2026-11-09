@@ -593,6 +593,70 @@
       "profil": "app"
     },
     {
+      "id": "zuschauer-mein-team",
+      "titel": "Zuschauer-Seite: Mein Team gewählt (Block mit langem Namen, @ZM-175, @ZM-196)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/live/MESS26",
+      "erwarte": "[data-testid=\"my-team-name\"]",
+      "profil": "app",
+      "klick": [
+        "[data-testid=\"my-team-choose\"]",
+        "role=button[name=/Sportgemeinschaft Fußballfreunde Nordheim/]",
+        "warte:400"
+      ]
+    },
+    {
+      "id": "zuschauer-filter-blatt",
+      "titel": "Zuschauer-Seite: Filter als Blatt von unten (Phase, Status, @ZM-196)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/live/MESS26",
+      "erwarte": "[data-testid=\"public-filter-button\"]",
+      "profil": "app",
+      "klick": [
+        "[data-testid=\"public-filter-button\"]",
+        "warte:400"
+      ]
+    },
+    {
+      "id": "zuschauer-filter-gesetzt",
+      "titel": "Zuschauer-Seite: Status „Beendet“ gesetzt, Taste „Filter (1)“ und Hinweiszeile (@ZM-197)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/live/MESS26?s=finished",
+      "erwarte": "[data-testid=\"public-filter-note\"]",
+      "profil": "app"
+    },
+    {
+      "id": "zuschauer-teilnehmer-offen",
+      "titel": "Zuschauer-Seite: Teilnehmer aufgeklappt (einspaltig, nach Gruppen, @ZM-196)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/live/MESS26",
+      "erwarte": "[data-testid=\"public-participants-toggle\"]",
+      "profil": "app",
+      "klick": [
+        "[data-testid=\"public-participants-toggle\"]",
+        "warte:400"
+      ]
+    },
+    {
+      "id": "zuschauer-nikolaus",
+      "titel": "Zuschauer-Seite: Nikolaus-Turnier, Jeder gegen jeden (nur Taste „Filter“, @ZM-196)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/live/NIKO26",
+      "erwarte": "[data-testid=\"public-weg\"]",
+      "profil": "app",
+      "saat": "nikolaus-gleichstand"
+    },
+    {
       "id": "monitor-live",
       "titel": "Monitor-Folie: Live",
       "gruppen": [

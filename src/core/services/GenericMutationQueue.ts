@@ -177,6 +177,13 @@ export interface MutationQueueConfig<TType extends string> {
      * die lokale Kopie trägt dann eine Wirkung, die der Server nicht übernommen hat. Ohne Angabe: keine.
      */
     cloudCopyOnConflict?: readonly TType[];
+    /**
+     * @FU-122 (Befund C-DOPPELTE-SENDUNG-NACH-NEULADEN): Standard `true` – der Konstruktor startet die Queue (`online`-Zuhörer,
+     * erster Durchgang). `false`: erst `start()` startet sie. Für Besitzer, die die Queue in der Render-Phase bauen
+     * (`RepositoryProvider`, `useMemo`): React ruft die Fabrik dort mehrfach auf und verwirft Ergebnisse (StrictMode); eine
+     * verworfene, schon gestartete Instanz sendet die gespeicherten Einträge ein zweites Mal.
+     */
+    autoStart?: boolean;
 }
 
 /**
@@ -195,6 +202,7 @@ export class GenericMutationQueue<TType extends string> {
     private failedQueue: FailedMutationItem<TType>[] = [];
     private isProcessing = false;
     private disposed = false;
+    private started = false;
     private retryTimer: QueueRetryTimer;
     private inFlight: QueueInFlight;
     private lastFailure: 'transient' | 'permanent' | 'storage' | 'storageBlocked' | null = null;
@@ -213,12 +221,18 @@ export class GenericMutationQueue<TType extends string> {
         this.load();
         this.loadFailed();
         this.loadCloudCopyNeeded();
+        if (config.autoStart !== false) { this.start(); }
+    }
 
-        // Auto-process on online
+    /**
+     * Startet die Queue: `online`-Zuhörer anmelden und mit Netz den ersten Durchgang anstoßen. Wirkt je Instanz einmal; nach
+     * `dispose()` nicht mehr (@FU-122: eine entsorgte oder nie übernommene Instanz sendet nichts von selbst).
+     */
+    public start(): void {
+        if (this.started || this.disposed) { return; }
+        this.started = true;
         if (typeof window !== 'undefined') {
             window.addEventListener('online', this.handleOnline);
-
-            // Try processing on start if online
             if (navigator.onLine) {
                 void this.process();
             }

@@ -57,6 +57,13 @@ interface ScheduleDisplayProps {
    * stehen dort schon im Seitenkopf (@ZM-141, Paket Z2 – ein Turnier-Kopf, nicht zwei).
    */
   showTournamentHeader?: boolean;
+  /**
+   * Teilnehmer-Block mit den Teamlisten je Gruppe über dem Spielplan, Vorgabe true. Die Zuschauer-Seite blendet ihn aus und zeigt
+   * die Teilnehmer eingeklappt über dem Spielplan (@ZM-196, `PublicParticipants`).
+   */
+  showParticipants?: boolean;
+  /** Engerer Innenabstand (Zuschauer-Seite am Handy, @ZM-196: der Spielplan rückt näher an den Kopf); Vorgabe false. */
+  compact?: boolean;
   /** Zeige QR-Code für Live-Tracking */
   showQRCode?: boolean;
   /** QR-Code URL */
@@ -111,6 +118,8 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   elapsedSeconds,
   currentMatches,
   showTournamentHeader = true,
+  showParticipants = true,
+  compact = false,
   showQRCode = false,
   qrCodeUrl,
   logoUrl,
@@ -196,7 +205,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   // Container Style - full width, parent controls maxWidth
   const containerStyle: CSSProperties = {
     width: '100%',
-    padding: '40px 20px',
+    padding: compact ? cssVars.spacing.sm : '40px 20px',
     background: cssVars.colors.background,
     fontFamily: cssVars.fontFamilies.body,
     color: cssVars.colors.textPrimary,
@@ -217,7 +226,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
       )}
 
       {/* Participants (only for group tournaments) */}
-      {hasGroups && (
+      {hasGroups && showParticipants && (
         <ParticipantsAndGroups
           teams={schedule.teams}
           standings={participantStandings ?? standings}

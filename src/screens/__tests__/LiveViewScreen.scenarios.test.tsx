@@ -295,10 +295,12 @@ describe('Zuschauer-Seite (LiveViewScreen) – Charakterisierung', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Gruppe B' }));
       expect(currentSearch().get('g')).toBe('B');
       expect(screen.queryByText('FC Nord')).toBeNull();
+      // Status liegt hinter der Taste „Filter“ (Blatt, @ZM-196); „Alle zeigen“ nimmt ihn zurück (@ZM-197)
+      fireEvent.click(screen.getByTestId('public-filter-button'));
       fireEvent.click(screen.getByRole('button', { name: 'Beendet' }));
       expect(currentSearch().get('s')).toBe('finished');
-      const alle = screen.getAllByRole('button', { name: 'Alle' });
-      fireEvent.click(alle[alle.length - 1]);
+      fireEvent.click(screen.getByRole('button', { name: 'Fertig' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Alle zeigen' }));
       expect(currentSearch().has('s')).toBe(false);
     });
 

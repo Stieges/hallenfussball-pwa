@@ -6,8 +6,8 @@
  * `role="group"` mit `aria-pressed` je Chip (kein Radio, weil die Wahl aufhebbar ist).
  */
 import { useEffect, useRef, type CSSProperties } from 'react';
-import { cssVars, iconSizeValues } from '../../../design-tokens';
-import { Icons } from '../Icons';
+import { cssVars } from '../../../design-tokens';
+import { ChipButton } from '../atoms/ChipButton';
 
 export interface ChipOption {
   value: string;
@@ -37,28 +37,6 @@ const rowStyle: CSSProperties = {
   WebkitOverflowScrolling: 'touch',
 };
 
-function chipStyle(selected: boolean): CSSProperties {
-  return {
-    flex: '0 0 auto',
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: cssVars.spacing.xs,
-    minHeight: cssVars.touchTargets.comfortable,
-    minWidth: cssVars.touchTargets.comfortable,
-    padding: `0 ${cssVars.spacing.md}`,
-    border: `${cssVars.borderWidth.thin} solid ${selected ? cssVars.colors.primary : cssVars.colors.borderControl}`,
-    borderRadius: cssVars.borderRadius.md,
-    background: selected ? cssVars.colors.primaryLight : cssVars.colors.background,
-    color: cssVars.colors.textPrimary,
-    fontFamily: 'inherit',
-    fontSize: cssVars.fontSizes.md,
-    fontWeight: selected ? cssVars.fontWeights.bold : cssVars.fontWeights.medium,
-    whiteSpace: 'nowrap',
-    cursor: 'pointer',
-  };
-}
-
 export function ChipChoice({ legend, options, value, onSelect, testId = 'chip-choice' }: ChipChoiceProps) {
   const row = useRef<HTMLDivElement | null>(null);
   const selected = useRef<HTMLButtonElement | null>(null);
@@ -82,18 +60,15 @@ export function ChipChoice({ legend, options, value, onSelect, testId = 'chip-ch
       {options.map((option) => {
         const isSelected = option.value === value;
         return (
-          <button
+          <ChipButton
             key={option.value}
             ref={isSelected ? selected : undefined}
-            type="button"
-            aria-pressed={isSelected}
-            style={chipStyle(isSelected)}
+            selected={isSelected}
             data-testid={`${testId}-${option.value}`}
             onClick={() => onSelect(option.value)}
           >
-            {isSelected ? <Icons.Check size={iconSizeValues.sm} color={cssVars.colors.primary} /> : null}
             {option.label}
-          </button>
+          </ChipButton>
         );
       })}
     </div>
