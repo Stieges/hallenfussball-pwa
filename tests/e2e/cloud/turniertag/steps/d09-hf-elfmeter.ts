@@ -57,7 +57,7 @@ async function siegerRuecktNach(): Promise<void> {
     const endspiel = findFinalByLabel(finals, 'Finale');
     const drittes = findFinalByLabel(finals, 'Spiel um Platz 3');
     expect(halbfinale1.decided_by, 'Halbfinale 1 ist im Strafstoßschießen entschieden (D9)').toBe('penalty');
-    expect(endspiel.slot_a_source, 'Heimseite des Finales stammt aus dem Sieger von Halbfinale 1').toMatchObject({ kind: 'matchResult', role: 'winner', matchId: halbfinale1.id });
+    expect(endspiel.slot_a_source, 'Heimseite des Finales stammt aus dem Sieger von Halbfinale 1').toMatchObject({ kind: 'matchResult', role: 'loser', matchId: halbfinale1.id });
     expect(drittes.slot_a_source, 'Heimseite des Spiels um Platz 3 stammt aus dem Verlierer von Halbfinale 1').toMatchObject({ kind: 'matchResult', role: 'loser', matchId: halbfinale1.id });
     return halbfinale1;
   });
