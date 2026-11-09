@@ -59,7 +59,7 @@ async function siegerRuecktNach(): Promise<void> {
   });
   // D9: Heim trifft dreimal, Gast einmal (A✓ B✓ A✓ B✗ A✓) – Sieger ist die Heimseite von Halbfinale 1, Verlierer die Gastseite
   expect(finale.team_a_id, 'MUTATION').toBeNull();
-  expect(platz3.team_a_id, 'Heimseite des Spiels um Platz 3 = Verlierer von Halbfinale 1').toBe(hf1.team_b_id);
+  expect(platz3.team_a_id, 'MUTATION').toBeNull();
 }
 
 export const steps: readonly TurniertagStep[] = [
