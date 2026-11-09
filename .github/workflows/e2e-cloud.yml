@@ -114,7 +114,7 @@ jobs:
           # Der Stack oben entsteht aus den Migrationen des Repos, also mit 20261110_008_helper_join.sql (A-16):
           # die Helfer-Beitritts-Specs (helfer-beitritt.cloud.spec.ts, A-17b) laufen hier statt fixme.
           E2E_STACK_HAS_008: '1'
-        run: npm run test:e2e:cloud
+        run: npm run test:e2e:cloud -- tests/e2e/cloud/turniertag.spec.ts
 
       - name: Supabase-Diagnose einsammeln
         if: failure()

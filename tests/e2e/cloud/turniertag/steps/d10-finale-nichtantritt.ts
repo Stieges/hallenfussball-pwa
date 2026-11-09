@@ -2,8 +2,8 @@
  * D10 Finale + Nichtantritt im Platzierungsspiel (2:0 auf Zuschauer-Seite und /tv).
  * Ablauf nach Spielplan (@TM-144: Spiel um Platz 3 vor dem Finale, Finale zuletzt): erst den Nichtantritt im Spiel um
  * Platz 3 eintragen, dann das Finale regulär spielen (Aufbau für D11 ff.), danach die Wirkung von Platz 3 prüfen.
- * Voraussetzung: D8/D9 (Halbfinale 1 im Strafstoßschießen entschieden); Halbfinale 2 spielt dieser Schritt als Vorbedingung regulär 2:1
- * (früher eigener Schritt D9b ohne Szenario), danach sind Platz 3 und Finale besetzt.
+ * Voraussetzung: D8/D9 (Halbfinale 1 im Strafstoßschießen entschieden); Halbfinale 2 trägt dieser Schritt als Vorbedingung im Spielplan mit 2:1 ein
+ * (früher eigener Schritt D9b ohne Szenario), danach besetzt die App Platz 3 und Finale.
  * Besitzer: A-25 (Nichtantritt als Ergebniseintrag mit Wertungsmerkmal, E-A4) / B-12. Das Weiterrücken nach Nichtantritt im K.-o. (@TM-061,
  * Halbfinale → Finale) prüft dieser Schritt nicht (Nichtantritt im Spiel um Platz 3).
  * Besitzer: A-25/B-12 -- Soll: das Spiel um Platz 3 nimmt `RESULT_ENTRY` mit
@@ -14,25 +14,47 @@
 import { expect } from '@playwright/test';
 import { getLocalServiceRoleClient } from '../../helpers';
 import { E2E_TURNIERTAG_SHARE_CODE } from '../../testData';
-import { fetchTurniertagBracket, findFinalByLabel, SOLL_TIMEOUT_MS, vorbedingung } from './shared';
+import { expectPageAnchor, fetchTurniertagBracket, fetchTurniertagTeams, findFinalByLabel, openTurniertagPath, SOLL_TIMEOUT_MS, vorbedingung } from './shared';
 import { appendOwner, eventOf, regularResultEvents } from './playViaRpc';
 import type { StepContext, TurniertagStep } from './types';
 
-/** Vorbedingung: Halbfinale 2 regulär 2:1 (Sieger ins Finale, Verlierer ins Spiel um Platz 3). */
-async function halbfinale2(): Promise<void> {
+/**
+ * Vorbedingung: Olli trägt Halbfinale 2 mit 2:1 im Spielplan ein (Schnelleingabe der Spielkarte). Nur dieser Weg lässt die App die Folgespiele
+ * besetzen: die K.-o.-Auflösung läuft im Gerät, das den Eintrag abgeschickt hat (`useKoResolutionAfterAck`), nicht am Server. Ein Ergebnis über die
+ * Server-Funktion allein besetzt Platz 3 und Finale nie (Befund C-KO-SIEGER-RUECKT-NICHT-AM-SERVER).
+ */
+async function halbfinale2(asRole: StepContext['asRole']): Promise<void> {
   const hf2 = findFinalByLabel((await fetchTurniertagBracket()).finals, '2. Halbfinale');
   expect(hf2.team_a_id && hf2.team_b_id, 'Halbfinale 2 ist besetzt (hängt an D8)').toBeTruthy();
-  const events = regularResultEvents(hf2, 2, 1);
-  const result = await appendOwner(hf2.id, events);
-  expect(result.results.map((r) => r.status)).toEqual(events.map(() => 'accepted'));
+  const namen = new Map((await fetchTurniertagTeams()).map((t) => [t.id, t.name]));
+  const heim = namen.get(hf2.team_a_id ?? '') ?? '';
+  const gast = namen.get(hf2.team_b_id ?? '') ?? '';
+  const olli = await asRole('owner');
+  await openTurniertagPath(olli, '/schedule');
+  await expectPageAnchor(olli.locator('[data-testid="filter-phase"]'), 'Spielplan der Turnierleitung');
+  // Heim und Gast zusammen: ein Halbfinale ist die einzige Karte mit dieser Paarung (die Teams kommen aus verschiedenen Gruppen).
+  const karte = olli.locator('[data-match-card]').filter({ hasText: heim }).filter({ hasText: gast });
+  await karte.getByText(heim).first().click({ timeout: SOLL_TIMEOUT_MS * 3 });
+  await olli.getByTestId('match-action-enterResult').click();
+  const eingabe = karte.getByTestId('quick-score-expand');
+  await expect(eingabe, 'Schnelleingabe von Halbfinale 2').toBeVisible({ timeout: SOLL_TIMEOUT_MS });
+  await eingabe.getByLabel(`${heim} Tor hinzufügen`).click();
+  await eingabe.getByLabel(`${heim} Tor hinzufügen`).click();
+  await eingabe.getByLabel(`${gast} Tor hinzufügen`).click();
+  await eingabe.getByTestId('quick-score-save-btn').click();
   await expect.poll(async () => {
     const m = findFinalByLabel((await fetchTurniertagBracket()).finals, '2. Halbfinale');
     return [m.match_status, m.score_a, m.score_b];
-  }, { message: 'Halbfinale 2 steht beendet auf 2:1', timeout: SOLL_TIMEOUT_MS }).toEqual(['finished', 2, 1]);
+  }, { message: 'Halbfinale 2 steht beendet auf 2:1', timeout: SOLL_TIMEOUT_MS * 3 }).toEqual(['finished', 2, 1]);
 }
 
-async function nichtantritt({ anonPage }: StepContext): Promise<void> {
-  await vorbedingung('Halbfinale 2 regulär 2:1 spielen', halbfinale2);
+async function nichtantritt({ anonPage, asRole }: StepContext): Promise<void> {
+  await vorbedingung('Halbfinale 2 im Spielplan mit 2:1 eintragen', () => halbfinale2(asRole));
+  // Die App besetzt Platz 3 und das Finale aus den beiden Halbfinal-Ergebnissen (@TM-052): im Gerät, danach in der Cloud.
+  await expect.poll(async () => {
+    const { finals: spiele } = await fetchTurniertagBracket();
+    return ['Spiel um Platz 3', 'Finale'].map((name) => { const m = findFinalByLabel(spiele, name); return Boolean(m.team_a_id && m.team_b_id); });
+  }, { message: 'Platz 3 und Finale sind nach den Halbfinal-Ergebnissen besetzt', timeout: SOLL_TIMEOUT_MS * 3 }).toEqual([true, true]);
   const { finals } = await fetchTurniertagBracket();
   const platz3 = findFinalByLabel(finals, 'Spiel um Platz 3');
   const finale = findFinalByLabel(finals, 'Finale');
@@ -62,5 +84,5 @@ async function nichtantritt({ anonPage }: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'D10', title: 'Nichtantritt im Spiel um Platz 3: 2:0 als Wertung', scenarios: ['@W2A-022'], befunde: ['C-KO-SIEGER-RUECKT-NICHT-AM-SERVER'], owner: 'Ursache offen (App oder Testablauf): Platz 3 und Finale bleiben nach den Halbfinal-Ergebnissen unbesetzt; Nichtantritt A-25/B-12 gebaut', expectedFail: true, run: nichtantritt },
+  { id: 'D10', title: 'Nichtantritt im Spiel um Platz 3: 2:0 als Wertung', scenarios: ['@W2A-022'], befunde: ['C-KO-SIEGER-RUECKT-NICHT-AM-SERVER'], owner: 'Ursache offen (App oder Testablauf): Platz 3 und Finale bleiben nach den Halbfinal-Ergebnissen unbesetzt; Nichtantritt A-25/B-12 gebaut', expectedFail: false, run: nichtantritt },
 ];

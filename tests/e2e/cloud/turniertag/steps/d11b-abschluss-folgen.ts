@@ -94,7 +94,7 @@ async function lastmessung({ asRole }: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'D11b', title: 'Nach dem Abschluss: Helfer-QR ungültig, Dashboard nicht vorzeitig beendet', scenarios: ['@HE-038'], befunde: ['C-ZUSTAND-ABGELEITET', 'C-E2E-N7B-SPALTE'], owner: 'Teil F (Endstand mit Finalrunde); Abschluss-Dialog gebaut (R3-4)', expectedFail: true, run: nachAbschluss },
+  { id: 'D11b', title: 'Nach dem Abschluss: Helfer-QR ungültig, Dashboard nicht vorzeitig beendet', scenarios: ['@HE-038'], befunde: ['C-FINALRUNDE-NICHT-ABSCHLIESSBAR'], owner: 'Teil F (Endstand mit Finalrunde); Abschluss-Dialog gebaut (R3-4)', expectedFail: false, run: nachAbschluss },
 ];
 
 /** Nach D13 (Zeitplan verschieben). */
