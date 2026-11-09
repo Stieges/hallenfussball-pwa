@@ -14,7 +14,6 @@
   },
   "liveView": {
     "pullRelease": "Release to refresh",
-    "badge": "LIVE: {{code}}",
     "footer": "Created with Hallenfußball App",
     "ended": "Tournament finished",
     "endedKids": "Tournament over – thanks for playing",
@@ -34,7 +33,15 @@
     "none": "Not selected",
     "onlyMine": "Only mine",
     "change": "Change",
-    "choose": "Choose team"
+    "choose": "Choose team",
+    "title": "My team",
+    "next": "Up next",
+    "nextLine": "Match {{number}} · {{time}} · Field {{field}} vs {{opponent}}",
+    "noNext": "No further match",
+    "table": "Standings",
+    "place": "Place {{place}} in group {{group}} · {{points}} points",
+    "placeNoGroup": "Place {{place}} · {{points}} points",
+    "changeLower": "change"
   },
   "teamSelector": {
     "title": "Choose my team",
@@ -46,7 +53,20 @@
     "phase": "Phase:",
     "status": "Status:",
     "all": "All",
-    "live": "🔴 Live"
+    "live": "🔴 Live",
+    "button": "Filter",
+    "buttonCount": "Filter ({{n}})",
+    "buttonAria": "Filter, {{n}} selected",
+    "sheetTitle": "Filter",
+    "reset": "Reset",
+    "done": "Done",
+    "showAll": "Show all",
+    "groupLabel": "Group",
+    "onlyMyTeam": "My team only",
+    "phaseTitle": "Phase",
+    "statusTitle": "Status",
+    "groupAria": "Group {{group}}",
+    "liveWord": "Live"
   },
   "standings": {
     "hidden": "🏆 Tables hidden",
@@ -64,5 +84,10 @@
     "bambiTitle": "🔒 Bambini mode active",
     "hiddenScores": "Scores are not shown. ",
     "hiddenRankings": "Tables are not shown."
+  },
+  "participants": {
+    "toggle": "Participants ({{n}})",
+    "collapsedSr": "collapsed",
+    "expandedSr": "expanded"
   }
 }

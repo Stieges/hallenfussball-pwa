@@ -14,7 +14,6 @@
   },
   "liveView": {
     "pullRelease": "Loslassen zum Aktualisieren",
-    "badge": "LIVE: {{code}}",
     "footer": "Erstellt mit Hallenfußball-App",
     "ended": "Turnier abgeschlossen",
     "endedKids": "Turnier beendet – danke fürs Mitspielen",
@@ -34,7 +33,15 @@
     "none": "Nicht ausgewählt",
     "onlyMine": "Nur meine",
     "change": "Ändern",
-    "choose": "Team wählen"
+    "choose": "Team wählen",
+    "title": "Mein Team",
+    "next": "Als Nächstes",
+    "nextLine": "Spiel {{number}} · {{time}} Uhr · Feld {{field}} gegen {{opponent}}",
+    "noNext": "Kein weiteres Spiel",
+    "table": "Tabelle",
+    "place": "Platz {{place}} in Gruppe {{group}} · {{points}} Punkte",
+    "placeNoGroup": "Platz {{place}} · {{points}} Punkte",
+    "changeLower": "ändern"
   },
   "teamSelector": {
     "title": "Mein Team wählen",
@@ -46,7 +53,20 @@
     "phase": "Phase:",
     "status": "Status:",
     "all": "Alle",
-    "live": "🔴 Live"
+    "live": "🔴 Live",
+    "button": "Filter",
+    "buttonCount": "Filter ({{n}})",
+    "buttonAria": "Filter, {{n}} gewählt",
+    "sheetTitle": "Filter",
+    "reset": "Zurücksetzen",
+    "done": "Fertig",
+    "showAll": "Alle zeigen",
+    "groupLabel": "Gruppe",
+    "onlyMyTeam": "Nur Mein Team",
+    "phaseTitle": "Phase",
+    "statusTitle": "Status",
+    "groupAria": "Gruppe {{group}}",
+    "liveWord": "Live"
   },
   "standings": {
     "hidden": "🏆 Tabellen ausgeblendet",
@@ -64,5 +84,10 @@
     "bambiTitle": "🔒 Bambini-Modus aktiv",
     "hiddenScores": "Spielstände werden nicht angezeigt. ",
     "hiddenRankings": "Tabellen werden nicht angezeigt."
+  },
+  "participants": {
+    "toggle": "Teilnehmer ({{n}})",
+    "collapsedSr": "eingeklappt",
+    "expandedSr": "aufgeklappt"
   }
 }

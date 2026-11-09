@@ -79,13 +79,15 @@ describe('Saat Hallencup Messlauf (@TA-011)', () => {
   it('ansichten.json verweist nur auf Turniere, Spiele, Monitore und den Code der Saat (ein Fehlverweis wäre ein stilles BLOCKED)', () => {
     const saat = lies()
     const turniere = saat.datenbanken[0].eintraege.tournaments as { id: string; shareCode?: string; matches: { id: string }[]; monitors?: { id: string }[] }[]
-    const liste = JSON.parse(readFileSync(join(__dirname, '..', '..', 'ansichten.json'), 'utf8')) as { saat: string; ansichten: { id: string; app: string; erwarte: string; saat?: boolean }[] }
+    const liste = JSON.parse(readFileSync(join(__dirname, '..', '..', 'ansichten.json'), 'utf8')) as { saat: string; ansichten: { id: string; app: string; erwarte: string; saat?: boolean | string }[] }
     expect(liste.saat).toBe(SAAT_NAME)
     expect(new Set(liste.ansichten.map((a) => a.id)).size).toBe(liste.ansichten.length)
     const finde = (id: string) => turniere.find((t) => t.id === id)
     for (const a of liste.ansichten) {
       expect(a.erwarte, a.id).not.toBe('')
       if (a.saat === false) { continue }
+      // Eine Ansicht mit eigener Saat (Name) prüft ihre Turniere dort, nicht in der Saat des Messlaufs
+      if (typeof a.saat === 'string') { continue }
       const turnier = /^\/#\/(?:tournament|display|public)\/([a-zA-Z0-9-]+)/.exec(a.app)?.[1]
       if (turnier !== undefined && turnier !== 'new') {
         const t = finde(turnier)

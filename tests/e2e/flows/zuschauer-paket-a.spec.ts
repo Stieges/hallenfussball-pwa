@@ -73,8 +73,9 @@ for (const groesse of GROESSEN) {
 
     test('@OB-022 Z16 jede Filter-Taste ist mindestens 44 × 44 px groß', async ({ page }) => {
       await oeffne(page, groesse.width, groesse.height);
+      // Gruppen-Chips „Alle · A · B“ und die Taste „Filter“ (Phase und Status liegen hinter der Taste, @ZM-196)
       const tasten = page.locator('[data-testid="public-filter-bar"] button');
-      expect(await tasten.count()).toBeGreaterThan(6);
+      expect(await tasten.count()).toBe(4);
       for (const taste of await tasten.all()) {
         const box = await taste.boundingBox();
         expect(box, 'Taste sichtbar').not.toBeNull();
