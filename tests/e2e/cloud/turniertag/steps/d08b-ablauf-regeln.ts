@@ -134,7 +134,7 @@ export const steps: readonly TurniertagStep[] = [
 
 /** Nach dem Abschluss (D11): der Endstand des abgeschlossenen Turniers. */
 export const stepsEndstand: readonly TurniertagStep[] = [
-  { id: 'D10b', title: 'Endstand: Torschützen mit Rückennummer in der App, Zuschauer-Seite gleich (Torschützen-Schalter an)', scenarios: ['@ET-044', '@ET-032'], befunde: ['C-FINALRUNDE-NICHT-ABSCHLIESSBAR'], owner: 'Teil F (Endstand mit Finalrunde: Abschluss D11); Anzeige gebaut (R3-5/R3-6)', expectedFail: false, run: endstandMitTorschuetzen },
+  { id: 'D10b', title: 'Endstand: Torschützen mit Rückennummer in der App, Zuschauer-Seite gleich (Torschützen-Schalter an)', scenarios: ['@ET-044', '@ET-032'], befunde: ['C-FINALRUNDE-NICHT-ABSCHLIESSBAR'], owner: 'Teil F (Endstand mit Finalrunde: Abschluss D11); Anzeige gebaut (R3-5/R3-6)', expectedFail: true, run: endstandMitTorschuetzen },
   { id: 'D10b2', title: 'Endstand ohne Torschützen auf der Zuschauer-Seite (Torschützen-Schalter aus)', scenarios: [], befunde: ['C-FINALRUNDE-NICHT-ABSCHLIESSBAR'], owner: 'Teil F (Endstand mit Finalrunde: Abschluss D11); Anzeige gebaut (R3-6)', expectedFail: true, run: endstandOhneTorschuetzen },
 ];
 

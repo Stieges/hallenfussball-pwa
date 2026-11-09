@@ -79,5 +79,5 @@ async function nichtantritt({ anonPage, asRole }: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'D10', title: 'Nichtantritt im Spiel um Platz 3: 2:0 als Wertung', scenarios: ['@W2A-022'], befunde: ['C-KO-SIEGER-RUECKT-NICHT-AM-SERVER'], owner: 'Ursache offen (App oder Testablauf): Platz 3 und Finale bleiben nach den Halbfinal-Ergebnissen unbesetzt; Nichtantritt A-25/B-12 gebaut', expectedFail: false, run: nichtantritt },
+  { id: 'D10', title: 'Nichtantritt im Spiel um Platz 3: 2:0 als Wertung', scenarios: ['@W2A-022'], owner: 'A-25/B-12 (Nichtantritt gebaut); Halbfinale 2 trägt Olli im Spielplan ein, die App besetzt Platz 3 und Finale', expectedFail: false, run: nichtantritt },
 ];

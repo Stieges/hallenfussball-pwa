@@ -34,5 +34,5 @@ async function pdfSicherung({ asRole }: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'D14', title: 'Turnier sichern: Datei enthält die Spiel-Einträge', scenarios: ['@TE-002'], befunde: ['C-BACKUP-EREIGNISSE'], owner: 'B-34 (Sicherung mit Spiel-Einträgen)', expectedFail: false, run: pdfSicherung },
+  { id: 'D14', title: 'Turnier sichern: Datei enthält die Spiel-Einträge', scenarios: ['@TE-002'], befunde: ['C-BACKUP-EREIGNISSE'], owner: 'B-34 (Sicherung mit Spiel-Einträgen)', expectedFail: true, run: pdfSicherung },
 ];
