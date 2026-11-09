@@ -25,13 +25,15 @@ async function abschluss({ asRole }: StepContext): Promise<void> {
     }).toBe('finished');
   } catch (fehler) {
     // Der Grund der Ablehnung steht im Dialog (Endstand vorläufig, offene Punkte, Netz ...): mit in die Fehlermeldung.
-    const meldungen: string[] = [`Dialog offen: ${(await ownerPage.getByTestId('finish-dialog').count()) > 0}`];
+    await ownerPage.getByTestId('tournament-ended').or(ownerPage.getByTestId('finish-error')).first().waitFor({ timeout: 15_000 }).catch(() => undefined);
+    const meldungen: string[] = [`Dialog offen: ${(await ownerPage.getByTestId('finish-dialog').count()) > 0}`, `Zustand C sichtbar: ${(await ownerPage.getByTestId('tournament-ended').count()) > 0}`];
     for (const kennung of ['finish-error', 'finish-unconfirmed', 'finish-sending', 'finish-offline']) {
       const stelle = ownerPage.getByTestId(kennung);
       if ((await stelle.count()) > 0) {
         meldungen.push(`${kennung}: ${(await stelle.first().innerText()).replace(/\s+/g, ' ')}`);
       }
     }
+    meldungen.push(`Seite: ${(await ownerPage.locator('body').innerText()).replace(/\s+/g, ' ').slice(0, 500)}`);
     throw new Error(`${fehler instanceof Error ? fehler.message : String(fehler)}\n${meldungen.join('\n')}`, { cause: fehler });
   }
   const { groupMatches } = await fetchTurniertagBracket();
