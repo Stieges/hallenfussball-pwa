@@ -35,17 +35,17 @@ export const HALL_SPEAKER_STATES = ['ready', 'not_activated', 'background', 'sle
 export type HallSpeakerState = (typeof HALL_SPEAKER_STATES)[number];
 /**
  * Gelesener Zustand: ein Wert, den dieser App-Stand nicht kennt (der Server kann die Liste später erweitern, z. B. um
- * `output_lost`), wird `'unbekannt'`. Nur ein Lesewert – gesendet wird weiter nur `HallSpeakerState`, darum steht er nicht in
- * `HALL_SPEAKER_STATES`. `'unbekannt'` ist nicht bereit und kein „Status unbekannt“ der Verwaltung (@HT-039, @HT-041).
+ * `output_lost`), wird `'zustandUnbekannt'`. Nur ein Lesewert – gesendet wird weiter nur `HallSpeakerState`, darum steht er nicht in
+ * `HALL_SPEAKER_STATES`. `'zustandUnbekannt'` ist nicht bereit und kein „Status unbekannt“ der Verwaltung (@HT-039, @HT-041).
  */
-export type HallSpeakerStateGelesen = HallSpeakerState | 'unbekannt';
+export type HallSpeakerStateGelesen = HallSpeakerState | 'zustandUnbekannt';
 
 function istBekannterZustand(roh: string): roh is HallSpeakerState {
   return (HALL_SPEAKER_STATES as readonly string[]).includes(roh);
 }
 
 export function lautsprecherZustandLesen(roh: string): HallSpeakerStateGelesen {
-  return istBekannterZustand(roh) ? roh : 'unbekannt';
+  return istBekannterZustand(roh) ? roh : 'zustandUnbekannt';
 }
 
 /** Nur ein Text wird lockerer gelesen; eine Zahl, ein Objekt o. Ä. macht die Antwort weiter unlesbar. */

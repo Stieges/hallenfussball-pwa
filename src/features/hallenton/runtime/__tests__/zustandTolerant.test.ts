@@ -1,6 +1,6 @@
 /**
  * H4-2: Ein Zustand, den dieser App-Stand nicht kennt (nach der nächsten Migration z. B. `output_lost`), macht die Antwort von
- * `hall_sound_status` und der Leitung nicht unlesbar. Der Zustand heißt dann `unbekannt`: nicht bereit, ohne Wortgrund (die Pille
+ * `hall_sound_status` und der Leitung nicht unlesbar. Der Zustand heißt dann `zustandUnbekannt`: nicht bereit, ohne Wortgrund (die Pille
  * wie @HT-039 auf anderen Geräten), und nicht „Status unbekannt“ (@HT-041, das bleibt dem Netzausfall der Verwaltung vorbehalten).
  * Die Antworten kommen als rohes JSON durch den echten Client `hallentonRpc.ts`, nicht aus dem Server-Doppel.
  */
@@ -16,7 +16,7 @@ import { flush } from './feldStandTestlage';
 
 const TID = '22222222-2222-4222-8222-222222222222';
 const T0 = 1_794_000_000_000;
-const OHNE_GRUND = { art: 'nichtBereit', grund: 'unbekannt', pruefen: false };
+const OHNE_GRUND = { art: 'nichtBereit', grund: 'zustandUnbekannt', pruefen: false };
 
 type Antwort = { data: unknown; error: { message: string } | null };
 /** Ein Client, dessen `rpc` rohes JSON liefert, wie es der Server schickt. */
@@ -64,7 +64,7 @@ describe('@HT-039 @HT-041 unbekannter Zustand in der Antwort von hall_sound_stat
     expect(stand.antwort?.sicht).toBe('voll');
     expect(stand.felder[2]).toEqual({ art: 'bereit', pruefen: false });
     expect(stand.felder[1]).toEqual(OHNE_GRUND);
-    expect(cockpitHinweisAus(stand.felder[1] ?? { art: 'keiner' })).toEqual({ art: 'aus', grund: 'unbekannt', zuletztServerMs: null });
+    expect(cockpitHinweisAus(stand.felder[1] ?? { art: 'keiner' })).toEqual({ art: 'aus', grund: 'zustandUnbekannt', zuletztServerMs: null });
   });
 
   it('@HT-041 Gegenbeispiel: ein unbekannter Zustand ist kein „Status unbekannt“ (der Stand bleibt „aktuell“)', async () => {
@@ -99,7 +99,7 @@ describe('@HT-039 @HT-041 unbekannter Zustand in der Antwort von hall_sound_stat
     expect(await hallSoundStatus(rohClient(kaputt), { p_tournament_id: TID })).toEqual({ ok: false, grund: 'antwort_unbekannt' });
   });
 
-  it('Test-Doppel: der Server meldet einen beliebigen Zustand, die App liest ihn als „unbekannt“', async () => {
+  it('Test-Doppel: der Server meldet einen beliebigen Zustand, die App liest ihn als „zustandUnbekannt“', async () => {
     const uhr = new ManuelleUhr(T0);
     const server = new FalscherHallServer(() => uhr.jetzt());
     server.zuordnen(1, 'laptop');
@@ -107,7 +107,7 @@ describe('@HT-039 @HT-041 unbekannter Zustand in der Antwort von hall_sound_stat
     server.zustandSetzen(1, 'output_unconfirmed');
     server.zustandSetzen(2, 'ready');
     const antwort = await server.status({ p_tournament_id: TID, p_device_id: 'olli' });
-    expect(antwort.ok && antwort.speakers.map((s) => s.state)).toEqual(['unbekannt', 'ready']);
+    expect(antwort.ok && antwort.speakers.map((s) => s.state)).toEqual(['zustandUnbekannt', 'ready']);
   });
 });
 
@@ -129,9 +129,9 @@ describe('@HT-039 @HT-041 unbekannter Zustand in der Antwort der Leitung (hall_f
     leitung.start();
     await flush();
     const stand = leitung.stand(TID, 1);
-    expect(stand?.speaker?.state).toBe('unbekannt');
+    expect(stand?.speaker?.state).toBe('zustandUnbekannt');
     const hinweis = cockpitHinweisAusLeitung(stand, leitung.jetzt());
-    expect(hinweis).toEqual({ art: 'aus', grund: 'unbekannt', zuletztServerMs: null });
+    expect(hinweis).toEqual({ art: 'aus', grund: 'zustandUnbekannt', zuletztServerMs: null });
     expect(hinweis.art).not.toBe('unbekannt');
     leitung.stop();
   });
@@ -145,11 +145,12 @@ describe('@HT-039 @HT-041 unbekannter Zustand in der Antwort der Leitung (hall_f
   });
 });
 
-describe('Regel 3 – ein unbekannter Zustand gilt nicht als bereit', () => {
-  it('Feld 1 mit „unbekannt“ → nicht bereit, der Cockpit-Ton schweigt dort nicht; Feld 2 „ready“ → er schweigt', async () => {
+/** Prüft nur die Datenebene (nie `bereit`); den Ton-Weg über den Kanal sichert der Gegenbeispieltest in H4-6. */
+describe('Regel 3 (nur Datenebene) – ein unbekannter Zustand gilt nicht als bereit', () => {
+  it('Feld 1 mit „zustandUnbekannt“ → nicht bereit, der Cockpit-Ton schweigt dort nicht; Feld 2 „ready“ → er schweigt', async () => {
     const felder = (await lies(SCHMAL)).felder;
     const bereit = Object.entries(felder).filter(([, lage]) => lage.art === 'bereit').map(([feld]) => `field-${feld}`);
-    expect(lautsprecherLage({ state: 'unbekannt', ageMs: 2000, outputHint: false }, T0).art).not.toBe('bereit');
+    expect(lautsprecherLage({ state: 'zustandUnbekannt', ageMs: 2000, outputHint: false }, T0).art).not.toBe('bereit');
     expect(cockpitTonSchweigt('field-1', bereit)).toBe(false);
     expect(cockpitTonSchweigt('field-2', bereit)).toBe(true);
   });

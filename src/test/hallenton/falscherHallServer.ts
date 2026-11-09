@@ -56,7 +56,11 @@ export class FalscherHallServer {
     this.lautsprecher.set(feld, { deviceId, deviceName, state: null, lastSeen: null, hintAt: null, test: null, assignedAt: this.jetzt() });
   }
 
-  /** Der Server meldet einen beliebigen Zustand (auch einen, den der App-Stand nicht kennt); die App liest ihn wie `hallentonRpc`. */
+  /**
+   * Der Server meldet einen beliebigen Zustand (auch einen, den der App-Stand nicht kennt). Gespeichert und geliefert wird bereits der
+   * GELESENE Wert (`lautsprecherZustandLesen`), nicht der rohe Serverwert: das Doppel liefert fertig gelesene Antworten. Ob der Client
+   * einen rohen Wert richtig liest, prüft nur ein Test mit rohem JSON (`rohClient` in `zustandTolerant.test.ts`).
+   */
   zustandSetzen(feld: number, roh: string | null, lastSeen: number = this.jetzt()): void {
     const s = this.lautsprecher.get(feld);
     if (s) {
