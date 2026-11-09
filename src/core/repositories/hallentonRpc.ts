@@ -33,7 +33,23 @@ export type HallErgebnis<T> = ({ ok: true } & T) | HallFehler;
 /** Zustand eines Lautsprechers aus fester Liste (CHECK `hall_speakers_state_check`); `null` = noch kein Lebenszeichen. */
 export const HALL_SPEAKER_STATES = ['ready', 'not_activated', 'background', 'slept', 'custom_sound_failed', 'volume_zero'] as const;
 export type HallSpeakerState = (typeof HALL_SPEAKER_STATES)[number];
-const StateSchema = z.enum(HALL_SPEAKER_STATES);
+/**
+ * Gelesener Zustand: ein Wert, den dieser App-Stand nicht kennt (der Server kann die Liste später erweitern, z. B. um
+ * `output_lost`), wird `'zustandUnbekannt'`. Nur ein Lesewert – gesendet wird weiter nur `HallSpeakerState`, darum steht er nicht in
+ * `HALL_SPEAKER_STATES`. `'zustandUnbekannt'` ist nicht bereit und kein „Status unbekannt“ der Verwaltung (@HT-039, @HT-041).
+ */
+export type HallSpeakerStateGelesen = HallSpeakerState | 'zustandUnbekannt';
+
+function istBekannterZustand(roh: string): roh is HallSpeakerState {
+  return (HALL_SPEAKER_STATES as readonly string[]).includes(roh);
+}
+
+export function lautsprecherZustandLesen(roh: string): HallSpeakerStateGelesen {
+  return istBekannterZustand(roh) ? roh : 'zustandUnbekannt';
+}
+
+/** Nur ein Text wird lockerer gelesen; eine Zahl, ein Objekt o. Ä. macht die Antwort weiter unlesbar. */
+const StateSchema = z.string().transform(lautsprecherZustandLesen);
 
 const ms = z.number();
 const FeldGeraetSchema = z.object({ field: z.number().int(), deviceName: z.string() });

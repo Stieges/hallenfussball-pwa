@@ -7,12 +7,14 @@
  * - nie gemeldet oder letztes Lebenszeichen älter als 10 s → `meldetSichNicht` mit „zuletzt“ (Serverzeit, @HT-011, @HT-040).
  *   10 s: der Lautsprecher meldet alle 5 s; wer alle 5 s liest, sieht einen Ausfall so nach höchstens 15 s (Ableitung).
  * - `ready` → `bereit`; sonst `nichtBereit` mit Grund. `custom_sound_failed` ist „nicht bereit – eigener Ton nicht geladen“,
- *   aber ohne Cockpit-Hinweis, weil die Halle „Hupe 1“ hört (@HT-039).
+ *   aber ohne Cockpit-Hinweis, weil die Halle „Hupe 1“ hört (@HT-039). Ein Zustand, den dieser App-Stand nicht kennt
+ *   (`zustandUnbekannt`, tolerant gelesen in `hallentonRpc.ts`): nicht bereit ohne Wortgrund – nicht „Status unbekannt“, das bleibt
+ *   dem Netzausfall der Verwaltung vorbehalten (@HT-041).
  * - `pruefen`: Hinweis „🔈? Prüfen“ (@HT-047), bis jemand „Gehört“ wählt (@HT-049).
  * Cockpit (@HT-040, @HT-050): `aus` mit Grund, sonst `ausgangGeaendert` bei Hinweis, sonst `bereit`; `unbekannt`, wenn die
  * eigene letzte Antwort älter als 15 s ist (das leitende Gerät hat selbst kein Netz – kein alter Stand als aktuell).
  */
-import type { HallSpeakerState } from '../../../core/repositories/hallentonRpc';
+import type { HallSpeakerStateGelesen } from '../../../core/repositories/hallentonRpc';
 import type { LeitungStand } from './leitungLebenszeichen';
 
 export const MELDET_SICH_NICHT_AB_MS = 10_000;
@@ -20,7 +22,7 @@ export const MELDET_SICH_NICHT_AB_MS = 10_000;
 export const ANTWORT_GUELTIG_MS = 15_000;
 
 export interface LautsprecherAmServer {
-  state: HallSpeakerState | null;
+  state: HallSpeakerStateGelesen | null;
   ageMs: number | null;
   outputHint: boolean;
 }
@@ -29,7 +31,7 @@ export type LautsprecherLage =
   | { art: 'keiner' }
   | { art: 'meldetSichNicht'; zuletztServerMs: number | null }
   | { art: 'bereit'; pruefen: boolean }
-  | { art: 'nichtBereit'; grund: Exclude<HallSpeakerState, 'ready'>; pruefen: boolean };
+  | { art: 'nichtBereit'; grund: Exclude<HallSpeakerStateGelesen, 'ready'>; pruefen: boolean };
 
 export function lautsprecherLage(lautsprecher: LautsprecherAmServer | null, serverNow: number): LautsprecherLage {
   if (lautsprecher === null) {
@@ -42,8 +44,13 @@ export function lautsprecherLage(lautsprecher: LautsprecherAmServer | null, serv
   return state === 'ready' ? { art: 'bereit', pruefen: outputHint } : { art: 'nichtBereit', grund: state, pruefen: outputHint };
 }
 
-export type CockpitGrund = Exclude<HallSpeakerState, 'ready' | 'custom_sound_failed'> | 'meldetSichNicht';
+/** `zustandUnbekannt`: ein Zustand, den dieser App-Stand nicht kennt – nicht bereit, aber ohne Wortgrund (nur die Pille, @HT-039). */
+export type CockpitGrund = Exclude<HallSpeakerStateGelesen, 'ready' | 'custom_sound_failed'> | 'meldetSichNicht';
 
+/**
+ * `aus` mit `grund: 'zustandUnbekannt'` = nur die Pille, kein Wortgrund; `art: 'unbekannt'` = das leitende Gerät hat selbst
+ * kein Netz (@HT-041). Beides nie verwechseln.
+ */
 export type CockpitHinweis =
   | { art: 'keiner' }
   | { art: 'unbekannt' }
