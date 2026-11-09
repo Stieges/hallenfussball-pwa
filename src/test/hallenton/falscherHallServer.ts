@@ -7,15 +7,16 @@
  * Seit `20261123_001_hallenton_torhymne.sql`: nach dem Turnierende (`turnierBeendet`) antwortet das Lebenszeichen 55000
  * (`turnier_beendet`, `hall_require_open`); `torWahl` liefert „Ton bei Tor“ und die Torhymnen in der vollen Sicht.
  */
+import { lautsprecherZustandLesen } from '../../core/repositories/hallentonRpc';
 import type {
   HallArgs, HallErgebnis, HallFehlerGrund, HallHeartbeatAntwort, HallHeardAntwort, HallLeadHeartbeatAntwort,
-  HallSpeakerState, HallStatusAntwort, HallTestAckAntwort, HallTestRequestAntwort,
+  HallSpeakerState, HallSpeakerStateGelesen, HallStatusAntwort, HallTestAckAntwort, HallTestRequestAntwort,
 } from '../../core/repositories/hallentonRpc';
 
 interface Lautsprecher {
   deviceId: string;
   deviceName: string;
-  state: HallSpeakerState | null;
+  state: HallSpeakerStateGelesen | null;
   lastSeen: number | null;
   hintAt: number | null;
   test: { testId: string; requestedAt: number; playedAt: number | null } | null;
@@ -53,6 +54,15 @@ export class FalscherHallServer {
 
   zuordnen(feld: number, deviceId: string, deviceName = 'Rechner der Turnierleitung'): void {
     this.lautsprecher.set(feld, { deviceId, deviceName, state: null, lastSeen: null, hintAt: null, test: null, assignedAt: this.jetzt() });
+  }
+
+  /** Der Server meldet einen beliebigen Zustand (auch einen, den der App-Stand nicht kennt); die App liest ihn wie `hallentonRpc`. */
+  zustandSetzen(feld: number, roh: string | null, lastSeen: number = this.jetzt()): void {
+    const s = this.lautsprecher.get(feld);
+    if (s) {
+      s.state = roh === null ? null : lautsprecherZustandLesen(roh);
+      s.lastSeen = lastSeen;
+    }
   }
 
   private antwort<T>(fn: string, bau: () => T): Promise<HallErgebnis<T>> {

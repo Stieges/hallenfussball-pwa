@@ -309,8 +309,15 @@ describe('hallSoundStatus (hall_sound_status)', () => {
     expect(await hallSoundStatus(client, { p_tournament_id: TID })).toEqual({ ok: false, grund: 'kein_recht' });
   });
 
-  it('Gegenbeispiel: Zustand außerhalb der festen Liste → antwort_unbekannt', async () => {
-    const kaputt = { serverNow: JETZT, speakers: [{ field: 1, state: 'fast_bereit', ageMs: 1, outputHint: false }] };
+  it('@HT-039 Zustand außerhalb der festen Liste (z. B. „fast_bereit“) → die Antwort gilt, der Zustand wird „unbekannt“ (H4-2)', async () => {
+    const data = { serverNow: JETZT, speakers: [{ field: 1, state: 'fast_bereit', ageMs: 1, outputHint: false }] };
+    expect(await hallSoundStatus(clientWith({ data, error: null }).client, { p_tournament_id: TID })).toEqual({
+      ok: true, sicht: 'schmal', serverNow: JETZT, speakers: [{ field: 1, state: 'unbekannt', ageMs: 1, outputHint: false }],
+    });
+  });
+
+  it('Gegenbeispiel: ein Zustand, der kein Text ist, bleibt ein Vertragsbruch → antwort_unbekannt', async () => {
+    const kaputt = { serverNow: JETZT, speakers: [{ field: 1, state: 5, ageMs: 1, outputHint: false }] };
     expect(await hallSoundStatus(clientWith({ data: kaputt, error: null }).client, { p_tournament_id: TID })).toEqual({ ok: false, grund: 'antwort_unbekannt' });
   });
 });
