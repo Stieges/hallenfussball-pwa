@@ -636,6 +636,8 @@
     "scoreAriaLive": "Score {{homeScore}}:{{awayScore}}, {{elapsed}}",
     "live": "Live",
     "startMatch": "Start match",
+    "liveNoScore": "Live, no score",
+    "notStarted": "Not started yet",
     "scoreAriaFinal": "Final score {{homeScore}}:{{awayScore}}",
     "finished": "End",
     "selectReferee": "Select referee",

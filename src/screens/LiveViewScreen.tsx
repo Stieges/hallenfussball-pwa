@@ -13,12 +13,10 @@
  * @see docs/concepts/PUBLIC-PAGE-KONZEPT-v4-FINAL.md
  */
 
-import { CSSProperties } from 'react';
 import { useTranslation, I18nextProvider } from 'react-i18next';
 import { ANZEIGE_SPRACHE, anzeigeI18n } from '../i18n/anzeigeSprache';
 import { cssVars } from '../design-tokens';
 import { ScheduleDisplay } from '../components/ScheduleDisplay';
-import { formatDateGerman } from '../utils/locationHelpers';
 import { Card } from '../components/ui/Card';
 import { PublicBottomNav } from '../components/ui/PublicBottomNav';
 import { NowSourceContext } from '../components/schedule/useTickingNow';
@@ -43,12 +41,13 @@ import { PublicStandingsTab } from '../features/public-view/components/PublicSta
 import { PublicInfoTab } from '../features/public-view/components/PublicInfoTab';
 import { PublicConnectionHint } from '../features/public-view/components/PublicConnectionHint';
 import { showsFinalStandings, showsKidsEnded } from '../features/public-view/showsFinalStandings';
-import { PublicEndedBadge, PublicFinalStandingsBlock } from '../features/public-view/components/PublicFinalStandings';
+import { PublicFinalStandingsBlock } from '../features/public-view/components/PublicFinalStandings';
 import { MyTeamBar } from '../features/public-view/components/MyTeamBar';
 import { PublicPdfRow } from '../features/public-view/components/PublicPdfRow';
+import { PublicPageHeader } from '../features/public-view/components/PublicPageHeader';
+import { PublicCurrentBlock } from '../features/public-view/components/PublicCurrentBlock';
 import { PublicFilterBar } from '../features/public-view/components/PublicFilterBar';
 import { TeamSelectorDialog } from '../features/public-view/components/TeamSelectorDialog';
-import { joinMeta } from '../core/view';
 
 export interface LiveViewScreenProps {
   shareCode: string;
@@ -86,36 +85,6 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
   const finalStandings = usePublicFinalStandings(shareCode, tournament !== null, tournament?.lifecycleStatus === 'finished');
   const view = usePublicView(tournament, schedule, fetchedAtMs, finalStandings);
 
-  // Styles
-  const headerStyle: CSSProperties = {
-    marginBottom: cssVars.spacing.lg,
-    textAlign: 'center',
-  };
-
-  const titleStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.xxl,
-    fontWeight: cssVars.fontWeights.bold,
-    color: cssVars.colors.textPrimary,
-    marginBottom: cssVars.spacing.xs,
-  };
-
-  const subtitleStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.md,
-    color: cssVars.colors.textSecondary,
-  };
-
-  const shareCodeBadgeStyle: CSSProperties = {
-    display: 'inline-block',
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
-    background: cssVars.colors.primary,
-    color: cssVars.colors.background,
-    borderRadius: cssVars.borderRadius.full,
-    fontSize: cssVars.fontSizes.sm,
-    fontWeight: cssVars.fontWeights.semibold,
-    letterSpacing: '0.1em',
-    marginTop: cssVars.spacing.sm,
-  };
-
   // Zustandsansichten (B-13d1)
   if (loadingState === 'loading') {
     return <PublicLoadingView shareCode={shareCode} />;
@@ -140,6 +109,7 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
   const groups = uniqueGroups(tournament);
   const finalShown = showsFinalStandings(view, finalStandings);
   const ended = finalShown || showsKidsEnded(tournament, view);
+  const currentMatches = publicMatches(tournament, view.rules);
   const pdfRow = <PublicPdfRow tournament={tournament} schedule={schedule} standings={currentStandings} view={view} finalStandings={finalStandings} />;
 
   return (
@@ -166,23 +136,18 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
       </div>
 
       <div style={{ ...publicPageContentStyle, transform: `translateY(${pullDistance}px)`, transition: pullDistance > 0 ? 'none' : 'transform 0.3s ease' }}>
-        {/* Header */}
-        <div style={headerStyle}>
-          <h1 style={titleStyle}>{tournament.title}</h1>
-          <p style={subtitleStyle}>
-            {joinMeta([tournament.ageClass, formatDateGerman(tournament.date)], ' • ')}
-          </p>
-          <div style={shareCodeBadgeStyle}>
-            {t('liveView.badge', { code: shareCode })}
-          </div>
-          {ended && <div style={{ marginTop: cssVars.spacing.sm }}><PublicEndedBadge /></div>}
-        </div>
+        <PublicPageHeader tournament={tournament} shareCode={shareCode} ended={ended} />
 
         {/* Ohne Netz bleibt der letzte Stand stehen, mit Hinweis (B-15, @ZM-032) */}
         {connectionHint !== null && (
           <div style={{ marginBottom: cssVars.spacing.md }}>
             <PublicConnectionHint hint={connectionHint} />
           </div>
+        )}
+
+        {/* Kopfblock (@ZM-141): läuft gerade / als Nächstes / zuletzt beendet, ohne Scrollen sichtbar; nach dem Abschluss steht der Endstand */}
+        {tab === 'schedule' && !ended && (
+          <PublicCurrentBlock view={view} schedule={schedule} tournament={tournament} currentMatches={currentMatches} locale={ANZEIGE_SPRACHE} />
         )}
 
         {/* Endstand oben (R3-6), Spielplan darunter wie heute */}
@@ -238,8 +203,9 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
                 currentStandings={filteredStandings}
                 showGroupTables={standingsTabAvailable(view.rules)}
                 participantStandings={view.rules.results ? undefined : schedule.initialStandings}
-                currentMatches={publicMatches(tournament, view.rules)}
+                currentMatches={currentMatches}
                 tournamentTeams={tournament.teams}
+                showTournamentHeader={false}
                 editable={false}
               />
             </Card>

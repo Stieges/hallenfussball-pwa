@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { overHex } from '../../../design-tokens/displayColor';
 import { useTheme } from '../../../hooks/useTheme';
+import { MATCH_BADGE_WORD_KEY } from '../../../core/view/badge';
 import { TeamAvatar } from '../../ui/TeamAvatar';
 import { ScoreBox } from '../../ui/molecules/ScoreBox';
 import { pairFrameStrength } from '../../ui/molecules/scoreBoxStyle';
@@ -38,6 +39,11 @@ export interface TeamScoreRowsProps {
   zeitstrafen?: OeffentlicheZeitstrafen;
   /** Kästen der Ansicht (`MatchView.boxes`) für das laufende und das nächste Spiel; ohne Angabe steht die Zahl wie bisher */
   kasten?: MatchView['boxes'];
+  /**
+   * Beendetes Spiel im Kasten (@ZM-158, @OB-064): der Sieger trägt den Ring, der Verlierer ist zurückgenommen, ein Unentschieden hat keins von beiden;
+   * `cup`: Pokal beim Sieger (nur Finalrunde); „nach Verlängerung“ klein unter dem Namen des Siegers. Nur zusammen mit `kasten`.
+   */
+  ende?: { cup: boolean };
 }
 
 type Side = 'a' | 'b';
@@ -67,13 +73,18 @@ const goalsStyle: CSSProperties = {
   fontFamily: 'inherit',
 };
 
-export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam, awayTeam, result, status, onScoreClick, disabled = false, zeitstrafen, kasten }) => {
+export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam, awayTeam, result, status, onScoreClick, disabled = false, zeitstrafen, kasten, ende }) => {
   const { t } = useTranslation('tournament');
   const { colors } = useTheme();
   const decided = result?.winner !== undefined && result.winner !== null;
 
   const spokenResult = (() => {
-    if (result === null) { return t('matchCard.startMatch'); }
+    // Ohne Stand (Live-Stand aus, noch nicht angepfiffen) sagt die Karte den Zustand, nie „Spiel starten“ einem, der nur zusieht (@ZM-116)
+    if (result === null) {
+      if (status === 'scheduled' || status === 'waiting') { return disabled ? t('matchCard.notStarted') : t('matchCard.startMatch'); }
+      // Zustandswort statt „Spiel starten“: läuft (ohne Stand), ausgefallen, Ende (Kindermodus) – @ZM-104, @OB-066
+      return t(status === 'running' ? 'matchCard.liveNoScore' : status === 'skipped' ? MATCH_BADGE_WORD_KEY.cancelled : MATCH_BADGE_WORD_KEY.ended);
+    }
     const values = { homeScore: result.goalsA, awayScore: result.goalsB, homePenalty: result.penaltyA, awayPenalty: result.penaltyB };
     if (status === 'running') { return t('matchCard.scoreAriaLive', { ...values, elapsed: t('matchCard.live') }); }
     if (result.decision === 'penalty') { return t('matchResult.scoreAriaPenalty', values); }
@@ -91,11 +102,17 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
   const bibTeams = kasten === undefined ? [] : [kasten.home.bib ? homeTeam.name : null, kasten.away.bib ? awayTeam.name : null].filter((name) => name !== null);
   const spokenWithBib = bibTeams.length === 0 ? spokenResult : `${spokenResult}. ${bibTeams.map((name) => t('matchCard.bibSpoken', { team: name })).join(', ')}`;
 
+  // „nach Verlängerung“ klein beim Stand des Siegers, rechtsbündig in einer eigenen Rasterzeile unter seinem Kasten (wie die Finalkarte, @ZM-158, @OB-064);
+  // der Rasterabstand der Kästen (spacing.md) wird nach oben aufgehoben (Höhe der Zeile und Hinweis dicht unter dem Kasten, etwa spacing.xs), damit der Zusatz am Kasten des Siegers hängt und nicht mittig zwischen beiden schwebt
+  const noteSide: Side | null = kasten !== undefined && ende !== undefined && status === 'finished' && result?.decision === 'overtime' && decided ? result.winner : null;
+  const rowOf = (side: Side): number => (side === 'a' ? 1 : noteSide === 'a' ? 3 : 2);
+
   const renderRow = (side: Side, team: Team) => {
     const isWinner = decided && result?.winner === side;
     const isLoser = decided && result?.winner !== side;
     const goals = result === null ? undefined : side === 'a' ? result.goalsA : result.goalsB;
     const penalty = side === 'a' ? result?.penaltyA : result?.penaltyB;
+    const finished = kasten !== undefined && ende !== undefined && status === 'finished';
     const nameStyle: CSSProperties = {
       fontSize: cssVars.fontSizes.md,
       fontWeight: isWinner ? cssVars.fontWeights.bold : isLoser || status === 'finished' ? cssVars.fontWeights.medium : cssVars.fontWeights.semibold,
@@ -107,14 +124,17 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
     const first = side === 'a';
     const seite = first ? 'home' : 'away';
     // Feste Zelle je Element: ohne Strafstoß-Spalte würde die automatische Platzierung die nächste Zeile in die freie Zelle ziehen
-    const row = first ? 1 : 2;
+    const row = rowOf(side);
+    const nameBlock = (
+      <ZeitstrafeHinweis liste={zeitstrafen?.[seite]} testId={`match-time-penalty-${matchId}-${seite}`}>
+        <span style={nameStyle} data-winner={isWinner ? 'true' : undefined} data-testid={`match-name-${matchId}-${seite}`}>{team.name}</span>
+      </ZeitstrafeHinweis>
+    );
     return (
       <Fragment key={side}>
         <div style={{ ...teamStyle, gridColumn: 1, gridRow: row }}>
           <TeamAvatar team={team} size="sm" />
-          <ZeitstrafeHinweis liste={zeitstrafen?.[seite]} testId={`match-time-penalty-${matchId}-${seite}`}>
-            <span style={nameStyle} data-winner={isWinner ? 'true' : undefined} data-testid={`match-name-${matchId}-${seite}`}>{team.name}</span>
-          </ZeitstrafeHinweis>
+          {nameBlock}
         </div>
         <button
           type="button"
@@ -141,8 +161,10 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
               background={hintergrund}
               textColor={colors.textPrimary}
               bib={(first ? kasten.home : kasten.away).bib}
+              outcome={finished && decided ? (isWinner ? 'winner' : 'loser') : undefined}
+              cup={finished && isWinner && ende.cup}
               frameStrength={rahmen}
-              ariaLabel={`${team.name}: ${String(goals ?? 0)}${(first ? kasten.home : kasten.away).bib ? `, ${t('matchCard.bibAria')}` : ''}`}
+              ariaLabel={[`${team.name}: ${String(goals ?? 0)}`, finished && isWinner ? t('matchCard.winnerAria') : null, (first ? kasten.home : kasten.away).bib ? t('matchCard.bibAria') : null].filter((x) => x !== null).join(', ')}
               testId={`match-box-${matchId}-${seite}`}
               position={seite}
             />
@@ -162,6 +184,11 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
             data-testid={`match-penalty-${matchId}-${side === 'a' ? 'home' : 'away'}`}
           >
             ({penalty})
+          </span>
+        )}
+        {noteSide === side && (
+          <span style={{ gridColumn: '1 / -1', gridRow: row + 1, textAlign: 'right', fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary, marginTop: `calc(-1 * ${cssVars.spacing.md})` }} data-testid={`match-overtime-${matchId}-${seite}`}>
+            {t('matchResult.afterOvertime')}
           </span>
         )}
       </Fragment>
