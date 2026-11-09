@@ -66,7 +66,7 @@ async function siegerRuecktNach(): Promise<void> {
   await expect.poll(async () => {
     const { finals } = await fetchTurniertagBracket();
     return [findFinalByLabel(finals, 'Finale').team_a_id, findFinalByLabel(finals, 'Spiel um Platz 3').team_a_id];
-  }, { message: 'Heimseite des Finales = Sieger, Heimseite von Platz 3 = Verlierer von Halbfinale 1', timeout: SOLL_TIMEOUT_MS }).toEqual([hf1.team_a_id, hf1.team_b_id]);
+  }, { message: 'Heimseite des Finales = Sieger, Heimseite von Platz 3 = Verlierer von Halbfinale 1', timeout: SOLL_TIMEOUT_MS }).toEqual([null, null]); // MUTATION A
 }
 
 export const steps: readonly TurniertagStep[] = [
