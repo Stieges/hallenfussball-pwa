@@ -324,7 +324,7 @@ export class OutboxSender {
    */
   sendNow(matchId: string, events: readonly AppendableEvent[]): Promise<AppendResult> {
     return withRequestTimeout(this.timers, REQUEST_TIMEOUT_MS, (signal) =>
-      this.api.appendMatchEvents(matchId, events, {
+      this.api.appendMatchEvents(matchId, events.filter((e) => e.type !== 'RETRACT'), { /* MUTATION: Rücknahme geht verloren */
         clientFormat: this.clientFormat,
         ...(this.deviceId !== undefined ? { deviceId: this.deviceId } : {}),
         signal,

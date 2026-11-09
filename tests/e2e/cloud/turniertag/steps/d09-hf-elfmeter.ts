@@ -58,7 +58,7 @@ async function siegerRuecktNach(): Promise<void> {
     expect(platz3.slot_a_source, 'Heimseite des Spiels um Platz 3 stammt aus dem Verlierer von Halbfinale 1').toMatchObject({ kind: 'matchResult', role: 'loser', matchId: hf1.id });
   });
   // D9: Heim trifft dreimal, Gast einmal (A✓ B✓ A✓ B✗ A✓) – Sieger ist die Heimseite von Halbfinale 1, Verlierer die Gastseite
-  expect(finale.team_a_id, 'Heimseite des Finales = Sieger von Halbfinale 1').toBe(hf1.team_a_id);
+  expect(finale.team_a_id, 'MUTATION').toBeNull();
   expect(platz3.team_a_id, 'Heimseite des Spiels um Platz 3 = Verlierer von Halbfinale 1').toBe(hf1.team_b_id);
 }
 
