@@ -136,7 +136,8 @@ export const RepositoryProvider: React.FC<{ children: React.ReactNode; user: Rep
             previous.dispose();
         }
         activeQueueRef.current = queue;
-        // @FU-122: erst jetzt (nach dem Abräumen der alten) senden; ein zweiter Effekt-Lauf im StrictMode ändert nichts.
+        // @FU-122: nur das übernommene Repo startet seine Queue (verworfene Fabrik-Ergebnisse senden nie); start() wirkt je
+        // Instanz einmal, ein zweiter Effekt-Lauf im StrictMode ändert nichts.
         queue?.start();
         // Review A-11 A4 (@FU-098): Rechte-Frage erkennt „angelegt, noch nicht in der Cloud“ über das Konto-Repo.
         const repo = value.tournamentRepository;

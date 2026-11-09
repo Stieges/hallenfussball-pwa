@@ -85,6 +85,17 @@ function renderProvider(strict: boolean): void {
   rendered.push(result.current.tournamentRepository as OfflineRepository);
 }
 
+/** Wie `renderProvider`, mit `rerender` für Konto- und Rollenwechsel; jedes entstehende Konto-Repo wird abgeräumt. */
+function renderSwitchable(strict: boolean): { rerender: () => void } {
+  const { result, rerender } = renderHook(() => useRepositories(), { wrapper: wrapperFor(strict) });
+  const track = (): void => {
+    const repo = result.current.tournamentRepository;
+    if (repo instanceof OfflineRepository) { rendered.push(repo); }
+  };
+  track();
+  return { rerender: () => { rerender(); track(); } };
+}
+
 function wrapperFor(strict: boolean) {
   return function Wrapper({ children }: { children: React.ReactNode }) {
     const provider = <RepositoryProvider user={currentUser}>{children}</RepositoryProvider>;
@@ -164,5 +175,47 @@ describe('@FU-122 Nach dem Neuladen geht ein noch nicht übertragener Eintrag ge
 
     expect(remote.save).toHaveBeenCalledTimes(1);
     expect(stored(QUEUE_KEY)).toHaveLength(0);
+  });
+
+  describe('@FU-006 @FU-122 Konto- und Rollenwechsel: die neue Warteschlange startet von selbst (ohne process() von außen)', () => {
+    it('@FU-006 @FU-122 Maria offline mit wartendem Eintrag → abmelden → mit Netz wieder angemeldet: der Eintrag kommt genau einmal an', async () => {
+      net.online = false;
+      const { rerender } = renderSwitchable(true);
+      await flush();
+      expect(remote.save).not.toHaveBeenCalled();
+      expect(stored(QUEUE_KEY)).toHaveLength(1);
+
+      currentUser = null;
+      session.userId = null;
+      rerender();
+      await flush();
+      expect(remote.save).not.toHaveBeenCalled();
+
+      net.online = true;
+      session.userId = 'A';
+      currentUser = { globalRole: 'user', id: 'A' };
+      rerender();
+      await flush();
+
+      expect(remote.save).toHaveBeenCalledTimes(1);
+      expect(stored(QUEUE_KEY)).toHaveLength(0);
+      expect(stored(FAILED_KEY)).toHaveLength(0);
+    });
+
+    it('@FU-122 Rollenwechsel bei gleichem Konto (Repo wird neu gebaut, alte Queue entsorgt): der wartende Eintrag kommt genau einmal an', async () => {
+      net.online = false;
+      const { rerender } = renderSwitchable(true);
+      await flush();
+      expect(remote.save).not.toHaveBeenCalled();
+
+      net.online = true;
+      currentUser = { globalRole: 'admin', id: 'A' };
+      rerender();
+      await flush();
+
+      expect(remote.save).toHaveBeenCalledTimes(1);
+      expect(stored(QUEUE_KEY)).toHaveLength(0);
+      expect(stored(FAILED_KEY)).toHaveLength(0);
+    });
   });
 });

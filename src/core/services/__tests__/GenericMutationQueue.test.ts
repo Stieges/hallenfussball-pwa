@@ -489,6 +489,18 @@ describe('@FU-122 autoStart: false – die Queue sendet erst nach start()', () =
     expect(queue.getPendingCount()).toBe(0);
   });
 
+  it('@FU-122 nach dispose() meldet start() keinen online-Zuhörer an', () => {
+    const queue = queueWithStoredItem(vi.fn().mockResolvedValue(undefined));
+    const addSpy = vi.spyOn(window, 'addEventListener');
+    try {
+      queue.dispose();
+      queue.start();
+      expect(addSpy.mock.calls.filter(([type]) => type === 'online')).toHaveLength(0);
+    } finally {
+      addSpy.mockRestore();
+    }
+  });
+
   it('@FU-122 Gegenbeispiel: nach dispose() startet start() nichts mehr', async () => {
     const execute = vi.fn().mockResolvedValue(undefined);
     const queue = queueWithStoredItem(execute);
