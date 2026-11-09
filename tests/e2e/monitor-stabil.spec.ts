@@ -141,11 +141,18 @@ test.describe('Monitor-Stabilität (Paket M)', () => {
   // zweizeiligen Namen und 10 % Bildrand ragt sie über den sicheren Bereich hinaus – dieser Fall hat unten seinen eigenen „erwartet rot“-Test.
   // „Nächste Spiele“ (@ZM-085 gilt auf jeder Folie) gehört ebenfalls in die Prüfung.
   async function pruefeUeberdeckung(page: Page, profil: (typeof PROFILE)[number], szene: Szene, rand: number): Promise<void> {
-    await oeffne(page, szene, profil, rand);
-    await netz(page, false);
-    await page.clock.runFor(31_000);
     const symbol = page.getByTestId('monitor-connection-hint');
-    await expect(symbol).toBeVisible();
+    // Aufbau (Seite öffnen, Netz weg, 31 s vorspulen, Symbol da): scheitert er, soll das nie als „erwartet rot“ des Befund-Tests durchgehen
+    // (Muster `vorbedingung` in tests/e2e/cloud/turniertag/steps/shared.ts)
+    try {
+      await oeffne(page, szene, profil, rand);
+      await netz(page, false);
+      await page.clock.runFor(31_000);
+      await expect(symbol).toBeVisible();
+    } catch (error) {
+      test.info().expectedStatus = 'passed';
+      throw new Error(`Aufbau fehlgeschlagen (kein erwartetes Rot): ${error instanceof Error ? error.message : String(error)}`, { cause: error });
+    }
     const s = await box(symbol);
     expect(s.x + s.w).toBeLessThanOrEqual(profil.width * (1 - rand / 100) + 1);
     expect(s.y + s.h).toBeLessThanOrEqual(profil.height * (1 - rand / 100) + 1);
