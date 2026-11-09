@@ -138,35 +138,55 @@ test.describe('Monitor-Stabilität (Paket M)', () => {
 
   // @ZM-086: das Symbol überdeckt auf keiner vollen Listen-Folie ein Element, das im sicheren Bereich liegt (Zeilen bis ganz unten, Namen mit 45–50 Zeichen).
   // Ausnahme (Befund C-MONITOR-TABELLE-HOEHE-UEBERLAUF, schon ohne Symbol): die Tabelle „Alle Tabellen“ blättert nicht nach Höhe; mit sechs
-  // zweizeiligen Namen und 10 % Bildrand ragt sie über den sicheren Bereich hinaus – dort gilt die Prüfung nicht.
+  // zweizeiligen Namen und 10 % Bildrand ragt sie über den sicheren Bereich hinaus – dieser Fall hat unten seinen eigenen „erwartet rot“-Test.
+  // „Nächste Spiele“ (@ZM-085 gilt auf jeder Folie) gehört ebenfalls in die Prüfung.
+  async function pruefeUeberdeckung(page: Page, profil: (typeof PROFILE)[number], szene: Szene, rand: number): Promise<void> {
+    const symbol = page.getByTestId('monitor-connection-hint');
+    // Aufbau (Seite öffnen, Netz weg, 31 s vorspulen, Symbol da): scheitert er, soll das nie als „erwartet rot“ des Befund-Tests durchgehen
+    // (Muster `vorbedingung` in tests/e2e/cloud/turniertag/steps/shared.ts)
+    try {
+      await oeffne(page, szene, profil, rand);
+      await netz(page, false);
+      await page.clock.runFor(31_000);
+      await expect(symbol).toBeVisible();
+    } catch (error) {
+      test.info().expectedStatus = 'passed';
+      throw new Error(`Aufbau fehlgeschlagen (kein erwartetes Rot): ${error instanceof Error ? error.message : String(error)}`, { cause: error });
+    }
+    const s = await box(symbol);
+    expect(s.x + s.w).toBeLessThanOrEqual(profil.width * (1 - rand / 100) + 1);
+    expect(s.y + s.h).toBeLessThanOrEqual(profil.height * (1 - rand / 100) + 1);
+    const getroffen = await page.evaluate((r) => {
+      const treffer: string[] = [];
+      const sym = document.querySelector('[data-testid="monitor-connection-hint"]')!;
+      for (const el of Array.from(document.querySelectorAll('body *'))) {
+        if (sym.contains(el) || el.contains(sym) || el.childElementCount > 0) { continue; }
+        if ((el.textContent ?? '').trim() === '' && !(el instanceof SVGElement)) { continue; }
+        const b = el.getBoundingClientRect();
+        if (b.width === 0 || b.height === 0) { continue; }
+        if (r.x < b.right && r.x + r.w > b.left && r.y < b.bottom && r.y + r.h > b.top) { treffer.push(`${el.tagName} „${(el.textContent ?? '').trim().slice(0, 30)}“`); }
+      }
+      return treffer;
+    }, s);
+    expect(getroffen, `überdeckte Elemente bei Bildrand ${String(rand)} %`).toEqual([]);
+  }
+
   for (const profil of PROFILE) {
-    for (const szene of ['plan', 'planlang', 'tabellelang'] as const) {
+    for (const szene of ['plan', 'planlang', 'naechste', 'tabellelang'] as const) {
       test(`@ZM-086 @ZM-085 Verbindungs-Symbol überdeckt auf der Folie „${szene}“ nichts (${profil.name}, Bildrand 0, 5 und 10 %)`, async ({ page }) => {
         for (const rand of szene === 'tabellelang' ? [0, 5] : [0, 5, 10]) {
-          await oeffne(page, szene, profil, rand);
-          await netz(page, false);
-          await page.clock.runFor(31_000);
-          const symbol = page.getByTestId('monitor-connection-hint');
-          await expect(symbol).toBeVisible();
-          const s = await box(symbol);
-          expect(s.x + s.w).toBeLessThanOrEqual(profil.width * (1 - rand / 100) + 1);
-          expect(s.y + s.h).toBeLessThanOrEqual(profil.height * (1 - rand / 100) + 1);
-          const getroffen = await page.evaluate((r) => {
-            const treffer: string[] = [];
-            const sym = document.querySelector('[data-testid="monitor-connection-hint"]')!;
-            for (const el of Array.from(document.querySelectorAll('body *'))) {
-              if (sym.contains(el) || el.contains(sym) || el.childElementCount > 0) { continue; }
-              if ((el.textContent ?? '').trim() === '' && !(el instanceof SVGElement)) { continue; }
-              const b = el.getBoundingClientRect();
-              if (b.width === 0 || b.height === 0) { continue; }
-              if (r.x < b.right && r.x + r.w > b.left && r.y < b.bottom && r.y + r.h > b.top) { treffer.push(`${el.tagName} „${(el.textContent ?? '').trim().slice(0, 30)}“`); }
-            }
-            return treffer;
-          }, s);
-          expect(getroffen, `überdeckte Elemente bei Bildrand ${String(rand)} %`).toEqual([]);
+          await pruefeUeberdeckung(page, profil, szene, rand);
         }
       });
     }
+    // Der ausgenommene Fall: Bildrand 10 % bei „Alle Tabellen“ mit sechs zweizeiligen Namen. Wird der Befund behoben, schlägt dieser Test mit
+    // „Expect test to fail“ an: dann die Markierung entfernen (Verweis bleibt im Namen) und „10“ in die Schleife oben aufnehmen.
+    test.fail(`@ZM-129 @ME-067 @ZM-085 Offen C-MONITOR-TABELLE-HOEHE-UEBERLAUF: „Alle Tabellen“ mit langen Namen bleibt bei Bildrand 10 % im sicheren Bereich, das Symbol überdeckt nichts (${profil.name})`, async ({ page }) => {
+      await pruefeUeberdeckung(page, profil, 'tabellelang', 10);
+      // der Befund selbst: die Folie ragt nicht über den sicheren Bereich hinaus
+      const unterkante = await page.evaluate(() => Math.max(...Array.from(document.querySelectorAll('[data-testid="standings-row"]')).map((z) => z.getBoundingClientRect().bottom)));
+      expect(unterkante).toBeLessThanOrEqual(profil.height * 0.9 + 1);
+    });
   }
 
   test('@ZM-198 Turnierbeginn: die Spalte Platz zeigt bei allen 6 Teams „–“, Teilnehmerliste, alle Zahlen 0', async ({ page }) => {

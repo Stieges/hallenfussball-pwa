@@ -4,6 +4,7 @@
  * Besitzer: B-09/A-14 -- Soll: Halbfinale 1 (besetzt durch D8) endet 1:1, es geht in die eingestellte Entscheidung
  * (Strafstoßschießen), nach den Schüssen steht `decided_by = 'penalty'` mit Strafstoß-Tabelle.
  * Sichtbares Soll (B-15/B-21): die Zuschauer-Seite zeigt Halbfinale 1 mit 1:1 und Strafstoß-Vermerk.
+ * Die Besetzung des Finales mit dem Sieger (@TM-052) prüft der eigene Schritt D9d weiter unten (erwartet rot).
  */
 import { expect } from '@playwright/test';
 import { E2E_TURNIERTAG_SHARE_CODE } from '../../testData';
@@ -37,6 +38,38 @@ async function halbfinaleElfmeter({ anonPage }: StepContext): Promise<void> {
   await expect(zeile, 'Strafstoß-Ergebnis in Klammern, z. B. (4:3)').toHaveText(/\(\s*\d+\s*:\s*\d+\s*(i\. E\.\s*)?\)|Strafstoß/i, { timeout: SOLL_TIMEOUT_MS });
 }
 
+/**
+ * @TM-052 Teil 2 („Dann ist im Finale die Heimseite …“): Halbfinale 1 ist im Strafstoßschießen entschieden (D9). Dann gehört der Sieger auf die Heimseite des
+ * Finales und der Verlierer auf die Heimseite des Spiels um Platz 3. Die Auflösung der K.-o.-Klammer startet in der App aber nur im Gerät (Client), über
+ * `enqueueKo` (Spielplan-Eintrag, Nichtantritt, Cockpit-Korrektur), nicht beim regulären Spielende oder Strafstoßschießen im Cockpit; am Server rückt nichts nach.
+ * ACHTUNG, Grenze dieses Schritts: D9 beendet Halbfinale 1 über die Server-Funktion (`appendOwner`), ohne Client. Darum wird D9d NUR grün, wenn die Klammer
+ * am SERVER aufgelöst wird. Ein Fix im Client (z. B. `enqueueKo` beim Spielende im Cockpit) lässt D9d erwartet rot; dann muss der Schritt angepasst werden
+ * (Halbfinale 1 über das Cockpit-Gerät der Turnierleitung zu Ende spielen). Das ist hier nicht sauber möglich: D9 bleibt unverändert (@SL-053, @W2A-007),
+ * und Halbfinale 1 ist dort schon beendet.
+ * Der Schritt steht vor D10, das Halbfinale 2 im Spielplan einträgt und dabei die ganze Klammer neu auflöst – danach wäre die Besetzung kein Beleg mehr.
+ */
+async function siegerRuecktNach(): Promise<void> {
+  // Aufbau, den der Schritt nicht prüft: die Spiele sind lesbar, Halbfinale 1 ist entschieden, und die Herkunft der Seiten ist wie im Szenario
+  // (Heimseite des Finales = Sieger, Heimseite des Spiels um Platz 3 = Verlierer von Halbfinale 1)
+  const hf1 = await vorbedingung('Spiele lesen, Halbfinale 1 im Strafstoßschießen entschieden, Herkunft der Heimseiten laut @TM-052', async () => {
+    const { finals } = await fetchTurniertagBracket();
+    const halbfinale1 = findFinalByLabel(finals, '1. Halbfinale');
+    const endspiel = findFinalByLabel(finals, 'Finale');
+    const drittes = findFinalByLabel(finals, 'Spiel um Platz 3');
+    expect(halbfinale1.decided_by, 'Halbfinale 1 ist im Strafstoßschießen entschieden (D9)').toBe('penalty');
+    expect(endspiel.slot_a_source, 'Heimseite des Finales stammt aus dem Sieger von Halbfinale 1').toMatchObject({ kind: 'matchResult', role: 'winner', matchId: halbfinale1.id });
+    expect(drittes.slot_a_source, 'Heimseite des Spiels um Platz 3 stammt aus dem Verlierer von Halbfinale 1').toMatchObject({ kind: 'matchResult', role: 'loser', matchId: halbfinale1.id });
+    return halbfinale1;
+  });
+  // D9: Heim trifft dreimal, Gast einmal (A✓ B✓ A✓ B✗ A✓) – Sieger ist die Heimseite von Halbfinale 1, Verlierer die Gastseite.
+  // Mit Zeitgrenze abgelesen (wie D9): eine spätere Auflösung am Server darf einen Moment brauchen.
+  await expect.poll(async () => {
+    const { finals } = await fetchTurniertagBracket();
+    return [findFinalByLabel(finals, 'Finale').team_a_id, findFinalByLabel(finals, 'Spiel um Platz 3').team_a_id];
+  }, { message: 'Heimseite des Finales = Sieger, Heimseite von Platz 3 = Verlierer von Halbfinale 1', timeout: SOLL_TIMEOUT_MS }).toEqual([hf1.team_a_id, hf1.team_b_id]);
+}
+
 export const steps: readonly TurniertagStep[] = [
-  { id: 'D9', title: 'Halbfinale unentschieden: Strafstoßschießen entscheidet', scenarios: ['@SL-053', '@W2A-007', '@TM-052'], owner: 'B-09/A-14', expectedFail: false, run: halbfinaleElfmeter },
+  { id: 'D9', title: 'Halbfinale unentschieden: Strafstoßschießen entscheidet', scenarios: ['@SL-053', '@W2A-007'], owner: 'B-09/A-14', expectedFail: false, run: halbfinaleElfmeter },
+  { id: 'D9d', title: 'Nach dem Strafstoßschießen von Halbfinale 1 steht dessen Sieger im Finale auf der Heimseite', scenarios: ['@TM-052'], befunde: ['C-KO-SIEGER-RUECKT-NICHT-AM-SERVER'], owner: 'Auflösung der K.-o.-Klammer beim Spielende am SERVER (nur sie macht den Schritt grün; ein Fix im Client, enqueueKo, lässt ihn rot – dann Schritt auf den Client-Weg umbauen)', expectedFail: true, run: siegerRuecktNach },
 ];

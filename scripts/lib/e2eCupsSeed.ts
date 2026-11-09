@@ -26,6 +26,7 @@ import {
   E2E_MONSOFORT_EINGANG_MONITOR_ID,
   E2E_MONSCHLECHT_MONITOR_ID,
   E2E_MONUHR_MONITOR_ID,
+  E2E_MONRUECKNAHME_MONITOR_ID,
   E2E_MONZEITSTRAFE_MONITOR_ID,
   E2E_MONZEITSTRAFE_SHARE_CODE,
   E2E_ZWEITES_TURNIER_ID,
@@ -209,7 +210,7 @@ async function seedOneEngineCup(
       },
     ];
   }
-  if (cup.slug === 'MONSOFORT' || cup.slug === 'MONSCHLECHT' || cup.slug === 'MONUHR' || cup.slug === 'MONZEITSTRAFE') {
+  if (cup.slug === 'MONSOFORT' || cup.slug === 'MONSCHLECHT' || cup.slug === 'MONUHR' || cup.slug === 'MONZEITSTRAFE' || cup.slug === 'MONRUECKNAHME') {
     // R5 PR 1/2 (monitor-sofort.cloud.spec.ts): Feld-Monitor mit Live-Folie Feld 1, bei MONSOFORT dazu „Eingang“.
     const nowIso = new Date().toISOString();
     const monitor = (id: string, name: string, slide: MonitorSlide) => ({
@@ -228,7 +229,9 @@ async function seedOneEngineCup(
         ? [monitor(E2E_MONUHR_MONITOR_ID, 'Feld 1', feld1(E2E_MONUHR_MONITOR_ID))]
         : cup.slug === 'MONZEITSTRAFE'
           ? [monitor(E2E_MONZEITSTRAFE_MONITOR_ID, 'Feld 1', feld1(E2E_MONZEITSTRAFE_MONITOR_ID))]
-          : [monitor(E2E_MONSCHLECHT_MONITOR_ID, 'Feld 1', feld1(E2E_MONSCHLECHT_MONITOR_ID))];
+          : cup.slug === 'MONRUECKNAHME'
+            ? [monitor(E2E_MONRUECKNAHME_MONITOR_ID, 'Feld 1', feld1(E2E_MONRUECKNAHME_MONITOR_ID))]
+            : [monitor(E2E_MONSCHLECHT_MONITOR_ID, 'Feld 1', feld1(E2E_MONSCHLECHT_MONITOR_ID))];
   }
   if (cup.slug === 'MONZEITSTRAFE') {
     tournament.publishedAt = new Date().toISOString(); // Backstop von make_tournament_public()
