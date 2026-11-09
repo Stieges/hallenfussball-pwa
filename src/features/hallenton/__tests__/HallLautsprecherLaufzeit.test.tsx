@@ -208,7 +208,7 @@ describe('useHallLautsprecher(tid) – Schnittstelle für H4', () => {
     const { result } = renderHook(() => useHallLautsprecher(TID));
     act(() => { result.current.setzeLautstaerke('halbzeit', 50); });
     expect(result.current.lautstaerke).toEqual({ abpfiff: 100, halbzeit: 50, tor: 100 }); // @HT-023: Regler Torhymne seit 07.11.
-    let gespielt = false;
+    let gespielt: boolean | 'belegt' = false;
     await act(async () => { gespielt = await result.current.hierAnhoeren('halbzeit'); });
     expect(gespielt).toBe(true);
     expect(kontext.quellen).toHaveLength(1);
@@ -231,7 +231,7 @@ describe('useHallLautsprecher(tid) – Schnittstelle für H4', () => {
     const { result } = renderHook(() => useHallLautsprecher(sued));
     act(() => { result.current.setzeLautstaerke('tor', 40); });
     expect(result.current.lautstaerke).toEqual({ abpfiff: 100, halbzeit: 100, tor: 40 });
-    let gespielt = false;
+    let gespielt: boolean | 'belegt' = false;
     await act(async () => { gespielt = await result.current.hierAnhoeren('tor', 1); });
     expect(gespielt).toBe(true);
     expect(geladen).toContain(`https://halle.test/hallenton-sounds/${hymnen[1]}`);
@@ -249,7 +249,7 @@ describe('useHallLautsprecher(tid) – Schnittstelle für H4', () => {
     const { result } = renderHook(() => useHallLautsprecher(TID));
     await act(async () => { await Promise.resolve(); });
     expect(result.current.laufzeit?.rolle).toBe('wartet');
-    let gespielt = false;
+    let gespielt: boolean | 'belegt' = false;
     await act(async () => { gespielt = await result.current.hierAnhoeren('abpfiff'); });
     expect(gespielt).toBe(true);
     expect(kontext.quellen).toHaveLength(1);
