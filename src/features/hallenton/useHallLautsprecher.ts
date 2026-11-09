@@ -11,6 +11,11 @@
  * - `hierAnhoeren(ton)` spielt den Ton nur auf diesem Gerät (@HT-023, „Anhören“) – mit der Tonwahl des Turniers, auch vor der
  *   Aktivierung und ohne Lautsprecher-Funktion (k4-neu-2, H3b-3). H3c: `hierAnhoeren('tor', i)` spielt die Torhymne `i`
  *   (Vorbelegung die erste) über ihren eigenen Regler, höchstens 10 s; Regler `tor` in `lautstaerke` (für H4, keine Oberfläche).
+ *   H4-1: „Anhören“ ist eine eigene Art: läuft gerade ein echter Ton (Torhymne, End-Ton, Testton), kommt `'belegt'` zurück und
+ *   der echte Ton läuft weiter; ein laufendes Anhören beendet jeder echte Ton (H4-10 zeigt den Hinweis).
+ * - H4-1: `abgeloest` = Spur einer Ablösung (@HT-015, „Feld 1 von einem anderen Gerät übernommen“) in allen Tabs, bis
+ *   `abgeloestVerstanden()` (H4-9) oder ein neues Einschalten; `lebenszeichenFehler` gilt geräteweit (@HT-012, @HT-041);
+ *   `erneutVersuchen()` beendet ein „still“ nach `kein_recht` (N2, H4 baut die Taste).
  */
 import { useCallback, useMemo, useReducer, useSyncExternalStore } from 'react';
 import { getDeviceId } from '../../core/device/deviceId';
@@ -21,9 +26,11 @@ import { supabase } from '../../lib/supabase';
 import { merkeAbmeldung, vergissAbmeldung, vergissAbmeldungWenn } from './ausstehendeAbmeldung';
 import { leseTonWahlSofort, leseTorWahlZumAnhoeren } from './browserLaufzeit';
 import { ladeTurnierLokal } from './lokalesTurnier';
-import { abonniereGeraet, geraetSpieler, geraetStand, schlafenQuittiert, setzeEinschaltung } from './lautsprecherGeraet';
+import {
+  abgeloestVerstanden, abonniereGeraet, erneutVersuchen, geraetSpieler, geraetStand, schlafenQuittiert, setzeEinschaltung,
+} from './lautsprecherGeraet';
 import type { LaufzeitSnapshot } from './runtime/HallLautsprecherLaufzeit';
-import type { ReglerArt } from './runtime/hallTonSpieler';
+import type { AnhoerenErgebnis, ReglerArt } from './runtime/hallTonSpieler';
 
 export type HallLautsprecherRolle = 'keiner' | 'diesesTurnier' | 'anderesTurnier';
 
@@ -38,19 +45,24 @@ export interface HallLautsprecher {
   tonAktivieren(): Promise<boolean>;
   ausschalten(): Promise<HallErgebnis<HallReleaseAntwort> | null>;
   /** `ton = 'tor'`: die Torhymne Nummer `hymne` (0 = die erste) der Liste des Turniers. */
-  hierAnhoeren(ton: ReglerArt, hymne?: number): Promise<boolean>;
+  hierAnhoeren(ton: ReglerArt, hymne?: number): Promise<AnhoerenErgebnis>;
   lautstaerke: Readonly<Record<ReglerArt, number>>;
   setzeLautstaerke(ton: ReglerArt, prozent: number): void;
   stumm: boolean;
   setzeStumm(stumm: boolean): void;
   /** Fehlergrund des letzten Lebenszeichens (z. B. `ungueltig`); `null` = angekommen (H3b-3 K2). */
   lebenszeichenFehler: HallFehlerGrund | null;
+  /** Felder dieses Turniers, die dem Gerät von einem anderen Gerät abgenommen wurden, und wann (Serverzeit, ms); sonst `null`. */
+  abgeloest: { felder: readonly number[]; um: number } | null;
+  abgeloestVerstanden(): void;
+  /** Ein „still“ nach dreimal `kein_recht` beenden und neu melden (auch aus einem anderen Tab des Geräts). */
+  erneutVersuchen(): void;
 }
 
 const nieAbonniert = (): (() => void) => () => undefined;
 
 export function useHallLautsprecher(tid: string): HallLautsprecher {
-  const { einschaltung, laufzeit, lebenszeichenFehler } = useSyncExternalStore(abonniereGeraet, geraetStand, geraetStand);
+  const { einschaltung, laufzeit, lebenszeichenFehler, abgeloest } = useSyncExternalStore(abonniereGeraet, geraetStand, geraetStand);
   const snapshot = useSyncExternalStore(laufzeit?.subscribe ?? nieAbonniert, () => laufzeit?.getSnapshot() ?? null, () => null);
   const [, neuZeichnen] = useReducer((n: number) => n + 1, 0);
   const rolle: HallLautsprecherRolle = einschaltung === null ? 'keiner' : einschaltung.turnierId === tid ? 'diesesTurnier' : 'anderesTurnier';
@@ -60,6 +72,7 @@ export function useHallLautsprecher(tid: string): HallLautsprecher {
       p_tournament_id: tid, p_fields: [...felder], p_device_id: getDeviceId(), p_device_name: name, p_replace: abloesen,
     });
     if (ergebnis.ok && ergebnis.status === 'assigned') {
+      abgeloestVerstanden(); // @HT-015: ein neues Einschalten löscht die Spur der Ablösung
       vergissAbmeldung(); // K6: erst jetzt – eine offene Abmeldung nähme die neue Zuordnung sonst wieder weg
       setzeEinschaltung({ turnierId: tid, felder: ergebnis.fields, name });
     }
@@ -105,7 +118,7 @@ export function useHallLautsprecher(tid: string): HallLautsprecher {
     } else {
       await spieler.laden(await leseTonWahlSofort(tid, ladeTurnierLokal));
     }
-    return ton === 'tor' ? spieler.hymnen.spielen(hymne) : spieler.jetztSpielen(ton);
+    return ton === 'tor' ? spieler.hymnen.anhoeren(hymne) : spieler.anhoeren(ton);
   }, [tid]);
 
   const setzeLautstaerke = useCallback((ton: ReglerArt, prozent: number) => {
@@ -132,5 +145,7 @@ export function useHallLautsprecher(tid: string): HallLautsprecher {
     lautstaerke, setzeLautstaerke,
     stumm: spieler.stumm(), setzeStumm,
     lebenszeichenFehler: rolle === 'diesesTurnier' ? lebenszeichenFehler : null,
+    abgeloest: abgeloest?.turnierId === tid ? { felder: abgeloest.felder, um: abgeloest.um } : null,
+    abgeloestVerstanden, erneutVersuchen: () => erneutVersuchen(),
   };
 }

@@ -12,43 +12,18 @@
  * - H3c: Torhymnen (`hymnen`, `torhymnenAusgabe.ts`) auf derselben Ausgabe; jeder hier geplante Ton beendet sie zu seinem Beginn.
  */
 import type { AudioKontext, AudioPuffer, GainKnoten, KompressorKnoten, QuellKnoten } from './webAudioTypen';
-import { browserSpeicher, gespeicherteLautstaerke, lies, schreib, LAUTSTAERKE_SCHLUESSEL, STUMM_SCHLUESSEL, type ReglerArt, type Speicher, type TonArt } from './tonEinstellungen';
+import { browserSpeicher, gespeicherteLautstaerke, lies, schreib, LAUTSTAERKE_SCHLUESSEL, STUMM_SCHLUESSEL, type TonArt } from './tonEinstellungen';
 import { erzeugeHallTonLader, HART_STOPP_SEK, type LadeStand, type TonWahl } from './hallTonLader';
-import { erzeugeTorhymnenAusgabe, type TorhymnenAusgabe } from './torhymnenAusgabe';
+import type { HallTonSpieler, HallTonSpielerAbhaengigkeiten, SpielerZustand } from './hallTonSpielerTypen';
+import { erzeugeHupenVorschau } from './hallTonVorschau';
+import { erzeugeTorhymnenAusgabe } from './torhymnenAusgabe';
 
 export type { AudioKontext, AudioPuffer, AudioZiel, GainKnoten, KompressorKnoten, QuellKnoten } from './webAudioTypen';
 export { LAUTSTAERKE_SCHLUESSEL, STUMM_SCHLUESSEL, type ReglerArt, type Speicher, type TonArt } from './tonEinstellungen';
 
 export { HART_STOPP_SEK, type HupenId, type LadeStand, type TonWahl } from './hallTonLader';
-export type SpielerZustand = 'not_activated' | 'volume_zero' | 'custom_sound_failed' | 'ready';
-
-export interface HallTonSpieler {
-  aktivieren(): Promise<boolean>;
-  laden(toene: Record<TonArt, TonWahl>): Promise<Record<TonArt, LadeStand>>;
-  planen(id: string, art: TonArt, startAtAudioSec: number): boolean;
-  abbrechen(id: string): void;
-  /** Sofort spielen (Testton, „Anhören“). */
-  jetztSpielen(art: TonArt): boolean;
-  /** Audiozeit (s) für eine Serverzeit (ms), abzüglich `outputLatency`, wo vorhanden. */
-  audioZeitFuerServerZeit(serverMs: number, serverNowMs: number): number;
-  lautstaerke(art: ReglerArt): number;
-  setzeLautstaerke(art: ReglerArt, prozent: number): void;
-  stumm(): boolean;
-  setzeStumm(stumm: boolean): void;
-  zustand(): SpielerZustand;
-  onZustand(fn: (zustand: SpielerZustand) => void): () => void;
-  geplant(): string[];
-  /** Für `ausgangsSignale` (dieselbe Ausgabe). */
-  audioKontext(): AudioKontext;
-  /** Torhymnen (@HT-024): laden, spielen, stoppen. */
-  readonly hymnen: TorhymnenAusgabe;
-}
-
-export interface HallTonSpielerAbhaengigkeiten {
-  erzeugeKontext: () => AudioKontext;
-  ladeDaten: (url: string) => Promise<ArrayBuffer>;
-  speicher: Speicher | null;
-}
+export type { AnhoerenErgebnis } from './hallTonVorschau';
+export type { HallTonSpieler, HallTonSpielerAbhaengigkeiten, SpielerZustand } from './hallTonSpielerTypen';
 
 /** `startAt`/`endetUm`: Audiozeit von Beginn und hartem Ende (für die Torhymne). */
 interface Geplant { quelle: QuellKnoten; gain: GainKnoten; art: TonArt; startAt: number; endetUm: number }
@@ -117,8 +92,12 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
   };
 
   const lader = erzeugeHallTonLader({ kontext, ladeDaten });
+  const vorschau = erzeugeHupenVorschau({ kontext, begrenzer });
+  /** Klingt gerade ein echter End-Ton oder Testton? (Beginn erreicht, Ende noch nicht.) */
+  const echterTonKlingt = (): boolean => [...geplant.values()].some((e) => e.startAt <= kontext().currentTime && kontext().currentTime < e.endetUm);
   const hymnen = erzeugeTorhymnenAusgabe({
     kontext, begrenzer, dekodiere: lader.dekodiere, andereToene: () => geplant.values(), lautstaerke: () => lautstaerke.tor,
+    vorschauBeenden: vorschau.beenden,
     darf: () => aktiviert && kontextWert?.state === 'running' && !stumm && lautstaerke.tor > 0, // ohne geladenen Abpfiff-Ton
   });
 
@@ -145,6 +124,7 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
       return false;
     }
     abbrechen(id);
+    vorschau.beendenUm(startAtAudioSec); // ein echter Ton beendet jedes Anhören zu seinem Beginn
     const k = kontext();
     const quelle = k.createBufferSource();
     const gain = k.createGain();
@@ -201,6 +181,18 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
       jetztZaehler += 1;
       return planen(`jetzt-${jetztZaehler}`, art, kontext().currentTime);
     },
+    anhoeren(art) {
+      const ton = puffer[art];
+      if (berechne() === 'not_activated' || stumm || lautstaerke[art] === 0 || !ton) {
+        return false;
+      }
+      if (echterTonKlingt() || hymnen.laeuft()) {
+        return 'belegt';
+      }
+      hymnen.anhoerenStoppen();
+      vorschau.spielen(art, ton, lautstaerke[art], HART_STOPP_SEK);
+      return true;
+    },
     audioZeitFuerServerZeit(serverMs, serverNowMs) {
       const k = kontext();
       return k.currentTime + (serverMs - serverNowMs) / 1000 - (k.outputLatency ?? 0);
@@ -212,6 +204,8 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
       schreib(speicher, LAUTSTAERKE_SCHLUESSEL, JSON.stringify(lautstaerke));
       if (art === 'tor') {
         hymnen.setzeLautstaerke(wert);
+      } else {
+        vorschau.setzeLautstaerke(art, wert);
       }
       for (const eintrag of geplant.values()) {
         if (eintrag.art === art) {

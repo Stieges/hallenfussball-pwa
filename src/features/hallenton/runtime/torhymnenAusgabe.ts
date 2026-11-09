@@ -9,11 +9,14 @@
  * - Jeder andere Ton des Geräts (End-Ton, Testton, „Anhören“) beendet die Hymne genau zu seinem Beginn – auch einer, der
  *   schon vor der Hymne geplant war; wird er abgebrochen, gilt wieder die harte Grenze (`toeneGeaendert`).
  * - `stoppen()`: von außen sofort (Rücknahme, Ende, Abschalten).
+ * - `anhoeren(i)` (H4-1, H3c-Befund 4): „Anhören“ als eigene Art. Sie verdrängt keine echte Hymne (läuft eine, kommt `'belegt'`),
+ *   zählt nie als „läuft“ und wird von der nächsten echten Ausgabe sofort beendet; `stoppen()` (Rücknahme) rührt sie nicht an.
  * - `nachladen()` (Fixrunde 1): nur die nicht spielbaren Hymnen der aktuellen Liste erneut holen (z. B. nach kurzem
  *   WLAN-Aussetzer beim Aktivieren); den Abstand der Versuche hält die Steuerung.
  * Alle Zeiten Audiozeit (s).
  */
 import { TORHYMNE_MAX_MS } from '../../../core/hallenton';
+import type { AnhoerenErgebnis } from './hallTonVorschau';
 import type { AudioKontext, AudioPuffer, GainKnoten, KompressorKnoten, QuellKnoten } from './webAudioTypen';
 
 export const HYMNE_HART_STOPP_SEK = TORHYMNE_MAX_MS / 1000;
@@ -35,6 +38,10 @@ export interface TorhymnenAusgabe {
   /** Hymne `index` sofort spielen; `false`, wenn sie nicht spielbar ist oder gerade nichts erklingen darf. */
   spielen(index: number): boolean;
   stoppen(): void;
+  /** Wie `spielen`, aber als Vorschau auf diesem Gerät: `'belegt'`, solange eine echte Hymne oder ein anderer Ton klingt. */
+  anhoeren(index: number): AnhoerenErgebnis;
+  anhoerenStoppen(): void;
+  /** Nur eine echte Hymne (nie das Anhören). */
   laeuft(): boolean;
   /** Ein anderer Ton wurde geplant oder abgebrochen: Ende der laufenden Hymne neu setzen. */
   toeneGeaendert(): void;
@@ -50,6 +57,8 @@ export interface TorhymnenAusgabeDeps {
   /** Regler `tor` in Prozent. */
   lautstaerke: () => number;
   andereToene: () => Iterable<AndererTon>;
+  /** Eine echte Hymne beginnt: ein laufendes Anhören der Hupen endet (die des Spielers). */
+  vorschauBeenden?: () => void;
 }
 
 export function istHttps(url: string): boolean {
@@ -86,34 +95,85 @@ export function erzeugeTorhymnenAusgabe(deps: TorhymnenAusgabeDeps): TorhymnenAu
   let runde = 0;
   let laufend: Laufend | null = null;
 
-  const laeuft = (): boolean => laufend !== null && !laufend.gestoppt
-    && deps.kontext().currentTime < Math.min(laufend.dateiEnde, laufend.stopAt);
+  let anhoerenLaufend: Laufend | null = null;
 
-  /** Ende = harte Grenze oder der Beginn des ersten anderen Tons ab dem Beginn der Hymne, was früher ist. */
+  const klingt = (e: Laufend | null): e is Laufend => e !== null && !e.gestoppt
+    && deps.kontext().currentTime < Math.min(e.dateiEnde, e.stopAt);
+
+  const laeuft = (): boolean => klingt(laufend);
+
+  /** Ende = harte Grenze oder der Beginn des ersten anderen Tons ab dem Beginn der Hymne, was früher ist (echte Hymne und Anhören). */
   const begrenzen = (): void => {
-    if (!laufend || !laeuft()) {
-      return;
-    }
-    let ziel = laufend.startAt + HYMNE_HART_STOPP_SEK;
-    for (const ton of deps.andereToene()) {
-      if (ton.startAt >= laufend.startAt) {
-        ziel = Math.min(ziel, ton.startAt);
+    for (const e of [laufend, anhoerenLaufend]) {
+      if (!klingt(e)) {
+        continue;
       }
-    }
-    if (ziel !== laufend.stopAt) {
-      laufend.stopAt = ziel;
-      stopUm(laufend.quelle, ziel); // der letzte Aufruf gilt (Web Audio), solange die Quelle noch klingt
+      let ziel = e.startAt + HYMNE_HART_STOPP_SEK;
+      for (const ton of deps.andereToene()) {
+        if (ton.startAt >= e.startAt) {
+          ziel = Math.min(ziel, ton.startAt);
+        }
+      }
+      if (ziel !== e.stopAt) {
+        e.stopAt = ziel;
+        stopUm(e.quelle, ziel); // der letzte Aufruf gilt (Web Audio), solange die Quelle noch klingt
+      }
     }
   };
 
-  const stoppen = (): void => {
-    if (!laufend || !laeuft()) {
+  const stoppeEintrag = (e: Laufend | null): void => {
+    if (!klingt(e)) {
       return;
     }
     const jetzt = deps.kontext().currentTime;
-    laufend.gestoppt = true;
-    laufend.stopAt = jetzt;
-    stopUm(laufend.quelle, jetzt);
+    e.gestoppt = true;
+    e.stopAt = jetzt;
+    stopUm(e.quelle, jetzt);
+  };
+
+  const stoppen = (): void => stoppeEintrag(laufend);
+  const anhoerenStoppen = (): void => stoppeEintrag(anhoerenLaufend);
+
+  /** Läuft jetzt ein anderer Ton (z. B. der Abpfiff)? */
+  const andererKlingt = (jetzt: number): boolean => {
+    for (const anderer of deps.andereToene()) {
+      if (anderer.startAt <= jetzt && jetzt < anderer.endetUm) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  /** Hymne `ton` jetzt starten; `echt` = die Torhymne, sonst das Anhören. */
+  const abspielen = (ton: AudioPuffer, echt: boolean): void => {
+    const k = deps.kontext();
+    const jetzt = k.currentTime;
+    const quelle = k.createBufferSource();
+    const gain = k.createGain();
+    quelle.buffer = ton;
+    gain.gain.value = deps.lautstaerke() / 100;
+    quelle.connect(gain);
+    gain.connect(deps.begrenzer());
+    const eintrag: Laufend = {
+      quelle, gain, startAt: jetzt, dateiEnde: jetzt + Math.min(ton.duration, HYMNE_HART_STOPP_SEK), stopAt: Number.POSITIVE_INFINITY, gestoppt: false,
+    };
+    quelle.onended = () => {
+      if (laufend === eintrag) {
+        laufend = null;
+      }
+      if (anhoerenLaufend === eintrag) {
+        anhoerenLaufend = null;
+      }
+      quelle.disconnect();
+      gain.disconnect();
+    };
+    if (echt) {
+      laufend = eintrag;
+    } else {
+      anhoerenLaufend = eintrag;
+    }
+    quelle.start(jetzt);
+    begrenzen();
   };
 
   return {
@@ -142,41 +202,37 @@ export function erzeugeTorhymnenAusgabe(deps: TorhymnenAusgabeDeps): TorhymnenAu
       if (!ton || !deps.darf()) {
         return false;
       }
-      const k = deps.kontext();
-      const jetzt = k.currentTime;
-      for (const anderer of deps.andereToene()) {
-        if (anderer.startAt <= jetzt && jetzt < anderer.endetUm) {
-          return false; // ein anderer Ton klingt gerade (z. B. der Abpfiff)
-        }
+      if (andererKlingt(deps.kontext().currentTime)) {
+        return false; // ein anderer Ton klingt gerade (z. B. der Abpfiff)
       }
+      anhoerenStoppen(); // jede echte Ausgabe beendet ein laufendes Anhören sofort
+      deps.vorschauBeenden?.();
       stoppen();
-      const quelle = k.createBufferSource();
-      const gain = k.createGain();
-      quelle.buffer = ton;
-      gain.gain.value = deps.lautstaerke() / 100;
-      quelle.connect(gain);
-      gain.connect(deps.begrenzer());
-      const eintrag: Laufend = {
-        quelle, gain, startAt: jetzt, dateiEnde: jetzt + Math.min(ton.duration, HYMNE_HART_STOPP_SEK), stopAt: Number.POSITIVE_INFINITY, gestoppt: false,
-      };
-      quelle.onended = () => {
-        if (laufend === eintrag) {
-          laufend = null;
-        }
-        quelle.disconnect();
-        gain.disconnect();
-      };
-      laufend = eintrag;
-      quelle.start(jetzt);
-      begrenzen();
+      abspielen(ton, true);
+      return true;
+    },
+    anhoeren(index) {
+      const ton = puffer[index] ?? null;
+      if (!ton || !deps.darf()) {
+        return false;
+      }
+      if (laeuft() || andererKlingt(deps.kontext().currentTime)) {
+        return 'belegt'; // eine echte Ausgabe geht vor und läuft weiter
+      }
+      deps.vorschauBeenden?.();
+      anhoerenStoppen();
+      abspielen(ton, false);
       return true;
     },
     stoppen,
+    anhoerenStoppen,
     laeuft,
     toeneGeaendert: begrenzen,
     setzeLautstaerke(prozent) {
-      if (laufend) {
-        laufend.gain.gain.value = prozent / 100;
+      for (const e of [laufend, anhoerenLaufend]) {
+        if (e) {
+          e.gain.gain.value = prozent / 100;
+        }
       }
     },
   };

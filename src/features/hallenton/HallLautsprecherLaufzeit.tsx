@@ -4,20 +4,23 @@
  *   angemeldet ist (kein Gast). Sonst entstehen weder Worker noch Abfrage.
  * - Bildschirm wach (`useWakeLock`), solange die Laufzeit hier tönt.
  * - Jeder Tab hört auf die Lautsprecher-Meldung des Geräts und hält dann das Reload-Tor zu (`lautsprecherReloadTor.ts`).
+ * - H4-1 (N2): Ein neues Zugangs-Token (SIGNED_IN/TOKEN_REFRESHED, wie `MatchEngineProvider` es über `session.token` sieht) beendet
+ *   ein „still“ nach dreimal `kein_recht` (`erneutVersuchen(false)`); kein eigener Supabase-Listener.
  * - H3b-3, auf jedem angemeldeten Gerät (kein Gast): Lebenszeichen der Leitung (`leitungGeraet.ts`), eine offene Abmeldung
  *   nachholen (`ausstehendeAbmeldung.ts`).
  * Keine Oberfläche: gibt `null` zurück.
  */
-import { useEffect, useSyncExternalStore } from 'react';
+import { useContext, useEffect, useRef, useSyncExternalStore } from 'react';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { isSupabaseConfigured, supabase } from '../../lib/supabase';
 import { attachReloadGate } from '../../lib/swRegistration';
+import { AuthContext } from '../auth/context/authContextInstance';
 import { useMatchEngineContextOptional } from '../match-engine/useMatchEngineContext';
 import { abmeldungNachholen, ABMELDEN_NEU_MS } from './ausstehendeAbmeldung';
 import { erzeugeBrowserKanal, erzeugeBrowserLaufzeit } from './browserLaufzeit';
 import { erzeugeBrowserLeitung, setzeLeitung } from './leitungGeraet';
 import { ladeTurnierLokal } from './lokalesTurnier';
-import { abonniereGeraet, geraetStand, setzeLaufzeit } from './lautsprecherGeraet';
+import { abonniereGeraet, erneutVersuchen, geraetStand, setzeLaufzeit } from './lautsprecherGeraet';
 import type { LaufzeitSnapshot } from './runtime/HallLautsprecherLaufzeit';
 import { verbindeLautsprecherReloadTor } from './runtime/lautsprecherReloadTor';
 import { echterZeitgeber } from './runtime/zeitgeber';
@@ -31,6 +34,15 @@ export function HallLautsprecherLaufzeit(): null {
   const aktiv = einschaltung !== null && konto;
   const turnierId = einschaltung?.turnierId ?? null;
   const felderSchluessel = einschaltung?.felder.join(',') ?? '';
+  const token = useContext(AuthContext)?.session?.token; // ohne Provider (Tests): kein Token
+  const letzterToken = useRef(token);
+
+  useEffect(() => {
+    if (token !== undefined && token !== letzterToken.current) {
+      erneutVersuchen(false); // Neu-Anmeldung dieses Tabs: ein „still“ nach kein_recht endet (die anderen Tabs sehen ihr eigenes Token)
+    }
+    letzterToken.current = token;
+  }, [token]);
 
   useEffect(() => {
     const kanal = erzeugeBrowserKanal();

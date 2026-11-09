@@ -19,7 +19,7 @@ import { isTournamentClosed } from '../../core/services/lifecycle';
 import { supabase } from '../../lib/supabase';
 import type { Tournament } from '../../types/tournament';
 import type { MatchEngineContextValue } from '../match-engine/matchEngineContextInstance';
-import { geraetSpieler, istGeschlafen, setzeEinschaltung, setzeLebenszeichenFehler, type Einschaltung } from './lautsprecherGeraet';
+import { beiErneutVersuchen, geraetSpieler, istGeschlafen, merkeAbloesung, setzeEinschaltung, setzeLebenszeichenFehler, type Einschaltung } from './lautsprecherGeraet';
 import { erzeugeBrowserAusgangsSignale } from './runtime/ausgangsSignale';
 import { erzeugeFeldStand } from './runtime/feldStand';
 import type { PlanSpiel } from './runtime/feldStandSpiele';
@@ -165,9 +165,10 @@ export function erzeugeBrowserLaufzeit({ einschaltung, engine, ladeTurnier }: Br
     zeitgeber: echterZeitgeber,
     rpc: { heartbeat: (args) => hallSpeakerHeartbeat(supabase, args), ack: (args) => hallTestToneAck(supabase, args) },
     speicher: browserKanalSpeicher(),
-    // Regel 1: erst die Laufzeit stoppen (kein Ton danach), dann die Einschaltung kürzen bzw. löschen
+    // Regel 1: erst die Laufzeit stoppen (kein Ton danach), dann die Spur merken (@HT-015, H4-1), dann die Einschaltung kürzen bzw. löschen
     abgeloest: (bleiben) => {
       laufzeit.stop();
+      merkeAbloesung(turnierId, felder.filter((feld) => !bleiben.includes(feld)), engine.clock.serverNow());
       setzeEinschaltung(bleiben.length > 0 ? { ...einschaltung, felder: bleiben } : null);
     },
     nachLebenszeichen: neuLesen,
@@ -181,14 +182,20 @@ export function erzeugeBrowserLaufzeit({ einschaltung, engine, ladeTurnier }: Br
       }
     },
   });
+  let erneutAb: (() => void) | null = null;
   return {
     laufzeit,
     starten: () => {
       laufzeit.start();
       lebenszeichen.start();
+      erneutAb = beiErneutVersuchen(() => {
+        lebenszeichen.wiederAufnehmen(); // N2: Neu-Anmeldung oder Taste beenden ein „still“ nach kein_recht
+      });
     },
     beenden: () => {
       beendet = true;
+      erneutAb?.();
+      erneutAb = null;
       lebenszeichen.stop();
       laufzeit.stop();
       kanal.schliessen();

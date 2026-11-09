@@ -2,16 +2,17 @@
  * Lebenszeichen des Hallen-Lautsprechers (H3b-3): `hall_speaker_heartbeat` alle 5 s mit Zustand und Anzeichen eines
  * Ausgangswechsels (@HT-047), dazu der Testton in der Halle mit Quittung (@HT-017).
  *
- * Genau ein Tab je Gerät meldet, auch ohne aktivierten Tab (@HT-012, @HT-013), über die Melde-Sperre `hallenton-melden`:
- * - Der tönende Tab meldet immer, aus dem Worker-Takt (`beimTakt`, minimiert weiter, @HT-029). Ein wartender Tab nur, solange
- *   keine fremde Meldung im Kanal steht; sonst gibt er die Sperre nach seiner laufenden Anfrage frei – nie zwei Melder zugleich.
- * - Ein geänderter Zustand meldet sofort (höchstens 1/s), etwa `background` aus der Wache im Hauptthread (@HT-014).
+ * Genau ein Tab je Gerät meldet, auch ohne aktivierten Tab (@HT-012, @HT-013), über die Melde-Sperre `hallenton-melden`: der tönende
+ * Tab immer (aus dem Worker-Takt, @HT-029), ein wartender nur, solange keine fremde Meldung im Kanal steht – nie zwei zugleich.
+ * Ein geänderter Zustand meldet sofort (höchstens 1/s), etwa `background` aus der Wache im Hauptthread (@HT-014).
  * Antwort:
  * - `superseded`/`unassigned` (Regel 1): lokal abschalten (`abgeloest`, kein Ton danach); die übrigen Felder bleiben.
  * - Turnierende (Fixrunde 1, W1): Seit `20261123_001_hallenton_torhymne.sql` antwortet der Server nach dem Ende 55000
  *   (`hall_require_open`) → `turnier_beendet` → still abschalten. Zusätzlich prüft jeder Tab die lokale Turnierkopie
  *   (`lebenszeichenTurnierende.ts`).
  * - `kein_recht` dreimal in Folge: still wie ein Gast; jeder Fehlergrund geht an `beiFehler`, ein Erfolg setzt ihn zurück (K2).
+ *   Dieses „still“ ist nicht endgültig (H4-1, N2): `wiederAufnehmen()` (Neu-Anmeldung, Taste „erneut versuchen“) startet die
+ *   Laufzeit neu und meldet wieder; das „still“ nach Turnierende bleibt.
  * - Offener Testton (`lebenszeichenTestton.ts`): nur der tönende Tab spielt ihn einmal, dann Quittung. Danach liest der tönende Tab
  *   die Tonwahl neu (`nachLebenszeichen`, k-neu-2).
  * Anzeichen bleiben offen, bis ein Lebenszeichen mit ihnen angekommen ist.
@@ -47,7 +48,7 @@ export interface LebenszeichenDeps {
   turnierId: string;
   felder: readonly number[];
   deviceId: string;
-  laufzeit: Pick<HallLautsprecherLaufzeit, 'getSnapshot' | 'subscribe' | 'beimTakt' | 'stillAbschalten'>;
+  laufzeit: Pick<HallLautsprecherLaufzeit, 'getSnapshot' | 'subscribe' | 'beimTakt' | 'stillAbschalten' | 'start' | 'stop'>;
   spieler: Pick<HallTonSpieler, 'jetztSpielen'>;
   /** Anzeichen eines Ausgangswechsels am Spieler dieses Tabs; erst im tönenden Tab erzeugt. */
   erzeugeAusgang: () => AusgangsSignale | null;
@@ -71,6 +72,8 @@ export interface LebenszeichenDeps {
 export interface Lebenszeichen {
   start(): void;
   stop(): void;
+  /** Nach „still“ wegen `kein_recht` neu anfangen; `false`, wenn das Gerät nicht deswegen still ist (z. B. Turnierende). */
+  wiederAufnehmen(): boolean;
 }
 
 /** `zurueck`: ein anderer Tab tönt, keine Anforderung, bis seine Meldung verschwindet. */
@@ -88,6 +91,7 @@ export function erzeugeLebenszeichen(d: LebenszeichenDeps): Lebenszeichen {
   let ausgang: AusgangsSignale | null = null;
   const ab: Array<() => void> = [];
   let keinRechtInFolge = 0;
+  let stillWegenRecht = false;
   const testton = erzeugeTestton({
     turnierId: d.turnierId, deviceId: d.deviceId, spieler: d.spieler, speicher: d.speicher, ausgang: () => ausgang, ack: (args) => d.rpc.ack(args),
   });
@@ -199,7 +203,8 @@ export function erzeugeLebenszeichen(d: LebenszeichenDeps): Lebenszeichen {
     keinRechtInFolge = !antwort.ok && antwort.grund === 'kein_recht' ? keinRechtInFolge + 1 : 0;
     if (!antwort.ok) {
       if (antwort.grund === 'turnier_beendet' || keinRechtInFolge >= KEIN_RECHT_GRENZE) {
-        d.laufzeit.stillAbschalten(); // 55000 nach dem Turnierende; kein Recht mehr wie ein Gast
+        stillWegenRecht = antwort.grund === 'kein_recht';
+        d.laufzeit.stillAbschalten(); // 55000 nach dem Turnierende; kein Recht mehr wie ein Gast (endet, N2)
       }
       return;
     }
@@ -247,5 +252,16 @@ export function erzeugeLebenszeichen(d: LebenszeichenDeps): Lebenszeichen {
       pruefen();
     },
     stop,
+    wiederAufnehmen() {
+      if (!gestartet || !stillWegenRecht) {
+        return false;
+      }
+      stillWegenRecht = false;
+      keinRechtInFolge = 0;
+      letzteSendung = null; // das nächste Lebenszeichen sofort, nicht erst nach 5 s
+      d.laufzeit.stop(); // Rolle `still` → `aus`, dann wie beim ersten Start; „Ton aktivieren“ bleibt erhalten
+      d.laufzeit.start();
+      return true;
+    },
   };
 }
