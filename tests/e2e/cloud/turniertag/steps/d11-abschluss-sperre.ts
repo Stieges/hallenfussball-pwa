@@ -19,9 +19,21 @@ async function abschluss({ asRole }: StepContext): Promise<void> {
   const dialog = ownerPage.getByTestId('finish-dialog');
   await expect(dialog.getByTestId('tournament-finish-confirm'), 'Abschluss möglich (nicht „Endstand ist noch vorläufig“)').toBeVisible({ timeout: SOLL_TIMEOUT_MS });
   await dialog.getByTestId('tournament-finish-confirm').click();
-  await expect.poll(async () => (await getRows<{ lifecycle_status: string }>(`tournaments?id=eq.${TURNIERTAG_ID}&select=lifecycle_status`, 'Zustand des Turniers'))[0]?.lifecycle_status, {
-    message: 'Zustand nach dem Abschluss (lifecycle_status, nicht die alte Spalte status: C-E2E-N7B-SPALTE)', timeout: SOLL_TIMEOUT_MS,
-  }).toBe('finished');
+  try {
+    await expect.poll(async () => (await getRows<{ lifecycle_status: string }>(`tournaments?id=eq.${TURNIERTAG_ID}&select=lifecycle_status`, 'Zustand des Turniers'))[0]?.lifecycle_status, {
+      message: 'Zustand nach dem Abschluss (lifecycle_status)', timeout: SOLL_TIMEOUT_MS,
+    }).toBe('finished');
+  } catch (fehler) {
+    // Der Grund der Ablehnung steht im Dialog (Endstand vorläufig, offene Punkte, Netz ...): mit in die Fehlermeldung.
+    const meldungen: string[] = [`Dialog offen: ${(await ownerPage.getByTestId('finish-dialog').count()) > 0}`];
+    for (const kennung of ['finish-error', 'finish-unconfirmed', 'finish-sending', 'finish-offline']) {
+      const stelle = ownerPage.getByTestId(kennung);
+      if ((await stelle.count()) > 0) {
+        meldungen.push(`${kennung}: ${(await stelle.first().innerText()).replace(/\s+/g, ' ')}`);
+      }
+    }
+    throw new Error(`${fehler instanceof Error ? fehler.message : String(fehler)}\n${meldungen.join('\n')}`, { cause: fehler });
+  }
   const { groupMatches } = await fetchTurniertagBracket();
   const rows = await fetchEngineRows(groupMatches[0].id);
   const lastScore = rows.filter((row) => ['GOAL', 'OWN_GOAL', 'CORRECTION', 'RESULT_ENTRY'].includes(row.type)).pop();

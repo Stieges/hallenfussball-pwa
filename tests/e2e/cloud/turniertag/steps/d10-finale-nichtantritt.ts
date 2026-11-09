@@ -74,7 +74,8 @@ async function nichtantritt({ anonPage, asRole }: StepContext): Promise<void> {
   const zeile = anonPage.locator('tr', { hasText: 'Spiel um Platz 3' }).first();
   await expect(zeile, 'Zeile von Platz 3 auf der Zuschauer-Seite').toBeVisible({ timeout: SOLL_TIMEOUT_MS });
   await expect(zeile).toHaveText(/2\s*:\s*0/, { timeout: SOLL_TIMEOUT_MS });
-  await expect(zeile, 'Wertungs-Vermerk (Nichtantritt/Wertung)').toHaveText(/Wertung|Nichtantritt|kampflos/i, { timeout: SOLL_TIMEOUT_MS });
+  // Die Zuschauer-Seite schreibt „2:0 gewertet“ (@W2A-022: als Wertung gekennzeichnet, nicht als gespieltes Ergebnis).
+  await expect(zeile, 'Wertungs-Vermerk (Nichtantritt/Wertung)').toHaveText(/gewertet|Wertung|Nichtantritt|kampflos/i, { timeout: SOLL_TIMEOUT_MS });
 }
 
 export const steps: readonly TurniertagStep[] = [
