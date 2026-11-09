@@ -166,9 +166,9 @@ export function erzeugeBrowserLaufzeit({ einschaltung, engine, ladeTurnier }: Br
     rpc: { heartbeat: (args) => hallSpeakerHeartbeat(supabase, args), ack: (args) => hallTestToneAck(supabase, args) },
     speicher: browserKanalSpeicher(),
     // Regel 1: erst die Laufzeit stoppen (kein Ton danach), dann die Spur merken (@HT-015, H4-1), dann die Einschaltung kürzen bzw. löschen
-    abgeloest: (bleiben) => {
+    abgeloest: (bleiben, verloren) => {
       laufzeit.stop();
-      merkeAbloesung(turnierId, felder.filter((feld) => !bleiben.includes(feld)), engine.clock.serverNow());
+      merkeAbloesung(turnierId, verloren, engine.clock.serverNow());
       setzeEinschaltung(bleiben.length > 0 ? { ...einschaltung, felder: bleiben } : null);
     },
     nachLebenszeichen: neuLesen,

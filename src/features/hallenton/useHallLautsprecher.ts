@@ -13,7 +13,7 @@
  *   (Vorbelegung die erste) über ihren eigenen Regler, höchstens 10 s; Regler `tor` in `lautstaerke` (für H4, keine Oberfläche).
  *   H4-1: „Anhören“ ist eine eigene Art: läuft gerade ein echter Ton (Torhymne, End-Ton, Testton), kommt `'belegt'` zurück und
  *   der echte Ton läuft weiter; ein laufendes Anhören beendet jeder echte Ton (H4-10 zeigt den Hinweis).
- * - H4-1: `abgeloest` = Spur einer Ablösung (@HT-015, „Feld 1 von einem anderen Gerät übernommen“) in allen Tabs, bis
+ * - H4-1: `abgeloest` = Spur eines Verlusts je Feld (@HT-015: `abgeloest` = „von einem anderen Gerät übernommen“, `abgemeldet`) in allen Tabs, bis
  *   `abgeloestVerstanden()` (H4-9) oder ein neues Einschalten; `lebenszeichenFehler` gilt geräteweit (@HT-012, @HT-041);
  *   `erneutVersuchen()` beendet ein „still“ nach `kein_recht` (N2, H4 baut die Taste).
  */
@@ -27,10 +27,11 @@ import { merkeAbmeldung, vergissAbmeldung, vergissAbmeldungWenn } from './ausste
 import { leseTonWahlSofort, leseTorWahlZumAnhoeren } from './browserLaufzeit';
 import { ladeTurnierLokal } from './lokalesTurnier';
 import {
-  abgeloestVerstanden, abonniereGeraet, erneutVersuchen, geraetSpieler, geraetStand, schlafenQuittiert, setzeEinschaltung,
+  abgeloestVerstanden, abonniereGeraet, erneutVersuchen, geraetSpieler, geraetStand, schlafenQuittiert, setzeEinschaltung, setzeLebenszeichenFehler,
 } from './lautsprecherGeraet';
 import type { LaufzeitSnapshot } from './runtime/HallLautsprecherLaufzeit';
 import type { AnhoerenErgebnis, ReglerArt } from './runtime/hallTonSpieler';
+import type { FeldVerlust } from './runtime/lautsprecherLebenszeichen';
 
 export type HallLautsprecherRolle = 'keiner' | 'diesesTurnier' | 'anderesTurnier';
 
@@ -52,8 +53,11 @@ export interface HallLautsprecher {
   setzeStumm(stumm: boolean): void;
   /** Fehlergrund des letzten Lebenszeichens (z. B. `ungueltig`); `null` = angekommen (H3b-3 K2). */
   lebenszeichenFehler: HallFehlerGrund | null;
-  /** Felder dieses Turniers, die dem Gerät von einem anderen Gerät abgenommen wurden, und wann (Serverzeit, ms); sonst `null`. */
-  abgeloest: { felder: readonly number[]; um: number } | null;
+  /**
+   * Felder dieses Turniers, die das Gerät verloren hat, je Feld mit der Art (`abgeloest` = von einem anderen Gerät übernommen,
+   * `abgemeldet` = keine Zuordnung mehr), und wann (Serverzeit, ms); sonst `null`. H4-9 baut den Text.
+   */
+  abgeloest: { felder: readonly FeldVerlust[]; um: number } | null;
   abgeloestVerstanden(): void;
   /** Ein „still“ nach dreimal `kein_recht` beenden und neu melden (auch aus einem anderen Tab des Geräts). */
   erneutVersuchen(): void;
@@ -73,6 +77,7 @@ export function useHallLautsprecher(tid: string): HallLautsprecher {
     });
     if (ergebnis.ok && ergebnis.status === 'assigned') {
       abgeloestVerstanden(); // @HT-015: ein neues Einschalten löscht die Spur der Ablösung
+      setzeLebenszeichenFehler(null); // ein Grund des alten Einschaltens gehört nicht zum neuen
       vergissAbmeldung(); // K6: erst jetzt – eine offene Abmeldung nähme die neue Zuordnung sonst wieder weg
       setzeEinschaltung({ turnierId: tid, felder: ergebnis.fields, name });
     }

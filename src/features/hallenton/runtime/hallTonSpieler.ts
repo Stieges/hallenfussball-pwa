@@ -191,6 +191,12 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
       }
       hymnen.anhoerenStoppen();
       vorschau.spielen(art, ton, lautstaerke[art], HART_STOPP_SEK);
+      // ein schon geplanter End-Ton beendet das Anhören zu seinem Beginn (wie bei der Torhymne)
+      const jetzt = kontext().currentTime;
+      const naechster = Math.min(...[...geplant.values()].filter((e) => e.startAt > jetzt).map((e) => e.startAt));
+      if (Number.isFinite(naechster)) {
+        vorschau.beendenUm(naechster);
+      }
       return true;
     },
     audioZeitFuerServerZeit(serverMs, serverNowMs) {

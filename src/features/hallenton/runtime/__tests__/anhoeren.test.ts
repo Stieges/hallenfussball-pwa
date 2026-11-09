@@ -148,6 +148,17 @@ describe('@HT-023 Anhören der Hupen folgt derselben Regel', () => {
     expect(letzterStop(zweites)).toBe(112.5);
   });
 
+  it('Gegenbeispiel: der Halbzeit-Ton ist schon in 1 s geplant, jetzt „Anhören“ des (3 s langen) Abpfiff-Tons → die Vorschau endet spätestens beim echten Ton, der klingt', async () => {
+    const { kontext, spieler } = await bereit();
+    expect(spieler.planen('ende', 'halbzeit', 101)).toBe(true);
+    expect(spieler.anhoeren('abpfiff')).toBe(true); // noch klingt nichts
+    const vorschau = kontext.quellen.at(-1);
+    expect(letzterStop(vorschau)).toBe(101); // ohne die Kürzung liefe sie bis 103
+    const echter = kontext.quellen[kontext.quellen.length - 2];
+    expect(echter?.starts).toEqual([101]);
+    expect(letzterStop(echter)).toBe(106); // der echte Ton wird nicht verkürzt
+  });
+
   it('Anhören der Hupe: stumm oder 0 % → false (kein „belegt“); der Regler wirkt auf ein laufendes Anhören', async () => {
     const { kontext, spieler } = await bereit();
     spieler.anhoeren('abpfiff');

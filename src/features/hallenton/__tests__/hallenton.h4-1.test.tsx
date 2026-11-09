@@ -36,6 +36,7 @@ import { useHallLautsprecher } from '../useHallLautsprecher';
 
 const TID = '22222222-2222-4222-8222-222222222222';
 const ANDERES = '33333333-3333-4333-8333-333333333333';
+const V1 = { feld: 1, art: 'abgeloest' };
 let speicher: FalscherSpeicher;
 let kontext: FalscherAudioKontext;
 let falsch: FalscherSupabase;
@@ -105,21 +106,22 @@ describe('@HT-015 Ablösung hinterlässt eine Spur, statt still zu löschen', ()
     expect(result.current.rolle).toBe('keiner'); // die Rolle ist weg
     expect(speicher.getItem(GERAET_SCHLUESSEL)).toBeNull();
     const marke: unknown = JSON.parse(speicher.getItem(ABGELOEST_SCHLUESSEL) ?? 'null');
-    expect(marke).toEqual({ turnierId: TID, felder: [1], um: expect.any(Number) });
+    expect(marke).toEqual({ turnierId: TID, felder: [{ feld: 1, art: 'abgeloest' }], um: expect.any(Number) });
     expect((marke as { um: number }).um).toBeGreaterThanOrEqual(vorher);
-    expect(result.current.abgeloest).toEqual({ felder: [1], um: (marke as { um: number }).um });
+    expect(result.current.abgeloest).toEqual({ felder: [{ feld: 1, art: 'abgeloest' }], um: (marke as { um: number }).um });
   });
 
   it('ein zweiter Tab sieht die Marke über das storage-Ereignis, auch ohne eigene Laufzeit', () => {
     const { result } = renderHook(() => useHallLautsprecher(TID));
     expect(result.current.abgeloest).toBeNull();
-    andererTab(ABGELOEST_SCHLUESSEL, JSON.stringify({ turnierId: TID, felder: [1, 2], um: 1_790_000_000_000 }));
-    expect(result.current.abgeloest).toEqual({ felder: [1, 2], um: 1_790_000_000_000 });
+    const felder = [{ feld: 1, art: 'abgeloest' }, { feld: 2, art: 'abgemeldet' }];
+    andererTab(ABGELOEST_SCHLUESSEL, JSON.stringify({ turnierId: TID, felder, um: 1_790_000_000_000 }));
+    expect(result.current.abgeloest).toEqual({ felder, um: 1_790_000_000_000 });
   });
 
   it('Gegenbeispiel: die Marke eines anderen Turniers erscheint nicht für dieses Turnier', () => {
     const { result } = renderHook(() => useHallLautsprecher(ANDERES));
-    andererTab(ABGELOEST_SCHLUESSEL, JSON.stringify({ turnierId: TID, felder: [1], um: 5 }));
+    andererTab(ABGELOEST_SCHLUESSEL, JSON.stringify({ turnierId: TID, felder: [V1], um: 5 }));
     expect(result.current.abgeloest).toBeNull();
   });
 
@@ -129,30 +131,50 @@ describe('@HT-015 Ablösung hinterlässt eine Spur, statt still zu löschen', ()
     const { result } = renderHook(() => useHallLautsprecher(TID));
     render(<HallLautsprecherLaufzeit />);
     await warten();
-    expect(result.current.abgeloest?.felder).toEqual([2]);
+    expect(result.current.abgeloest?.felder).toEqual([{ feld: 2, art: 'abgeloest' }]);
     expect(result.current.felder).toEqual([1]);
     expect(result.current.rolle).toBe('diesesTurnier');
   });
 
+  it('@HT-015 Feld ohne Zuordnung (unassigned) → trotzdem eine Marke, aber mit der Art „abgemeldet“ (kein stilles Verschwinden, kein „übernommen“)', async () => {
+    einschalten();
+    heartbeat([{ field: 1, status: 'unassigned' }]);
+    const { result } = renderHook(() => useHallLautsprecher(TID));
+    render(<HallLautsprecherLaufzeit />);
+    await warten();
+    expect(result.current.rolle).toBe('keiner');
+    expect(result.current.abgeloest?.felder).toEqual([{ feld: 1, art: 'abgemeldet' }]);
+  });
+
+  it('@HT-015 gemischte Antwort: Feld 1 übernommen (superseded), Feld 2 ohne Zuordnung (unassigned), Feld 3 bleibt → Art je Feld', async () => {
+    einschalten([1, 2, 3]);
+    heartbeat([{ field: 1, status: 'superseded' }, { field: 2, status: 'unassigned' }, { field: 3, status: 'ok' }]);
+    const { result } = renderHook(() => useHallLautsprecher(TID));
+    render(<HallLautsprecherLaufzeit />);
+    await warten();
+    expect(result.current.abgeloest?.felder).toEqual([{ feld: 1, art: 'abgeloest' }, { feld: 2, art: 'abgemeldet' }]);
+    expect(result.current.felder).toEqual([3]);
+  });
+
   it('ein neues Einschalten auf diesem Gerät löscht die Marke, in allen Tabs', async () => {
     falsch.rpcDaten.hall_speaker_assign = { status: 'assigned', fields: [1], replaced: [] };
-    speicher.setItem(ABGELOEST_SCHLUESSEL, JSON.stringify({ turnierId: TID, felder: [1], um: 5 }));
+    speicher.setItem(ABGELOEST_SCHLUESSEL, JSON.stringify({ turnierId: TID, felder: [V1], um: 5 }));
     const { result } = renderHook(() => useHallLautsprecher(TID));
-    expect(result.current.abgeloest).toEqual({ felder: [1], um: 5 });
+    expect(result.current.abgeloest).toEqual({ felder: [V1], um: 5 });
     await act(async () => { await result.current.einschalten([1], 'Rechner der Turnierleitung'); });
     expect(result.current.abgeloest).toBeNull();
     expect(speicher.getItem(ABGELOEST_SCHLUESSEL)).toBeNull();
   });
 
   it('abgeloestVerstanden() löscht die Marke; ein anderer Tab sieht es', () => {
-    speicher.setItem(ABGELOEST_SCHLUESSEL, JSON.stringify({ turnierId: TID, felder: [1], um: 5 }));
+    speicher.setItem(ABGELOEST_SCHLUESSEL, JSON.stringify({ turnierId: TID, felder: [V1], um: 5 }));
     const { result } = renderHook(() => useHallLautsprecher(TID));
     expect(result.current.abgeloest).not.toBeNull();
     act(() => { result.current.abgeloestVerstanden(); });
     expect(result.current.abgeloest).toBeNull();
     expect(speicher.getItem(ABGELOEST_SCHLUESSEL)).toBeNull();
-    andererTab(ABGELOEST_SCHLUESSEL, JSON.stringify({ turnierId: TID, felder: [1], um: 9 })); // ein anderer Tab löst erneut ab
-    expect(result.current.abgeloest).toEqual({ felder: [1], um: 9 });
+    andererTab(ABGELOEST_SCHLUESSEL, JSON.stringify({ turnierId: TID, felder: [V1], um: 9 })); // ein anderer Tab löst erneut ab
+    expect(result.current.abgeloest).toEqual({ felder: [V1], um: 9 });
     act(() => { abgeloestVerstanden(); });
     expect(geraetStand().abgeloest).toBeNull();
   });
@@ -185,6 +207,18 @@ describe('@HT-012 @HT-041 Der Grund des Lebenszeichens gilt für alle Tabs des G
     expect(result.current.lebenszeichenFehler).toBe('kein_recht');
     andererTab(FEHLER_SCHLUESSEL, null);
     expect(result.current.lebenszeichenFehler).toBeNull();
+  });
+
+  it('ein alter Grund (kein_recht) ist nach dem Einschalten für ein anderes Turnier weg', async () => {
+    speicher.setItem(GERAET_SCHLUESSEL, JSON.stringify({ turnierId: ANDERES, felder: [1], name: 'Rechner der Turnierleitung' }));
+    speicher.setItem(FEHLER_SCHLUESSEL, 'kein_recht');
+    falsch.rpcDaten.hall_speaker_assign = { status: 'assigned', fields: [1], replaced: [] };
+    const { result } = renderHook(() => useHallLautsprecher(TID));
+    expect(result.current.lebenszeichenFehler).toBeNull(); // andere Turnierbindung: nicht dieses Turnier
+    await act(async () => { await result.current.einschalten([1], 'Rechner der Turnierleitung'); });
+    expect(result.current.rolle).toBe('diesesTurnier');
+    expect(result.current.lebenszeichenFehler).toBeNull();
+    expect(speicher.getItem(FEHLER_SCHLUESSEL)).toBeNull();
   });
 
   it('Gegenbeispiel: ein unbekannter Wert im Speicher gilt als kein Grund', () => {

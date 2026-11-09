@@ -6,7 +6,7 @@
  *   auf eine Hupe und kein Zustand `custom_sound_failed` deswegen (gilt nach Vorschlag, Brief H3c).
  * - `spielen(i)`: sofort, über den eigenen Regler `tor` (`GainNode`) → Begrenzer → Ausgang; harte Grenze 10 s, auch bei
  *   einer längeren Datei. Nicht, solange auf dem Gerät gerade ein anderer Ton klingt (ein Ende geht vor, Regel 4).
- * - Jeder andere Ton des Geräts (End-Ton, Testton, „Anhören“) beendet die Hymne genau zu seinem Beginn – auch einer, der
+ * - Jeder andere echte Ton des Geräts (End-Ton, Testton; nicht „Anhören“, das weicht) beendet die Hymne genau zu seinem Beginn – auch einer, der
  *   schon vor der Hymne geplant war; wird er abgebrochen, gilt wieder die harte Grenze (`toeneGeaendert`).
  * - `stoppen()`: von außen sofort (Rücknahme, Ende, Abschalten).
  * - `anhoeren(i)` (H4-1, H3c-Befund 4): „Anhören“ als eigene Art. Sie verdrängt keine echte Hymne (läuft eine, kommt `'belegt'`),

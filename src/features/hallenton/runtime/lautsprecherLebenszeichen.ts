@@ -39,6 +39,12 @@ export { TURNIERENDE_FRIST_MS, TURNIERENDE_PRUEF_MS } from './lebenszeichenTurni
 export const KEIN_RECHT_GRENZE = 3;
 const PRUEF_MS = 1000;
 
+/** Ein Feld, das das Gerät verloren hat: `abgeloest` = von einem anderen Gerät übernommen (`superseded`, @HT-015), `abgemeldet` = keine Zuordnung mehr (`unassigned`). */
+export interface FeldVerlust {
+  feld: number;
+  art: 'abgeloest' | 'abgemeldet';
+}
+
 export interface LebenszeichenRpc {
   heartbeat(args: HallArgs<'hall_speaker_heartbeat'>): Promise<HallErgebnis<HallHeartbeatAntwort>>;
   ack(args: HallArgs<'hall_test_tone_ack'>): Promise<HallErgebnis<HallTestAckAntwort>>;
@@ -61,7 +67,7 @@ export interface LebenszeichenDeps {
   /** Gespielte Testtöne des Geräts (über die Tabs). */
   speicher: KanalSpeicher | null;
   /** Regel 1: abgelöst oder abgemeldet; `bleiben` = Felder, die das Gerät noch hat (leer = ganz aus). */
-  abgeloest: (bleiben: number[]) => void;
+  abgeloest: (bleiben: number[], verloren: readonly FeldVerlust[]) => void;
   nachLebenszeichen?: () => void;
   /** Turnier abgeschlossen oder abgebrochen? (lokale Turnierkopie, W1) */
   turnierBeendet?: () => Promise<boolean>;
@@ -211,10 +217,11 @@ export function erzeugeLebenszeichen(d: LebenszeichenDeps): Lebenszeichen {
     if (mitAnzeichen) {
       anzeichenOffen = false;
     }
-    const weg = new Set(antwort.fields.filter((f) => f.status !== 'ok').map((f) => f.field));
+    const verloren: FeldVerlust[] = antwort.fields.flatMap((f) => (f.status === 'ok' ? [] : [{ feld: f.field, art: f.status === 'superseded' ? 'abgeloest' as const : 'abgemeldet' as const }]));
+    const weg = new Set(verloren.map((v) => v.feld));
     if (weg.size > 0) {
       stop();
-      d.abgeloest(d.felder.filter((feld) => !weg.has(feld)));
+      d.abgeloest(d.felder.filter((feld) => !weg.has(feld)), verloren);
       return;
     }
     if (snapshot().rolle !== 'toent' || phase !== 'haelt') {

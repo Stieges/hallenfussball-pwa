@@ -14,6 +14,7 @@ import { browserKanalSpeicher } from './runtime/lautsprecherKanal';
 import { erzeugeBrowserHallTonSpieler, type HallTonSpieler } from './runtime/hallTonSpieler';
 import type { HallFehlerGrund } from '../../core/repositories/hallentonRpc';
 import type { HallLautsprecherLaufzeit } from './runtime/HallLautsprecherLaufzeit';
+import type { FeldVerlust } from './runtime/lautsprecherLebenszeichen';
 
 export const GERAET_SCHLUESSEL = 'hallenton:geraet';
 export const ABGELOEST_SCHLUESSEL = 'hallenton:abgeloest';
@@ -27,10 +28,13 @@ export interface Einschaltung {
   name: string;
 }
 
-/** Spur einer Ablösung (@HT-015): welche Felder von einem anderen Gerät übernommen wurden, und wann (Serverzeit, ms). */
+/**
+ * Spur eines Verlusts (@HT-015): welche Felder das Gerät verloren hat – je Feld `abgeloest` (von einem anderen Gerät übernommen)
+ * oder `abgemeldet` (keine Zuordnung mehr) – und wann (Serverzeit, ms). Den Text dazu baut H4-9.
+ */
 export interface AbgeloestMarke {
   turnierId: string;
-  felder: readonly number[];
+  felder: readonly FeldVerlust[];
   um: number;
 }
 
@@ -69,6 +73,11 @@ function gespeichert(): Einschaltung | null {
   }
 }
 
+function istVerlust(roh: unknown): roh is FeldVerlust {
+  const v = roh as Partial<FeldVerlust> | null;
+  return typeof v === 'object' && v !== null && Number.isInteger(v.feld) && (v.feld ?? 0) > 0 && (v.art === 'abgeloest' || v.art === 'abgemeldet');
+}
+
 function gespeicherteMarke(): AbgeloestMarke | null {
   try {
     const roh: unknown = JSON.parse(lies(browserKanalSpeicher(), ABGELOEST_SCHLUESSEL) ?? 'null');
@@ -76,7 +85,7 @@ function gespeicherteMarke(): AbgeloestMarke | null {
       return null;
     }
     const m = roh as Partial<AbgeloestMarke>;
-    const felder = Array.isArray(m.felder) && m.felder.every((f) => Number.isInteger(f) && f > 0) ? m.felder : null;
+    const felder = Array.isArray(m.felder) && m.felder.every(istVerlust) ? m.felder : null;
     return typeof m.turnierId === 'string' && typeof m.um === 'number' && Number.isFinite(m.um) && felder && felder.length > 0
       ? { turnierId: m.turnierId, felder, um: m.um }
       : null;
@@ -166,9 +175,14 @@ export function setzeLebenszeichenFehler(grund: HallFehlerGrund | null): void {
  * @HT-015: Spur der Ablösung vor dem Löschen der Rolle; weitere Ablösungen desselben Turniers kommen dazu. `um` = Serverzeit.
  * Bleibt, bis das Gerät neu eingeschaltet wird oder `abgeloestVerstanden()` gerufen wird.
  */
-export function merkeAbloesung(turnierId: string, felder: readonly number[], um: number): void {
+export function merkeAbloesung(turnierId: string, felder: readonly FeldVerlust[], um: number): void {
   const alt = geraetStand().abgeloest;
-  const alle = alt?.turnierId === turnierId ? [...new Set([...alt.felder, ...felder])].sort((a, b) => a - b) : [...felder];
+  // je Feld gilt die jüngste Art
+  const jeFeld = new Map((alt?.turnierId === turnierId ? alt.felder : []).map((v) => [v.feld, v] as const));
+  for (const v of felder) {
+    jeFeld.set(v.feld, v);
+  }
+  const alle = [...jeFeld.values()].sort((a, b) => a.feld - b.feld);
   if (alle.length === 0) {
     return;
   }
@@ -177,7 +191,7 @@ export function merkeAbloesung(turnierId: string, felder: readonly number[], um:
   melden({ ...geraetStand(), abgeloest: marke });
 }
 
-/** Die Turnierleitung hat „von einem anderen Gerät übernommen“ gesehen (H4-9) oder schaltet neu ein: Marke weg, in allen Tabs. */
+/** Die Turnierleitung hat den Verlust gesehen („von einem anderen Gerät übernommen“ bzw. „abgemeldet“, H4-9) oder schaltet neu ein: Marke weg, in allen Tabs. */
 export function abgeloestVerstanden(): void {
   loesche(ABGELOEST_SCHLUESSEL);
   melden({ ...geraetStand(), abgeloest: null });
