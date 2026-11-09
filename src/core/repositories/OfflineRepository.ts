@@ -158,9 +158,11 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         private localRepo: LocalStorageRepository,
         private supabaseRepo: SupabaseRepository,
         /** A-07b: Konto, dem die Warteschlange gehoert (@FU-006). Ohne Angabe: Altschluessel. */
-        private accountId?: string
+        private accountId?: string,
+        /** @FU-122 (C-DOPPELTE-SENDUNG-NACH-NEULADEN): `false` = die Warteschlange startet erst mit `mutationQueue.start()`. */
+        options: { autoStartQueue?: boolean } = {},
     ) {
-        this._mutationQueue = new MutationQueue(supabaseRepo, localRepo, undefined, accountId);
+        this._mutationQueue = new MutationQueue(supabaseRepo, localRepo, undefined, accountId, options.autoStartQueue ?? true);
         this.queueGuard = new CloudQueueGuard(this._mutationQueue);
         // @FU-106: nach „Verwerfen“ eines Konflikts sofort (und nach einem Neustart) den Cloud-Stand holen
         this._mutationQueue.subscribe(() => this.adoptAfterDiscard());
