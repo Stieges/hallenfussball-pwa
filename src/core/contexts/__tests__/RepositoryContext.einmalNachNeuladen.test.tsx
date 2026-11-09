@@ -134,7 +134,7 @@ describe('@FU-122 Nach dem Neuladen geht ein noch nicht übertragener Eintrag ge
     vi.useRealTimers();
   });
 
-  it.fails('@FU-122 App mit Netz neu geöffnet (StrictMode wie main.tsx): das Tor in Spiel 6 kommt genau einmal beim Server an', async () => {
+  it('@FU-122 App mit Netz neu geöffnet (StrictMode wie main.tsx): das Tor in Spiel 6 kommt genau einmal beim Server an', async () => {
     renderProvider(true);
     await flush();
 
@@ -152,7 +152,7 @@ describe('@FU-122 Nach dem Neuladen geht ein noch nicht übertragener Eintrag ge
     expect(stored(FAILED_KEY)).toHaveLength(0);
   });
 
-  it.fails('@FU-122 Gegenbeispiel: App ohne Netz geöffnet, dann Netz da – der wartende Eintrag geht genau einmal raus', async () => {
+  it('@FU-122 Gegenbeispiel: App ohne Netz geöffnet, dann Netz da – der wartende Eintrag geht genau einmal raus', async () => {
     net.online = false;
     renderProvider(true);
     await flush();
