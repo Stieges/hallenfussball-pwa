@@ -98,7 +98,7 @@ async function frueherAnpfiff({ browser }: StepContext): Promise<void> {
   // @ZP-092: der Monitor, schon vorher offen, zeigt Spiel 1 ohne Neuladen innerhalb von 10 Sekunden als live mit laufender Uhr
   await expect(monitor.locator('body'), 'Hallenmonitor: Spiel 1 ist live').toContainText(/Live\s*Feld 1\s*—\s*Spiel 1[\s\S]*TSV Waging rot/, { timeout: Math.max(1000, 10000 - (Date.now() - klick)) });
   test.info().annotations.push({ type: 'Monitor live nach (ms)', description: String(Date.now() - klick) });
-  await expect(monitor.locator('body'), 'Hallenmonitor: die Uhr läuft').toContainText(/\b[0-8]:\d\d\b/);
+  await expect(monitor.locator('body'), 'Hallenmonitor: die Uhr läuft').toContainText(/(?<!\d)[0-8]:\d\d(?!\d)/);
   expect((await fetchNikolausSpiele())[1].scheduled_start, 'Spiel 2 steht weiter um 16:40').toBe('16:40:00');
 }
 
