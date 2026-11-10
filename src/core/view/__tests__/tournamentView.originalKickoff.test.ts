@@ -112,6 +112,40 @@ describe('@ZP-049 @ZP-090 @ZP-091 wann nach dem Verschieben „ursprünglich“ 
   });
 });
 
+describe('@ZP-007 ohne Verschieben durch die Turnierleitung bleiben die Uhrzeiten auch bei Verzug stehen', () => {
+  const uhrzeiten = (matches: Match[]): Array<[string, string | undefined, string | undefined]> => {
+    const view = viewOf(matches);
+    return matches.map((m) => [m.id, view.byId.get(m.id)?.kickoff?.time, view.byId.get(m.id)?.originalKickoff?.time]);
+  };
+  const ohneAnpassung = (): Match[] => cup.tournament.matches.map((m) => ({ ...m, originalStart: undefined }));
+
+  it('Spiel 9 wird erst 20 Minuten nach seinem Anstoß beendet (Slot: 12 Minuten), niemand verschiebt: alle Uhrzeiten bleiben, bei keinem „(war …)“', () => {
+    const spielNeun = idOf(GAME[9]);
+    const anstoss = cup.tournament.matches[GAME[9]].scheduledTime;
+    expect(anstoss).toBeDefined();
+    const geplant = ohneAnpassung();
+    const verzug = geplant.map((m) => (m.id === spielNeun
+      ? { ...m, matchStatus: 'finished' as const, finishedAt: new Date(anstoss!.getTime() + 20 * 60_000).toISOString() }
+      : m));
+    const vorher = uhrzeiten(geplant);
+    const nachher = uhrzeiten(verzug);
+    expect(nachher, 'jede angezeigte Uhrzeit bleibt, obwohl Spiel 9 überzogen hat').toEqual(vorher);
+    expect(nachher.filter(([, , war]) => war !== undefined), 'nirgends steht „(war …)“').toEqual([]);
+  });
+
+  it('Gegenbeispiel: verschiebt die Turnierleitung, ändert sich die Uhrzeit und „(war …)“ steht dabei', () => {
+    const id = idOf(GAME[10]);
+    const geplant = ohneAnpassung();
+    const original = viewOf(geplant).byId.get(id)?.kickoff?.time;
+    const verschoben = shiftSchedule(geplant, { from: { kind: 'match', matchId: id }, minutes: 10 },
+      { groupPhaseGameDuration: 10, groupPhaseBreakDuration: 5 },
+      { now: new Date(geplant[0].scheduledTime!.getTime() - 3_600_000), statusOf: (m) => (m.id === geplant[0].id ? 'running' : 'scheduled') });
+    const gezeigt = viewOf(verschoben).byId.get(id);
+    expect(gezeigt?.kickoff?.time).not.toBe(original);
+    expect(gezeigt?.originalKickoff?.time).toBe(original);
+  });
+});
+
 describe('@ZM-105 @ZP-010 Uhrzeiten der K.-o.-Spiele stehen ohne „voraussichtlich“, verschoben mit „(war hh:mm)“ (@ZP-048)', () => {
   it('Finale steht verschoben um 17:05 mit der ursprünglichen Uhrzeit 16:55 und ohne Merkmal „vorläufig“', () => {
     const id = idOf(GAME.FINAL);
