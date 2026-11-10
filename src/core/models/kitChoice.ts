@@ -90,7 +90,7 @@ export function kitHinweis(farben: TrikotFarben): KitConflict {
 /** @SL-137/@SL-138: bei Konflikt die Heimseite mit Leibchen vorbelegt, sonst ohne Leibchen. */
 const andere = (seite: KitSide): KitSide => (seite === 'a' ? 'b' : 'a');
 
-/** @SL-151: Leibchenfarbe gegen die Trikotfarbe des Gegners der Seite `seite` (ΔE2000 < 30 oder Helligkeit < 1,5 : 1). */
+/** @SL-151: Leibchenfarbe gegen die Trikotfarbe des Gegners der Seite `seite` (ΔE2000 < 30; die Helligkeit ist nur der Hinweis „gleich hell“, @SL-173). */
 export function leibchenFarbeZuAehnlich(farben: TrikotFarben, seite: KitSide, farbe: string): boolean {
   return kitConflict(farbe, farben[andere(seite)]) !== 'none';
 }
