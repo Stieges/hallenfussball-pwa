@@ -245,6 +245,11 @@ pending_assertions_for() {
     20261124_001_zeitstrafe_endet_bei_gegentor.sql)
       echo "public-read-core-unchanged"
       ;;
+    # Leibchen Schritt 2a (@SL-150, @SL-201, @SL-202, @SL-213, @SL-227 bis @SL-229, @SL-236): matches.kit_decision, match_kit_set,
+    # Teamwechsel nimmt die Wahl zurueck (scripts/leibchen-kit-check.sh)
+    20261124_002_leibchen_schritt2.sql)
+      echo "leibchen-kit-set-rpc-authenticated-only leibchen-kit-set-shape"
+      ;;
     # Hallenton Torhymne (@HT-024, @HT-046): Liste der Torhymnen, hall_goal_anthems_set, Lebenszeichen 55000 nach dem Ende
     20261123_001_hallenton_torhymne.sql)
       echo "hallenton-goal-anthems-rpc-authenticated-only hallenton-goal-anthems-column-checked hallenton-heartbeat-closed-tournament"
@@ -773,6 +778,9 @@ PRIVILEGE_ASSERTION_NAMES=(
   "hallenton-goal-anthems-rpc-authenticated-only"
   "hallenton-goal-anthems-column-checked"
   "hallenton-heartbeat-closed-tournament"
+  # Leibchen Schritt 2a (20261124_002_leibchen_schritt2.sql, @SL-150, @SL-201 bis @SL-236): eigener Block am Ende von db_privilege_assertions.sql
+  "leibchen-kit-set-rpc-authenticated-only"
+  "leibchen-kit-set-shape"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
