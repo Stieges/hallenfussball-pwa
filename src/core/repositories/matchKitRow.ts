@@ -6,7 +6,7 @@
  * schlägt der Schutz-Trigger `matches_guard_kit_columns` an, Fehlercode HF003). Die Schreibwege in
  * `supabaseMappers.ts` führen ihre Spalten einzeln auf; `kit` steht in keinem davon.
  */
-import { MatchKitSchema, type MatchKit } from '../models/kit';
+import { MatchKitSchema, parseKitDecision, type KitDecision, type MatchKit } from '../models/kit';
 import { captureFeatureError } from '../../lib/sentry';
 
 /**
@@ -17,6 +17,7 @@ export interface MatchKitColumns {
   kit_color_a?: string | null;
   kit_color_b?: string | null;
   bib_side?: string | null;
+  kit_decision?: string | null;
 }
 
 /**
@@ -47,4 +48,22 @@ export function kitFromRow(row: { id: string } & MatchKitColumns): { kit?: Match
     });
   }
   return { kit };
+}
+
+/**
+ * Spalte `kit_decision` (Leibchen Schritt 2a, `20261124_002_leibchen_schritt2.sql`): Wahl der Leibchen. NULL oder fehlende Spalte (vor dem
+ * Einspielen) = offen; ein unbekannter Wert gilt ebenfalls als offen, EINE Meldung je Zeile (Bereich sync). Nur lesen, der Mapper sendet sie nie
+ * (Wächter `matches_guard_kit_columns`, HF003).
+ */
+export function kitDecisionFromRow(row: { id: string } & MatchKitColumns): { kitDecision?: KitDecision } {
+  const raw = row.kit_decision;
+  if (raw === null || raw === undefined) {
+    return {};
+  }
+  const decision = parseKitDecision(raw);
+  if (decision === undefined) {
+    captureFeatureError(new Error(`Spiel ${row.id}: kit_decision aus der Cloud ungültig`), 'sync', 'mapMatchKitDecision', { matchId: row.id });
+    return {};
+  }
+  return { kitDecision: decision };
 }

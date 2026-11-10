@@ -33,7 +33,7 @@ import { SlotSourceSchema, TeamIdSchema, type MatchSlot, type SlotSource } from 
 import { pendingSlot, slotSource, slotTeamId, teamSlot } from '../models/matchSlot';
 import { ensureMatchNumbers, sortByMatchNumber } from '../models/matchNumbers';
 import { originFromRow, originToColumns, type MatchOriginColumns } from './matchOriginColumns';
-import { kitFromRow } from './matchKitRow';
+import { kitDecisionFromRow, kitFromRow } from './matchKitRow';
 import { bibColorFromConfig, bibColorToConfig } from './tournamentBibColor';
 import { spectatorDisplayFromConfig, spectatorDisplayToConfig } from './tournamentSpectatorDisplay';
 import { hostTeamsFromConfig, hostTeamsToConfig } from './tournamentHostTeams';
@@ -222,7 +222,7 @@ export function mapMatchFromSupabase(row: MatchRow, tournamentDate: string): Mat
     slot: row.slot ?? undefined,
     slotA,
     slotB,
-    ...originFromRow(row), ...kitFromRow(row), // A-36a: Herkunft des Platzes; A-30a: getragene Farben (nur lesen)
+    ...originFromRow(row), ...kitFromRow(row), ...kitDecisionFromRow(row), // A-36a: Herkunft des Platzes; A-30a: getragene Farben (nur lesen)
     scoreA: row.score_a ?? undefined,
     scoreB: row.score_b ?? undefined,
     group: row.group_letter ?? undefined,

@@ -12,21 +12,24 @@ export interface VestPiecesProps {
   size: VestSize;
   /** Trikotfarbe, `#RRGGBB` oder jede CSS-Farbe */
   color: string;
+  /** Trikotfarbe unbekannt (@ZM-204): Hintergrundbild mit dem Fallback-Muster auf den Teilen, `color` bleibt der dunkle Ton darunter */
+  patternImage?: string;
 }
 
-const pieceStyle = (color: string, box: ReturnType<typeof vestPieceBox>): CSSProperties => ({
+const pieceStyle = (color: string, box: ReturnType<typeof vestPieceBox>, patternImage?: string): CSSProperties => ({
   position: 'absolute',
   display: 'block',
   backgroundColor: color,
+  ...(patternImage === undefined ? {} : { backgroundImage: patternImage }),
   pointerEvents: 'none',
   ...box,
 });
 
-export function VestPieces({ size, color }: VestPiecesProps): ReactElement {
+export function VestPieces({ size, color, patternImage }: VestPiecesProps): ReactElement {
   return (
     <>
       {vestPieces(size).map((points, index) => (
-        <i key={index} data-teil="" aria-hidden="true" style={pieceStyle(color, vestPieceBox(points))} />
+        <i key={index} data-teil="" aria-hidden="true" style={pieceStyle(color, vestPieceBox(points), patternImage)} />
       ))}
     </>
   );

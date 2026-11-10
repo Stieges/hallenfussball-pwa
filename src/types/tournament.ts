@@ -332,6 +332,7 @@ export interface Match {
   skippedReason?: string;        // Grund für Überspringen (z.B. "Team zurückgezogen")
   skippedAt?: string;            // ISO timestamp when match was skipped
   kit?: import('../core/models/kit').MatchKit; // A-30a: beim Anpfiff getragene Farben (nur Server schreibt, @W3-028)
+  kitDecision?: import('../core/models/kit').KitDecision; // Leibchen Schritt 2a: Wahl der Leibchen (bib = bestätigt, none = Keine Leibchen, fehlt = offen; nur Server schreibt, @SL-220)
 
   // DB-PERSISTENCE: Events for detailed match summary (scorers, cards)
   events?: RuntimeMatchEvent[]; // Full event history persisted with the match

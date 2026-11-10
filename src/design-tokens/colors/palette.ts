@@ -113,6 +113,25 @@ export const palette = {
     black: '#000000', // Ausweichfarbe
   },
 
+  // Trikot-Palette des Assistenten (Farbwähler der Teams, @W3-029) – die EINE Quelle für `ColorPicker` und die Grundauswahl der Leibchen
+  // im Cockpit (@SL-219): Gelb, Orange, Neongrün, Pink, Rot, Blau, Weiß, Schwarz; Hallenfarben des Turniers kommen aus derselben Palette.
+  // `neonGreen` steht NICHT im Farbwähler der Teams, sondern in der Auswahl der Leibchenfarben des Turniers (`bibColorPresets`, Daniel 2026-11-10).
+  jersey: {
+    white: '#FFFFFF',
+    black: '#000000',
+    red: '#DC0000',
+    blue: '#0033CC',
+    green: '#009933',
+    yellow: '#FFCC00',
+    orange: '#FF6600',
+    purple: '#660099',
+    pink: '#FF66B2',
+    teal: '#009999',
+    gray: '#666666',
+    brown: '#663300',
+    neonGreen: '#39FF14',
+  },
+
   yellow: {
     400: '#FACC15',
     500: '#EAB308',
@@ -156,6 +175,15 @@ export const palette = {
     live: '#FB7185', // Live-Rot (Rose 400, dunkles Thema): eigener Ton, nicht das Fehler-Rot (@OB-039, Aufgabe 1.1)
   },
 } as const;
+
+/** Die Farben des Farbwählers im Assistenten (Trikot-Palette, in der Reihenfolge der Auswahl); `neonGreen` gehört nicht dazu. */
+export const wizardJerseyPresets: readonly string[] = [
+  palette.jersey.white, palette.jersey.black, palette.jersey.red, palette.jersey.blue, palette.jersey.green, palette.jersey.yellow,
+  palette.jersey.orange, palette.jersey.purple, palette.jersey.pink, palette.jersey.teal, palette.jersey.gray, palette.jersey.brown,
+];
+
+/** Auswahl der Leibchenfarben des Turniers (@W3-029): dieselbe Trikot-Palette plus Neongrün; der Farbwähler der Trikots bleibt `wizardJerseyPresets`. */
+export const bibColorPresets: readonly string[] = [...wizardJerseyPresets, palette.jersey.neonGreen];
 
 // Type exports
 export type PaletteColor = keyof typeof palette;

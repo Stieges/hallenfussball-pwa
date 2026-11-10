@@ -3,7 +3,7 @@ import { TeamTrainerSchema, TournamentGroupSchema, TournamentFieldSchema, Runtim
 import { RULEBOOK_MAX_LENGTH } from '../../../constants/rulebook';
 import { MatchSlotSchema, SlotSourceSchema } from './MatchSlotSchema';
 import { CLOCK_MODES, FINAL_PHASE_MINUTES_MAX, FINAL_PHASE_MINUTES_MIN } from '../../match/clockDisplay';
-import { MatchKitSchema } from '../kit';
+import { KIT_DECISIONS, MatchKitSchema } from '../kit';
 import { FOUL_LIMIT_MAX, FOUL_LIMIT_MIN, OPENING_MODES } from '../../../types/tournament';
 import { parseStandingDecisions, StandingDecisionSchema } from './StandingDecisionSchema';
 import { PlacementsToPlayOutSchema } from '../../standings/playOutPlaces';
@@ -106,6 +106,7 @@ export const MatchSchema = z.object({
     liveState: z.unknown().optional(), // matches.live_state (Feinstatus für das Abzeichen, R-SA8); die Form prüft `badgeDetailFromLiveState`
     events: z.array(RuntimeMatchEventSchema).optional(),
     kit: MatchKitSchema.optional(), // A-30a: getragene Farben beim Anpfiff (@W3-028), übersteht das lokale Laden
+    kitDecision: z.enum(KIT_DECISIONS).optional(), // Leibchen Schritt 2a: Wahl der Leibchen (@SL-220), übersteht das lokale Laden
 });
 
 // scheduledTime uses z.preprocess to handle both Date objects and ISO strings from JSON/localStorage
