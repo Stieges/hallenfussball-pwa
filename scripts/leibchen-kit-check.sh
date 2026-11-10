@@ -28,7 +28,7 @@
 # Aufrufoptionen:
 #   bash scripts/leibchen-kit-check.sh                      normaler Lauf, Exit 0 nur ohne Abweichung
 #   bash scripts/leibchen-kit-check.sh --without-migration  Gegenprobe: ohne die Migration muessen R, Z, C, L rot sein
-#   bash scripts/leibchen-kit-check.sh --gegenprobe         je Lauf eine Mutation der Migration (M1-M22); Exit 0 NUR, wenn
+#   bash scripts/leibchen-kit-check.sh --gegenprobe         je Lauf eine Mutation der Migration (M1-M24); Exit 0 NUR, wenn
 #                                                           JEDE Mutation mindestens eine Pruefung rot faerbt
 #
 # Aendert NICHTS an der Produktionsdatenbank und nichts am lokalen Supabase-Stack -- eigener Wegwerf-Container (nativ, per
@@ -321,7 +321,7 @@ setup_before() {
   setup_helpers
   setup_users
   # Turniere VOR der Migration, damit der Lauf ohne Migration dieselben Daten hat (Spalte kit_decision gibt es dann noch nicht).
-  for g in recht zustand steuer reihe vorab laufend team form anpfiff waechter papierkorb abgeschlossen; do new_t "$g"; done
+  for g in recht zustand steuer reihe vorab laufend team form anpfiff anpfiff2 waechter papierkorb abgeschlossen; do new_t "$g"; done
   q "UPDATE public.tournaments SET deleted_at = now() WHERE id = '$(tid papierkorb)';" >/dev/null
 }
 
@@ -582,11 +582,22 @@ SQL
   check A "@SL-201 Anpfiff mit dem bestaetigten Kit: angenommen, Zustand bleibt bib, beide Farben festgehalten" "accepted|bib|a|$GELB|#1565C0" "$(results "$OUT")|$(row "$m2")"
   check A "@SL-150 nach dem Anpfiff nimmt match_kit_set von Toms Geraet nichts mehr an (LEAD_ONLY)" "rejected:LEAD_ONLY" \
     "$(res "$(kit "$U_TOM_HANDY" "$D_TOM" "$m2" bib "$(bib b $ORANGE)" 1)")"
-  # A2 bestaetigt, Anpfiff ohne Leibchen -> none
+  # A2 bestaetigt, Anpfiff ohne Angabe zum Leibchen -> die Wahl bleibt stehen (Ableitung, gilt nach Vorschlag; nicht @SL-210)
   kit "$U_PAUL" "$D_PAUL" "$m6" bib "$(bib a $GELB)" >/dev/null
   ev MATCH_START "$(E start-6)" '{"clockMs":null,"payload":{"kit":{"a":"#1565C0","b":"#C62828"}}}'
   send "$U_PAUL" "$D_PAUL" "$m6"
-  check A "@SL-210 Anpfiff ohne Leibchen nach einer Bestaetigung: Zustand none, Seite leer" "accepted|none|-|#1565C0|#C62828" "$(results "$OUT")|$(row "$m6")"
+  check A "Ableitung: bestaetigte Wahl (Heim Gelb) und Anpfiff ohne Angabe zum Leibchen: sie bleibt (bib, Seite a, Leibchenfarbe Gelb), die andere Seite bekommt die Trikotfarbe des Anpfiffs" "accepted|bib|a|$GELB|#C62828" "$(results "$OUT")|$(row "$m6")"
+  # A2b dasselbe auf der Gastseite
+  t2="$(tid anpfiff2)"; n2="$(match "$t2" 2)"; n6="$(match "$t2" 6)"
+  kit "$U_OLLI" "$D_OLLI" "$n2" bib "$(bib b $ORANGE)" >/dev/null
+  ev MATCH_START "$(E start-n2)" '{"clockMs":null,"payload":{"kit":{"a":"#C62828","b":"#1565C0"}}}'
+  send "$U_TOM_HANDY" "$D_TOM" "$n2"
+  check A "Ableitung: bestaetigte Wahl auf der Gastseite (Orange) bleibt beim Anpfiff ohne Angabe, Heim bekommt die Trikotfarbe" "accepted|bib|b|#C62828|$ORANGE" "$(results "$OUT")|$(row "$n2")"
+  # A2c ausdruecklich keine Leibchen im Anpfiff (kit.bibSide = JSON null) -> none
+  kit "$U_PAUL" "$D_PAUL" "$n6" bib "$(bib a $GELB)" >/dev/null
+  ev MATCH_START "$(E start-n6)" '{"clockMs":null,"payload":{"kit":{"a":"#1565C0","b":"#C62828","bibSide":null}}}'
+  send "$U_PAUL" "$D_PAUL" "$n6"
+  check A "Ableitung: der Anpfiff sendet ausdruecklich keine Leibchen (bibSide null) nach einer Bestaetigung: Zustand none, Seite leer, beide Trikotfarben" "accepted|none|-|#1565C0|#C62828" "$(results "$OUT")|$(row "$n6")"
   # A3 nichts getippt, Anpfiff ohne Leibchen -> bleibt offen (NULL)
   ev MATCH_START "$(E start-3)" '{"clockMs":null,"payload":{"kit":{"a":"#C62828","b":"#FFFFFF"}}}'
   send "$U_TOM_HANDY" "$D_TOM" "$m3"
@@ -652,7 +663,7 @@ summary() {
 
 if [[ "$MODE" == "gegenprobe" ]]; then
   # Jede Mutation ersetzt GENAU EINE Stelle der Migration (Muster muss genau einmal vorkommen).
-  MUTATIONS=(M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20 M21 M22)
+  MUTATIONS=(M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20 M21 M22 M23 M24)
   if [[ -n "${GEGENPROBE_NUR:-}" ]]; then read -r -a MUTATIONS <<<"$GEGENPROBE_NUR"; fi
   RED_TOTAL=0
   for mut in "${MUTATIONS[@]}"; do
@@ -668,7 +679,7 @@ M = {
   # M3 beendetes Spiel nicht gesperrt
   "M3": [("  IF v_match.match_status = '\''finished'\'' THEN\n", "  IF false THEN\n")],
   # M4 Halter-Pruefung weg: jedes Geraet gilt als steuernd
-  "M4": [("        IF NOT (v_fc.holder_user_id = v_uid AND v_fc.holder_device_id IS NOT DISTINCT FROM p_device_id) THEN\n", "        IF false THEN\n")],
+  "M4": [("        IF NOT coalesce(v_fc.holder_user_id = v_uid AND v_fc.holder_device_id = p_device_id, false) THEN\n", "        IF false THEN\n")],
   # M5 Epochen-Vergleich weg
   "M5": [("        ELSIF p_control_epoch IS NOT NULL AND p_control_epoch <> v_fc.epoch THEN\n", "        ELSIF false THEN\n")],
   # M6 Vorab-Festlegung: auch Helfer duerfen ein spaeteres Spiel setzen
@@ -681,8 +692,8 @@ M = {
   "M9": [("  IF (NEW.team_a_id IS DISTINCT FROM OLD.team_a_id OR NEW.team_b_id IS DISTINCT FROM OLD.team_b_id)\n", "  IF false AND (NEW.team_a_id IS DISTINCT FROM OLD.team_a_id OR NEW.team_b_id IS DISTINCT FROM OLD.team_b_id)\n")],
   # M10 Waechter schuetzt kit_decision nicht
   "M10": [("       OR NEW.bib_side     IS DISTINCT FROM OLD.bib_side\n       OR NEW.kit_decision IS DISTINCT FROM OLD.kit_decision THEN\n", "       OR NEW.bib_side     IS DISTINCT FROM OLD.bib_side THEN\n")],
-  # M11 Anpfiff ohne Leibchen nach Bestaetigung bleibt bib statt none
-  "M11": [("                             WHEN kit_decision = '\''bib'\'' THEN '\''none'\''\n", "                             WHEN kit_decision = '\''bib'\'' THEN '\''bib'\''\n")],
+  # M11 bestaetigte Wahl bleibt beim Anpfiff ohne Angabe nicht stehen (Anpfiff ueberschreibt Seite und Farben)
+  "M11": [("  v_keep := v_old = '\''bib'\'' AND v_bib IS NULL AND NOT v_none;\n", "  v_keep := false;\n")],
   # M12 EXECUTE auch fuer anon
   "M12": [("GRANT EXECUTE ON FUNCTION public.match_kit_set(uuid, text, jsonb, uuid, integer) TO authenticated;\n", "GRANT EXECUTE ON FUNCTION public.match_kit_set(uuid, text, jsonb, uuid, integer) TO authenticated, anon;\n")],
   # M13 laufend: die Seite, die ihr Leibchen verliert, bekommt ihre Teamfarbe nicht zurueck
@@ -704,6 +715,10 @@ M = {
   # M21 Zeilensperre weg: gleichzeitige Aufrufe koennen sich mischen
   "M21": [("  SELECT * INTO v_match FROM public.matches WHERE id = p_match_id FOR UPDATE;\n", "  SELECT * INTO v_match FROM public.matches WHERE id = p_match_id;\n")],
   # M22 nach dem Anpfiff gilt die Steuerung nicht mehr als Sperre: laufende Spiele nehmen auch Helfer an (zaehlt wie M2 fuer pausiert)
+  # M23 ausdrueckliches "keine Leibchen" im Anpfiff wird ignoriert (bestaetigte Wahl bleibt)
+  "M23": [("  v_none := v_kit ? '\''bibSide'\'' AND jsonb_typeof(v_kit -> '\''bibSide'\'') = '\''null'\'';\n", "  v_none := false;\n")],
+  # M24 beim Behalten gilt die Trikotfarbe des Anpfiffs auch fuer die Leibchen-Seite (Leibchenfarbe geht verloren)
+  "M24": [("SET kit_color_a  = CASE WHEN v_keep AND bib_side = '\''a'\'' THEN kit_color_a ELSE v_a END,\n", "SET kit_color_a  = v_a,\n")],
   "M22": [("  ELSIF v_match.match_status IN ('\''running'\'', '\''paused'\'') THEN\n", "  ELSIF v_match.match_status IN ('\''running'\'') THEN\n")],
 }
 s = sys.stdin.read()

@@ -21,8 +21,11 @@
 --   2. matches_guard_kit_columns (Fassung 20261028_004 + kit_decision): Client-Rollen setzen die Spalte weder im INSERT noch im
 --      UPDATE (HF003).
 --   3. matches_kit_from_match_start (Fassung 20261028_004 + kit_decision): der Anpfiff setzt den Zustand nur, wenn er etwas
---      entscheidet -- mit Leibchen 'bib', ohne Leibchen nach einer Bestaetigung 'none', ohne Leibchen und ohne Tipp bleibt der
---      Zustand wie er war (NULL). Damit zeigt die Karte nach "Anpfiff rueckgaengig" den Stand davor (@SL-214).
+--      entscheidet. Mit Leibchen (kit.bibSide a|b) 'bib'. Ist die Wahl schon bestaetigt und der Anpfiff nennt nichts zum
+--      Leibchen (kein Schluessel bibSide), bleibt sie stehen: Seite und Leibchenfarbe bleiben, die uebrige Seite bekommt die
+--      Trikotfarbe des Anpfiffs (Ableitung, gilt nach Vorschlag). 'none' entsteht beim Anpfiff nur ausdruecklich (kit.bibSide
+--      = JSON null) oder aus offen nie -- ohne Leibchen-Angabe und ohne Tipp bleibt der Zustand wie er war (NULL, @SL-210;
+--      none bleibt none). Damit zeigt die Karte nach "Anpfiff rueckgaengig" den Stand davor (@SL-214).
 --   4. public.match_kit_set(p_match_id, p_decision, p_kit, p_device_id, p_control_epoch): die Wahl schreiben.
 --        p_decision 'bib'  + p_kit {"bibSide": "a"|"b", "bibColor": "#RRGGBB" [, "teamA": uuid, "teamB": uuid]}
 --        p_decision 'none' + p_kit NULL oder nur {"teamA": uuid, "teamB": uuid}
@@ -125,7 +128,8 @@ END;
 $$;
 REVOKE ALL ON FUNCTION public.matches_guard_kit_columns() FROM PUBLIC, anon, authenticated;
 
--- 3. Anpfiff-Projektion: Fassung 20261028_004, dazu kit_decision (Anpfiff ohne Tipp laesst den Zustand stehen, @SL-210, @SL-214).
+-- 3. Anpfiff-Projektion: Fassung 20261028_004, dazu kit_decision (Anpfiff ohne Angabe laesst eine Wahl und einen offenen Zustand
+--    stehen, @SL-210, @SL-214; ausdrueckliches kit.bibSide null setzt 'none').
 CREATE OR REPLACE FUNCTION public.matches_kit_from_match_start() RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -136,6 +140,9 @@ DECLARE
   v_a   text;
   v_b   text;
   v_bib text;
+  v_old text;
+  v_none boolean;
+  v_keep boolean;
 BEGIN
   IF v_kit IS NULL OR jsonb_typeof(v_kit) <> 'object' THEN
     RETURN NULL;
@@ -146,10 +153,17 @@ BEGIN
   IF v_a IS NOT NULL AND v_a !~ '^#[0-9A-F]{6}$' THEN v_a := NULL; END IF;
   IF v_b IS NOT NULL AND v_b !~ '^#[0-9A-F]{6}$' THEN v_b := NULL; END IF;
   IF v_bib IS NOT NULL AND v_bib NOT IN ('a', 'b') THEN v_bib := NULL; END IF;
+  -- ausdrueckliches "keine Leibchen": der Schluessel bibSide steht da und ist JSON null
+  v_none := v_kit ? 'bibSide' AND jsonb_typeof(v_kit -> 'bibSide') = 'null';
+  SELECT m.kit_decision INTO v_old FROM public.matches m WHERE m.id = NEW.match_id;
+  -- bestaetigte Wahl und der Anpfiff sagt nichts zum Leibchen: sie bleibt stehen
+  v_keep := v_old = 'bib' AND v_bib IS NULL AND NOT v_none;
   UPDATE public.matches
-     SET kit_color_a = v_a, kit_color_b = v_b, bib_side = v_bib,
-         kit_decision = CASE WHEN v_bib IS NOT NULL THEN 'bib'
-                             WHEN kit_decision = 'bib' THEN 'none'
+     SET kit_color_a  = CASE WHEN v_keep AND bib_side = 'a' THEN kit_color_a ELSE v_a END,
+         kit_color_b  = CASE WHEN v_keep AND bib_side = 'b' THEN kit_color_b ELSE v_b END,
+         bib_side     = CASE WHEN v_keep THEN bib_side ELSE v_bib END,
+         kit_decision = CASE WHEN v_bib IS NOT NULL OR v_keep THEN 'bib'
+                             WHEN v_none THEN 'none'
                              ELSE kit_decision END
    WHERE id = NEW.match_id;
   RETURN NULL;
@@ -290,7 +304,7 @@ BEGIN
       SELECT * INTO v_fc FROM public.field_control
        WHERE tournament_id = v_match.tournament_id AND field = v_match.field;
       IF FOUND AND v_fc.holder_user_id IS NOT NULL THEN
-        IF NOT (v_fc.holder_user_id = v_uid AND v_fc.holder_device_id IS NOT DISTINCT FROM p_device_id) THEN
+        IF NOT coalesce(v_fc.holder_user_id = v_uid AND v_fc.holder_device_id = p_device_id, false) THEN
           RETURN jsonb_build_object('status', 'rejected', 'code', 'NOT_CONTROLLER',
             'detail', jsonb_build_object('reason', 'OTHER_DEVICE')
                       || public.field_control_info(v_match.tournament_id, v_match.field, p_device_id));
