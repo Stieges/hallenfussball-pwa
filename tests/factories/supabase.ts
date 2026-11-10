@@ -82,6 +82,7 @@ export function createMatchRow(
     actual_end: null,
     kit_color_a: null,
     kit_color_b: null,
+    kit_decision: null,
     bib_side: null,
     timer_start_time: null,
     timer_paused_at: null,

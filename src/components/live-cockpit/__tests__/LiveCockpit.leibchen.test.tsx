@@ -25,7 +25,8 @@ const ROT = '#C62828';
 const WEISS = '#FFFFFF';
 const GELB_SV_SUED = '#FFEB3B';
 const TURNIER_GELB = '#FFCC00';
-const BLAU = '#1565C0';
+// Blau der Grundauswahl (Trikot-Palette des Assistenten, @SL-219), nicht das Standardblau der Kästen
+const BLAU = '#0033CC';
 
 const spiel12 = () => makeLiveMatch({ id: 'spiel-12', number: 12, status: 'NOT_STARTED', elapsedSeconds: 0, homeTeam: { id: 'sv-sued', name: 'SV Süd' }, awayTeam: { id: 'fc-nord', name: 'FC Nord' } });
 const spiel14 = () => makeLiveMatch({ id: 'spiel-14', number: 14, status: 'NOT_STARTED', elapsedSeconds: 0, homeTeam: { id: 'sv-sued', name: 'SV Süd' }, awayTeam: { id: 'tsv-ost', name: 'TSV Ost' } });

@@ -3,6 +3,7 @@
  * Szenarien: @SL-176 (drei Beispiele), @ZM-159 (acht Fälle als Literale), Parität mit `buildTournamentView` (Hallenmonitor).
  * Gherkin: docs/anforderungen/2026-10-02_spiel-leiten.md (@SL-176), 2026-10-02_zuschauer-und-monitor.md (@ZM-159).
  */
+import { FALLBACK_PATTERN } from '../../../../core/models/scoreBoxColors';
 import { describe, expect, it } from 'vitest';
 import { toCockpitBoxes } from '../toCockpitBoxes';
 import { buildTournamentView } from '../../../../core/view';
@@ -16,7 +17,6 @@ const ROT = '#C62828';
 const LILA = '#6A1B9A';
 const GRUEN = '#2E7D32';
 const GELB = '#FDD835';
-const WEISS = '#FFFFFF';
 const GRAUVIOLETT = '#736469';
 const HEIM = '00000000-0000-4000-8000-000000000001';
 const GAST = '00000000-0000-4000-8000-000000000006';
@@ -55,20 +55,22 @@ describe('@SL-176 Die Ergebniskästen im Cockpit zeigen dieselbe Farbe wie am Mo
   });
 });
 
-type F = { kind: 'solid'; color: string } | { kind: 'vest'; center: string; stripes: string };
+type F = { kind: 'solid'; color: string } | { kind: 'vest'; center: string; stripes: string } | { kind: 'striped'; light: string; dark: string };
 const solid = (color: string): F => ({ kind: 'solid', color });
+/** @ZM-203: Seite ohne Trikotfarbe */
+const muster: F = { kind: 'striped', light: FALLBACK_PATTERN.light, dark: FALLBACK_PATTERN.dark };
 
 describe('@ZM-159 welche Farbe ein Kasten bekommt (Tabelle als Literale), Cockpit = Hallenmonitor', () => {
   // Heim = SV Süd, Gast = FC Nord, Standardfarben Blau/Rot
   const faelle: Array<{ fall: string; heim?: string; gast?: string; kit: Match['kit']; teams?: { heim?: string; gast?: string }; erwarteHeim: F; erwarteGast: F }> = [
     { fall: 'A keine/keine', kit: {}, erwarteHeim: solid(BLAU), erwarteGast: solid(ROT) },
-    { fall: 'B keine/Gelb', kit: { b: GELB }, erwarteHeim: solid(BLAU), erwarteGast: solid(GELB) },
-    { fall: 'B keine/Blau (Heim weicht auf Rot aus)', kit: { b: BLAU }, erwarteHeim: solid(ROT), erwarteGast: solid(BLAU) },
-    { fall: 'B keine/Grauviolett (Heim Weiß)', kit: { b: GRAUVIOLETT }, erwarteHeim: solid(WEISS), erwarteGast: solid(GRAUVIOLETT) },
+    { fall: 'B keine/Gelb', kit: { b: GELB }, erwarteHeim: muster, erwarteGast: solid(GELB) },
+    { fall: 'B keine/Blau (Heim gestreift, nicht Rot und nicht Blau)', kit: { b: BLAU }, erwarteHeim: muster, erwarteGast: solid(BLAU) },
+    { fall: 'B keine/Grauviolett (Heim gestreift)', kit: { b: GRAUVIOLETT }, erwarteHeim: muster, erwarteGast: solid(GRAUVIOLETT) },
     { fall: 'C Gelb/Blau', kit: { a: GELB, b: BLAU }, erwarteHeim: solid(GELB), erwarteGast: solid(BLAU) },
     { fall: 'D Gelb / rote Leibchen über gelben Trikots', kit: { a: GELB, b: ROT, bibSide: 'b' }, teams: { gast: GELB }, erwarteHeim: solid(GELB), erwarteGast: { kind: 'vest', center: ROT, stripes: GELB } },
-    { fall: 'D2 Gelb/Gelb ohne Leibchen (Gast weicht auf Rot aus)', kit: { a: GELB, b: GELB }, erwarteHeim: solid(GELB), erwarteGast: solid(ROT) },
-    { fall: 'D2 Rot/Rot ohne Leibchen (Gast weicht auf Blau aus)', kit: { a: ROT, b: ROT }, erwarteHeim: solid(ROT), erwarteGast: solid(BLAU) },
+    { fall: 'D2 Gelb/Gelb ohne Leibchen (echte Trikotfarbe, keine Ausweichfarbe)', kit: { a: GELB, b: GELB }, erwarteHeim: solid(GELB), erwarteGast: solid(GELB) },
+    { fall: 'D2 Rot/Rot ohne Leibchen (echte Trikotfarbe, keine Ausweichfarbe)', kit: { a: ROT, b: ROT }, erwarteHeim: solid(ROT), erwarteGast: solid(ROT) },
   ];
   it.each(faelle)('$fall', ({ kit, teams, erwarteHeim, erwarteGast }) => {
     const ts = [team(HEIM, 'SV Süd', teams?.heim), team(GAST, 'FC Nord', teams?.gast)];

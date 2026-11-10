@@ -1,6 +1,6 @@
 /**
  * Leibchen-Anzeige Schritt 1 (Monitor, Zuschauer-Seite): @ZM-161 (Trainingsleibchen), @ZM-157 (Zeichen oben links), @ZM-192 (Zeitstrafen-Kreis
- * berührt kein Zeichen), @ZM-195 (Folie „Nächstes Spiel“ mit Kästen „0 : 0“ in Größe und Lage wie im Spiel), @ZM-159 (Gast weicht aus),
+ * berührt kein Zeichen), @ZM-195 (Folie „Nächstes Spiel“ mit Kästen „0 : 0“ in Größe und Lage wie im Spiel), @ZM-159 (Fall D2 ohne Ausweichfarbe),
  * @ZM-151 (Kästen in jedem Zustand gleich), @ZM-158 (kleiner Kasten am Handy). Saat: `helpers/leibchenSaat.ts` (Mockup `leibchen-anzeige`).
  * Cockpit (@SL-176): Kasten mit der Form, der flache Kopf behält die Streifen (Befund im Bericht). Bilder: LEIBCHEN_BILDER=<Ordner> (Vorsatz LEIBCHEN_PHASE, Vorgabe „nachher“); die Messungen laufen nur im Projekt `desktop`.
  * Der Test „Bilder“ macht nur Aufnahmen (er läuft auch gegen den alten Stand, `-g Bilder`).
@@ -13,7 +13,7 @@ import { test, expect } from '../helpers/test-fixtures';
 import { installiereSaat } from '../../../scripts/visual-metrics/saat/lader.mjs';
 import { displayLayout } from '../../../src/design-tokens';
 import { cup, NAMEN, NAME_50, anpfeifen } from '../helpers/laptopCup';
-import { BLAU, GELB, LEIBCHEN_MONITOR_ID, LEIBCHEN_SHARE_CODE, LEIBCHEN_TURNIER_ID, ROT, SPIEL_2_ID, leibchenSaat, type Szene } from '../helpers/leibchenSaat';
+import { GELB, LEIBCHEN_MONITOR_ID, LEIBCHEN_SHARE_CODE, LEIBCHEN_TURNIER_ID, ROT, SPIEL_2_ID, leibchenSaat, type Szene } from '../helpers/leibchenSaat';
 
 const BILDER = process.env.LEIBCHEN_BILDER;
 const PHASE = process.env.LEIBCHEN_PHASE ?? 'nachher';
@@ -162,13 +162,13 @@ for (const g of MONITORE) {
       await bild(page, `m-zweistellig-${g.name}`);
     });
 
-    test(`@ZM-195 @ZM-159 Folie „Nächstes Spiel“: Kästen „0 : 0“, Abzeichen links, Anstoßzeit an der Stelle der Uhr, Gast weicht aus (${g.name})`, async ({ page }) => {
+    test(`@ZM-195 @ZM-159 Folie „Nächstes Spiel“: Kästen „0 : 0“, Abzeichen links, Anstoßzeit an der Stelle der Uhr, Gast ohne Ausweichfarbe (${g.name})`, async ({ page }) => {
       await oeffneMonitor(page, 'vor-gleiche-farbe', g);
       await expect(page.getByTestId('live-badge')).toContainText('Nächstes Spiel');
       await expect(page.getByTestId('live-box-home-digits')).toHaveText('0');
       await expect(page.getByTestId('live-box-away-digits')).toHaveText('0');
       await expect(page.getByTestId('live-box-home')).toHaveAttribute('data-color', ROT);
-      await expect(page.getByTestId('live-box-away')).toHaveAttribute('data-color', BLAU); // 1b: Rot gegen Rot ohne Leibchen → Gast Standardfarbe Heim
+      await expect(page.getByTestId('live-box-away')).toHaveAttribute('data-color', ROT); // @ZM-159 Fall D2: Rot gegen Rot ohne Leibchen → jeder Kasten seine echte Trikotfarbe
       await expect(page.getByTestId('live-box-away-bib')).toHaveCount(0);
       await expect(page.getByTestId('monitor-kickoff')).toContainText('08:40');
       await bild(page, `m-vor-${g.name}`);
@@ -192,7 +192,7 @@ for (const g of MONITORE) {
       expect(Math.abs(vor.uhr.t - laeuft.uhr.t), 'Uhr-Lage').toBeLessThanOrEqual(2);
     });
 
-    // Die Weste vor dem Anpfiff (@SL-201, @ZM-195 mit festgelegtem Leibchen) braucht Schritt 2 (Festlegen vor dem Anpfiff schreibt zum Server): hier gilt vor dem Anpfiff die Trikot- bzw. Ausweichfarbe.
+    // Die Weste vor dem Anpfiff (@SL-201, @ZM-195 mit festgelegtem Leibchen) braucht Schritt 2 (Festlegen vor dem Anpfiff schreibt zum Server): hier gilt vor dem Anpfiff die Trikotfarbe.
     test(`@ZM-195 Gegenbeispiel: vor dem Anpfiff (Schritt 1) steht kein Leibchen-Zeichen und keine Form, auch wenn das Spiel später Leibchen bekommt (${g.name})`, async ({ page }) => {
       await oeffneMonitor(page, 'vor-gleiche-farbe', g);
       await expect(page.locator('[data-teil]')).toHaveCount(0);
@@ -208,12 +208,12 @@ for (const g of MONITORE) {
       await expect(page.getByTestId('live-box-away-bib')).toHaveCount(0);
     });
 
-    test(`@ZM-140 @ZM-161 Team 1 ohne Trikotfarbe mit Leibchen Orange: Form über der Standardfarbe Heim (Blau) (${g.name})`, async ({ page }) => {
+    test(`@ZM-204 @ZM-161 Team 1 ohne Trikotfarbe mit Leibchen Orange: Form über dem grauen Streifenmuster (${g.name})`, async ({ page }) => {
       await oeffneMonitor(page, 'laeuft-orange', g);
       const kasten = page.getByTestId('live-box-home');
       await expect(kasten).toHaveAttribute('data-fill', 'vest');
       await expect(kasten).toHaveAttribute('data-color', '#EF6C00');
-      await expect(kasten).toHaveAttribute('data-stripes', BLAU);
+      await expect(kasten).toHaveAttribute('data-shirt-unknown', 'true');
       await expect(page.getByTestId('live-box-away')).toHaveAttribute('data-fill', 'solid');
       await bild(page, `m-orange-${g.name}`);
     });
@@ -251,14 +251,14 @@ test.describe('Leibchen-Anzeige Zuschauer-Seite 390', () => {
     await bild(page, 'z-laeuft');
   });
 
-  test('@ZM-158 @ZM-195 Als Nächstes: Kästen mit „0“ in Trikot- bzw. Ausweichfarbe statt Strich (Rot gegen Rot: der Gast weicht auf Blau aus)', async ({ page }) => {
+  test('@ZM-158 @ZM-195 Als Nächstes: Kästen mit „0“ in der echten Trikotfarbe statt Strich (Rot gegen Rot: beide Rot, keine Ausweichfarbe, @ZM-159 Fall D2)', async ({ page }) => {
     await oeffneZuschauer(page, 'vor-gleiche-farbe');
     // Das nächste Spiel steht im Kopfblock und als Karte im Spielplan; gemessen wird die Karte, der Kopf trägt dieselben Farben
     const plan = page.locator('.mobile-view');
-    await expect(page.getByTestId('public-current').getByTestId(/^match-box-.*-away$/)).toHaveAttribute('data-color', BLAU);
+    await expect(page.getByTestId('public-current').getByTestId(/^match-box-.*-away$/)).toHaveAttribute('data-color', ROT);
     await expect(plan.getByTestId(/^match-box-.*-home-digits$/)).toHaveText('0');
     await expect(plan.getByTestId(/^match-box-.*-home$/)).toHaveAttribute('data-color', ROT);
-    await expect(plan.getByTestId(/^match-box-.*-away$/)).toHaveAttribute('data-color', BLAU);
+    await expect(plan.getByTestId(/^match-box-.*-away$/)).toHaveAttribute('data-color', ROT);
     await expect(plan.getByTestId(/^match-box-.*-away$/)).toHaveAttribute('data-fill', 'solid');
     // Gegenbeispiel: Spiel 5 (später, Weiß gegen Grün) ist nicht das nächste Spiel des Felds → Zahl ohne Kasten wie bisher
     await expect(page.locator('.mobile-view [data-testid^="match-box-"][data-testid$="-home"]')).toHaveCount(1);

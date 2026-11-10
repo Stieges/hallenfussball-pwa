@@ -1,6 +1,6 @@
 /**
  * Spielanzeige 2.3: Der Monitor liest die Kastenfarbe aus der Ansicht (`MatchView.boxes`), nicht mehr aus einer Farbe je Folie.
- * @ZM-159 Fälle A, B, C · @ZM-153 (Gast weicht auf Weiß aus) · @ZM-154 (Teamfarben aus) · @ZM-152 (keine Farbe je Folie)
+ * @ZM-159 Fälle A, B, C · @ZM-203 (Seite ohne Trikotfarbe: Fallback-Muster) · @ZM-153 (genau die eingestellten Standardfarben) · @ZM-154 (Teamfarben aus) · @ZM-152 (keine Farbe je Folie)
  * Spiel 7 läuft auf Feld 1: FC Nord (Heim) – SV Süd (Gast). Getragene Farben kommen aus `match.kit` (beim Anpfiff festgehalten).
  */
 import { describe, it, expect } from 'vitest';
@@ -21,6 +21,8 @@ const ROT = palette.kit.red;
 const GELB = palette.yellow[400];
 const WEISS = palette.neutral[0];
 const GRAUVIOLETT = '#736469';
+/** @ZM-203: Kasten einer Seite ohne Trikotfarbe */
+const MUSTER = 'muster';
 
 function zeigeSpiel7(kit: MatchKit | undefined, spectatorDisplay: SpectatorDisplaySettings | undefined = VORBELEGUNG, config: SlideConfig = { fieldId: 'field-1' }) {
   const tournament = buildTournament({
@@ -38,13 +40,18 @@ const gast = () => document.querySelector<HTMLElement>('[data-position="away"]')
 describe('@ZM-159 Farbe der Kästen am Monitor Feld 1 (Fälle A, B, C)', () => {
   it.each([
     ['A keine Farbe / keine Farbe', undefined, BLAU, ROT],
-    ['B keine Farbe / Gelb', { b: GELB }, BLAU, GELB],
-    ['B keine Farbe / Blau (Heim weicht auf die Standardfarbe Gast aus)', { b: BLAU }, ROT, BLAU],
-    ['B keine Farbe / Grauviolett (Heim weiß, weil weiter weg als Schwarz)', { b: GRAUVIOLETT }, WEISS, GRAUVIOLETT],
+    ['B keine Farbe / Gelb (Heim schräg grau gestreift)', { b: GELB }, MUSTER, GELB],
+    ['B keine Farbe / Blau (Heim gestreift, nicht Rot und nicht Blau)', { b: BLAU }, MUSTER, BLAU],
+    ['B keine Farbe / Grauviolett (Heim gestreift, ohne Rechnung nach Farbabstand)', { b: GRAUVIOLETT }, MUSTER, GRAUVIOLETT],
     ['C Gelb / Blau', { a: GELB, b: BLAU }, GELB, BLAU],
   ] as const)('@ZM-159 Fall %s', (_name, kit, kastenHeim, kastenGast) => {
     zeigeSpiel7(kit);
-    expect(heim()).toHaveStyle({ backgroundColor: kastenHeim });
+    if (kastenHeim === MUSTER) {
+      expect(heim()).toHaveAttribute('data-fill', 'striped');
+      expect(heim()).toHaveAttribute('data-digit-color', palette.neutral[0]);
+    } else {
+      expect(heim()).toHaveStyle({ backgroundColor: kastenHeim });
+    }
     expect(gast()).toHaveStyle({ backgroundColor: kastenGast });
   });
 
@@ -54,12 +61,13 @@ describe('@ZM-159 Farbe der Kästen am Monitor Feld 1 (Fälle A, B, C)', () => {
   });
 });
 
-describe('@ZM-153 Standardfarben zu ähnlich: Gast-Kasten am Monitor weiß', () => {
+describe('@ZM-153 Standardfarben zu ähnlich: der Monitor zeigt genau Ollis Einstellung', () => {
   const NAVY = palette.kit.navy;
-  it('@ZM-153 Blau/Navy, Spiel ohne Teamfarben: Heim Blau, Gast Weiß', () => {
+  it('@ZM-153 Blau/Navy, Spiel ohne Teamfarben: Heim Blau, Gast Navy wie eingestellt, kein Ausweichen', () => {
     zeigeSpiel7(undefined, { teamColors: true, homeColor: BLAU, awayColor: NAVY });
     expect(heim()).toHaveStyle({ backgroundColor: BLAU });
-    expect(gast()).toHaveStyle({ backgroundColor: WEISS });
+    expect(gast()).toHaveStyle({ backgroundColor: NAVY });
+    expect(gast()).not.toHaveStyle({ backgroundColor: WEISS });
   });
 
   it('@ZM-153 Gegenbeispiel Blau/Rot: Gast bleibt Rot', () => {
@@ -67,9 +75,9 @@ describe('@ZM-153 Standardfarben zu ähnlich: Gast-Kasten am Monitor weiß', () 
     expect(gast()).toHaveStyle({ backgroundColor: ROT });
   });
 
-  it('RF2 Blau/Blau: Gast-Kasten weicht auf Weiß aus', () => {
+  it('@ZM-153 Blau/Blau: Gast-Kasten bleibt Blau wie eingestellt (keine Ausweichfarbe)', () => {
     zeigeSpiel7(undefined, { teamColors: true, homeColor: BLAU, awayColor: BLAU });
-    expect(gast()).toHaveStyle({ backgroundColor: WEISS });
+    expect(gast()).toHaveStyle({ backgroundColor: BLAU });
   });
 });
 

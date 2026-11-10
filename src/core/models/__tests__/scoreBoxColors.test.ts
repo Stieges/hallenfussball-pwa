@@ -1,12 +1,13 @@
 /**
  * Aufgabe 2.1 (Spielanzeige): Farbregel der Ergebniskästen, Fälle A–D2 (@ZM-159), getragene Farbe und Weste (@ZM-140,
- * @ZM-161), Standardfarben (@ZM-153), Teamfarben aus (@ZM-154), RF1/RF2 aus dem Review Focus.
+ * @ZM-161), Standardfarben (@ZM-153), Teamfarben aus (@ZM-154), Fallback-Muster statt Ausweichfarbe (@ZM-203, @ZM-204; Daniel 2026-11-09),
+ * RF1 aus dem Review Focus.
  * Testwerte aus dem Gherkin von docs/anforderungen/2026-10-02_zuschauer-und-monitor.md; „zu ähnlich“ = ΔE2000 < 30.
  */
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_BIB_COLOR, KIT_SIMILAR_DELTA_E, kitConflict } from '../kit';
 import { hexDeltaE2000 } from '../kitColorDistance';
-import { resolveBoxColors, whiteOrBlackFarthestFrom, type BoxColorInput, type BoxFill } from '../scoreBoxColors';
+import { FALLBACK_PATTERN, fillColorUnknown, resolveBoxColors, type BoxColorInput, type BoxFill } from '../scoreBoxColors';
 import { DEFAULT_AWAY_BOX_COLOR, DEFAULT_HOME_BOX_COLOR, DEFAULT_SPECTATOR_DISPLAY, type SpectatorDisplaySettings } from '../spectatorDisplay';
 import { palette } from '../../../design-tokens/colors/palette';
 
@@ -23,6 +24,10 @@ const ROT_STD = DEFAULT_AWAY_BOX_COLOR;
 
 const solid = (color: string): BoxFill => ({ kind: 'solid', color });
 const vest = (center: string, stripes: string): BoxFill => ({ kind: 'vest', center, stripes });
+/** Seite ohne Trikotfarbe: das Fallback-Muster (@ZM-203). */
+const muster: BoxFill = { kind: 'striped', light: FALLBACK_PATTERN.light, dark: FALLBACK_PATTERN.dark };
+/** Weste über einem Team ohne Trikotfarbe: das Muster in den Rändern (@ZM-204). */
+const westeOhneTrikot = (center: string): BoxFill => ({ kind: 'vest', center, stripes: FALLBACK_PATTERN.dark, stripesUnknown: true });
 const settings = (patch: Partial<SpectatorDisplaySettings> = {}): SpectatorDisplaySettings => ({ ...DEFAULT_SPECTATOR_DISPLAY, ...patch });
 const resolve = (worn: BoxColorInput['worn'], extra: Partial<BoxColorInput> = {}) =>
   resolveBoxColors({ worn, settings: settings(), ...extra });
@@ -49,17 +54,23 @@ describe('@ZM-159 Vorbelegung der Standardfarben', () => {
 describe('@ZM-159 Fälle A–D2 (Teamfarben an, Standardfarben Vorbelegung)', () => {
   it.each([
     ['A keine/keine', {}, {}, solid(BLAU_STD), solid(ROT_STD)],
-    ['B keine/Gelb', { b: GELB }, {}, solid(BLAU_STD), solid(GELB)],
-    ['B keine/Blau', { b: BLAU }, {}, solid(ROT_STD), solid(BLAU)],
-    ['B keine/Grauviolett', { b: GRAUVIOLETT }, {}, solid(WEISS), solid(GRAUVIOLETT)],
+    ['B keine/Gelb', { b: GELB }, {}, muster, solid(GELB)],
+    ['B keine/Blau (nicht Rot und nicht Blau)', { b: BLAU }, {}, muster, solid(BLAU)],
+    ['B Gelb/keine', { a: GELB }, {}, solid(GELB), muster],
+    ['B keine/Grauviolett (ohne Rechnung nach Farbabstand)', { b: GRAUVIOLETT }, {}, muster, solid(GRAUVIOLETT)],
     ['C Gelb/Blau', { a: GELB, b: BLAU }, {}, solid(GELB), solid(BLAU)],
     ['D Gelb/rote Leibchen über Gelb', { a: GELB, b: ROT }, { bibSide: 'b' as const, shirt: GELB }, solid(GELB), vest(ROT, GELB)],
-    ['D2 Gelb/Gelb ohne Leibchen', { a: GELB, b: GELB }, {}, solid(GELB), solid(ROT_STD)],
-    ['D2 Rot/Rot ohne Leibchen', { a: ROT, b: ROT }, {}, solid(ROT), solid(BLAU_STD)],
+    ['D2 Gelb/Gelb ohne Leibchen (echte Trikotfarbe, keine Ausweichfarbe)', { a: GELB, b: GELB }, {}, solid(GELB), solid(GELB)],
+    ['D2 Rot/Rot ohne Leibchen (echte Trikotfarbe, keine Ausweichfarbe)', { a: ROT, b: ROT }, {}, solid(ROT), solid(ROT)],
   ])('@ZM-159 Fall %s', (_fall, worn, extra, heim, gast) => {
     const boxes = resolve(worn, extra);
     expect(boxes.a.fill).toEqual(heim);
     expect(boxes.b.fill).toEqual(gast);
+  });
+
+  it('@ZM-159 Fall D2 Blau gegen Blau (@ZM-200): beide Kästen Blau, kein Ausweichen auf Rot, Weiß oder Schwarz', () => {
+    const boxes = resolve({ a: BLAU, b: BLAU });
+    expect([boxes.a.fill, boxes.b.fill]).toEqual([solid(BLAU), solid(BLAU)]);
   });
 
   it('@ZM-159 Leibchen-Zeichen nur an der Leibchen-Seite (Fall D: FC Nord); Gegenbeispiel Fall C ohne Zeichen', () => {
@@ -69,39 +80,71 @@ describe('@ZM-159 Fälle A–D2 (Teamfarben an, Standardfarben Vorbelegung)', ()
     expect([c.a.bib, c.b.bib]).toEqual([false, false]);
   });
 
-  it('@ZM-159 Gegenbeispiel B: Blau ist der Standardfarbe Heim zu ähnlich, Gelb nicht', () => {
-    expect(kitConflict(BLAU, BLAU_STD)).not.toBe('none');
-    expect(kitConflict(GELB, BLAU_STD)).toBe('none');
-    expect(kitConflict(BLAU, ROT_STD)).toBe('none');
+  it('@ZM-159 Gegenbeispiel Fall A: keine Seite mit Farbe, aber Teamfarben aus – ebenfalls Heim Blau, Gast Rot (kein Muster)', () => {
+    const boxes = resolveBoxColors({ worn: {}, settings: settings({ teamColors: false }) });
+    expect([boxes.a.fill, boxes.b.fill]).toEqual([solid(BLAU_STD), solid(ROT_STD)]);
   });
 
-  it('@ZM-159 Fall B spiegelbildlich: Gastseite ohne Farbe gegen Heim Rot weicht auf Blau aus', () => {
+  it('@ZM-159 Fall B spiegelbildlich: Gastseite ohne Farbe gegen Heim Rot zeigt das Muster, nicht Blau', () => {
     const boxes = resolve({ a: ROT });
     expect(boxes.a.fill).toEqual(solid(ROT));
-    expect(boxes.b.fill).toEqual(solid(BLAU_STD));
+    expect(boxes.b.fill).toEqual(muster);
   });
 
-  it('@ZM-159 Fall B gegen eine Weste: die Seite ohne Farbe weicht von der Mitte der Weste aus', () => {
-    // Heim in roten Leibchen über Gelb, Gast ohne Farbe: Standardfarbe Gast Rot ist der Mitte zu ähnlich → Blau.
+  it('@ZM-159 Fall B gegen eine Weste: die Seite ohne Farbe zeigt das Muster, die Weste bleibt (Mitte Rot, Streifen Gelb)', () => {
     const boxes = resolve({ a: ROT }, { bibSide: 'a', shirt: GELB });
     expect(boxes.a.fill).toEqual(vest(ROT, GELB));
-    expect(boxes.b.fill).toEqual(solid(BLAU_STD));
+    expect(boxes.b.fill).toEqual(muster);
   });
 });
 
-describe('@ZM-159 whiteOrBlackFarthestFrom', () => {
-  it('@ZM-159 whiteOrBlackFarthestFrom: Grauviolett → Weiß, Blau #1565C0 → Weiß, Gelb → Schwarz', () => {
-    expect(whiteOrBlackFarthestFrom(GRAUVIOLETT)).toBe(WEISS);
-    expect(whiteOrBlackFarthestFrom(BLAU_STD)).toBe(WEISS);
-    expect(whiteOrBlackFarthestFrom(GELB)).toBe(SCHWARZ);
+describe('@ZM-203 Kasten ohne Trikotfarbe: schräg grau gestreift, kein Ausweichen', () => {
+  it('@ZM-203 SV Süd (Heim) ohne Trikotfarbe, FC Nord (Gast) Blau: Heim Muster, Gast Blau, Heim weder Blau noch Rot noch Weiß noch Schwarz', () => {
+    const boxes = resolve({ b: BLAU });
+    expect(boxes.a.fill).toEqual(muster);
+    expect(boxes.b.fill).toEqual(solid(BLAU));
+    for (const verboten of [BLAU, BLAU_STD, ROT_STD, WEISS, SCHWARZ]) {
+      expect(boxes.a.fill).not.toEqual(solid(verboten));
+    }
   });
 
-  it('@ZM-153 Blau #1565C0: Weiß 49,7', () => {
-    expectDistance(BLAU_STD, WEISS, 49.7);
+  it('@ZM-203 Aber haben beide Seiten keine Trikotfarbe: SV Süd Blau (Standardfarbe Heim), FC Nord Rot (Standardfarbe Gast)', () => {
+    const boxes = resolve({});
+    expect([boxes.a.fill, boxes.b.fill]).toEqual([solid(BLAU_STD), solid(ROT_STD)]);
   });
 
-  it('@ZM-153 Blau #1565C0: gegen Schwarz 39,1', () => {
-    expectDistance(BLAU_STD, SCHWARZ, 39.1);
+  it('@ZM-203 das Muster ist das Zeichen „Trikotfarbe unbekannt“: fillColorUnknown nur dafür, nicht für echte Farben', () => {
+    const boxes = resolve({ b: BLAU });
+    expect(fillColorUnknown(boxes.a.fill)).toBe(true);
+    expect(fillColorUnknown(boxes.b.fill)).toBe(false);
+    expect(fillColorUnknown(solid(GELB))).toBe(false);
+    expect(fillColorUnknown(vest(GELB, ROT))).toBe(false);
+  });
+
+  it('@ZM-203 Gegenbeispiel Teamfarben aus: auch eine Seite ohne Trikotfarbe trägt die Standardfarbe, kein Muster', () => {
+    const boxes = resolveBoxColors({ worn: { b: BLAU }, settings: settings({ teamColors: false }) });
+    expect([boxes.a.fill, boxes.b.fill]).toEqual([solid(BLAU_STD), solid(ROT_STD)]);
+  });
+});
+
+describe('@ZM-204 Weste über einem Team ohne Trikotfarbe: das Muster in den Rändern', () => {
+  it('@ZM-204 SV Süd (Heim) in gelben Leibchen ohne Trikotfarbe: Mitte Gelb, Ränder im Muster (weder Blau noch Rot), Leibchen-Zeichen', () => {
+    const boxes = resolve({ a: DEFAULT_BIB_COLOR, b: WEISS }, { bibSide: 'a' });
+    expect(boxes.a).toEqual({ fill: westeOhneTrikot(GELB), bib: true });
+    expect(fillColorUnknown(boxes.a.fill)).toBe(true);
+    expect(boxes.a.fill).not.toMatchObject({ stripes: BLAU_STD });
+    expect(boxes.a.fill).not.toMatchObject({ stripes: ROT_STD });
+  });
+
+  it('@ZM-204 Gegenbeispiel: Gastseite in Leibchen ohne Trikotfarbe – ebenfalls das Muster, nicht die Standardfarbe Gast (Rot)', () => {
+    const boxes = resolve({ a: WEISS, b: GELB }, { bibSide: 'b' });
+    expect(boxes.b.fill).toEqual(westeOhneTrikot(GELB));
+  });
+
+  it('@ZM-195 Gegenbeispiel: mit Trikotfarbe bleibt die Weste einfarbig in dieser Farbe (kein Muster)', () => {
+    const boxes = resolve({ a: GELB, b: WEISS }, { bibSide: 'a', shirt: ROT });
+    expect(boxes.a.fill).toEqual(vest(GELB, ROT));
+    expect(fillColorUnknown(boxes.a.fill)).toBe(false);
   });
 });
 
@@ -116,38 +159,40 @@ describe('@ZM-140 getragene Farbe, Weste (Teamfarben an, Vorbelegung)', () => {
     expect(resolve({ a: SCHWARZ, b: WEISS }).a.fill).toEqual(solid(SCHWARZ));
   });
 
-  it('@ZM-140 keine Farbe gegen Weiß: Standardfarbe Heim (Blau)', () => {
-    expect(resolve({ b: WEISS }).a.fill).toEqual(solid(BLAU_STD));
+  it('@ZM-140 keine Farbe gegen Weiß: schräg grau gestreift (Fallback-Muster)', () => {
+    expect(resolve({ b: WEISS }).a.fill).toEqual(muster);
   });
 
-  it('@ZM-140 keine Farbe gegen Blau: Standardfarbe Gast (Rot)', () => {
-    expect(resolve({ b: BLAU }).a.fill).toEqual(solid(ROT_STD));
+  it('@ZM-140 keine Farbe gegen Blau: schräg grau gestreift, nicht Rot und nicht Blau', () => {
+    const fill = resolve({ b: BLAU }).a.fill;
+    expect(fill).toEqual(muster);
+    expect(fill).not.toEqual(solid(ROT_STD));
+    expect(fill).not.toEqual(solid(BLAU_STD));
   });
 
-  it('@ZM-140 gelbe Leibchen ohne Trikotfarbe: Streifen in der Standardfarbe Heim (Blau)', () => {
+  it('@ZM-140 gelbe Leibchen ohne eingetragene Trikotfarbe: Weste über dem grauen Streifenmuster', () => {
     const boxes = resolve({ a: GELB, b: WEISS }, { bibSide: 'a' });
-    expect(boxes.a.fill).toEqual(vest(GELB, BLAU_STD));
-  });
-
-  it('@ZM-140 Gegenbeispiel: Leibchen der Gastseite ohne Trikotfarbe → Streifen in der Standardfarbe Gast (Rot)', () => {
-    const boxes = resolve({ a: WEISS, b: GELB }, { bibSide: 'b' });
-    expect(boxes.b.fill).toEqual(vest(GELB, ROT_STD));
+    expect(boxes.a.fill).toEqual(westeOhneTrikot(GELB));
   });
 });
 
-describe('@ZM-153 Standardfarben, keine Seite trägt eine Farbe', () => {
+describe('@ZM-153 Standardfarben, keine Seite trägt eine Farbe: genau Ollis Einstellung', () => {
   it.each([
-    ['Blau/Rot', BLAU_STD, ROT_STD, ROT_STD],
-    ['Blau/Navy', BLAU_STD, NAVY, WEISS],
-  ])('@ZM-153 Standardfarben %s, keine Seite mit Farbe: Gast-Kasten', (_name, home, away, gast) => {
+    ['Blau/Rot', BLAU_STD, ROT_STD],
+    ['Blau/Navy (zu ähnlich, Abstand 26,8): Navy wie eingestellt, kein Ausweichen', BLAU_STD, NAVY],
+  ])('@ZM-153 Standardfarben %s: Heim und Gast wie eingestellt', (_name, home, away) => {
     const boxes = resolveBoxColors({ worn: {}, settings: settings({ homeColor: home, awayColor: away }) });
     expect(boxes.a.fill).toEqual(solid(home));
-    expect(boxes.b.fill).toEqual(solid(gast));
+    expect(boxes.b.fill).toEqual(solid(away));
   });
 
-  it('@ZM-153 Abstände: Blau/Rot 44,8 (kein Hinweis), Blau/Navy 26,8 (zu ähnlich)', () => {
+  it('@ZM-153 Abstände: Blau/Rot 44,8 (kein Hinweis), Blau/Navy 26,8 (zu ähnlich), Blau/Weiß 49,7, Blau/Schwarz 39,1', () => {
     expectDistance(BLAU_STD, ROT_STD, 44.8);
     expectDistance(BLAU_STD, NAVY, 26.8);
+    expectDistance(BLAU_STD, WEISS, 49.7);
+    expectDistance(BLAU_STD, SCHWARZ, 39.1);
+    expect(kitConflict(BLAU_STD, NAVY)).toBe('similar');
+    expect(kitConflict(BLAU_STD, ROT_STD)).toBe('none');
   });
 });
 
@@ -176,11 +221,11 @@ describe('@ZM-161 Weste', () => {
   });
 });
 
-describe('RF1/RF2 Review Focus', () => {
-  it('RF2 beide Standardfarben Blau, Teamfarben aus: Gast weicht auf Weiß aus', () => {
+describe('RF1 Review Focus', () => {
+  it('@ZM-153 beide Standardfarben Blau, Teamfarben aus: beide Kästen Blau (keine Ausweichfarbe für den Gast)', () => {
     const boxes = resolveBoxColors({ worn: { a: GELB, b: ROT }, settings: settings({ teamColors: false, homeColor: BLAU_STD, awayColor: BLAU_STD }) });
     expect(boxes.a.fill).toEqual(solid(BLAU_STD));
-    expect(boxes.b.fill).toEqual(solid(WEISS));
+    expect(boxes.b.fill).toEqual(solid(BLAU_STD));
   });
 
   it('RF1 Teamfarbe in Kurzform oder Kleinbuchstaben wird normalisiert, ungültige gilt als „keine Farbe“', () => {

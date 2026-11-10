@@ -3,7 +3,7 @@
  * Werte aus dem Gherkin (docs/anforderungen/2026-10-02_spiel-leiten.md), nicht aus dem Code.
  */
 import { describe, expect, it } from 'vitest';
-import { kitConflictWithLuminance } from '../kit';
+import { kitConflict } from '../kit';
 import {
   leibchenFarbeFuer,
   ersteLeibchenWahl, kitAusWahl, kitHinweis, leibchenFarbenMit, leibchenGegenGegner, trikotFarben, vorschauKaesten,
@@ -64,16 +64,16 @@ describe('@SL-149 ohne Leibchen anpfeifen', () => {
   });
 });
 
-describe('@SL-139/@SL-173 sehr ähnliche Farben (Grenzen aus der Anforderung)', () => {
+describe('@SL-139/@SL-173 sehr ähnliche Farben: Karte nur bei Farbabstand (Grenzen aus der Anforderung, geändert 2026-11-10)', () => {
   it.each([
     ['Schwarz/Dunkelblau', '#000000', NAVY, 'similar'],
     ['Blau/Navy', BLAU, NAVY, 'similar'],
     ['Weiß/Gelb', WEISS, '#FFEB3B', 'similar'],
-    ['Weiß/Zitronengelb (Helligkeit)', WEISS, '#FFFF00', 'similar'],
+    ['Weiß/Zitronengelb (Helligkeit 1,07:1: nur Hinweis „gleich hell“, keine Karte, @SL-139/@SL-173)', WEISS, '#FFFF00', 'none'],
     ['Rot/Weiß', ROT, WEISS, 'none'],
-    ['Rot/Grün (Helligkeit, @SL-173)', '#D32F2F', '#2E7D32', 'similar'],
+    ['Rot/Grün (Helligkeit 1,03:1: keine Karte, @SL-173)', '#D32F2F', '#2E7D32', 'none'],
     ['Gelb/Blau', '#FFEB3B', BLAU, 'none'],
-    ['Rot/Blau (Helligkeit 1,02:1, @SL-173)', '#C62828', BLAU, 'similar'],
+    ['Rot/Blau (Helligkeit 1,02:1: keine Karte, @SL-173)', '#C62828', BLAU, 'none'],
     ['Rot #D32F2F/Weiß (Helligkeit 4,98:1, @SL-173)', '#D32F2F', WEISS, 'none'],
   ])('%s → %s', (_zeile, a, b, erwartet) => {
     expect(kitHinweis({ a, b })).toBe(erwartet);
@@ -89,7 +89,7 @@ describe('@SL-151 Leibchenfarbe der Farbe des Gegners zu ähnlich', () => {
     const wahl = ersteLeibchenWahl({ a: WEISS, b: GELB_SV_SUED }, TURNIER_GELB);
     expect(wahl.bibSide).toBe('a');
     expect(wahl.bibColor).not.toBe(TURNIER_GELB);
-    expect(kitConflictWithLuminance(wahl.bibColor, GELB_SV_SUED)).toBe('none');
+    expect(kitConflict(wahl.bibColor, GELB_SV_SUED)).toBe('none');
   });
 
   it('@SL-151 Gegenprobe: ist die Turnier-Leibchenfarbe konfliktfrei, bleibt sie (Rot gegen Rot, Gelb)', () => {
