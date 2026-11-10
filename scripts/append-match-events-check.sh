@@ -166,6 +166,7 @@ A13BS_APPLIED=0
 A21AS_FILE=""
 A35_FILE=""
 R8_FILE=""
+K2A_FILE=""
 # M1 (20261118_002): juengste Fassung von server_rules (Schuetzen 1-5/Vorgabe 3, Zeitstrafe aus der Einstellung). Jedes erneute
 # Einspielen von 20261028_001 (ZA-3) stellte die Fassung mit 120 s/5 Schuetzen wieder her -- danach wieder einspielen. Pflicht wie A-34.
 M1_MIGRATION="20261118_002_spielregeln_zeitstrafe_schuetzen.sql"
@@ -234,6 +235,7 @@ while IFS= read -r line; do
   # R8 (20261118_001): fasst den Trigger matches_bump_change_revision neu (mit original_start) und bringt
   # matches_guard_schedule_times -- nach dem erneuten Einspielen von 20261028_005 (Idempotenz) wieder einspielen.
   [[ "$(basename "$line")" == "20261118_001_verschieben_server.sql" ]] && R8_FILE="$line"
+  [[ "$(basename "$line")" == "20261124_002_leibchen_schritt2.sql" ]] && K2A_FILE="$line"
   [[ "$(basename "$line")" == "$M1_MIGRATION" ]] && M1_FILE="$line"
   # W-M setzt 20261113_003 voraus (Fail-fast) -- ohne SW faellt sie ebenfalls weg.
   if [[ "$(basename "$line")" == "$WM_MIGRATION" ]]; then
@@ -1369,9 +1371,13 @@ A21AS_TRIGGER=""
 # R8 (20261118_001): matches_guard_schedule_times (BEFORE UPDATE OF scheduled_start, original_start; keine Engine-Spalte).
 R8_TRIGGER=""
 [[ -n "$R8_FILE" ]] && R8_TRIGGER="matches_guard_schedule_times,"
+# Leibchen 2a (20261124_002): matches_kit_reset_on_team_change (BEFORE UPDATE OF team_a_id, team_b_id, nimmt die Wahl bei Teamwechsel zurueck;
+# keine Engine-Spalte) sortiert nach matches_keep_origin und nach dem Waechter matches_guard_kit_columns.
+K2A_TRIGGER=""
+[[ -n "$K2A_FILE" ]] && K2A_TRIGGER="matches_kit_reset_on_team_change,"
 out="$(q "SELECT string_agg(t.tgname, ',' ORDER BY t.tgname) FROM pg_trigger t WHERE t.tgrelid = 'public.matches'::regclass AND NOT t.tgisinternal AND (t.tgtype & 2) = 2 AND (t.tgtype & 16) = 16;")"
 check Spaltenschutz "BEFORE-UPDATE-Trigger auf matches (Feuerreihenfolge = Name): $out" \
-  ". == \"${A21AS_TRIGGER}matches_guard_engine_columns,${A13BS_TRIGGER}matches_guard_kit_columns,${R8_TRIGGER}matches_keep_origin,matches_protect_owner_id,matches_protect_tournament_id,matches_updated_at\"" "$(jq -Rn --arg v "$out" '$v')"
+  ". == \"${A21AS_TRIGGER}matches_guard_engine_columns,${A13BS_TRIGGER}matches_guard_kit_columns,${R8_TRIGGER}matches_keep_origin,${K2A_TRIGGER}matches_protect_owner_id,matches_protect_tournament_id,matches_updated_at\"" "$(jq -Rn --arg v "$out" '$v')"
 # A-10 (20261028_005, L7): der Spalten-Schutz feuert auch BEFORE INSERT (Client-INSERT neutral).
 out="$(q "SELECT string_agg(t.tgname, ',' ORDER BY t.tgname) FROM pg_trigger t WHERE t.tgrelid = 'public.matches'::regclass AND NOT t.tgisinternal AND (t.tgtype & 2) = 2 AND (t.tgtype & 4) = 4;")"
 # B-14 (20261117_104): matches_updated_at_insert setzt updated_at auch beim INSERT; er

@@ -140,6 +140,7 @@ FS_FILE=""
 # 20261119_001 (A1 Veranstaltung): fasst tournaments_guard_lifecycle (c_free + gathering_id) neu -- nach dem erneuten
 # 20261113_003 wieder einspielen (Assertion gatherings-guards). Optional: fehlt die Datei, entfaellt sie.
 GA_FILE=""
+K2A_FILE=""  # Leibchen 2a (20261124_002): Waechter und Anpfiff-Projektion mit kit_decision -- das erneute Einspielen von 20261028_004 setzt sie zurueck
 FIXTURES_DIR="$REPO_ROOT/src/core/match/__fixtures__"
 RULES_DIR="$FIXTURES_DIR/rules"
 CONTAINER_NAME="match-engine-parity-$$"
@@ -195,6 +196,7 @@ while IFS= read -r line; do
     "$A35_MIGRATION") A35_FILE="$line" ;;
     20261118_009_fortsetzen_spaet.sql) FS_FILE="$line" ;;
     20261119_001_gatherings.sql) GA_FILE="$line" ;;
+    20261124_002_leibchen_schritt2.sql) K2A_FILE="$line" ;;
   esac
 done <<< "$NEWER_MIGRATIONS_RAW"
 if [[ -z "$A25B_FILE" ]]; then
@@ -308,6 +310,7 @@ psql_stdin < "$M1_FILE"  # M1: server_rules nach dem erneuten 20261028_001 zurue
 psql_stdin < "$WM_FILE"  # W-M: finish_open_items/final_standings_payload nach dem erneuten 20261113_003 zurueck
 psql_stdin < "$MEND_FILE"  # 008: public_final_standings (Zweig B) nach dem erneuten 20261113_003 zurueck
 if [[ -n "$GA_FILE" ]]; then psql_stdin < "$GA_FILE"; fi  # A1: Abschluss-Sperre mit gathering_id nach dem erneuten 20261113_003 zurueck
+if [[ -n "$K2A_FILE" ]]; then psql_stdin < "$K2A_FILE"; fi  # Leibchen 2a: Waechter/Projektion mit kit_decision nach dem erneuten 20261028_004 zurueck
 
 # C0b-Gegenprobe Phase A: je Kategorie genau eine gezielte Mutation in 20261001 (grep belegt je
 # Muster genau einen Treffer). (4) wirkt auf state.details (und damit auch auf die Nachtrag-Regel,
@@ -399,6 +402,7 @@ sys.stdout.write(s)' < "$A25B_FILE" | psql_stdin
   psql_stdin < "$WM_FILE"  # W-M: finish_open_items/final_standings_payload nach dem erneuten 20261113_003 zurueck
   psql_stdin < "$MEND_FILE"  # 008: public_final_standings (Zweig B) nach dem erneuten 20261113_003 zurueck
   if [[ -n "$GA_FILE" ]]; then psql_stdin < "$GA_FILE"; fi  # A1: Abschluss-Sperre mit gathering_id nach dem erneuten 20261113_003 zurueck
+  if [[ -n "$K2A_FILE" ]]; then psql_stdin < "$K2A_FILE"; fi  # Leibchen 2a: Waechter/Projektion mit kit_decision nach dem erneuten 20261028_004 zurueck
 }
 
 if [[ "$MODE" == "gegenprobe" ]]; then
@@ -668,6 +672,7 @@ if [[ "$MODE" == "gegenprobe" ]]; then
   psql_stdin < "$WM_FILE"  # W-M: finish_open_items/final_standings_payload nach dem erneuten 20261113_003 zurueck
   psql_stdin < "$MEND_FILE"  # 008: public_final_standings (Zweig B) nach dem erneuten 20261113_003 zurueck
   if [[ -n "$GA_FILE" ]]; then psql_stdin < "$GA_FILE"; fi  # A1: Abschluss-Sperre mit gathering_id nach dem erneuten 20261113_003 zurueck
+  if [[ -n "$K2A_FILE" ]]; then psql_stdin < "$K2A_FILE"; fi  # Leibchen 2a: Waechter/Projektion mit kit_decision nach dem erneuten 20261028_004 zurueck
   psql_stdin <<'SQL'
 UPDATE public.match_transitions SET actor = 'leitung' WHERE from_status = 'running' AND event_type = 'GOAL';
 GRANT EXECUTE ON FUNCTION match_engine.num(jsonb) TO PUBLIC;
