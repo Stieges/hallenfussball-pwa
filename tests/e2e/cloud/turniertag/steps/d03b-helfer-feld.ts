@@ -1,10 +1,13 @@
 /**
- * D3b Helfer leitet ein Spiel auf seinem Feld, auf dem Handy (390 x 844, Touch). Besitzer: A-16/A-17/A-18, A-27.
- * Soll: der Helfer trägt auf seinem Feld ein Tor ein, ein fremdes Feld ist für ihn gesperrt. @HE-082/@HE-083 (Server-Grenzen: Gerät ohne
- * Zulassung bzw. außerhalb seines Turniers legt nichts an) prüft dieser Schritt nicht – sie sind in den Prüfskripten der Geräte-Rollen belegt.
- * Szenario: @HE-042 (Helfer auf seinem Feld: Tor eintragen gelingt, in der App und in der Datenbank). Die frühere Erwartung „fremdes Feld gesperrt“
- * (`helper-field-locked`) stammte aus dem entfallenen @HE-041; @HE-108 macht das Feld zur Vorauswahl ohne Sperre. Sie ist seit V1 (09.11.) aus dem
- * Schritt genommen: ein Schritt darf nicht an einer Erwartung rot bleiben, die keine Anforderung mehr stellt.
+ * D3b Helfer trägt auf seinem Feld ein Tor ein, auf dem Handy (390 x 844, Touch). Besitzer: A-16/A-17/A-18, A-27.
+ * Soll (@HE-042, Tabellenzeile „ein Tor eintragen und wieder zurücknehmen → gelingt“, in der App und in der Datenbank): der Helfer trägt auf seinem
+ * Feld ein Tor ein. Die frühere Erwartung „fremdes Feld gesperrt“ (`helper-field-locked`) stammte aus dem entfallenen @HE-041; @HE-108 macht das Feld
+ * zur Vorauswahl ohne Sperre – sie ist aus dem Schritt genommen.
+ * Heute erwartet rot, ohne Kennung (CI-Lauf 42728718636): der Turniertag-Cup hat nur den Eigentümer als Mitglied, das Helfer-Handy kommt nicht ins
+ * Cockpit (der Seitenanker `team-name-home` fehlt). Ein Aufbau, der den Helfer zulässt, würde ihn auf ein Spiel setzen, das D4/D5/D7/D8/D11/D12/D14 lesen
+ * (D4 erwartet genau MATCH_START, GOAL, YELLOW_CARD) oder auf eines, das D8 zeitrichtig beenden muss; das ist ohne Lauf am lokalen Stack nicht sicher.
+ * @HE-042 ist durch die Prüfskripte der Geräte-Rollen (`spur-geraete-a27.sh`: Tor als Helfer angenommen, `writeMatchData` ja, `leadMatches` nein) und
+ * die Cockpit-Tests belegt, nicht durch diesen Schritt.
  */
 import { expect } from '@playwright/test';
 import { fetchEngineRows, openCockpit } from '../../engineHelpers';
@@ -30,5 +33,5 @@ async function helferLeitetSeinFeld({ browser }: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'D3b', title: 'Helfer trägt auf seinem Feld ein Tor ein (Handy), es steht in der Datenbank', scenarios: ['@HE-042'], owner: 'A-16/A-17/A-18, A-27 (gebaut)', expectedFail: false, run: helferLeitetSeinFeld },
+  { id: 'D3b', title: 'Helfer-Handy trägt ein Tor ein: im Turniertag-Cup fehlt dem Helfer der Zugang (kein Mitglied, Aufbau fehlt)', scenarios: [], owner: 'Aufbau im Turniertag-Cup (Helfer zulassen, eigenes Spiel)', expectedFail: true, run: helferLeitetSeinFeld },
 ];

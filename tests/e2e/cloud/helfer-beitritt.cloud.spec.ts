@@ -1,8 +1,8 @@
 /**
  * tests/e2e/cloud/helfer-beitritt.cloud.spec.ts — GA5 A-17b „Einstieg per QR“.
  *
- * Szenarien: @HE-095 (Scan → Name → gleiche Prüfzahl → Zulassen → gleicher QR öffnet das Feld; @HE-001 ist in A-17b nur Teil:
- * der Wechsel Warteschirm → „Du bist zugelassen“ ohne neuen Scan kommt mit A-17c), @HE-089 (Konto scannt → Rückfrage → der
+ * Szenarien: @HE-095 (Scan → Name → gleiche Prüfzahl → Zulassen → gleicher QR öffnet das Feld), @HE-001:teil (Tor auf Feld 2 binnen 2 Minuten nach dem Scan,
+ * ohne Konto; der Wechsel Warteschirm → „Du bist zugelassen“ ohne neuen Scan kommt mit A-17c), @HE-089 (Konto scannt → Rückfrage → der
  * Laptop-Kontext bleibt angemeldet), @HE-015 (Gegenbeispiel: Hallen-WLAN ohne Internet → „Für den Einstieg brauchst du Netz“).
  *
  * Voraussetzung: lokaler Stack MIT der Migration `20261110_008_helper_join.sql` (A-16). Ein lokal älterer Stack hat sie evtl.
@@ -16,8 +16,8 @@
  */
 import type { Browser, BrowserContext } from '@playwright/test';
 import { test, expect } from './fixtures';
-import { restAsRole } from './restAsRole';
-import { loginAsRole } from './helpers';
+import { restAsRole, restWithToken, serviceRest } from './restAsRole';
+import { getLocalServiceRoleClient, loginAsRole, readSessionAccessToken } from './helpers';
 import { E2E_HELFER_BEITRITT_CUP_ID, E2E_USERS } from './testData';
 import { neuLaden } from '../helpers/neuLaden';
 
@@ -69,6 +69,48 @@ test.describe('Helfer-Beitritt per QR (A-17b)', () => {
     await helper.goto('about:blank');
     await helper.goto(`/#/join/${code}`);
     await expect(helper).toHaveURL(/\/live\?f=2/);
+  });
+
+  // @HE-001 (Record 2026-09-24_helfer-am-turniertag.md): Tom hat kein Konto · scannt den QR-Code und gibt seinen Namen ein · Olli lässt mit derselben Prüfzahl zu ·
+  // Dann kann Tom höchstens 2 Minuten nach dem Scannen an seinem Feld eintragen · Und Tom hat weder Konto noch Passwort noch Mail gebraucht · Und Olli hat höchstens
+  // 3 Tipps gebraucht. Geprüft sind die ersten beiden Dann-Zeilen (Tor auf Feld 2 als Helfer-Gerät, Zeit seit dem Scan, anonyme Sitzung ohne Mail); die Tipps von Olli sind
+  // eine Oberflächen-Aussage der Leitungs-Seite (A-18a, gibt es noch nicht) und hier nicht geprüft – darum `:teil`.
+  test('@HE-001:teil Scan → Name → Zulassen mit Feld 2 → Tom trägt höchstens 2 Minuten nach dem Scan auf Feld 2 ein, ohne Konto, Passwort und Mail', async ({ browser }) => {
+    const code = await helperCode();
+    const gescannt = Date.now();
+    const helper = await (await newDevice(browser)).newPage();
+    await helper.goto(`/#/join/${code}`);
+    await helper.getByTestId('join-name').fill('Tina');
+    await helper.getByTestId('join-submit').click();
+    const shown = Number(await helper.getByTestId('check-number').innerText());
+
+    const list = await restAsRole('owner', 'POST', 'rpc/list_helper_access', { p_tournament_id: E2E_HELFER_BEITRITT_CUP_ID });
+    const request = (list.json as { requests: { id: string; name: string; checkNumber: number }[] }).requests.find((r) => r.name === 'Tina');
+    expect(request?.checkNumber, 'dieselbe Prüfzahl wie auf dem Wartebildschirm').toBe(shown);
+    const decided = await restAsRole('owner', 'POST', 'rpc/decide_join_request', { p_request_id: request?.id, p_accept: true, p_field: 2, p_check_number: shown });
+    expect(decided.status).toBe(200);
+
+    // Toms Gerät: die Sitzung, die der Scan angelegt hat. Kein Konto, keine Mail, kein Passwort.
+    const token = await readSessionAccessToken(helper);
+    expect(token, 'der Scan hat eine Gerätesitzung angelegt').toBeTruthy();
+    const { url, anonKey } = getLocalServiceRoleClient();
+    const sitzung = (await (await fetch(`${url}/auth/v1/user`, { headers: { apikey: anonKey, Authorization: `Bearer ${token}` } })).json()) as { is_anonymous?: boolean; email?: string | null };
+    expect(sitzung.is_anonymous, 'Tom hat kein Konto (anonyme Gerätesitzung)').toBe(true);
+    expect(sitzung.email ?? '', 'Tom hat keine Mail gebraucht').toBe('');
+
+    // Tom trägt auf Feld 2 ein (Anpfiff und Tor), als Gerät mit der Zulassung für Feld 2.
+    const spiele = (await serviceRest('GET', `matches?tournament_id=eq.${E2E_HELFER_BEITRITT_CUP_ID}&field=eq.2&order=slot.desc&limit=1&select=id,team_a_id`)).json as { id: string; team_a_id: string }[];
+    expect(spiele.length, 'ein Spiel auf Feld 2').toBe(1);
+    const jetzt = Date.now();
+    const tor = await restWithToken(token ?? '', 'POST', 'rpc/append_match_events', {
+      p_match_id: spiele[0].id, p_client_format: 1, p_device_id: null,
+      p_events: [
+        { id: crypto.randomUUID(), type: 'MATCH_START', at: jetzt, section: 1, clockMs: 0, payload: {} },
+        { id: crypto.randomUUID(), type: 'GOAL', at: jetzt + 1000, section: 1, clockMs: 1000, teamId: spiele[0].team_a_id, payload: {} },
+      ],
+    });
+    expect((tor.json as { results: { status: string }[] }).results.map((r) => r.status), 'Anpfiff und Tor von Tom werden angenommen').toEqual(['accepted', 'accepted']);
+    expect(Date.now() - gescannt, 'höchstens 2 Minuten nach dem Scannen').toBeLessThanOrEqual(120_000);
   });
 
   test('@HE-089 Konto scannt: Rückfrage; „Weiter“ meldet nur das Handy ab, der Laptop (eigene Anmeldung) bleibt angemeldet', async ({ browser }) => {

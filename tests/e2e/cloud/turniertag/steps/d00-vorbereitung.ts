@@ -103,6 +103,12 @@ async function anmeldenTurniertag({ anonPage }: StepContext): Promise<void> {
   await expect(anonPage.getByRole('button', { name: /magic link|e-mail-link/i }), 'keine Anmeldung per E-Mail-Link').toHaveCount(0, { timeout: SOLL_TIMEOUT_MS });
   await expect(anonPage.getByRole('button', { name: /zusammenführen/i }), 'kein „Konto zusammenführen“').toHaveCount(0, { timeout: SOLL_TIMEOUT_MS });
   await expect(anonPage.getByRole('button', { name: /passwort vergessen/i }), 'kein "Passwort vergessen" ohne Mailversand (@AN-010)').toHaveCount(0, { timeout: SOLL_TIMEOUT_MS });
+  // Positive Zeilen, damit der Schritt nicht grün wird, nur weil „Registrieren“ fehlt:
+  // @AN-015: die Anmeldung mit E-Mail und Passwort und der Weg „ohne Konto als Gast weiter“ (im Szenario so formuliert; die App nennt ihn „Als Gast fortfahren“).
+  await expect(anonPage.getByTestId('login-password-input'), 'Anmeldung mit Passwort (@AN-015)').toBeVisible({ timeout: SOLL_TIMEOUT_MS });
+  await expect(anonPage.getByTestId('login-guest-button'), 'Weg ohne Konto als Gast weiter (@AN-015)').toBeVisible({ timeout: SOLL_TIMEOUT_MS });
+  // @AN-005: der Hinweis auf den Betreiber steht da.
+  await expect(anonPage.getByText(/Konten für Turnierleitungen legt im Moment der Betreiber an – wende dich an ihn/), 'Hinweis auf den Betreiber (@AN-005)').toBeVisible({ timeout: SOLL_TIMEOUT_MS });
   // C-SITZUNG-STILL: langsames Netz beim Start meldet "Sitzung abgelaufen" ehrlich statt still abzumelden.
   await expectSollMarker(anonPage, 'session-expired-notice');
 }
