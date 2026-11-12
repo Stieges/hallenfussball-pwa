@@ -979,24 +979,13 @@
       ]
     },
     {
-      "id": "karte-endstand",
-      "titel": "Endstand von Spiel 2 mit der Karte für Spiel 3 über „Weiter“ (@SL-215)",
-      "gruppen": [
-        "pflicht"
-      ],
-      "app": "/#/tournament/leibchen-7a/live?matchId=0000000b-0000-4000-9000-000000000002",
-      "erwarte": "[data-testid=\"leibchen-karte\"]",
-      "profil": "app",
-      "saat": "leibchen-vor-anpfiff"
-    },
-    {
       "id": "karte-lang",
-      "titel": "Cockpit: Karte mit langem Teamnamen „Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921“ (@SL-206)",
+      "titel": "Cockpit: Zeile „… zieht Gelb · Ändern“ mit langem Teamnamen „Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921“, bestätigt (@SL-208, @SL-206)",
       "gruppen": [
         "pflicht"
       ],
       "app": "/#/tournament/leibchen-lang/live?matchId=0000000b-0000-4000-9000-000000000003",
-      "erwarte": "[data-testid=\"leibchen-karte\"]",
+      "erwarte": "[data-testid=\"leibchen-zeile\"]",
       "profil": "app",
       "saat": "leibchen-vor-anpfiff"
     }
