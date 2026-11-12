@@ -20,6 +20,12 @@ const FENSTER = [
 ] as const;
 
 test.use({ locale: 'de-DE', timezoneId: 'Europe/Berlin', serviceWorkers: 'block' });
+// Die Fenstergröße setzt jeder Test selbst: ein Projekt genügt (sonst läuft dieselbe Messung 4 × je Fenster).
+test.beforeEach(async ({}, testInfo) => { // eslint-disable-line no-empty-pattern
+  test.skip(testInfo.project.name !== 'desktop', 'Fenstergröße setzt der Test selbst, nur im Projekt „desktop“.');
+});
+/** Der Schutz gegen Doppeltipp (@SL-221) schluckt ein „Ändern“ in der ersten Sekunde nach „Bestätigen“. */
+const NACH_DOPPELTIPP_MS = 1100;
 
 interface Box { x: number; y: number; width: number; height: number }
 
@@ -91,6 +97,7 @@ for (const f of FENSTER) {
       expect(o.tipps()).toBe(3);
       // K-8: eine Wahl wieder aufgeben („Ändern“, „Keine Leibchen“) = 2 Tipps
       const davor = o.tipps();
+      await page.waitForTimeout(NACH_DOPPELTIPP_MS);
       await o.tippe(page.getByTestId('leibchen-aendern'));
       await o.tippe(page.getByTestId('leibchen-keine'));
       await expect(page.getByTestId('leibchen-zeile')).toContainText('Keine Leibchen');
@@ -122,12 +129,24 @@ for (const f of FENSTER) {
       expect(Math.abs(nachher.x - vorher.x)).toBeLessThanOrEqual(1);
     });
 
+    test(`@SL-237 @SL-221 Vorschlag öffnen, dann „Anpfeifen“: das Spiel läuft, Tafel und Tor-Tasten sind wieder da (${f.name})`, async ({ page }) => {
+      await oeffne(page, f);
+      await expect(page.getByTestId('leibchen-ueberschrift')).toContainText('Leibchen für dieses Spiel · Spiel 3'); // @SL-215 Z2: Überschrift immer
+      await page.getByTestId('leibchen-vorschlag').click();
+      if (f.handy) { await expect(page.getByTestId('scoreboard')).toBeHidden(); }
+      await page.getByTestId('match-start-button').click();
+      await expect(page.getByTestId('match-pause-button')).toBeVisible();
+      await expect(page.getByTestId('scoreboard')).toBeVisible();
+      await expect(page.getByTestId('goal-button-home')).toBeVisible(); // Tor-Taste nicht versteckt (die offene Wahl endet mit der Karte)
+    });
+
     test(`@SL-224 „Ändern“ in der Zeile und jede Farbe der Wahl sind mindestens 44×44 groß (${f.name})`, async ({ page }) => {
       await oeffne(page, f);
       await page.getByTestId('leibchen-bestaetigen').click();
       const aendern = await box(page.getByTestId('leibchen-aendern'));
       expect(aendern.height).toBeGreaterThanOrEqual(44);
       expect(aendern.width).toBeGreaterThanOrEqual(44);
+      await page.waitForTimeout(NACH_DOPPELTIPP_MS);
       await page.getByTestId('leibchen-aendern').click();
       await page.getByTestId('leibchen-vorschlag').click();
       await page.getByTestId('leibchen-andere').click();
