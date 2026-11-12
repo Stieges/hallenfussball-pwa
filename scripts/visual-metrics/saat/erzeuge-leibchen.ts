@@ -45,12 +45,12 @@ export interface LeibchenFall {
 }
 
 export const FAELLE: readonly LeibchenFall[] = [
-  { id: 'leibchen-7a', code: 'LBA26', titel: '7a Blau gegen Blau, Leibchen nicht geklärt', waging: BLAU, petting: BLAU, bestaetigt: false },
-  { id: 'leibchen-7b', code: 'LBB26', titel: '7b Waging 1 zieht Gelb, bestätigt', waging: BLAU, petting: BLAU, bestaetigt: true },
-  { id: 'leibchen-7c', code: 'LBC26', titel: '7c Waging 1 ohne Trikotfarbe', waging: undefined, petting: BLAU, bestaetigt: false },
-  { id: 'leibchen-7d', code: 'LBD26', titel: '7d Weste über dem gestreiften Kasten', waging: undefined, petting: BLAU, bestaetigt: true },
-  { id: 'leibchen-7e', code: 'LBE26', titel: '7e beide Teams ohne Trikotfarbe', waging: undefined, petting: undefined, bestaetigt: false },
-  { id: 'leibchen-lang', code: 'LBL26', titel: 'Waging 1 mit langem Namen, bestätigt', waging: BLAU, petting: BLAU, bestaetigt: true, name: LANG },
+  { id: 'leibchen-7a', code: 'LBX2A7', titel: '7a Blau gegen Blau, Leibchen nicht geklärt', waging: BLAU, petting: BLAU, bestaetigt: false },
+  { id: 'leibchen-7b', code: 'LBX2B7', titel: '7b Waging 1 zieht Gelb, bestätigt', waging: BLAU, petting: BLAU, bestaetigt: true },
+  { id: 'leibchen-7c', code: 'LBX2C7', titel: '7c Waging 1 ohne Trikotfarbe', waging: undefined, petting: BLAU, bestaetigt: false },
+  { id: 'leibchen-7d', code: 'LBX2D7', titel: '7d Weste über dem gestreiften Kasten', waging: undefined, petting: BLAU, bestaetigt: true },
+  { id: 'leibchen-7e', code: 'LBX2E7', titel: '7e beide Teams ohne Trikotfarbe', waging: undefined, petting: undefined, bestaetigt: false },
+  { id: 'leibchen-lang', code: 'LBX2L7', titel: 'Waging 1 mit langem Namen, bestätigt', waging: BLAU, petting: BLAU, bestaetigt: true, name: LANG },
 ]
 
 const keinSpeicher = {

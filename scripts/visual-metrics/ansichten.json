@@ -806,7 +806,7 @@
       "gruppen": [
         "pflicht"
       ],
-      "app": "/#/live/LBA26",
+      "app": "/#/live/LBX2A7",
       "erwarte": "[data-testid=\"public-current\"]",
       "profil": "app",
       "saat": "leibchen-vor-anpfiff"
@@ -828,7 +828,7 @@
       "gruppen": [
         "pflicht"
       ],
-      "app": "/#/live/LBB26",
+      "app": "/#/live/LBX2B7",
       "erwarte": "[data-testid=\"public-current\"]",
       "profil": "app",
       "saat": "leibchen-vor-anpfiff"
@@ -850,7 +850,7 @@
       "gruppen": [
         "pflicht"
       ],
-      "app": "/#/live/LBC26",
+      "app": "/#/live/LBX2C7",
       "erwarte": "[data-testid=\"public-current\"]",
       "profil": "app",
       "saat": "leibchen-vor-anpfiff"
@@ -872,7 +872,7 @@
       "gruppen": [
         "pflicht"
       ],
-      "app": "/#/live/LBD26",
+      "app": "/#/live/LBX2D7",
       "erwarte": "[data-testid=\"public-current\"]",
       "profil": "app",
       "saat": "leibchen-vor-anpfiff"
@@ -894,7 +894,7 @@
       "gruppen": [
         "pflicht"
       ],
-      "app": "/#/live/LBE26",
+      "app": "/#/live/LBX2E7",
       "erwarte": "[data-testid=\"public-current\"]",
       "profil": "app",
       "saat": "leibchen-vor-anpfiff"
@@ -916,7 +916,7 @@
       "gruppen": [
         "pflicht"
       ],
-      "app": "/#/live/LBL26",
+      "app": "/#/live/LBX2L7",
       "erwarte": "[data-testid=\"public-current\"]",
       "profil": "app",
       "saat": "leibchen-vor-anpfiff"

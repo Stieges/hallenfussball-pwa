@@ -262,7 +262,7 @@
             "startDate": "@heute",
             "startTime": "09:00",
             "bibColor": "#FFCC00",
-            "shareCode": "LBA26",
+            "shareCode": "LBX2A7",
             "shareCodeCreatedAt": "2026-12-06T08:00:00.000Z",
             "monitors": [
               {
@@ -548,7 +548,7 @@
             "startDate": "@heute",
             "startTime": "09:00",
             "bibColor": "#FFCC00",
-            "shareCode": "LBB26",
+            "shareCode": "LBX2B7",
             "shareCodeCreatedAt": "2026-12-06T08:00:00.000Z",
             "monitors": [
               {
@@ -826,7 +826,7 @@
             "startDate": "@heute",
             "startTime": "09:00",
             "bibColor": "#FFCC00",
-            "shareCode": "LBC26",
+            "shareCode": "LBX2C7",
             "shareCodeCreatedAt": "2026-12-06T08:00:00.000Z",
             "monitors": [
               {
@@ -1109,7 +1109,7 @@
             "startDate": "@heute",
             "startTime": "09:00",
             "bibColor": "#FFCC00",
-            "shareCode": "LBD26",
+            "shareCode": "LBX2D7",
             "shareCodeCreatedAt": "2026-12-06T08:00:00.000Z",
             "monitors": [
               {
@@ -1384,7 +1384,7 @@
             "startDate": "@heute",
             "startTime": "09:00",
             "bibColor": "#FFCC00",
-            "shareCode": "LBE26",
+            "shareCode": "LBX2E7",
             "shareCodeCreatedAt": "2026-12-06T08:00:00.000Z",
             "monitors": [
               {
@@ -1670,7 +1670,7 @@
             "startDate": "@heute",
             "startTime": "09:00",
             "bibColor": "#FFCC00",
-            "shareCode": "LBL26",
+            "shareCode": "LBX2L7",
             "shareCodeCreatedAt": "2026-12-06T08:00:00.000Z",
             "monitors": [
               {
@@ -1720,32 +1720,32 @@
     "faelle": [
       {
         "turnierId": "leibchen-7a",
-        "shareCode": "LBA26",
+        "shareCode": "LBX2A7",
         "titel": "7a Blau gegen Blau, Leibchen nicht geklärt"
       },
       {
         "turnierId": "leibchen-7b",
-        "shareCode": "LBB26",
+        "shareCode": "LBX2B7",
         "titel": "7b Waging 1 zieht Gelb, bestätigt"
       },
       {
         "turnierId": "leibchen-7c",
-        "shareCode": "LBC26",
+        "shareCode": "LBX2C7",
         "titel": "7c Waging 1 ohne Trikotfarbe"
       },
       {
         "turnierId": "leibchen-7d",
-        "shareCode": "LBD26",
+        "shareCode": "LBX2D7",
         "titel": "7d Weste über dem gestreiften Kasten"
       },
       {
         "turnierId": "leibchen-7e",
-        "shareCode": "LBE26",
+        "shareCode": "LBX2E7",
         "titel": "7e beide Teams ohne Trikotfarbe"
       },
       {
         "turnierId": "leibchen-lang",
-        "shareCode": "LBL26",
+        "shareCode": "LBX2L7",
         "titel": "Waging 1 mit langem Namen, bestätigt"
       }
     ],
