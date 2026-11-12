@@ -30,6 +30,7 @@ export function BibColorsSettings({ formData, onUpdate }: BibColorsSettingsProps
   const gewaehlt = hallenFarbenOf(formData);
   const regel = bibRuleOf(formData);
   const normal = (farbe: string): string => farbe.toUpperCase();
+  const voll = gewaehlt.length >= MAX_HALLEN_FARBEN;
 
   const wechsle = (farbe: string): void => {
     const hex = normal(farbe);
@@ -47,13 +48,14 @@ export function BibColorsSettings({ formData, onUpdate }: BibColorsSettingsProps
           const position = gewaehlt.indexOf(normal(farbe)) + 1;
           const name = tCockpit(`anpfiff.farbe.${leibchenFarbName(farbe) ?? 'turnier'}`);
           return (
-            <ChipButton key={farbe} selected={position > 0} size="minimum" onClick={() => { wechsle(farbe); }}
+            <ChipButton key={farbe} selected={position > 0} disabled={voll && position === 0} size="minimum" onClick={() => { wechsle(farbe); }}
               aria-label={position > 0 ? `${name}, ${t('step4.bib.gewaehlt', { position })}` : name} data-testid={`wizard-bib-farbe-${leibchenFarbName(farbe) ?? 'turnier'}`}>
               <span style={punkt(farbe)} aria-hidden="true" />{name}{position > 0 ? ` (${String(position)})` : ''}
             </ChipButton>
           );
         })}
       </div>
+      {voll && <p role="status" style={{ margin: `${cssVars.spacing.xs} 0 0 0`, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.md }} data-testid="wizard-bib-max">{t('step4.bib.max')}</p>}
       <p style={{ margin: `${cssVars.spacing.md} 0 ${cssVars.spacing.xs} 0`, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.md }}>{t('step4.bib.regelTitel')}</p>
       <div style={reihe} role="group" aria-label={t('step4.bib.regelTitel')}>
         <ChipButton selected={regel === 'home'} size="minimum" onClick={() => { onUpdate('bibRule', 'home'); }} data-testid="wizard-bib-regel-heim">{t('step4.bib.heim')}</ChipButton>

@@ -46,10 +46,19 @@ describe('@W3-029 Leibchenfarben dieses Turniers', () => {
     expect(screen.getByTestId('wizard-bib-farbe-orange')).toHaveAccessibleName('Orange, gewählt als 2. Farbe');
   });
 
-  it('@W3-029 Gegenbeispiel: eine dritte Farbe wird nicht angenommen (höchstens zwei)', async () => {
+  it('@W3-029 sind zwei Farben gewählt, sind die übrigen gesperrt und „Höchstens zwei Farben“ steht sichtbar da; ein Tipp darauf ändert nichts', async () => {
     const { onUpdate, user } = aufbau({ bibColors: [J.yellow.toUpperCase(), J.orange.toUpperCase()] });
+    expect(screen.getByTestId('wizard-bib-max')).toHaveTextContent('Höchstens zwei Farben');
+    expect(screen.getByTestId('wizard-bib-farbe-pink')).toBeDisabled();
+    expect(screen.getByTestId('wizard-bib-farbe-gelb')).toBeEnabled(); // eine gewählte lässt sich abwählen
     await user.click(screen.getByTestId('wizard-bib-farbe-pink'));
-    expect(onUpdate).toHaveBeenCalledWith('bibColors', [J.yellow.toUpperCase(), J.orange.toUpperCase()]);
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it('@W3-029 Gegenbeispiel: bei einer gewählten Farbe ist nichts gesperrt und kein Hinweis zu sehen', () => {
+    aufbau({ bibColors: [J.yellow.toUpperCase()] });
+    expect(screen.queryByTestId('wizard-bib-max')).toBeNull();
+    expect(screen.getByTestId('wizard-bib-farbe-pink')).toBeEnabled();
   });
 
   it('@W3-029 eine gewählte Farbe lässt sich wieder abwählen; die zweite rückt nach vorn', async () => {

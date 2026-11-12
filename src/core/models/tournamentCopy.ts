@@ -30,6 +30,7 @@ const MATCH_CLEARED = {
   liveState: undefined,
   // Beim Anpfiff getragene Farben schreibt nur der Server (K1)
   kit: undefined,
+  kitDecision: undefined, // die Wahl der Leibchen gehört dem Spiel, nicht der Kopie (@SL-232); die Hallenfarben des Turniers bleiben (@W3-029)
   // B-26: eine Kopie ist ein neues Turnier ohne verschobene Uhrzeiten
   originalStart: undefined,
 } as const;
