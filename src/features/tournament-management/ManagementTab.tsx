@@ -157,13 +157,11 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     [lastFinishedMatchData, toSummary]
   );
 
-  // Upcoming matches (matches after current)
-  const upcomingMatches = useMemo(() => {
-    const currentIndex = fieldMatches.findIndex((m) => m.id === currentMatchData?.id);
-    return currentIndex !== -1
-      ? fieldMatches.slice(currentIndex + 1).map(toSummary)
-      : fieldMatches.map(toSummary);
-  }, [fieldMatches, currentMatchData, toSummary]);
+  // Folgende Spiele: die noch offenen des Felds in der Spielfolge (ein beendetes Spiel ist nie „Nächstes“); das erste ist dasselbe wie bei „Weiter“ und bei der Karte
+  const upcomingMatches = useMemo(
+    () => fieldMatches.filter((m) => m.id !== currentMatchData?.id && (m.scoreA === undefined || m.scoreB === undefined)).map(toSummary),
+    [fieldMatches, currentMatchData, toSummary],
+  );
 
   const handleFinishAndReset = useCallback((matchId: string): Promise<string | null> => handleFinish(matchId).then((eventId) => {
     setTimeout(() => { waehleSpiel(null); }, 0);

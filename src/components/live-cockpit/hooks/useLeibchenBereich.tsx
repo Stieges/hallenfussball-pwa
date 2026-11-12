@@ -50,7 +50,7 @@ export function useLeibchenBereich({ turnier, matchId, zustand, melde, kannSteue
   }, [turnier, matchId, zustand]);
   const karte = daten === null ? null : (
     <LeibchenKarte
-      key={kartenId ?? daten.matchId} spielNummer={daten.spielNummer} teams={daten.teams} trikot={daten.trikot} hallenFarben={daten.hallenFarben} gewaehlt={daten.gewaehlt}
+      key={kartenId ?? daten.matchId} spielNummer={daten.spielNummer} naechstes={zustand === 'abgepfiffen'} teams={daten.teams} trikot={daten.trikot} hallenFarben={daten.hallenFarben} gewaehlt={daten.gewaehlt}
       vorschlag={daten.vorschlag} nurFestlegen={daten.nurFestlegen} senden={daten.senden} lesen={!kannSteuern}
       onUebernehmen={onUebernehmen} onBestaetigen={daten.onBestaetigen} onKeine={daten.onKeine} onWahlOffen={(offen) => { setWahlFuer(offen ? kartenId : null); }}
     />

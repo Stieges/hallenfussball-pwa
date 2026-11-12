@@ -118,8 +118,9 @@ export function useFieldMatchSelection(p: FieldMatchSelectionParams): FieldMatch
 
   const ladeNaechstes = useCallback(() => {
     quittiere(); // das abgepfiffene Spiel kommt nicht zurück (@SL-162)
-    const index = fieldMatches.findIndex((m) => m.id === currentMatchData?.id);
-    const naechstes = fieldMatches.slice(index + 1).find((m) => m.scoreA === undefined || m.scoreB === undefined);
+    // Eine Regel wie die Karte und der Server (`nextMatchOnField`): das früheste noch offene Spiel des Felds in der Spielfolge, nicht „das nach diesem“ –
+    // ist ein früheres Spiel noch offen, springt „Weiter“ dorthin, und die Karte der Leibchen gehört zum selben Spiel (@SL-215)
+    const naechstes = fieldMatches.find((m) => m.id !== currentMatchData?.id && (m.scoreA === undefined || m.scoreB === undefined));
     if (naechstes) { setSelectedMatchId(naechstes.id); return; }
     const erstes = schedule.allMatches.find((m) => m.scoreA === undefined || m.scoreB === undefined);
     if (erstes && erstes.field !== feld) {

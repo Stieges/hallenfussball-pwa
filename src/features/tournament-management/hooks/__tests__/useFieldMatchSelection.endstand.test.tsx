@@ -14,6 +14,8 @@ import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { useFieldMatchSelection } from '../useFieldMatchSelection';
+import { nextMatchOnField } from '../../../../core/models/nextMatch';
+import { teamSlot } from '../../../../core/models/matchSlot';
 import { MatchEngineContext, type MatchEngineContextValue } from '../../../match-engine/matchEngineContextInstance';
 import type { GeneratedSchedule } from '../../../../core/generators';
 import type { LiveMatch } from '../../../../components/live-cockpit/types';
@@ -193,5 +195,36 @@ describe('Spiel aus dem Spielplan geöffnet (?matchId=) endet von selbst', () =>
     r.rerender({ engine: lange, schedule: schedule(true), live: karte(['m11', 'FINISHED']), initialMatchId: undefined });
     r.rerender({ engine: lange, schedule: schedule(true), live: karte(['m11', 'FINISHED']), initialMatchId: 'm11' }); // Zurück/Vor in der Adresse
     expect(aktuell(r)).toBe('m11');
+  });
+});
+
+describe('Das nächste Spiel: „Weiter“, Tafel und Karte rechnen nach einer Regel (@SL-215, @SL-162)', () => {
+  const mitFrueherem = (): GeneratedSchedule => ({
+    allMatches: [spiel('m10', 10), spiel('m11', 11, { scoreA: 2, scoreB: 1 }), spiel('m12', 12), spiel('m13', 13, { scoreA: 1, scoreB: 0 })],
+  }) as unknown as GeneratedSchedule;
+
+  it('@SL-215 ist ein früheres Spiel noch offen (m10), führt „Weiter“ dorthin – wie die Karte (`nextMatchOnField`), nicht zu m12', () => {
+    const r = render({ engine: engineMit({ m11: T0 - 5_000 }), schedule: mitFrueherem(), live: karte(['m11', 'FINISHED']), initialMatchId: 'm11' });
+    expect(aktuell(r)).toBe('m11');
+    act(() => { r.result.current.ladeNaechstes(); });
+    const team = (n: number) => teamSlot(`00000000-0000-4000-8000-0000000000a${String(n)}`);
+    const karteMeint = nextMatchOnField(mitFrueherem().allMatches.map((m) => ({
+      id: m.id, field: 1, round: 1, slot: m.slot, matchNumber: m.matchNumber, scheduledTime: undefined, slotA: team(1), slotB: team(2),
+      matchStatus: m.scoreA === undefined ? ('scheduled' as const) : ('finished' as const),
+    })), 1);
+    expect(karteMeint?.id).toBe('m10');
+    expect(aktuell(r)).toBe('m10');
+  });
+
+  it('Gegenbeispiel: sind alle früheren beendet, bleibt es beim folgenden Spiel (m12)', () => {
+    const r = render({ engine: engineMit({ m11: T0 - 5_000 }), schedule: schedule(true), live: karte(['m11', 'FINISHED']), initialMatchId: 'm11' });
+    act(() => { r.result.current.ladeNaechstes(); });
+    expect(aktuell(r)).toBe('m12');
+  });
+
+  it('Gegenbeispiel: ein beendetes Spiel (m13) ist nie das nächste; „Weiter“ nimmt das offene m12', () => {
+    const r = render({ engine: engineMit({ m11: T0 - 5_000 }), schedule: { allMatches: [spiel('m11', 11, { scoreA: 2, scoreB: 1 }), spiel('m13', 13, { scoreA: 1, scoreB: 0 }), spiel('m14', 14)] } as unknown as GeneratedSchedule, live: karte(['m11', 'FINISHED']), initialMatchId: 'm11' });
+    act(() => { r.result.current.ladeNaechstes(); });
+    expect(aktuell(r)).toBe('m14');
   });
 });

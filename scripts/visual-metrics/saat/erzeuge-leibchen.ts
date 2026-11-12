@@ -101,8 +101,11 @@ export async function erzeugeFall(fall: LeibchenFall): Promise<{ turnier: Tourna
       return { ...m, id, matchNumber: 3, field: 1, slotA: teamSlot(WAGING), slotB: teamSlot(PETTING), matchStatus: 'scheduled', scheduledTime: '@jetzt+240s' as unknown as Date, ...bib }
     }
     const [a, b] = nr === 2 ? [ASCHAU, SEEON] : [slotTeamId(m.slotA) ?? ASCHAU, slotTeamId(m.slotB) ?? SEEON]
-    // Spiel 2: SV Aschau 2:1 FC Seeon, beendet; alle übrigen Spiele sind gespielt, damit Spiel 3 das nächste ist
-    return { ...m, id, field: 1, slotA: teamSlot(a), slotB: teamSlot(b), scoreA: nr === 2 ? 2 : 1, scoreB: nr === 2 ? 1 : 0, matchStatus: 'finished', decidedBy: 'regular', finishedAt: ZEIT, timerElapsedSeconds: 540 }
+    // Spiel 1 und 2 sind beendet (Spiel 2: SV Aschau 2:1 FC Seeon), Spiel 3 ist das nächste, Spiel 4 und später stehen noch aus
+    // Anstoßzeiten im Takt von 12 Minuten, Spiel 3 um „jetzt + 240 s“: Spiel 1 und 2 davor, Spiel 4 danach (die Reihenfolge 1, 2, 3, 4 …, @SL-206)
+    const zeit = `@jetzt${nr < 3 ? '-' : '+'}${String(Math.abs(240 + (nr - 3) * 720))}s` as unknown as Date
+    const vorbei = { scoreA: nr === 2 ? 2 : 1, scoreB: nr === 2 ? 1 : 0, matchStatus: 'finished' as const, decidedBy: 'regular' as const, finishedAt: ZEIT, timerElapsedSeconds: 540 }
+    return { ...m, id, field: 1, scheduledTime: zeit, slotA: teamSlot(a), slotB: teamSlot(b), ...(nr < 3 ? vorbei : { matchStatus: 'scheduled' as const }) }
   })
   const kopien: EngineKopie[] = []
   if (fall.endstand === true) {

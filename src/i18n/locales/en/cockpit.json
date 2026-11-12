@@ -763,6 +763,9 @@
     "gleichHellVon": "{{farbe}} – same brightness as the own jersey of {{team}}",
     "teamFrage": "Who wears the bibs?",
     "ueberschrift": "Bibs for this match · Match {{nummer}}",
-    "ueberschriftOhneNummer": "Bibs for this match"
+    "ueberschriftOhneNummer": "Bibs for this match",
+    "ueberschriftNaechstes": "Bibs for the next match · Match {{nummer}}",
+    "ueberschriftNaechstesOhneNummer": "Bibs for the next match",
+    "grundBeideSpielen": "Both play {{farbe}}"
   }
 }

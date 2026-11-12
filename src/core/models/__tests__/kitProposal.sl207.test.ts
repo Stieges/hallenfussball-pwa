@@ -68,3 +68,20 @@ describe('@SL-206 @SL-138 wann die Karte erscheint', () => {
     expect(karteNoetig(FELDER(undefined, undefined))).toBe(false);
   });
 });
+
+describe('@SL-151 „spielt selbst in dieser Farbe“ gilt auch für ähnliche Farben', () => {
+  const GELB_HELL = '#FFEB3B';
+
+  it('@SL-151 Weiß gegen Gelb (#FFEB3B), Hallenfarbe nur Gelb (#FFCC00): dem gelben Team werden KEINE gelben Leibchen vorgeschlagen – kein passendes Leibchen', () => {
+    expect(kitProposal(FELDER(WEISS, GELB_HELL), [GELB], 'home')).toEqual({ kind: 'keinPassendes', seite: 'a' });
+  });
+
+  it('@SL-151 mit Orange als zweiter Hallenfarbe zieht das gelbe Team Orange, nicht Gelb', () => {
+    expect(kitProposal(FELDER(WEISS, GELB_HELL), [GELB, ORANGE], 'home')).toEqual({ kind: 'vorschlag', seite: 'a', farbe: ORANGE });
+  });
+
+  it('Gegenbeispiel: Blau gegen Blau schlägt weiter Gelb vor (keine Ähnlichkeit mit dem eigenen Trikot)', () => {
+    expect(kitProposal(FELDER(BLAU, BLAU), [GELB], 'home')).toEqual({ kind: 'vorschlag', seite: 'a', farbe: GELB });
+  });
+});
+

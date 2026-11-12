@@ -372,3 +372,27 @@ describe('@SL-219 @SL-221 „Andere Farbe …“ öffnet die Grundauswahl als ei
     expect(byId('andere-blatt')).toBeInTheDocument();
   });
 });
+
+describe('@SL-215 Karte im Endstand: „Leibchen für das nächste Spiel · Spiel N“ mit dem Grund', () => {
+  it('@SL-215 im Endstand gilt die Überschrift dem nächsten Spiel, darunter „Beide spielen Blau“', () => {
+    aufbau({ naechstes: true, spielNummer: 3, trikot: { a: palette.jersey.blue, b: palette.jersey.blue } });
+    expect(byId('ueberschrift')).toHaveTextContent('Leibchen für das nächste Spiel · Spiel 3');
+    expect(byId('grund')).toHaveTextContent('Beide spielen Blau');
+  });
+
+  it('@SL-215 eine Trikotfarbe ohne Namen (Blau #1565C0 gleich Blau): „Gleiche Trikotfarbe“', () => {
+    aufbau({ naechstes: true, spielNummer: 3 });
+    expect(byId('grund')).toHaveTextContent('Gleiche Trikotfarbe');
+  });
+
+  it('@SL-215 ähnliche, nicht gleiche Trikotfarben: „Sehr ähnliche Trikotfarben“', () => {
+    aufbau({ naechstes: true, spielNummer: 3, trikot: { a: '#FFEB3B', b: '#FFF59D' } });
+    expect(byId('grund')).toHaveTextContent('Sehr ähnliche Trikotfarben');
+  });
+
+  it('Gegenbeispiel: vor dem Anpfiff (nicht im Endstand) heißt es „für dieses Spiel“ und der Grund steht nicht in der Karte', () => {
+    aufbau({ spielNummer: 3 });
+    expect(byId('ueberschrift')).toHaveTextContent('Leibchen für dieses Spiel · Spiel 3');
+    expect(screen.queryByTestId('leibchen-grund')).toBeNull();
+  });
+});

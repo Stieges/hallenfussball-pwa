@@ -12,7 +12,7 @@ import { useRef, useState, type CSSProperties, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars, iconSizeValues } from '../../../design-tokens';
 import type { KitSide } from '../../../core/models/kit';
-import { leibchenFarbName, type TrikotFarben } from '../../../core/models/kitChoice';
+import { kitHinweis, leibchenFarbName, type TrikotFarben } from '../../../core/models/kitChoice';
 import type { KitProposal } from '../../../core/models/kitProposal';
 import { Icons } from '../Icons';
 import { MatchIcons } from '../IconsMatch';
@@ -38,6 +38,8 @@ export interface LeibchenKarteProps {
   onWahlOffen?: ((offen: boolean) => void) | undefined;
   /** Nummer des Spiels, für das die Karte gilt (im Endstand das NÄCHSTE Spiel, @SL-215); fehlt sie, steht die Überschrift ohne Nummer. */
   spielNummer?: number | undefined;
+  /** Die Karte steht im Endstand und gilt dem NÄCHSTEN Spiel („Leibchen für das nächste Spiel“, mit dem Grund, @SL-215). */
+  naechstes?: boolean;
   testIdPrefix?: string;
 }
 
@@ -137,12 +139,19 @@ export function LeibchenKarte(p: LeibchenKarteProps): ReactElement | null {
   if (p.vorschlag === null && aktuell === null && !aendern) { return null; }
 
   const keinPassendes = p.vorschlag?.kind === 'keinPassendes' && entwurf === null && !aendern;
+  const konflikt = kitHinweis(p.trikot);
+  const trikotName = leibchenFarbName(p.trikot.a ?? '');
+  const grund = konflikt === 'none' ? null : konflikt === 'same' && trikotName !== null && trikotName === leibchenFarbName(p.trikot.b ?? '')
+    ? t('leibchenKarte.grundBeideSpielen', { farbe: t(`anpfiff.farbe.${trikotName}`) }) : t(konflikt === 'same' ? 'anpfiff.hinweisGleich' : 'anpfiff.hinweisAehnlich');
   const regelSeite: KitSide = p.vorschlag?.seite ?? 'a';
   const schliesse = (): void => { setAendern(false); setEntwurf(null); setzeOffen(false); };
 
   return (
     <div style={karteFlaeche} data-leibchen-flaeche="" role="group" aria-label={t('leibchenKarte.gruppeAria')} data-testid={`${prefix}-karte`}>
-      <p style={ueberschriftStil} data-testid={`${prefix}-ueberschrift`}>{p.spielNummer === undefined ? t('leibchenKarte.ueberschriftOhneNummer') : t('leibchenKarte.ueberschrift', { nummer: p.spielNummer })}</p>
+      <p style={ueberschriftStil} data-testid={`${prefix}-ueberschrift`}>{t(`leibchenKarte.${p.naechstes === true ? 'ueberschriftNaechstes' : 'ueberschrift'}${p.spielNummer === undefined ? 'OhneNummer' : ''}`, { nummer: p.spielNummer })}</p>
+      {p.naechstes === true && grund !== null && (
+        <p style={{ margin: 0, fontWeight: cssVars.fontWeights.semibold }} data-testid={`${prefix}-grund`}><Icons.AlertTriangle size={iconSizeValues.sm} /> {grund}</p>
+      )}
       {keinPassendes ? (
         <p style={{ margin: 0, fontWeight: cssVars.fontWeights.semibold }} data-testid={`${prefix}-kein-passendes`}>
           <Icons.AlertTriangle size={iconSizeValues.sm} /> {t('leibchenKarte.keinPassendes')}

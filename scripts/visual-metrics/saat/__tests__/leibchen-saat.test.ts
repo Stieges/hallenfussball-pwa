@@ -67,7 +67,9 @@ describe('Saat Leibchen vor dem Anpfiff', () => {
       expect(spiel3.matchStatus).toBe('scheduled')
       expect(spiel3.scheduledTime).toBe('@jetzt+240s')
       expect(name(spiel3.slotB.teamId)).toBe('TSV Petting')
-      expect(t.matches.filter((m) => m.matchStatus !== 'finished')).toHaveLength(1)
+      expect(t.matches.filter((m) => m.matchStatus !== 'finished').map((m) => m.matchNumber)).toEqual([3, 4, 5, 6]) // Spiel 3 ist das früheste offene
+      const zeiten = [...t.matches].sort((x, y) => (x.matchNumber as number) - (y.matchNumber as number)).map((m) => Number((/^@jetzt([+-]\d+)s$/.exec(String(m.scheduledTime)) ?? [])[1]))
+      expect(zeiten, 'Anstoßzeiten wachsen mit der Spielnummer').toEqual([...zeiten].sort((x, y) => x - y))
       expect(t.date).toBe('@heute')
       expect(t.monitors.map((m) => m.id)).toEqual(['mon-live'])
     }

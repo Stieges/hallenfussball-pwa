@@ -763,6 +763,9 @@
     "gleichHellVon": "{{farbe}} – gleich hell wie das eigene Trikot von {{team}}",
     "teamFrage": "Wer zieht die Leibchen an?",
     "ueberschrift": "Leibchen für dieses Spiel · Spiel {{nummer}}",
-    "ueberschriftOhneNummer": "Leibchen für dieses Spiel"
+    "ueberschriftOhneNummer": "Leibchen für dieses Spiel",
+    "ueberschriftNaechstes": "Leibchen für das nächste Spiel · Spiel {{nummer}}",
+    "ueberschriftNaechstesOhneNummer": "Leibchen für das nächste Spiel",
+    "grundBeideSpielen": "Beide spielen {{farbe}}"
   }
 }

@@ -126,7 +126,7 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:00:00.000Z",
+                "scheduledTime": "@jetzt-1200s",
                 "matchNumber": 1,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
@@ -151,7 +151,7 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:11:00.000Z",
+                "scheduledTime": "@jetzt-480s",
                 "matchNumber": 2,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
@@ -191,17 +191,12 @@
                   "kind": "team",
                   "teamId": "0000000b-0000-4000-8000-000000000003"
                 },
-                "scoreA": 1,
-                "scoreB": 0,
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:33:00.000Z",
+                "scheduledTime": "@jetzt+960s",
                 "matchNumber": 4,
-                "matchStatus": "finished",
-                "decidedBy": "regular",
-                "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 540
+                "matchStatus": "scheduled"
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000005",
@@ -216,17 +211,12 @@
                   "kind": "team",
                   "teamId": "0000000b-0000-4000-8000-000000000002"
                 },
-                "scoreA": 1,
-                "scoreB": 0,
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:44:00.000Z",
+                "scheduledTime": "@jetzt+1680s",
                 "matchNumber": 5,
-                "matchStatus": "finished",
-                "decidedBy": "regular",
-                "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 540
+                "matchStatus": "scheduled"
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000006",
@@ -241,17 +231,12 @@
                   "kind": "team",
                   "teamId": "0000000b-0000-4000-8000-000000000004"
                 },
-                "scoreA": 1,
-                "scoreB": 0,
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:55:00.000Z",
+                "scheduledTime": "@jetzt+2400s",
                 "matchNumber": 6,
-                "matchStatus": "finished",
-                "decidedBy": "regular",
-                "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 540
+                "matchStatus": "scheduled"
               }
             ],
             "status": "published",
@@ -412,7 +397,7 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:00:00.000Z",
+                "scheduledTime": "@jetzt-1200s",
                 "matchNumber": 1,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
@@ -437,7 +422,7 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:11:00.000Z",
+                "scheduledTime": "@jetzt-480s",
                 "matchNumber": 2,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
@@ -482,17 +467,12 @@
                   "kind": "team",
                   "teamId": "0000000b-0000-4000-8000-000000000003"
                 },
-                "scoreA": 1,
-                "scoreB": 0,
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:33:00.000Z",
+                "scheduledTime": "@jetzt+960s",
                 "matchNumber": 4,
-                "matchStatus": "finished",
-                "decidedBy": "regular",
-                "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 540
+                "matchStatus": "scheduled"
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000005",
@@ -507,17 +487,12 @@
                   "kind": "team",
                   "teamId": "0000000b-0000-4000-8000-000000000002"
                 },
-                "scoreA": 1,
-                "scoreB": 0,
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:44:00.000Z",
+                "scheduledTime": "@jetzt+1680s",
                 "matchNumber": 5,
-                "matchStatus": "finished",
-                "decidedBy": "regular",
-                "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 540
+                "matchStatus": "scheduled"
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000006",
@@ -532,17 +507,12 @@
                   "kind": "team",
                   "teamId": "0000000b-0000-4000-8000-000000000004"
                 },
-                "scoreA": 1,
-                "scoreB": 0,
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:55:00.000Z",
+                "scheduledTime": "@jetzt+2400s",
                 "matchNumber": 6,
-                "matchStatus": "finished",
-                "decidedBy": "regular",
-                "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 540
+                "matchStatus": "scheduled"
               }
             ],
             "status": "published",
@@ -700,7 +670,7 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:00:00.000Z",
+                "scheduledTime": "@jetzt-1200s",
                 "matchNumber": 1,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
@@ -725,7 +695,7 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:11:00.000Z",
+                "scheduledTime": "@jetzt-480s",
                 "matchNumber": 2,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
@@ -765,17 +735,12 @@
                   "kind": "team",
                   "teamId": "0000000b-0000-4000-8000-000000000003"
                 },
-                "scoreA": 1,
-                "scoreB": 0,
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:33:00.000Z",
+                "scheduledTime": "@jetzt+960s",
                 "matchNumber": 4,
-                "matchStatus": "finished",
-                "decidedBy": "regular",
-                "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 540
+                "matchStatus": "scheduled"
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000005",
@@ -790,17 +755,12 @@
                   "kind": "team",
                   "teamId": "0000000b-0000-4000-8000-000000000002"
                 },
-                "scoreA": 1,
-                "scoreB": 0,
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:44:00.000Z",
+                "scheduledTime": "@jetzt+1680s",
                 "matchNumber": 5,
-                "matchStatus": "finished",
-                "decidedBy": "regular",
-                "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 540
+                "matchStatus": "scheduled"
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000006",
@@ -815,17 +775,12 @@
                   "kind": "team",
                   "teamId": "0000000b-0000-4000-8000-000000000004"
                 },
-                "scoreA": 1,
-                "scoreB": 0,
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:55:00.000Z",
+                "scheduledTime": "@jetzt+2400s",
                 "matchNumber": 6,
-                "matchStatus": "finished",
-                "decidedBy": "regular",
-                "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 540
+                "matchStatus": "scheduled"
               }
             ],
             "status": "published",
@@ -983,7 +938,7 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:00:00.000Z",
+                "scheduledTime": "@jetzt-1200s",
                 "matchNumber": 1,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
@@ -1008,7 +963,7 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:11:00.000Z",
+                "scheduledTime": "@jetzt-480s",
                 "matchNumber": 2,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
@@ -1053,17 +1008,12 @@
                   "kind": "team",
                   "teamId": "0000000b-0000-4000-8000-000000000003"
                 },
-                "scoreA": 1,
-                "scoreB": 0,
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:33:00.000Z",
+                "scheduledTime": "@jetzt+960s",
                 "matchNumber": 4,
-                "matchStatus": "finished",
-                "decidedBy": "regular",
-                "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 540
+                "matchStatus": "scheduled"
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000005",
@@ -1078,17 +1028,12 @@
                   "kind": "team",
                   "teamId": "0000000b-0000-4000-8000-000000000002"
                 },
-                "scoreA": 1,
-                "scoreB": 0,
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:44:00.000Z",
+                "scheduledTime": "@jetzt+1680s",
                 "matchNumber": 5,
-                "matchStatus": "finished",
-                "decidedBy": "regular",
-                "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 540
+                "matchStatus": "scheduled"
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000006",
@@ -1103,17 +1048,12 @@
                   "kind": "team",
                   "teamId": "0000000b-0000-4000-8000-000000000004"
                 },
-                "scoreA": 1,
-                "scoreB": 0,
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:55:00.000Z",
+                "scheduledTime": "@jetzt+2400s",
                 "matchNumber": 6,
-                "matchStatus": "finished",
-                "decidedBy": "regular",
-                "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 540
+                "matchStatus": "scheduled"
               }
             ],
             "status": "published",
@@ -1268,7 +1208,7 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:00:00.000Z",
+                "scheduledTime": "@jetzt-1200s",
                 "matchNumber": 1,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
@@ -1293,7 +1233,7 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:11:00.000Z",
+                "scheduledTime": "@jetzt-480s",
                 "matchNumber": 2,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
@@ -1333,17 +1273,12 @@
                   "kind": "team",
                   "teamId": "0000000b-0000-4000-8000-000000000003"
                 },
-                "scoreA": 1,
-                "scoreB": 0,
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:33:00.000Z",
+                "scheduledTime": "@jetzt+960s",
                 "matchNumber": 4,
-                "matchStatus": "finished",
-                "decidedBy": "regular",
-                "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 540
+                "matchStatus": "scheduled"
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000005",
@@ -1358,17 +1293,12 @@
                   "kind": "team",
                   "teamId": "0000000b-0000-4000-8000-000000000002"
                 },
-                "scoreA": 1,
-                "scoreB": 0,
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:44:00.000Z",
+                "scheduledTime": "@jetzt+1680s",
                 "matchNumber": 5,
-                "matchStatus": "finished",
-                "decidedBy": "regular",
-                "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 540
+                "matchStatus": "scheduled"
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000006",
@@ -1383,17 +1313,12 @@
                   "kind": "team",
                   "teamId": "0000000b-0000-4000-8000-000000000004"
                 },
-                "scoreA": 1,
-                "scoreB": 0,
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:55:00.000Z",
+                "scheduledTime": "@jetzt+2400s",
                 "matchNumber": 6,
-                "matchStatus": "finished",
-                "decidedBy": "regular",
-                "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 540
+                "matchStatus": "scheduled"
               }
             ],
             "status": "published",
@@ -1554,7 +1479,7 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:00:00.000Z",
+                "scheduledTime": "@jetzt-1200s",
                 "matchNumber": 1,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
@@ -1579,7 +1504,7 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:11:00.000Z",
+                "scheduledTime": "@jetzt-480s",
                 "matchNumber": 2,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
@@ -1619,17 +1544,12 @@
                   "kind": "team",
                   "teamId": "0000000b-0000-4000-8000-000000000003"
                 },
-                "scoreA": 1,
-                "scoreB": 0,
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:33:00.000Z",
+                "scheduledTime": "@jetzt+960s",
                 "matchNumber": 4,
-                "matchStatus": "finished",
-                "decidedBy": "regular",
-                "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 540
+                "matchStatus": "scheduled"
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000005",
@@ -1644,17 +1564,12 @@
                   "kind": "team",
                   "teamId": "0000000b-0000-4000-8000-000000000002"
                 },
-                "scoreA": 1,
-                "scoreB": 0,
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:44:00.000Z",
+                "scheduledTime": "@jetzt+1680s",
                 "matchNumber": 5,
-                "matchStatus": "finished",
-                "decidedBy": "regular",
-                "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 540
+                "matchStatus": "scheduled"
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000006",
@@ -1669,17 +1584,12 @@
                   "kind": "team",
                   "teamId": "0000000b-0000-4000-8000-000000000004"
                 },
-                "scoreA": 1,
-                "scoreB": 0,
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:55:00.000Z",
+                "scheduledTime": "@jetzt+2400s",
                 "matchNumber": 6,
-                "matchStatus": "finished",
-                "decidedBy": "regular",
-                "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 540
+                "matchStatus": "scheduled"
               }
             ],
             "status": "published",
@@ -1840,7 +1750,7 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:00:00.000Z",
+                "scheduledTime": "@jetzt-1200s",
                 "matchNumber": 1,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
@@ -1865,7 +1775,7 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:11:00.000Z",
+                "scheduledTime": "@jetzt-480s",
                 "matchNumber": 2,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
@@ -1910,17 +1820,12 @@
                   "kind": "team",
                   "teamId": "0000000b-0000-4000-8000-000000000003"
                 },
-                "scoreA": 1,
-                "scoreB": 0,
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:33:00.000Z",
+                "scheduledTime": "@jetzt+960s",
                 "matchNumber": 4,
-                "matchStatus": "finished",
-                "decidedBy": "regular",
-                "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 540
+                "matchStatus": "scheduled"
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000005",
@@ -1935,17 +1840,12 @@
                   "kind": "team",
                   "teamId": "0000000b-0000-4000-8000-000000000002"
                 },
-                "scoreA": 1,
-                "scoreB": 0,
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:44:00.000Z",
+                "scheduledTime": "@jetzt+1680s",
                 "matchNumber": 5,
-                "matchStatus": "finished",
-                "decidedBy": "regular",
-                "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 540
+                "matchStatus": "scheduled"
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000006",
@@ -1960,17 +1860,12 @@
                   "kind": "team",
                   "teamId": "0000000b-0000-4000-8000-000000000004"
                 },
-                "scoreA": 1,
-                "scoreB": 0,
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:55:00.000Z",
+                "scheduledTime": "@jetzt+2400s",
                 "matchNumber": 6,
-                "matchStatus": "finished",
-                "decidedBy": "regular",
-                "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 540
+                "matchStatus": "scheduled"
               }
             ],
             "status": "published",
