@@ -41,7 +41,7 @@ async function oeffneZuschauer(page: Page, szene: Szene): Promise<void> {
   await karte.scrollIntoViewIfNeeded(); // die Karte steht im Bild (Aufnahmen)
 }
 
-/** Cockpit-Cup mit Blau gegen Navy (zu ähnlich): der Anpfiff gibt dem Heim-Team Leibchen; Kasten und Kopf zeigen die Weste (@SL-176). */
+/** Cockpit-Cup mit Blau gegen Navy (zu ähnlich): Tom bestätigt die Karte und pfeift an; Kasten und Kopf zeigen die Weste (@SL-176). */
 async function oeffneCockpit(page: Page, groesse: { width: number; height: number }, heimName: string): Promise<void> {
   await page.setViewportSize(groesse);
   const namen = [heimName, ...NAMEN.slice(1)];
@@ -49,7 +49,7 @@ async function oeffneCockpit(page: Page, groesse: { width: number; height: numbe
     formatVersion: 1, name: 'cockpit', localStorage: { 'app:consent': { errorTracking: false, sessionReplay: false, timestamp: 1794643200000, version: 1 } },
     datenbanken: [{ name: 'hallenfussball', version: 1, store: 'cache', eintraege: { tournaments: [cup({ namen, farben: ['#1565C0', '#0D1B4C', '#2E8B57', '#C0392B'] })] } }],
   });
-  await anpfeifen(page);
+  await anpfeifen(page, { leibchen: true }); // Tom bestätigt die Karte, dann der Anpfiff (@SL-206, @SL-210)
   await page.evaluate(() => document.fonts.ready);
 }
 
