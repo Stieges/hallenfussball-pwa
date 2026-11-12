@@ -286,7 +286,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
         handlers={cmd.overlayHandlers}
         rejectedOutbox={rejectedOutbox}
         mehr={{
-          punkte: mehrPunkteGrundgeruest(phase, { kannSteuern, istLeitung: istLeitung && props.onNichtAngetreten !== undefined }),
+          punkte: mehrPunkteGrundgeruest(phase, { kannSteuern, istLeitung: istLeitung && props.onNichtAngetreten !== undefined, leibchenNachtragen: istLeitung }),
           aktionen: { ...cmd.mehrAktionen, nichtAngetreten: () => { props.onNichtAngetreten?.(match.id); }, ...leibchen.mehrAktion },
         }}
         entrySheets={{ flows, teams: teams ?? NO_TEAMS, ausloeserSeite: (seite) => (sides.links === seite ? 'links' : 'rechts'), kartenArten: cockpitSettings.enabledCards, t: tx }}
