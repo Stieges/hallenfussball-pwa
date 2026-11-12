@@ -11,6 +11,7 @@ import type deSport from './locales/de/sport.json';
 import type deShort from './locales/de/short.json';
 import type dePublicView from './locales/de/publicView.json';
 import type deHelpers from './locales/de/helpers.json';
+import type deHallenton from './locales/de/hallenton.json';
 
 /**
  * Module augmentation for type-safe i18next.
@@ -35,6 +36,7 @@ declare module 'i18next' {
       short: typeof deShort;
       publicView: typeof dePublicView;
       helpers: typeof deHelpers;
+      hallenton: typeof deHallenton;
     };
   }
 }
