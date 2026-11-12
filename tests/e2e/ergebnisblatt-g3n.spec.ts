@@ -11,6 +11,7 @@ import { mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Page } from '@playwright/test';
 import { test, expect } from './helpers/test-fixtures';
+import { animationenFertig } from './helpers/animationenFertig';
 // @ts-expect-error – .mjs ohne Typen; die echte Messfunktion von `npm run visual:metrics`
 import { messeSeite } from '../../scripts/visual-metrics/browser-messung.mjs';
 
@@ -55,7 +56,7 @@ async function oeffneBlatt(page: Page, fall: (typeof FAELLE)[number], query: str
     await page.locator('[data-testid^="match-goals-"]:visible, [data-testid^="match-circle-"]:visible').first().click(); // Karte: Torzahl, Tabelle: Ergebnisfeld
   }
   await expect(page.getByTestId('result-sheet')).toBeVisible();
-  await page.waitForTimeout(600); // das Blatt gleitet 0,3 s ein; erst danach messen
+  await animationenFertig(page); // das Blatt gleitet 0,3 s ein; erst danach messen
 }
 
 test.describe('@SL-195 Blatt „Endergebnis“: Darstellung und Tastatur-Probe (Prüfstand)', () => {
@@ -93,7 +94,7 @@ test.describe('@SL-195 Blatt „Endergebnis“: Darstellung und Tastatur-Probe (
             }
             const schrift = await page.getByTestId('result-sheet-score-home').evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
             expect(schrift, 'Schrift der Felder mindestens 16 px').toBeGreaterThanOrEqual(16);
-            await page.waitForTimeout(400); // Übergänge der Tasten abwarten, sonst misst der Kontrast eine Zwischenfarbe
+            await animationenFertig(page); // Übergänge der Tasten abwarten, sonst misst der Kontrast eine Zwischenfarbe
             const ordner = process.env.G3N_N4_BILDER ?? testInfo.outputDir;
             mkdirSync(ordner, { recursive: true });
             await page.screenshot({ path: join(ordner, `n4-${g.name}-${thema}-${fall}-${sprache.name}.png`) });
@@ -108,7 +109,8 @@ test.describe('@SL-195 Blatt „Endergebnis“: Darstellung und Tastatur-Probe (
     await page.setViewportSize({ width: 360, height: 640 });
     await oeffneBlatt(page, 'leer', '');
     await page.setViewportSize({ width: 360, height: 320 }); // etwa die Hälfte: Bildschirmtastatur offen
-    await page.waitForTimeout(300);
+    await expect.poll(() => page.evaluate(() => window.innerHeight)).toBe(320);
+    await animationenFertig(page);
     const feld = page.getByTestId('result-sheet-score-home');
     const speichern = page.getByTestId('result-sheet-save');
     // Beide sind sichtbar oder per Scrollen im Blatt erreichbar: nach dem Heranscrollen liegen sie ganz im Fenster
