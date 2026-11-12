@@ -1,5 +1,5 @@
 /**
- * Leibchen-Karte im Cockpit und im Endstand (Leibchen 2b-2, Lage B): @SL-206, @SL-208, @SL-210, @SL-211, @SL-213, @SL-215, @SL-148, @SL-149, @SL-150, @SL-196.
+ * Leibchen-Karte im Cockpit und im Endstand (Leibchen 2b-2, Lage B): @SL-197 (Spielzeit vor dem Anpfiff, aus dem alten Test übernommen), @SL-206, @SL-208, @SL-210, @SL-211, @SL-213, @SL-215, @SL-148, @SL-149, @SL-150, @SL-196.
  * Die Wahl geht durch die echte Warteschlange und die Überlagerung der Turnierkopie (`useKitChoiceOverlay`), gesendet wird nichts (Gastkonto).
  * Gherkin: docs/anforderungen/2026-10-02_spiel-leiten.md. Teams und Farben wie in den Szenarien (TSV Waging 1, TSV Petting, SV Aschau, FC Seeon).
  */
@@ -211,5 +211,20 @@ describe('@SL-150 Nachtragen im laufenden Spiel nur durch die Turnierleitung', (
     const k = zeige(turnier(gleicheFarbe, [spiel('spiel-2', WAGING, PETTING)]), live2(), { istLeitung: true });
     await k.tippe(screen.getByTestId('cockpit-more-button'));
     expect(screen.queryByTestId('mehr-leibchen-nachtragen')).toBeNull();
+  });
+});
+
+describe('@SL-197 vor dem Anpfiff die Spielzeit aus den Regeln (neben der Karte)', () => {
+  it('@SL-197 9 Minuten → groß „9:00“, darunter „Anstoß hh:mm · Spiel 12 · Feld 1“', () => {
+    render(<LiveCockpit {...makeProps(makeLiveMatch({ id: 'spiel-12', number: 12, status: 'NOT_STARTED', elapsedSeconds: 0, homeTeam: { id: 'sv-sued', name: 'SV Süd' }, awayTeam: { id: 'fc-nord', name: 'FC Nord' } }), { spielzeit: { abschnitte: 1, abschnittSekunden: 540 } })} />);
+    expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('9:00');
+    expect(screen.getByTestId('scoreboard-clock')).toHaveTextContent('Spielzeit');
+    expect(screen.getByTestId('scoreboard-clock-sub')).toHaveTextContent(/^Anstoß \d{2}:\d{2} · Spiel 12 · Feld 1$/);
+  });
+
+  it('@SL-197 zwei Abschnitte zu 4 Minuten → „2 ד vor „4:00“', () => {
+    render(<LiveCockpit {...makeProps(makeLiveMatch({ id: 'spiel-12', number: 12, status: 'NOT_STARTED', elapsedSeconds: 0 }), { spielzeit: { abschnitte: 2, abschnittSekunden: 240 } })} />);
+    expect(screen.getByTestId('scoreboard-clock-vorsatz')).toHaveTextContent('2 ×');
+    expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('4:00');
   });
 });
