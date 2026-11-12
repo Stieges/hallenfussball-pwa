@@ -69,19 +69,15 @@ describe('@SL-206 @SL-138 wann die Karte erscheint', () => {
   });
 });
 
-describe('@SL-151 „spielt selbst in dieser Farbe“ gilt auch für ähnliche Farben', () => {
+describe('@SL-151 @SL-217 „spielt selbst in dieser Farbe“ heißt gleiche Farbe, eine ähnliche warnt nur (Frage an Daniel)', () => {
   const GELB_HELL = '#FFEB3B';
 
-  it('@SL-151 Weiß gegen Gelb (#FFEB3B), Hallenfarbe nur Gelb (#FFCC00): dem gelben Team werden KEINE gelben Leibchen vorgeschlagen – kein passendes Leibchen', () => {
-    expect(kitProposal(FELDER(WEISS, GELB_HELL), [GELB], 'home')).toEqual({ kind: 'keinPassendes', seite: 'a' });
+  it('@SL-151 Weiß gegen Gelb (#FFEB3B), Hallenfarbe nur Gelb (#FFCC00): der Vorschlag nennt Gelb für das gelbe Team (Gast) – die Karte warnt bei der Wahl „sieht aus wie das eigene Trikot“', () => {
+    expect(kitProposal(FELDER(WEISS, GELB_HELL), [GELB], 'home')).toEqual({ kind: 'vorschlag', seite: 'b', farbe: GELB });
   });
 
-  it('@SL-151 mit Orange als zweiter Hallenfarbe zieht das gelbe Team Orange, nicht Gelb', () => {
-    expect(kitProposal(FELDER(WEISS, GELB_HELL), [GELB, ORANGE], 'home')).toEqual({ kind: 'vorschlag', seite: 'a', farbe: ORANGE });
-  });
-
-  it('Gegenbeispiel: Blau gegen Blau schlägt weiter Gelb vor (keine Ähnlichkeit mit dem eigenen Trikot)', () => {
-    expect(kitProposal(FELDER(BLAU, BLAU), [GELB], 'home')).toEqual({ kind: 'vorschlag', seite: 'a', farbe: GELB });
+  it('@SL-151 Gegenbeispiel: dieselbe Farbe (Gelb #FFCC00 auf Gelb) wird nie vorgeschlagen', () => {
+    expect(kitProposal(FELDER(GELB, GELB), [GELB, ORANGE], 'home')).toEqual({ kind: 'vorschlag', seite: 'a', farbe: ORANGE });
+    expect(kitProposal(FELDER(GELB, GELB), [GELB], 'home')).toEqual({ kind: 'keinPassendes', seite: 'a' });
   });
 });
-

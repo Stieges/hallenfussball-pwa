@@ -21,9 +21,13 @@ export function karteNoetig(farben: TrikotFarben): boolean {
   return kitConflict(farben.a, farben.b) !== 'none';
 }
 
-/** Die Farbe passt für `seite`: weder gleich noch ähnlich wie die eigene Trikotfarbe der Seite („spielt selbst in dieser Farbe“, @SL-151) und dem Gegner nicht zu ähnlich (@SL-217). */
+/**
+ * Die Farbe passt für `seite`: nicht die eigene Trikotfarbe der Seite („spielt selbst in dieser Farbe“ = `same`, @SL-151/@SL-217) und dem Gegner nicht zu ähnlich.
+ * Eine dem eigenen Trikot nur ÄHNLICHE Farbe schließt der Vorschlag nicht aus: die Karte warnt bei der Wahl („sieht aus wie das eigene Trikot“, @SL-231, bestätigen
+ * bleibt erlaubt); die Beispielwerte von @SL-217 (Gast Braun zieht Rot) verlangen das.
+ */
 function passt(farbe: string, seite: KitSide, farben: TrikotFarben): boolean {
-  return kitConflict(farbe, farben[seite]) === 'none' && kitConflict(farbe, farben[andere(seite)]) === 'none';
+  return kitConflict(farbe, farben[seite]) !== 'same' && kitConflict(farbe, farben[andere(seite)]) === 'none';
 }
 
 export function kitProposal(farben: TrikotFarben, hallenFarben: readonly string[], regel: 'home' | 'away'): KitProposal {
