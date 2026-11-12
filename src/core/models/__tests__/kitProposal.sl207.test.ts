@@ -24,6 +24,10 @@ describe('@SL-207 die Karte schlägt Seite und Farbe nach den Einstellungen des 
     expect(kitProposal(FELDER(a, b), hallen, regel)).toEqual(erwartet);
   });
 
+  it('@SL-207 spielt die ziehende Seite selbst in der ersten Hallenfarbe (Gelb), auch wenn der Gegner Blau trägt (Leibchen über „Leibchen festlegen“): die zweite Farbe', () => {
+    expect(kitProposal(FELDER(GELB, BLAU), [GELB, ORANGE], 'home')).toEqual({ kind: 'vorschlag', seite: 'a', farbe: ORANGE });
+  });
+
   it('@SL-207 Gegenbeispiel: die Regel „Gast“ ändert nichts an der Farbe, nur an der Seite', () => {
     expect(kitProposal(FELDER(BLAU, BLAU), [GELB, ORANGE], 'away')).toMatchObject({ farbe: GELB });
   });
