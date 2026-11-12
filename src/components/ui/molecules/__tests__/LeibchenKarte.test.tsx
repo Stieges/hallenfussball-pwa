@@ -18,6 +18,7 @@ const BLAU = '#1565C0';
 const GELB = '#FFCC00';
 const ORANGE = '#FF6600';
 const ROT = '#C62828';
+const WEISS_ = '#FFFFFF';
 const PINK = palette.jersey.pink;
 
 function aufbau(extra: Partial<LeibchenKarteProps> = {}) {
@@ -186,12 +187,22 @@ describe('@SL-231 @SL-173 @SL-219 Farbwahl: Name als Wort, Haken, Warnung mit Wo
     await k.tippe(byId('andere'));
     const rot = byId('farbe-rot');
     expect(rot).toHaveTextContent('Wie Trikot');
-    expect(rot).toHaveAccessibleName('Rot – Wie Trikot');
+    expect(rot).toHaveAccessibleName('Rot – sieht aus wie das eigene Trikot von SV Süd'); // Wortlaut @SL-231
     expect(screen.queryByTestId('leibchen-satz')).toBeNull();
     await k.tippe(rot);
     expect(byId('satz')).toHaveTextContent('Leibchen sieht aus wie das eigene Trikot');
     await k.tippe(byId('bestaetigen')); // bestätigen bleibt erlaubt
     expect(k.onBestaetigen).toHaveBeenCalledWith('a', palette.jersey.red);
+  });
+
+  it('@SL-151 Gelb ist dem Trikot des Gegners zu ähnlich: Kachel „Wie Gegner“, vorgelesen „Gelb – zu ähnlich wie das Trikot von FC Nord“, nach der Wahl der volle Satz', async () => {
+    const k = aufbau({ trikot: { a: WEISS_, b: '#FFEB3B' }, hallenFarben: [ORANGE], teams: { a: 'SV Süd', b: 'FC Nord' }, vorschlag: { kind: 'vorschlag', seite: 'a', farbe: ORANGE } });
+    await k.tippe(byId('vorschlag'));
+    await k.tippe(byId('andere'));
+    expect(byId('farbe-gelb')).toHaveTextContent('Wie Gegner');
+    expect(byId('farbe-gelb')).toHaveAccessibleName('Gelb – zu ähnlich wie das Trikot von FC Nord');
+    await k.tippe(byId('farbe-gelb'));
+    expect(byId('satz')).toHaveTextContent('Gelb – zu ähnlich wie das Trikot von FC Nord');
   });
 
   it('@SL-231 Rot gegen Blau (Farbabstand 44,8, aber gleich hell): Rot trägt „Gleich hell“', async () => {

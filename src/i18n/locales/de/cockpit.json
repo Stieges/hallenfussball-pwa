@@ -766,6 +766,8 @@
       "nurSteuerndes": "Nur das steuernde Gerät kann Leibchen bestätigen.",
       "zuSpaet": "Das Spiel wurde schon angepfiffen, Leibchen nicht übernommen",
       "fehlgeschlagen": "Leibchen nicht übernommen"
-    }
+    },
+    "eigenesTrikotVon": "{{farbe}} – sieht aus wie das eigene Trikot von {{team}}",
+    "gleichHellVon": "{{farbe}} – gleich hell wie das eigene Trikot von {{team}}"
   }
 }

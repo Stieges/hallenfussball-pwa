@@ -54,12 +54,21 @@ export function LeibchenWahlFelder(p: LeibchenWahlFelderProps): ReactElement {
     if (h.art === 'gleichHell') { return t('leibchenKarte.gleichHell'); }
     return gross ? t('leibchenKarte.aehnlichWieTrikot') : t('leibchenKarte.wieTrikot');
   };
+  const eigen = p.seite === 'a' ? p.teams.a : p.teams.b;
+  const gegnerName = p.seite === 'a' ? p.teams.b : p.teams.a;
+  /** Vorgelesen mit vollem Satz (@SL-231, @SL-151): „… – zu ähnlich wie das Trikot von <Gegner>“ bzw. „… – sieht aus wie das eigene Trikot von <Team>“. */
+  const vollerSatz = (farbe: string): string | null => {
+    const h = hinweisVon(farbe);
+    if (h.art === 'none') { return null; }
+    if (h.gegner) { return t('anpfiff.farbeZuAehnlich', { farbe: name(farbe), gegner: gegnerName }); }
+    return t(h.art === 'gleichHell' ? 'leibchenKarte.gleichHellVon' : 'leibchenKarte.eigenesTrikotVon', { farbe: name(farbe), team: eigen });
+  };
   const farbTaste = (farbe: string, gross: boolean): ReactElement => {
     const gewaehlt = p.farbe === farbe;
     const warnung = hinweisText(farbe, gross);
     return (
       <ChipButton key={farbe} selected={gewaehlt} size="minimum" onClick={() => { p.onFarbe(farbe); }}
-        aria-label={warnung === null ? t('leibchenKarte.farbeAria', { farbe: name(farbe) }) : t('leibchenKarte.farbeWarnAria', { farbe: name(farbe), warnung })}
+        aria-label={vollerSatz(farbe) ?? t('leibchenKarte.farbeAria', { farbe: name(farbe) })}
         data-testid={`${p.testIdPrefix}-farbe-${leibchenFarbName(farbe) ?? 'turnier'}`}>
         <span style={punkt(farbe)} aria-hidden="true" />
         {name(farbe)}
@@ -67,7 +76,9 @@ export function LeibchenWahlFelder(p: LeibchenWahlFelderProps): ReactElement {
       </ChipButton>
     );
   };
-  const satz = hinweisVon(p.farbe).art === 'aehnlich' && !hinweisVon(p.farbe).gegner ? t('leibchenKarte.warnungEigenesTrikot') : null;
+  // Der volle Satz steht erst nach der Wahl unter der Auswahl (@SL-231): eigenes Trikot oder Gegner
+  const wahl = hinweisVon(p.farbe);
+  const satz = p.farbe === '' || wahl.art !== 'aehnlich' ? null : wahl.gegner ? t('anpfiff.farbeZuAehnlich', { farbe: name(p.farbe), gegner: gegnerName }) : t('leibchenKarte.warnungEigenesTrikot');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm }} data-testid={`${p.testIdPrefix}-wahl`}>

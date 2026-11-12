@@ -766,6 +766,8 @@
       "nurSteuerndes": "Only the controlling device can confirm bibs.",
       "zuSpaet": "The match has already kicked off, bibs not accepted",
       "fehlgeschlagen": "Bibs not accepted"
-    }
+    },
+    "eigenesTrikotVon": "{{farbe}} – looks like the own jersey of {{team}}",
+    "gleichHellVon": "{{farbe}} – same brightness as the own jersey of {{team}}"
   }
 }
