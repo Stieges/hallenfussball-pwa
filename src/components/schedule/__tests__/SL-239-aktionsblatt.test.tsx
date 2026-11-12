@@ -6,7 +6,8 @@
  * @EK-063 (beendet: „Ergebnis korrigieren“), @HE-042 @FU-113 (Helfer).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 vi.unmock('i18next');
 vi.unmock('react-i18next');
@@ -95,10 +96,12 @@ describe('@SL-239 Kopf des Blatts: Abzeichen neben dem Titel, Zeit, Feld, Spielz
     expect(within(kopf()).getByTestId(`match-box-aktion-${SPIEL.id}-away-digits`)).toHaveTextContent('1');
   });
 
-  it('@SL-239 @OB-066 ausgefallen und gewertet tragen ebenfalls ihr Wort („ausgefallen“, „Ende“)', () => {
+  it('@SL-239 @OB-066 ein abgesetztes Spiel trägt das Wort „ausgefallen“, ein gewertetes („Nicht angetreten“) das Wort „Ende“', () => {
     zeige({ matchStatus: 'skipped' }, LEITUNG);
-    expect(within(kopf()).getByTestId('match-action-badge').textContent).toMatch(/\S/);
     expect(within(kopf()).getByTestId('match-action-badge')).toHaveTextContent('ausgefallen');
+    cleanup();
+    zeige({ matchStatus: 'finished', scoreA: 0, scoreB: 2, decidedBy: 'forfeit' }, LEITUNG);
+    expect(within(kopf()).getByTestId('match-action-badge')).toHaveTextContent('Ende');
   });
 });
 
@@ -120,10 +123,10 @@ describe('@SL-239 Haupttaste: gefüllt, zuletzt, höchstens eine', () => {
     });
   }
 
-  it('@SL-239 @EK-063 @FU-113 Gegenbeispiel: ein Helfer bei einem beendeten Spiel hat keine Korrektur; „Ergebnis eintragen“ fehlt beim Helfer im geplanten Spiel', () => {
+  it('@SL-239 @EK-063 @FU-113 Gegenbeispiel: ein Helfer bei einem beendeten Spiel hat keine Korrektur, seine Haupttaste ist „Protokoll ansehen“', () => {
     zeige('beendet', HELFER);
     expect(screen.queryByTestId('match-action-correct')).toBeNull();
-    expect(gefuellt()).toHaveLength(1);
+    expect(gefuellt().map((taste) => taste.dataset.testid)).toEqual(['match-action-protocol']);
   });
 
   it('@SL-239 @HE-042 Gegenbeispiel: ein Helfer bei einem geplanten Spiel bekommt keine Eingabe als Haupttaste', () => {
@@ -138,11 +141,20 @@ describe('@SL-239 Haupttaste: gefüllt, zuletzt, höchstens eine', () => {
     expect(gefuellt()).toHaveLength(0);
   });
 
+  it('@SL-239 abgesetzt: die Turnierleitung hat „Ergebnis eintragen“ als gefüllte Haupttaste (wie der Code es heute tut)', () => {
+    zeige({ matchStatus: 'skipped' }, LEITUNG);
+    expect(gefuellt().map((taste) => taste.dataset.testid)).toEqual(['match-action-enterResult']);
+    expect(tasten().at(-1)).toBe(gefuellt()[0]);
+  });
+
   it('@SL-239 „Nicht angetreten“ trägt die rote Randfarbe und ist nicht gefüllt; die übrigen Einträge haben die Randfarbe der Bedienelemente', () => {
     zeige('geplant', LEITUNG);
     expect(screen.getByTestId('match-action-forfeit').style.border).toContain('--color-error');
     expect(screen.getByTestId('match-action-forfeit')).not.toHaveAttribute('data-primary');
-    expect(screen.getByTestId('match-action-kickOff').style.border).not.toContain('--color-error');
+    // nur „Nicht angetreten“ ist rot: kein anderer Eintrag trägt die Farbe (auch „Ab hier verschieben“ nicht)
+    for (const taste of tasten().filter((t) => t.dataset.testid !== 'match-action-forfeit')) {
+      expect(taste.style.border, taste.dataset.testid).not.toContain('--color-error');
+    }
   });
 
   it('@SL-239 @OB-022 jede Taste mindestens so hoch wie die Haupttaste (56 px, Token), Haupttaste im festen Fuß', () => {
@@ -178,5 +190,32 @@ describe('@SL-239 Symbole und „X“ oben', () => {
     const taste = screen.getByTestId('match-action-menu-close');
     expect(taste.style.minWidth).toContain('--touch-target-minimum');
     expect(taste.style.minHeight).toContain('--touch-target-minimum');
+  });
+});
+
+describe('@SL-239 Anfangsfokus und Tastatur', () => {
+  it('@SL-239 nach dem Öffnen trägt kein Bedienelement den Fokus (der Titel, ohne Rahmen), damit „X“ oder die erste Aktion nicht wie eine zweite Haupttaste wirken', () => {
+    zeige('geplant', LEITUNG);
+    const aktiv = document.activeElement as HTMLElement;
+    expect(aktiv.tagName).toBe('H2');
+    expect(aktiv).toHaveTextContent(`Spiel ${SPIEL.matchNumber}`);
+    expect(aktiv.style.outline).toBe('none');
+    expect(aktiv.style.boxShadow).toBe('none'); // die globale Regel [tabindex]:focus-visible setzt sonst auch einen Schatten
+    expect(aktiv.closest('button')).toBeNull();
+  });
+
+  it('@SL-239 Tab erreicht danach „X“ und alle Einträge der Reihe nach, Esc schließt das Blatt', async () => {
+    const user = userEvent.setup();
+    zeige('geplant', LEITUNG);
+    const erwartet = ['match-action-menu-close', ...tasten().map((taste) => taste.dataset.testid!)];
+    const erreicht: string[] = [];
+    // eslint-disable-next-line @typescript-eslint/prefer-for-of -- Tab-Schritte zählen, kein Element der Liste
+    for (let schritt = 0; schritt < erwartet.length; schritt++) {
+      await user.tab();
+      erreicht.push((document.activeElement as HTMLElement).dataset.testid ?? '');
+    }
+    expect(erreicht).toEqual(erwartet);
+    await user.keyboard('{Escape}');
+    expect(screen.queryByTestId('match-action-menu')).toBeNull();
   });
 });

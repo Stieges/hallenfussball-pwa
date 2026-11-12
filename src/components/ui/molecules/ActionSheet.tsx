@@ -8,9 +8,11 @@
  *   `danger` trägt die rote Randfarbe, `primary` ist die gefüllte Haupttafel: sie steht immer zuletzt und im festen Fuß
  *   (am Handy ohne Scrollen erreichbar, @OB-022); höchstens ein Eintrag ist gefüllt (der erste mit `primary`).
  * - Ein gesperrter Eintrag bleibt sichtbar (`aria-disabled`, kein Klick) und nennt unter der Beschriftung seinen Grund – er fehlt nie still.
+ * Anfangsfokus: der Titel (`tabIndex={-1}`, ohne Rahmen und Schatten – die globale Regel `[tabindex]:focus-visible` zeichnet sonst beides), nie ein Bedienelement – sonst trüge das „X“ oder die erste Aktion sofort einen
+ * Fokusrahmen, der wie eine zweite Haupttaste wirkt. Tab erreicht danach „X“ und alle Einträge.
  * Fläche, Abdunkelung, Fokusfalle, Esc und Scroll-Sperre kommen aus `DialogSurface`.
  */
-import { useId, type CSSProperties, type ReactNode } from 'react';
+import { useId, useRef, type CSSProperties, type ReactNode } from 'react';
 import { cssVars, dialogWidths, mediaQueries } from '../../../design-tokens';
 import { Icons } from '../Icons';
 import { DialogSurface } from './DialogSurface';
@@ -50,7 +52,7 @@ export interface ActionSheetProps {
 const headerStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm, paddingTop: cssVars.spacing.lg, paddingBottom: cssVars.spacing.sm };
 const titleRowStyle: CSSProperties = { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: cssVars.spacing.sm };
 const titleGroupStyle: CSSProperties = { display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', columnGap: cssVars.spacing.sm, rowGap: cssVars.spacing.xs, minWidth: 0, paddingTop: cssVars.spacing.sm };
-const headingStyle: CSSProperties = { margin: 0, fontSize: cssVars.fontSizes.xl, fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.textPrimary, overflowWrap: 'anywhere' };
+const headingStyle: CSSProperties = { margin: 0, outline: 'none', boxShadow: 'none', fontSize: cssVars.fontSizes.xl, fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.textPrimary, overflowWrap: 'anywhere' };
 const closeStyle: CSSProperties = {
   flex: 'none',
   display: 'inline-flex',
@@ -118,6 +120,7 @@ function ItemButton({ item }: { item: ActionSheetItem }) {
 
 export function ActionSheet({ isOpen, onClose, title, badge, subtitle, summary, items, closeLabel, testId = 'action-sheet' }: ActionSheetProps) {
   const titleId = useId();
+  const titleRef = useRef<HTMLHeadingElement>(null);
   const main = items.find((item) => item.primary === true);
   const others = items.filter((item) => item !== main).map((item) => (item.primary === true ? { ...item, primary: false } : item));
   // Die Haupttaste steht im festen Fuß, solange es weitere Einträge gibt; ist sie der einzige Eintrag, steht sie im Inhalt (sonst bliebe über dem Fuß eine leere Fläche)
@@ -128,7 +131,7 @@ export function ActionSheet({ isOpen, onClose, title, badge, subtitle, summary, 
     <div style={headerStyle} className="action-sheet-edge">
       <div style={titleRowStyle}>
         <div style={titleGroupStyle}>
-          <h2 id={titleId} style={headingStyle}>{title}</h2>
+          <h2 id={titleId} ref={titleRef} tabIndex={-1} style={headingStyle}>{title}</h2>
           {badge}
         </div>
         <button type="button" style={closeStyle} onClick={onClose} aria-label={closeLabel} data-testid={`${testId}-close`}>
@@ -146,7 +149,7 @@ export function ActionSheet({ isOpen, onClose, title, badge, subtitle, summary, 
   );
 
   return (
-    <DialogSurface isOpen={isOpen} onClose={onClose} placement="center" maxWidth={dialogWidths.sm} labelledBy={titleId} testId={testId} header={header} footer={footer}>
+    <DialogSurface isOpen={isOpen} onClose={onClose} placement="center" maxWidth={dialogWidths.sm} labelledBy={titleId} initialFocusRef={titleRef} testId={testId} header={header} footer={footer}>
       <div style={bodyStyle} className="action-sheet-edge">
         <style>{edgeCss}</style>
         <ul style={listStyle}>
