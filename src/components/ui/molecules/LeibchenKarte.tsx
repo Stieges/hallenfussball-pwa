@@ -58,7 +58,7 @@ const aktionen: CSSProperties = {
   backgroundColor: cssVars.colors.background, backgroundImage: `linear-gradient(${cssVars.colors.warningSubtle}, ${cssVars.colors.warningSubtle})`,
 };
 const ueberschriftStil: CSSProperties = {
-  margin: 0, fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.04em',
+  margin: 0, fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.textSecondary, textTransform: 'uppercase', letterSpacing: cssVars.letterSpacing.wider,
 };
 const wTeil = (farbe: string): CSSProperties => ({ position: 'absolute', top: 0, bottom: 0, left: '30%', right: '30%', background: farbe });
 const wRahmen = (trikot: string): CSSProperties => ({

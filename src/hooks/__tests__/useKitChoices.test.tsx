@@ -11,7 +11,9 @@ import type { Tournament } from '../../types/tournament';
 import { teamSlot } from '../../core/models/matchSlot';
 
 const sendMock = vi.fn();
-vi.mock('../../core/repositories/matchKitSetRpc', () => ({ sendMatchKitSet: (...args: unknown[]) => sendMock(...args) }));
+/** Frischer Stand vom Server: im Test steuerbar (`frischMock`), Vorgabe „noch nicht angepfiffen“. */
+const frischMock = vi.fn(async (ids: readonly string[]) => new Map(ids.map((id) => [id, { kickedOff: false }])));
+vi.mock('../../core/repositories/matchKitSetRpc', () => ({ sendMatchKitSet: (...args: unknown[]) => sendMock(...args), loadMatchKickoffStates: (_client: unknown, ids: readonly string[]) => frischMock(ids) }));
 vi.mock('../../lib/supabase', () => ({ isSupabaseConfigured: true, supabase: {} }));
 const engineLog = vi.hoisted(() => ({ log: [] as unknown[] }));
 vi.mock('../../features/match-engine/useMatchEngineContext', () => ({
@@ -42,6 +44,7 @@ describe('useKitChoices / useKitChoiceOverlay', () => {
   beforeEach(() => {
     localStorage.clear();
     sendMock.mockReset();
+    frischMock.mockClear();
     const queue = kitChoiceQueueFor('konto-test-1');
     for (const entry of [...queue.entries()]) { queue.discardStarted(new Set([entry.matchId])); }
   });
@@ -122,5 +125,22 @@ describe('useKitChoices / useKitChoiceOverlay', () => {
     await act(async () => { rerender({ t: turnier({ matchStatus: 'running', kit: { a: BLAU, b: BLAU } }) }); });
     expect(result.current.api.entries).toHaveLength(0);
     expect(result.current.api.notices[0]).toMatchObject({ kind: 'tooLate' });
+  });
+
+  it('@SL-229 Zeile 1 Handy der Leitung offline, bestätigt, ein anderes Gerät pfeift an, das Netz kommt zurück: die alte Turnierkopie zeigt es noch nicht – es wird NICHT gesendet, „zu spät“', async () => {
+    engineLog.log = [];
+    sendMock.mockResolvedValue({ kind: 'offline' });
+    const alt = turnier({ matchStatus: 'scheduled' });
+    const { result } = renderHook(() => ({ api: useKitChoices(), shown: useKitChoiceOverlay(alt) }), { wrapper });
+    await act(async () => { result.current.api.choose({ matchId: 'spiel-2', decision: 'bib', bibSide: 'a', bibColor: GELB }, alt); });
+    expect(result.current.api.entries[0]).toMatchObject({ status: 'pending' });
+    sendMock.mockReset();
+    sendMock.mockResolvedValue({ kind: 'saved', phase: 'live', decision: 'bib' });
+    frischMock.mockResolvedValue(new Map([['spiel-2', { kickedOff: true }]])); // der Server weiß es, die Kopie noch nicht
+    await act(async () => { window.dispatchEvent(new Event('online')); });
+    expect(sendMock).not.toHaveBeenCalled();
+    expect(result.current.api.entries).toHaveLength(0);
+    expect(result.current.api.notices[0]).toMatchObject({ kind: 'tooLate' });
+    frischMock.mockImplementation(async (ids) => new Map(ids.map((id) => [id, { kickedOff: false }])));
   });
 });

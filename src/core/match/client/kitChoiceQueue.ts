@@ -106,7 +106,7 @@ export class KitChoiceQueue {
   private seq = 0;
   private noticeSeq = 0;
   private flushing = false;
-  private readonly seenDecision = new Set<string>();
+  private readonly seenDecision = new Map<string, { a: string | undefined; b: string | undefined } | undefined>();
   private localStarts: ReadonlySet<string> = new Set();
   private readonly listeners = new Set<() => void>();
 
@@ -235,10 +235,17 @@ export class KitChoiceQueue {
     let neu = false;
     for (const [matchId, row] of rows) {
       if (row.decision !== undefined) {
-        this.seenDecision.add(matchId);
-      } else if (this.seenDecision.delete(matchId) && row.kickedOff !== true && !this.list.some((e) => e.matchId === matchId)) {
-        this.notify({ matchId, kind: 'withdrawn' });
-        neu = true;
+        this.seenDecision.set(matchId, row.teams);
+      } else if (this.seenDecision.has(matchId)) {
+        const vorher = this.seenDecision.get(matchId);
+        this.seenDecision.delete(matchId);
+        // „zurückgenommen“ nur mit Beleg: auf den Seiten stehen andere Teams als bei der Wahl (@SL-212). Ein Anpfiff rückgängig, eine ältere Kopie ohne `kitDecision`
+        // oder ein lokales Laden zeigen die Wahl auch als leer, sind aber keine Zurücknahme – dann bleibt es still.
+        const andereTeams = vorher !== undefined && row.teams !== undefined && (row.teams.a !== vorher.a || row.teams.b !== vorher.b);
+        if (andereTeams && row.kickedOff !== true && !this.list.some((e) => e.matchId === matchId)) {
+          this.notify({ matchId, kind: 'withdrawn' });
+          neu = true;
+        }
       }
     }
     if (neu) { this.changed(); }
@@ -246,7 +253,7 @@ export class KitChoiceQueue {
 
   /** Spiele, deren Wahl zuletzt bekannt war (für `observeRows`). */
   decidedMatchIds(): readonly string[] {
-    return [...this.seenDecision];
+    return [...this.seenDecision.keys()];
   }
 
   /** Alles verwerfen (Abmelden, Tests): Einträge, Meldungen und das Gemerkte. */

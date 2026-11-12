@@ -350,13 +350,22 @@ describe('@SL-229 Zeile 4 und @SL-227: wer hielt das Feld?', () => {
 });
 
 describe('@SL-212 @SL-235 der Server nimmt die Wahl nach einem Teamwechsel zurück', () => {
-  const zeile = (decision: 'bib' | undefined, kickedOff = false) => new Map([[SPIEL, { decision, kickedOff, teams: { a: WAGING, b: PETTING } }]]);
+  const ANDERES = '00000000-0000-4000-8000-0000000000a3';
+  const zeile = (decision: 'bib' | undefined, kickedOff = false, b = PETTING) => new Map([[SPIEL, { decision, kickedOff, teams: { a: WAGING, b } }]]);
 
-  it('@SL-212 war die Wahl da und ist sie weg (kein eigener Eintrag, nicht angepfiffen): Meldung „zurückgenommen“', () => {
+  it('@SL-212 war die Wahl da, ist sie weg und steht auf einer Seite ein anderes Team (kein eigener Eintrag, nicht angepfiffen): Meldung „zurückgenommen“', () => {
+    const { queue } = aufbau();
+    queue.observeRows(zeile('bib'));
+    queue.observeRows(zeile(undefined, false, ANDERES));
+    expect(queue.notices()[0]).toMatchObject({ kind: 'withdrawn', matchId: SPIEL });
+  });
+
+  it('@SL-214 Gegenbeispiel: dieselben Teams, die Wahl erscheint leer (Anpfiff rückgängig, ältere Kopie ohne kitDecision, lokales Laden): keine Meldung „zurückgenommen“', () => {
     const { queue } = aufbau();
     queue.observeRows(zeile('bib'));
     queue.observeRows(zeile(undefined));
-    expect(queue.notices()[0]).toMatchObject({ kind: 'withdrawn', matchId: SPIEL });
+    expect(queue.notices()).toHaveLength(0);
+    expect(queue.decidedMatchIds()).toHaveLength(0);
   });
 
   it('@SL-212 Gegenbeispiel: nie eine Wahl gesehen, keine Meldung', () => {
@@ -368,12 +377,12 @@ describe('@SL-212 @SL-235 der Server nimmt die Wahl nach einem Teamwechsel zurü
   it('@SL-212 Gegenbeispiel: angepfiffen oder eigener Eintrag wartet: keine Meldung', async () => {
     const a = aufbau();
     a.queue.observeRows(zeile('bib'));
-    a.queue.observeRows(zeile(undefined, true));
+    a.queue.observeRows(zeile(undefined, true, ANDERES));
     expect(a.queue.notices()).toHaveLength(0);
     const b = aufbau([{ kind: 'offline' }]);
     b.queue.observeRows(zeile('bib'));
     b.queue.submit(bestaetigen());
-    b.queue.observeRows(zeile(undefined));
+    b.queue.observeRows(zeile(undefined, false, ANDERES));
     expect(b.queue.notices()).toHaveLength(0);
   });
 });
