@@ -4,7 +4,8 @@
  * Jede Ziffer bleibt lokal. Gespeichert wird erst, wenn beide Felder gefüllt sind UND `save` gewählt wird („Ergebnis
  * speichern“); Verlassen eines Feldes speichert nichts (Korrektur 2026-11-01). Enter im ersten Feld springt ins zweite,
  * Enter im zweiten wirkt wie „Ergebnis speichern“ (nur bei gefüllten, gültigen Feldern). Escape verwirft.
- * Nur ganze Zahlen ab 0 werden angenommen (`-3`, `1e1`, `2,5`, Buchstaben: kein Senden, `invalid` ist gesetzt).
+ * Nur ganze Zahlen ab 0 werden angenommen: das Eingabefeld (`ScoreDraftInput`) lässt nur Ziffern stehen; kommt anderes Text-Material auf
+ * anderem Weg an (`-3`, `1e1`, `2,5`, Buchstaben), wird nicht gesendet und `invalid` ist gesetzt (Schutz im Hook, nicht am Feld).
  * Doppelschutz: zweimal `save` mit demselben Stand sendet genau einmal. Meldet `onCommit` per Rückgabe `false` (bzw. eine
  * abgelehnte Zusage), dass nichts gespeichert wurde (@FU-093 „Nein“, @FU-097 „Abbrechen“, Ablehnung), zeigen
  * die Felder wieder den gespeicherten Stand, und derselbe Stand lässt sich erneut senden.
@@ -143,9 +144,9 @@ export function useScoreDraft({ resetKey, savedA, savedB, onCommit, resolveAutho
     setInvalidSides(NONE_INVALID);
   }, []);
 
-  const commit = useCallback((valueA: string, valueB: string, badInputSide: ScoreSide | null) => {
-    const badA = badInputSide === 'a' || (valueA !== '' && !WHOLE_NUMBER.test(valueA));
-    const badB = badInputSide === 'b' || (valueB !== '' && !WHOLE_NUMBER.test(valueB));
+  const commit = useCallback((valueA: string, valueB: string) => {
+    const badA = valueA !== '' && !WHOLE_NUMBER.test(valueA);
+    const badB = valueB !== '' && !WHOLE_NUMBER.test(valueB);
     if (badA || badB) {
       setInvalidSides({ a: badA, b: badB });
       return;
@@ -188,9 +189,9 @@ export function useScoreDraft({ resetKey, savedA, savedB, onCommit, resolveAutho
   }, [showSaved, allowUnchanged]);
 
   /** Ungültige Eingabe zeigt den Hinweis (beim Verlassen und beim Speichern), gesendet wird hier nie */
-  const validate = useCallback((valueA: string, valueB: string, badInputSide: ScoreSide | null) => {
-    const badA = badInputSide === 'a' || (valueA !== '' && !WHOLE_NUMBER.test(valueA));
-    const badB = badInputSide === 'b' || (valueB !== '' && !WHOLE_NUMBER.test(valueB));
+  const validate = useCallback((valueA: string, valueB: string) => {
+    const badA = valueA !== '' && !WHOLE_NUMBER.test(valueA);
+    const badB = valueB !== '' && !WHOLE_NUMBER.test(valueB);
     setInvalidSides({ a: badA, b: badB });
   }, []);
 
@@ -199,7 +200,7 @@ export function useScoreDraft({ resetKey, savedA, savedB, onCommit, resolveAutho
   const canSave = filled && !unchanged && changed === null && !invalidSides.a && !invalidSides.b;
 
   const save = useCallback(() => {
-    commit(draftRef.current.a, draftRef.current.b, null);
+    commit(draftRef.current.a, draftRef.current.b);
   }, [commit]);
 
   const fieldRefs = useRef<Record<ScoreSide, HTMLInputElement | null>>({ a: null, b: null });
@@ -215,7 +216,7 @@ export function useScoreDraft({ resetKey, savedA, savedB, onCommit, resolveAutho
       setInvalidSides(NONE_INVALID);
       (side === 'a' ? setA : setB)(event.target.value);
     },
-    onBlur: (event) => validate(a, b, event.currentTarget.validity.badInput ? side : null),
+    onBlur: () => validate(a, b),
     onKeyDown: (event) => {
       if (event.key === 'Enter') {
         // @FU-101: Enter im ersten Feld springt ins zweite, im zweiten wirkt es wie „Ergebnis speichern“ (nur bei gefüllten,
@@ -224,7 +225,7 @@ export function useScoreDraft({ resetKey, savedA, savedB, onCommit, resolveAutho
         if (side === 'a') {
           fieldRefs.current.b?.focus();
         } else {
-          commit(a, b, event.currentTarget.validity.badInput ? side : null);
+          commit(a, b);
         }
       } else if (event.key === 'Escape') {
         showSaved();

@@ -1,7 +1,7 @@
 /**
  * ScoreDraftInput – Feld für Tore, gedacht für `useScoreDraft` (@FU-101).
  * Ein Textfeld mit Ziffernblock (`inputMode="numeric"`, `pattern`), kein Zahlenfeld: Pfeiltasten und Mausrad ändern nichts, es gibt keine
- * nativen Pfeile, und nur Ziffern bleiben stehen (höchstens `MAX_GOAL_DIGITS` Stellen, also bis 99). So kann „-3“, „1e2“ oder „2,5“ nie im
+ * nativen Pfeile, und nur Ziffern bleiben stehen (höchstens `MAX_GOAL_DIGITS` Stellen, also bis 99); enthält die Eingabe anderes oder wäre sie länger, bleibt der alte Wert stehen. So kann „-3“, „1e2“ oder „2,5“ nie im
  * Feld stehen. Mindestens 16 px Schrift und Touch-Höhe; ungültige Eingabe ist am Rahmen sichtbar. `large`: das große Feld des Blatts „Endergebnis“.
  */
 import type { ChangeEvent, CSSProperties, FocusEvent, KeyboardEvent, Ref } from 'react';
@@ -58,19 +58,24 @@ const invalidStyle: CSSProperties = {
 
 export const ScoreDraftInput: React.FC<ScoreDraftInputProps> = ({
   ariaLabel, testId, invalid, describedBy, inputRef, large = false, onChange, ...handlers
-}) => (
+}) => {
+  const { value } = handlers;
+  return (
   <input
     {...handlers}
     ref={inputRef}
     type="text"
     inputMode="numeric"
     pattern="[0-9]*"
-    maxLength={MAX_GOAL_DIGITS}
     autoComplete="off"
     onChange={(event) => {
-      // Nur Ziffern, höchstens zwei Stellen: alles andere (Minus, „e“, Komma, Buchstaben) bleibt nicht stehen
-      const digits = event.target.value.replace(/\D/g, '').slice(0, MAX_GOAL_DIGITS);
-      if (digits !== event.target.value) { event.target.value = digits; }
+      // Nur Ziffern, höchstens zwei Stellen. Enthält die Eingabe etwas anderes (Minus, „e“, Komma, Buchstaben) oder wäre sie länger,
+      // bleibt der alte Wert stehen: nichts wird still umgedeutet („2,5“ wird nie 25, „100“ nie 10). Führende Nullen entfallen („007“ → 7).
+      const raw = event.target.value;
+      const normalized = /^\d*$/.test(raw) ? raw.replace(/^0+(?=\d)/, '') : null;
+      const next = normalized !== null && normalized.length <= MAX_GOAL_DIGITS ? normalized : value;
+      if (next !== raw) { event.target.value = next; }
+      if (next === value) { return; }
       onChange(event);
     }}
     aria-label={ariaLabel}
@@ -78,5 +83,5 @@ export const ScoreDraftInput: React.FC<ScoreDraftInputProps> = ({
     aria-describedby={invalid ? describedBy : undefined}
     data-testid={testId}
     style={{ ...baseStyle, ...(large ? largeStyle : {}), ...(invalid ? invalidStyle : {}) }}
-  />
-);
+  />  );
+};

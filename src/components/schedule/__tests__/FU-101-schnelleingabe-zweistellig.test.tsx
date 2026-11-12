@@ -255,6 +255,27 @@ describe('@FU-101 Ein zweistelliges Ergebnis lässt sich im Spielplan eintragen'
       expect(onScoreChange).not.toHaveBeenCalled();
     });
 
+    it.each([['007', '7'], ['00', '0'], ['07', '7'], ['a12', ''], ['1e2', ''], ['2,5', ''], ['-3', ''], ['100', ''], ['42', '42']])(
+      '@FU-101 Einfügen von „%s“: Ziffern ohne führende Nullen bis 99 gelten, alles andere lässt den alten Wert stehen (nichts wird umgedeutet), Ergebnis „%s“',
+      async (text, bleibt) => {
+        const user = userEvent.setup();
+        const { onScoreChange, fieldFcNord } = renderCell();
+        await user.click(fieldFcNord);
+        await user.paste(text);
+        expect(fieldFcNord.value).toBe(bleibt);
+        expect(onScoreChange).not.toHaveBeenCalled();
+      },
+    );
+
+    it('@FU-101 Einfügen von Text mit Nicht-Ziffern behält einen schon getippten Wert („7“ bleibt bei „2,5“)', async () => {
+      const user = userEvent.setup();
+      const { fieldFcNord } = renderCell();
+      await user.click(fieldFcNord);
+      await user.keyboard('7');
+      await user.paste('2,5');
+      expect(fieldFcNord.value).toBe('7');
+    });
+
     it('@FU-101 Buchstaben allein lassen das Feld leer; danach geht 3:2 mit der Taste durch', async () => {
       const user = userEvent.setup();
       const { onScoreChange, fieldFcNord, saveButton } = renderCell();

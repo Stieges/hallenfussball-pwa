@@ -92,10 +92,10 @@ test.describe('@SL-195 Blatt „Endergebnis“: Darstellung und Tastatur-Probe (
               expect(box.height, `${id} mindestens 44 px hoch`).toBeGreaterThan(43.9);
               expect(box.x + box.width, `${id} rechts im Fenster`).toBeLessThanOrEqual(g.width);
             }
-            // Fuß wie im Mockup: ab 390 px „Abbrechen“ und „Ergebnis speichern“ in einer Zeile (@OB-061), bündig mit dem Titel (Kopf, Liste, Fuß teilen den Seitenrand)
+            // Fuß wie im Mockup: ab 360 px „Abbrechen“ und „Ergebnis speichern“ in einer Zeile (@OB-061), bündig mit dem Titel (Kopf, Liste, Fuß teilen den Seitenrand)
             const abbrechen = (await page.getByTestId('result-sheet-cancel').boundingBox())!;
             const titel = (await blatt.getByRole('heading').first().boundingBox())!;
-            if (g.width >= 390) { expect(Math.abs(abbrechen.y - speichern.y), 'Abbrechen und Speichern in einer Zeile').toBeLessThan(2); }
+            expect(Math.abs(abbrechen.y - speichern.y), 'Abbrechen und Speichern in einer Zeile').toBeLessThan(2);
             expect(Math.abs(abbrechen.x - titel.x), 'Fuß bündig mit dem Titel').toBeLessThanOrEqual(1);
             // „Tore während des Spiels trägst du im Cockpit ein“ + „Zum Cockpit“ nur im laufenden Spiel
             await expect(page.getByTestId('result-sheet-cockpit-note')).toHaveCount(fall === 'laeuft' ? 1 : 0);
