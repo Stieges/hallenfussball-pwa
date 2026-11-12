@@ -82,11 +82,33 @@ describe('@SL-239 Kopf des Blatts: Abzeichen neben dem Titel, Zeit, Feld, Spielz
     expect(heim.compareDocumentPosition(gast) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('@SL-239 @OB-066 geplant: Abzeichen „Geplant“ (das Wort, nie nur Farbe), die Kästen sind leer; Gegenbeispiel läuft: Kästen tragen eine Ziffer', () => {
+  it('@SL-239 @OB-066 geplant: Abzeichen „Geplant“ (das Wort, nie nur Farbe); ohne Stand keine Ergebniskästen, nur Initialen-Kreis und Teamname (Daniel 12.11.)', () => {
     zeige('geplant', LEITUNG);
     expect(within(kopf()).getByTestId('match-action-badge')).toHaveTextContent('Geplant');
-    expect(within(kopf()).getByTestId(`match-box-aktion-${SPIEL.id}-home`)).toBeInTheDocument();
-    expect(within(kopf()).queryByTestId(`match-box-aktion-${SPIEL.id}-home-digits`)).toBeNull();
+    expect(within(kopf()).queryByTestId(`match-box-aktion-${SPIEL.id}-home`)).toBeNull();
+    expect(within(kopf()).queryByTestId(`match-box-aktion-${SPIEL.id}-away`)).toBeNull();
+    expect(within(kopf()).queryByTestId(`match-goals-aktion-${SPIEL.id}-home`)).toBeNull(); // auch kein „–“ als Platzhalter
+    expect(within(kopf()).getByTestId(`match-name-aktion-${SPIEL.id}-home`)).toBeInTheDocument();
+    expect(within(kopf()).getByTestId(`match-name-aktion-${SPIEL.id}-away`)).toBeInTheDocument();
+    expect(within(kopf()).getAllByTestId('team-avatar')).toHaveLength(2);
+  });
+
+  it('@SL-239 Gegenbeispiel: mit Stand (läuft 1:0, beendet 2:1) stehen die Kästen in Teamfarbe im Kopf (@OB-064)', () => {
+    zeige('läuft', LEITUNG);
+    for (const seite of ['home', 'away']) {
+      expect(within(kopf()).getByTestId(`match-box-aktion-${SPIEL.id}-${seite}`)).toHaveAttribute('data-color');
+    }
+    cleanup();
+    zeige('beendet', LEITUNG);
+    for (const seite of ['home', 'away']) {
+      expect(within(kopf()).getByTestId(`match-box-aktion-${SPIEL.id}-${seite}`)).toHaveAttribute('data-color');
+    }
+  });
+
+  it('@SL-239 ein abgesetztes Spiel ohne Ergebnis zeigt ebenfalls keine Kästen', () => {
+    zeige({ matchStatus: 'skipped' }, LEITUNG);
+    expect(within(kopf()).queryByTestId(`match-box-aktion-${SPIEL.id}-home`)).toBeNull();
+    expect(within(kopf()).getByTestId(`match-name-aktion-${SPIEL.id}-home`)).toBeInTheDocument();
   });
 
   it('@SL-239 @OB-066 beendet: Abzeichen „Ende“ mit dem Endstand 2 : 1', () => {
