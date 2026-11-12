@@ -4,11 +4,14 @@
  * daneben klein „−“ und „+“ (je mindestens `touchTargets.minimum` groß, @OB-022). Slots `notice` (oben, z. B. Hinweis „inzwischen geändert“)
  * und `hint` (unter der Liste). Fuß (bleibt stehen, `DialogActions`): „Abbrechen“ und die Haupttaste „Ergebnis speichern“ (@OB-061).
  * Am Handy erscheint die Fläche als Blatt von unten (volle Breite, 90 % der Höhe), sonst zentriert (`DialogSurface` placement `center`).
+ * Tab-Reihenfolge: Feld Heim → Feld Gast → Abbrechen/Speichern. „−“ und „+“ sind per Maus und Touch bedienbar und benannt (`aria-label`), liegen aber
+ * mit `tabIndex={-1}` nicht in der Tab-Reihenfolge: mit der Tastatur tippt man die Ziffer, und die Felder nehmen keine Pfeiltasten an – so
+ * läuft Tab ohne vier Zwischenstopps vom ersten Feld zum zweiten (Enter springt ebenfalls, @FU-101). Hilfstechnik erreicht sie über die Beschriftung.
  * Ein Tipp neben das Blatt (Schleier) schließt nicht: Eingaben gehen nicht verloren; „Abbrechen“, „X“ und Esc verwerfen sie.
  * Der Fokus startet im ersten Feld (`initialFocusRef`). Fläche, Fokusfalle und Scroll-Sperre kommen aus `DialogSurface`.
  */
 import { useId, type CSSProperties, type ReactNode, type RefObject } from 'react';
-import { cssVars, dialogWidths } from '../../../design-tokens';
+import { cssVars, dialogWidths, mediaQueries } from '../../../design-tokens';
 import { Icons } from '../Icons';
 import { DialogActions } from './DialogActions';
 import { DialogSurface } from './DialogSurface';
@@ -48,7 +51,7 @@ export interface ScoreEntrySheetProps {
   testId?: string;
 }
 
-const headerStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: cssVars.spacing.xs, padding: `${cssVars.spacing.lg} ${cssVars.spacing.md} ${cssVars.spacing.sm}` };
+const headerStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: cssVars.spacing.xs, paddingTop: cssVars.spacing.lg, paddingBottom: cssVars.spacing.sm };
 const titleRowStyle: CSSProperties = { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: cssVars.spacing.sm };
 const headingStyle: CSSProperties = { margin: 0, paddingTop: cssVars.spacing.sm, fontSize: cssVars.fontSizes.xl, fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.textPrimary, overflowWrap: 'anywhere' };
 const closeStyle: CSSProperties = {
@@ -56,9 +59,11 @@ const closeStyle: CSSProperties = {
   padding: 0, background: 'transparent', border: 'none', color: cssVars.colors.textPrimary, cursor: 'pointer',
 };
 const subtitleStyle: CSSProperties = { margin: 0, fontSize: cssVars.fontSizes.md, color: cssVars.colors.textSecondary, overflowWrap: 'anywhere' };
-const bodyStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm, padding: `${cssVars.spacing.xs} ${cssVars.spacing.md} ${cssVars.spacing.sm}` };
+const bodyStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm, paddingTop: cssVars.spacing.xs, paddingBottom: cssVars.spacing.sm };
+// Seitenrand wie der feste Fuß der Fläche (xl; am Handy md), damit Kopf, Liste und Tasten bündig stehen
+const edgeCss = `.score-entry-edge { padding-left: ${cssVars.spacing.xl}; padding-right: ${cssVars.spacing.xl}; } ${mediaQueries.tabletDown} { .score-entry-edge { padding-left: ${cssVars.spacing.md}; padding-right: ${cssVars.spacing.md}; } }`;
 // Name | Tor-Feld | − | + : die Spalte des Felds ist für beide Zeilen gleich breit (Raster), der Name nimmt den Rest
-const gridStyle: CSSProperties = { display: 'grid', gridTemplateColumns: `minmax(0, 1fr) ${cssVars.touchTargets.primary} auto auto`, alignItems: 'center', columnGap: cssVars.spacing.sm, rowGap: cssVars.spacing.sm };
+const gridStyle: CSSProperties = { display: 'grid', gridTemplateColumns: `minmax(0, 1fr) ${cssVars.sizing.scoreField} auto auto`, alignItems: 'center', columnGap: cssVars.spacing.sm, rowGap: cssVars.spacing.sm };
 const headingCellStyle: CSSProperties = { fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textSecondary };
 const nameStyle: CSSProperties = { fontSize: cssVars.fontSizes.lg, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary, overflowWrap: 'break-word', minWidth: 0 };
 const stepStyle: CSSProperties = {
@@ -71,7 +76,7 @@ export function ScoreEntrySheet({
 }: ScoreEntrySheetProps) {
   const titleId = useId();
   const header = (
-    <div style={headerStyle}>
+    <div style={headerStyle} className="score-entry-edge">
       <div style={titleRowStyle}>
         <h2 id={titleId} style={headingStyle}>{title}</h2>
         <button type="button" style={closeStyle} onClick={onCancel} aria-label={closeLabel} data-testid={`${testId}-close`}>
@@ -85,6 +90,7 @@ export function ScoreEntrySheet({
     <DialogActions
       secondary={[{ label: cancelLabel, onClick: onCancel, 'data-testid': `${testId}-cancel` }]}
       primary={{ label: saveLabel, onClick: onSave, disabled: saveDisabled, 'data-testid': `${testId}-save` }}
+      compact
     />
   );
   return (
@@ -100,7 +106,8 @@ export function ScoreEntrySheet({
       header={header}
       footer={footer}
     >
-      <div style={bodyStyle}>
+      <div style={bodyStyle} className="score-entry-edge">
+        <style>{edgeCss}</style>
         {notice}
         <div style={gridStyle} role="group" aria-labelledby={titleId}>
           <span style={headingCellStyle}>{teamHeading}</span>
@@ -111,8 +118,8 @@ export function ScoreEntrySheet({
             <div key={row.id} style={{ display: 'contents' }}>
               <span style={nameStyle}>{row.name}</span>
               {row.field}
-              <button type="button" style={stepStyle} onClick={row.onMinus} aria-label={row.minusLabel} data-testid={row.minusTestId}><Icons.Minus size={cssVars.iconSizes.md} /></button>
-              <button type="button" style={stepStyle} onClick={row.onPlus} aria-label={row.plusLabel} data-testid={row.plusTestId}><Icons.Plus size={cssVars.iconSizes.md} /></button>
+              <button type="button" tabIndex={-1} style={stepStyle} onClick={row.onMinus} aria-label={row.minusLabel} data-testid={row.minusTestId}><Icons.Minus size={cssVars.iconSizes.md} /></button>
+              <button type="button" tabIndex={-1} style={stepStyle} onClick={row.onPlus} aria-label={row.plusLabel} data-testid={row.plusTestId}><Icons.Plus size={cssVars.iconSizes.md} /></button>
             </div>
           ))}
         </div>

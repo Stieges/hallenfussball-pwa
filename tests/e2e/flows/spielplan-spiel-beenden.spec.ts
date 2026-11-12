@@ -102,7 +102,7 @@ async function finalEintrag(context: BrowserContext, heim: number, gast: number)
   const plan = await context.newPage();
   await plan.goto(`/#/tournament/${TOURNAMENT}/schedule`);
   await plan.waitForLoadState('networkidle');
-  const felder = plan.getByRole('spinbutton').filter({ visible: true });
+  const felder = plan.locator('[data-testid^="match-score-input-"], [data-testid^="final-score-input-"]').filter({ visible: true }); // Tor-Felder (Textfelder mit Ziffernblock)
   await expect(felder.first()).toBeVisible({ timeout: 15_000 });
   await felder.nth(0).fill(String(heim));
   await felder.nth(1).fill(String(gast));

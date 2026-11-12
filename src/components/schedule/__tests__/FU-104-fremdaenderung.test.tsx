@@ -183,7 +183,7 @@ describe('@FU-104 C-SCHNELLEINGABE-FREMDAENDERUNG-STILL eigenes Speichern gegen 
     const props = { matchId: ID, editable: true, isFinished: false, onScoreChange, changeAuthorOf: async () => 'Tom' };
     const utils = render(<MatchScoreCell {...props} scoreA={scoreA} scoreB={scoreB} />);
     const stand = (a: number | undefined, b: number | undefined) => utils.rerender(<MatchScoreCell {...props} scoreA={a} scoreB={b} />);
-    const [fcNord, svSued] = utils.getAllByRole('spinbutton') as HTMLInputElement[];
+    const [fcNord, svSued] = utils.getAllByRole('textbox') as HTMLInputElement[];
     return { stand, fcNord, svSued };
   }
   const hinweis = () => screen.queryByTestId(`score-changed-${ID}`);

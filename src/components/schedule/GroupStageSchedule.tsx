@@ -570,7 +570,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                 backgroundColor: cssVars.colors.surface,
                 boxShadow: cssVars.shadows.lg,
                 borderRadius: cssVars.borderRadius.md,
-                border: `${cssVars.borderWidth.medium} solid ${cssVars.colors.primary}`,
+                border: `${cssVars.borderWidth.strong} solid ${cssVars.colors.primary}`,
                 padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
                 display: 'flex',
                 alignItems: 'center',
@@ -681,12 +681,12 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                 backgroundColor: cssVars.colors.surface,
                 boxShadow: cssVars.shadows.lg,
                 borderRadius: cssVars.borderRadius.md,
-                border: `${cssVars.borderWidth.medium} solid ${cssVars.colors.primary}`,
+                border: `${cssVars.borderWidth.strong} solid ${cssVars.colors.primary}`,
                 padding: cssVars.spacing.md,
                 display: 'flex',
                 alignItems: 'center',
                 gap: cssVars.spacing.sm,
-                minWidth: spacingSemantics.dialogSm,
+                minWidth: cssVars.sizing.dragOverlayMinWidth,
                 maxWidth: '100%',
                 cursor: 'grabbing',
                 height: '100%', // Match height
@@ -773,7 +773,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
         /* Tablet: Keep table but adjust sizing */
         ${mediaQueries.tabletBand} {
           .group-stage-schedule table {
-            font-size: ${cssVars.fontSizes.xs};
+            font-size: ${cssVars.fontSizes.sm};
           }
           .group-stage-schedule th,
           .group-stage-schedule td {

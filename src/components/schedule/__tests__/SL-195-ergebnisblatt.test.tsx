@@ -22,6 +22,7 @@ import { testUuid } from '../../../test/testIds';
 import { ScheduleDisplay } from '../../ScheduleDisplay';
 import { ToastProvider } from '../../ui/Toast';
 import { MatchScoreCell } from '../MatchScoreCell';
+import { pendingSlot } from '../../../core/models/matchSlot';
 import { MatchTimeShiftContext } from '../matchTimeShiftContext';
 import type { MatchActionRights } from '../actionMenu/matchActions';
 import { matchOf, viewOf, type Cache } from './scheduleViewFixture';
@@ -36,11 +37,17 @@ const SPIEL: ScheduledMatch = plan.allMatches[0];
 const ANDERES: ScheduledMatch = plan.allMatches[1];
 
 type Spy = (id: string, a: number, b: number) => boolean;
-const props = (cache: Cache, rights: MatchActionRights, onScoreChange: Spy, extra: { anderes?: Cache; author?: string | null } = {}) => {
-  const current: Match[] = plan.allMatches.map((m) => matchOf(m, m.id === SPIEL.id ? cache : m.id === ANDERES.id ? extra.anderes ?? {} : {}));
+/** Spiel 1 mit noch offener Gast-Seite (die Paarung steht nicht fest) */
+const withOpenSide = (p: typeof plan): typeof plan => {
+  const offen = (m: ScheduledMatch): ScheduledMatch => (m.id === SPIEL.id ? { ...m, slotB: pendingSlot({ kind: 'groupRank', group: 'A', rank: 2 }) } : m);
+  return { ...p, allMatches: p.allMatches.map(offen), phases: p.phases.map((ph) => ({ ...ph, matches: ph.matches.map(offen) })) };
+};
+const props = (cache: Cache, rights: MatchActionRights, onScoreChange: Spy, extra: { anderes?: Cache; author?: string | null; offen?: boolean; cockpit?: (id: string) => void } = {}) => {
+  const schedule = extra.offen === true ? withOpenSide(plan) : plan;
+  const current: Match[] = schedule.allMatches.map((m) => matchOf(m, m.id === SPIEL.id ? cache : m.id === ANDERES.id ? extra.anderes ?? {} : {}));
   return {
-    schedule: plan, currentMatches: current, view: viewOf(current, teams), editable: true, actionRights: rights,
-    onScoreChange, onNavigateToCockpit: vi.fn(), onCorrect: vi.fn(), canEndRunning: rights.lead,
+    schedule, currentMatches: current, view: viewOf(current, teams), editable: true, actionRights: rights,
+    onScoreChange, onNavigateToCockpit: extra.cockpit ?? vi.fn(), onCorrect: vi.fn(), forfeit: { mark: vi.fn(), revoke: vi.fn() }, canEndRunning: rights.lead,
     changeAuthorOf: async () => extra.author ?? null,
   };
 };
@@ -51,6 +58,13 @@ const zeige = (cache: Cache, rights: MatchActionRights = LEITUNG, extra: Paramet
   const onScoreChange = vi.fn<Spy>(() => true);
   const view = render(wrap(props(cache, rights, onScoreChange, extra)));
   return { onScoreChange, view, neu: (cache2: Cache, extra2: Parameters<typeof props>[3] = {}) => { view.rerender(wrap(props(cache2, rights, onScoreChange, extra2))); } };
+};
+const zeigeLaufendesBlatt = () => {
+  const onCockpit = vi.fn<(id: string) => void>();
+  const r = zeige({ matchStatus: 'running', scoreA: 1, scoreB: 0 }, LEITUNG, { cockpit: onCockpit });
+  act(() => { fireEvent.click(screen.getAllByTestId(`match-name-${SPIEL.id}-home`)[0]); });
+  act(() => { fireEvent.click(screen.getByTestId('match-action-endAndEnter')); });
+  return { ...r, onCockpit };
 };
 const tippeErgebnisfeld = (id = SPIEL.id) => { act(() => { fireEvent.click(screen.getAllByTestId(`match-goals-${id}-home`)[0]); }); };
 const blatt = () => screen.getByTestId('result-sheet');
@@ -69,7 +83,9 @@ describe('@SL-195 Tipp aufs Ergebnisfeld öffnet das Blatt „Endergebnis Spiel 
     expect(away().value).toBe('');
     expect(document.activeElement).toBe(home());
     expect(screen.queryByTestId('match-action-menu')).toBeNull();
-    expect(within(blatt()).getByText('Tore während des Spiels trägst du im Cockpit ein')).toBeInTheDocument();
+    // die Zeile „Tore während des Spiels trägst du im Cockpit ein“ gehört nur zum laufenden Spiel (nicht zu einem geplanten)
+    expect(within(blatt()).queryByTestId('result-sheet-cockpit-note')).toBeNull();
+    expect(within(blatt()).queryByTestId('result-sheet-to-cockpit')).toBeNull();
   });
 
   it('@SL-195 Gegenbeispiel: ein Tipp auf den Rest der Karte (Name) öffnet die Auswahl der Aktionen, nicht das Blatt (@SL-193)', () => {
@@ -102,10 +118,23 @@ describe('@SL-195 Tipp aufs Ergebnisfeld öffnet das Blatt „Endergebnis Spiel 
     expect(screen.queryByTestId('result-sheet')).toBeNull();
   });
 
-  it('@SL-195 „Zum Cockpit“ im Blatt navigiert zu diesem Spiel und schließt das Blatt', () => {
-    zeige({});
+  const ohneBlatt: Array<[string, Cache, Parameters<typeof props>[3]]> = [
+    ['abgesetzt', { matchStatus: 'skipped' }, {}],
+    ['gewertet', { matchStatus: 'finished', scoreA: 0, scoreB: 2, decidedBy: 'forfeit' }, {}],
+    ['offene Paarung', {}, { offen: true }],
+  ];
+  it.each(ohneBlatt  )('@SL-195 Gegenbeispiel %s: der Tipp aufs Ergebnisfeld öffnet die Auswahl, nicht das Blatt', (_name, cache, extra) => {
+    zeige(cache, LEITUNG, extra);
     tippeErgebnisfeld();
+    expect(screen.queryByTestId('result-sheet')).toBeNull();
+    expect(screen.getByTestId('match-action-menu')).toBeInTheDocument();
+  });
+
+  it('@SL-195 laufendes Spiel: „Tore während des Spiels trägst du im Cockpit ein“ mit „Zum Cockpit“; die Taste navigiert zu diesem Spiel und schließt das Blatt', () => {
+    const { onCockpit } = zeigeLaufendesBlatt();
+    expect(within(blatt()).getByTestId('result-sheet-cockpit-note')).toHaveTextContent('Tore während des Spiels trägst du im Cockpit ein');
     act(() => { fireEvent.click(screen.getByTestId('result-sheet-to-cockpit')); });
+    expect(onCockpit).toHaveBeenCalledExactlyOnceWith(SPIEL.id);
     expect(screen.queryByTestId('result-sheet')).toBeNull();
   });
 });
@@ -225,10 +254,11 @@ describe('@SL-238 „−“ und „+“ ändern nur den Entwurf', () => {
       expect(screen.getByTestId(id).style.minHeight).toContain('--touch-target-minimum');
       expect(screen.getByTestId(id).style.minWidth).toContain('--touch-target-minimum');
     }
-    expect(home().style.height).toContain('--touch-target-minimum');
-    expect(home().style.fontSize).toContain('--font-size-lg');
+    expect(home().style.height).toContain('--sizing-score-field'); // 64 px wie im Mockup (Token), nie unter 44 px
+    expect(home().style.width).toContain('--sizing-score-field');
+    expect(home().style.fontSize).toContain('--font-size-xxl'); // große Ziffer, mindestens 16 px
     expect(speichern().style.minHeight).toContain('--touch-target-primary');
-    expect(screen.getByTestId('result-sheet-cancel').style.minHeight).toContain('--touch-target-minimum');
+    expect(screen.getByTestId('result-sheet-cancel').style.minHeight).toContain('--touch-target-primary'); // gleich hoch wie „Ergebnis speichern“ (nebeneinander, @OB-061), nie unter 44 px
     expect(speichern()).toHaveAttribute('data-primary');
   });
 });
@@ -314,17 +344,96 @@ describe('@SL-238 „einsetzen“ nur im Blatt, die Finalrunde bleibt unverände
     expect(screen.getByTestId('score-changed-f1')).not.toHaveTextContent('einsetzen');
   });
 
-  it('@SL-238 im Blatt eines laufenden Spiels bietet der Hinweis „inzwischen geändert“ „3:1 einsetzen“ an; die Taste füllt beide Felder und der Hinweis geht', async () => {
+  it('@SL-238 Gegenbeispiel: auch im Blatt des Gruppenspiels bietet der Hinweis „inzwischen geändert“ kein „einsetzen“ an, nur „Meine Eingabe behalten“ (ein von außen eingetragenes Ergebnis beendet das Spiel)', async () => {
     const user = userEvent.setup();
     const { neu } = zeige({ matchStatus: 'running', scoreA: 0, scoreB: 0 }, LEITUNG, { author: 'Tom' });
     act(() => { fireEvent.click(screen.getAllByTestId(`match-name-${SPIEL.id}-home`)[0]); });
     act(() => { fireEvent.click(screen.getByTestId('match-action-endAndEnter')); });
     await user.type(home(), '1');
-    neu({ matchStatus: 'running', scoreA: 3, scoreB: 1 }, { author: 'Tom' });
-    // Beim laufenden Spiel zählt der Stand der Uhr nicht als „gespeichert“; den Hinweis löst nur ein beendetes Spiel aus
-    expect(screen.queryByTestId(`score-changed-${SPIEL.id}-takeover`)).toBeNull();
     neu({ matchStatus: 'finished', scoreA: 3, scoreB: 1 }, { author: 'Tom' });
     expect(await screen.findByTestId(`score-changed-${SPIEL.id}`)).toBeInTheDocument();
-    expect(screen.queryByTestId(`score-changed-${SPIEL.id}-takeover`)).toBeNull(); // Spiel nicht mehr laufend: nur „Meine Eingabe behalten“
+    expect(screen.getByTestId(`score-changed-keep-${SPIEL.id}`)).toBeInTheDocument();
+    expect(screen.getByTestId(`score-changed-${SPIEL.id}`)).not.toHaveTextContent('einsetzen');
+  });
+});
+
+describe('@FU-101 das Feld ist ein Ziffernfeld: nur Ziffern, höchstens zwei Stellen, keine Pfeile', () => {
+  it('@FU-101 „-3“, „1e2“, „2,5“ und Buchstaben bleiben nicht im Feld stehen (nur die Ziffern); höchstens zwei Stellen; 99 ist speicherbar', async () => {
+    const user = userEvent.setup();
+    const { onScoreChange } = zeige({});
+    tippeErgebnisfeld();
+    await user.type(home(), '-3');
+    expect(home().value).toBe('3');
+    await user.clear(home());
+    await user.type(home(), '1e2');
+    expect(home().value).toBe('12');
+    await user.clear(home());
+    await user.type(home(), '2,5');
+    expect(home().value).toBe('25');
+    await user.clear(home());
+    await user.type(home(), '99999');
+    expect(home().value).toBe('99');
+    await user.type(away(), 'x7');
+    expect(away().value).toBe('7');
+    await user.click(speichern());
+    expect(onScoreChange).toHaveBeenCalledExactlyOnceWith(SPIEL.id, 99, 7);
+  });
+
+  it('@FU-101 Pfeil hoch/runter und Mausrad ändern den Stand nicht, Pfeil runter auf leerem Feld setzt keine „0“ (kein Zahlenfeld, keine nativen Pfeile)', async () => {
+    const user = userEvent.setup();
+    zeige({});
+    tippeErgebnisfeld();
+    expect(home().type).toBe('text');
+    expect(home()).toHaveAttribute('inputmode', 'numeric');
+    await user.keyboard('{ArrowDown}');
+    expect(home().value).toBe('');
+    await user.type(home(), '2');
+    await user.keyboard('{ArrowUp}{ArrowUp}');
+    expect(home().value).toBe('2');
+    act(() => { fireEvent.wheel(home(), { deltaY: -100 }); });
+    expect(home().value).toBe('2');
+  });
+
+  it('@FU-101 Gegenbeispiel Finalrunde: auch die Zelle der Finalrunde nimmt nur Ziffern an und höchstens zwei Stellen', async () => {
+    const user = userEvent.setup();
+    render(<MatchScoreCell matchId="f2" scoreA={undefined} scoreB={undefined} editable isFinished={false} onScoreChange={vi.fn()} />);
+    const feld = screen.getByTestId<HTMLInputElement>('match-score-input-f2-home');
+    await user.type(feld, 'a-1e234');
+    expect(feld.value).toBe('12');
+    expect(feld.type).toBe('text');
+  });
+});
+
+describe('@SL-238 Tab-Reihenfolge und Konsole', () => {
+  it('@SL-238 Tab geht vom Feld Heim zum Feld Gast und dann zu „Abbrechen“ und „Ergebnis speichern“; „−“ und „+“ liegen nicht dazwischen, bleiben aber benannt und bedienbar', async () => {
+    const user = userEvent.setup();
+    zeige({});
+    tippeErgebnisfeld();
+    await user.type(home(), '3');
+    await user.type(away(), '1');
+    home().focus();
+    const reihenfolge: string[] = [];
+    for (let schritt = 0; schritt < 3; schritt++) {
+      await user.tab();
+      reihenfolge.push((document.activeElement as HTMLElement).dataset.testid ?? '');
+    }
+    expect(reihenfolge).toEqual(['result-sheet-score-away', 'result-sheet-cancel', 'result-sheet-save']);
+    for (const knopf of within(blatt()).getAllByRole('button', { name: /Ein Tor (mehr|weniger) für Team/ })) { expect(knopf).toHaveAttribute('tabindex', '-1'); }
+    await user.click(screen.getByTestId('result-sheet-plus-home'));
+    expect(home().value).toBe('4');
+  });
+
+  it('@SL-238 beim Öffnen und Bedienen des Blatts warnt React nicht vor gemischten Stil-Eigenschaften (background und backgroundColor)', async () => {
+    const user = userEvent.setup();
+    const fehler = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    zeige({});
+    const zeile = screen.getAllByTestId(`match-row-time-${SPIEL.id}`)[0];
+    await user.hover(zeile);
+    tippeErgebnisfeld();
+    await user.type(home(), '1');
+    await user.unhover(zeile);
+    const gemischt = fehler.mock.calls.filter((aufruf) => aufruf.join(' ').includes('conflicting property'));
+    fehler.mockRestore();
+    expect(gemischt).toEqual([]);
   });
 });

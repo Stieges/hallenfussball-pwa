@@ -60,13 +60,13 @@ async function trageDreiZuEinsEin(page: Page): Promise<void> {
   await page.goto(`/#/tournament/${TOURNAMENT}/schedule`);
   await page.waitForLoadState('networkidle');
   await expect(page.getByText('Sieger Halbfinale 1').filter({ visible: true }).first()).toBeVisible();
-  await expect(page.getByRole('spinbutton').filter({ visible: true })).toHaveCount(4);
-  await page.getByRole('spinbutton').filter({ visible: true }).nth(0).fill('3');
-  await page.getByRole('spinbutton').filter({ visible: true }).nth(1).fill('1');
+  await expect(page.locator('[data-testid^="match-score-input-"], [data-testid^="final-score-input-"]').filter({ visible: true })).toHaveCount(4);
+  await page.locator('[data-testid^="match-score-input-"], [data-testid^="final-score-input-"]').filter({ visible: true }).nth(0).fill('3');
+  await page.locator('[data-testid^="match-score-input-"], [data-testid^="final-score-input-"]').filter({ visible: true }).nth(1).fill('1');
   // @FU-101: gespeichert wird nur mit „Ergebnis speichern“
   await page.locator('[data-testid^="match-score-save-"], [data-testid^="final-score-save-"]').filter({ visible: true }).first().click();
   // Dann ist Spiel 9 beendet: nur noch das Finale hat Eingabefelder
-  await expect(page.getByRole('spinbutton').filter({ visible: true })).toHaveCount(2, { timeout: 10_000 });
+  await expect(page.locator('[data-testid^="match-score-input-"], [data-testid^="final-score-input-"]').filter({ visible: true })).toHaveCount(2, { timeout: 10_000 });
 }
 
 test.describe('@FU-080 Protokoll eines im Spielplan eingetragenen Spiels (Gast, offline)', () => {

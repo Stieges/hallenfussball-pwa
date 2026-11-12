@@ -14,13 +14,11 @@ interface ScoreChangedHintProps {
   keepTestId: string;
   /** Nur solange das Spiel eintragbar ist */
   onKeepDraft?: () => void;
-  /** „2:1 einsetzen“ (@SL-238): nur das Blatt im laufenden Spiel übergibt sie; die Finalrunde (Zelle, Karte) nie */
-  onTakeOver?: () => void;
 }
 
 const asText = (score: number | undefined): string => (score === undefined ? '–' : String(score));
 
-export const ScoreChangedHint: React.FC<ScoreChangedHintProps> = ({ changed, testId, keepTestId, onKeepDraft, onTakeOver }) => {
+export const ScoreChangedHint: React.FC<ScoreChangedHintProps> = ({ changed, testId, keepTestId, onKeepDraft }) => {
   const { t } = useTranslation('tournament');
   const score = `${asText(changed.goalsA)}:${asText(changed.goalsB)}`;
   const text = changed.by === null
@@ -48,25 +46,6 @@ export const ScoreChangedHint: React.FC<ScoreChangedHintProps> = ({ changed, tes
       }}
     >
       <span>{text}</span>
-      {onTakeOver && (
-        <button
-          type="button"
-          data-testid={`${testId}-takeover`}
-          onClick={onTakeOver}
-          style={{
-            minHeight: cssVars.touchTargets.minimum,
-            padding: `0 ${cssVars.spacing.sm}`,
-            border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}`,
-            borderRadius: cssVars.borderRadius.sm,
-            backgroundColor: cssVars.colors.background,
-            color: cssVars.colors.textPrimary,
-            fontSize: cssVars.fontSizes.md,
-            cursor: 'pointer',
-          }}
-        >
-          {t('scoreCell.takeOver', { score })}
-        </button>
-      )}
       {onKeepDraft && (
         <button
           type="button"

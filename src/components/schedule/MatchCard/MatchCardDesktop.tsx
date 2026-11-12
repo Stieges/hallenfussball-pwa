@@ -138,7 +138,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
   const containerStyle: CSSProperties = {
     borderRadius: cssVars.borderRadius.md,
     overflow: 'hidden',
-    border: `1px solid ${isLive ? cssVars.colors.borderActive : cssVars.colors.border}`,
+    border: `${cssVars.borderWidth.thin} solid ${isLive ? cssVars.colors.borderActive : cssVars.colors.border}`,
   };
 
   const rowStyle: CSSProperties = {
@@ -147,14 +147,12 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
     alignItems: 'center',
     gap: cssVars.spacing.md,
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
-    backgroundColor: isLive
-      ? undefined
+    // Nur `background` (nie zusammen mit `backgroundColor`): sonst warnt React beim Wechsel des Zustands (Hover, laufend)
+    background: isLive
+      ? `linear-gradient(135deg, ${cssVars.colors.primaryMedium}, ${cssVars.colors.surface})`
       : isHovered && !disabled
         ? cssVars.colors.surfaceHover
         : cssVars.colors.surface,
-    background: isLive
-      ? `linear-gradient(135deg, ${cssVars.colors.primaryMedium}, ${cssVars.colors.surface})`
-      : undefined,
     cursor: disabled ? 'default' : 'pointer',
     transition: 'background-color 0.15s ease',
   };
@@ -170,20 +168,20 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
   const fieldStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.textSecondary,
-    minWidth: '60px',
+    minWidth: cssVars.touchTargets.primary,
   };
 
   const groupStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.xs,
     color: cssVars.colors.textSecondary,
     textAlign: 'right',
-    minWidth: '50px',
+    minWidth: cssVars.touchTargets.minimum,
   };
 
 
 
   const expandStyle: CSSProperties = {
-    borderTop: `1px solid ${cssVars.colors.border}`,
+    borderTop: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
     backgroundColor: cssVars.colors.surfaceVariant,
     padding: cssVars.spacing.md,
   };

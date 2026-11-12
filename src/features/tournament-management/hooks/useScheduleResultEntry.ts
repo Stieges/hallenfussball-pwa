@@ -21,6 +21,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Tournament } from '../../../types/tournament';
 import { ERROR_CODES, effectiveScoreFor } from '../../../core/match';
+import { TOURNAMENT_TIME_ZONE, toTournamentLocal } from '../../../core/view';
 import { MatchCommands, MatchCommandRejectedError } from '../../../core/match/client';
 import { useMatchEngineContextOptional } from '../../match-engine/useMatchEngineContext';
 import { useActorRole } from '../../../hooks/useActorRole';
@@ -265,10 +266,10 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
         if (route === 'unskip' && (await ask({ kind: 'unskip', matchNumber: entry.meta.number })) === null) {
           return false;
         }
-        // @SL-195: liegt der geplante Anstoß nach Serverzeit noch in der Zukunft, fragt die App vor dem Speichern; „Nein“ speichert nichts (ohne geplante Zeit keine Frage)
+        // @SL-195: liegt der geplante Anstoß nach Serverzeit noch in der Zukunft, fragt die App vor dem Speichern; „Nein“ speichert nichts (ohne geplante Zeit keine Frage; nur die Gruppenphase, die Finalrunde trägt bis G3-Rest R2 unverändert inline ein)
         const kickoff = new Date(entry.meta.scheduledKickoff);
-        if (route === 'enter' && match?.scheduledTime !== undefined && kickoff.getTime() > engine.serverNow()
-          && (await ask({ kind: 'future', matchNumber: entry.meta.number, time: `${String(kickoff.getHours()).padStart(2, '0')}:${String(kickoff.getMinutes()).padStart(2, '0')}` })) === null) {
+        if (route === 'enter' && entry.phase === 'groupStage' && match?.scheduledTime !== undefined && kickoff.getTime() > engine.serverNow()
+          && (await ask({ kind: 'future', matchNumber: entry.meta.number, time: toTournamentLocal(kickoff, TOURNAMENT_TIME_ZONE).time })) === null) {
           return false;
         }
         let shootout: Record<string, number> | undefined;

@@ -59,11 +59,11 @@ function strafstossTurnier(): Record<string, unknown> {
 async function trageEin(page: Page, heim: number, gast: number, bestaetigung: 'enter' | 'verlassen' = 'enter'): Promise<void> {
   // Erst eintragen, wenn das Turnier geladen ist (sonst setzt das Nachladen die Felder zurück).
   await expect(page.getByText('Sieger Halbfinale 1').filter({ visible: true }).first()).toBeVisible();
-  await expect(page.getByRole('spinbutton').filter({ visible: true })).toHaveCount(4);
-  await page.getByRole('spinbutton').filter({ visible: true }).nth(0).fill(String(heim));
-  await page.getByRole('spinbutton').filter({ visible: true }).nth(1).fill(String(gast));
+  await expect(page.locator('[data-testid^="match-score-input-"], [data-testid^="final-score-input-"]').filter({ visible: true })).toHaveCount(4);
+  await page.locator('[data-testid^="match-score-input-"], [data-testid^="final-score-input-"]').filter({ visible: true }).nth(0).fill(String(heim));
+  await page.locator('[data-testid^="match-score-input-"], [data-testid^="final-score-input-"]').filter({ visible: true }).nth(1).fill(String(gast));
   // @FU-101: gespeichert wird nur mit „Ergebnis speichern“ (Enter und Verlassen des Feldes speichern nichts)
-  const gastFeld = page.getByRole('spinbutton').filter({ visible: true }).nth(1);
+  const gastFeld = page.locator('[data-testid^="match-score-input-"], [data-testid^="final-score-input-"]').filter({ visible: true }).nth(1);
   if (bestaetigung === 'verlassen') {
     await gastFeld.blur();
     await page.waitForTimeout(500);
@@ -130,7 +130,7 @@ test.describe('@FU-094 Spielplan: K.-o.-Unentschieden mit Strafstoßschießen ei
     } else {
       await expect(page.getByText(ZWEI_ZWEI).filter({ visible: true }).first()).toBeVisible({ timeout: 10_000 });
     }
-    await expect(page.getByRole('spinbutton').filter({ visible: true })).toHaveCount(2); // Halbfinale beendet: nur noch das Finale hat Felder
+    await expect(page.locator('[data-testid^="match-score-input-"], [data-testid^="final-score-input-"]').filter({ visible: true })).toHaveCount(2); // Halbfinale beendet: nur noch das Finale hat Felder
     // Finale mit FC Nord: belegt in src/hooks/__tests__/koSlotResolution.a25aStrafstoss.test.ts (die Hand-Saat hier
     // trifft den Resolver nicht wie ein veröffentlichtes Turnier -- Saat-Paket).
   });
@@ -145,7 +145,7 @@ test.describe('@FU-094 Spielplan: K.-o.-Unentschieden mit Strafstoßschießen ei
     await neuLaden(page);
     await page.waitForLoadState('networkidle');
     await expect(page.getByText('Sieger Halbfinale 1').filter({ visible: true }).first()).toBeVisible();
-    await expect(page.getByRole('spinbutton').filter({ visible: true })).toHaveCount(4); // Halbfinale weiter offen
+    await expect(page.locator('[data-testid^="match-score-input-"], [data-testid^="final-score-input-"]').filter({ visible: true })).toHaveCount(4); // Halbfinale weiter offen
     await expect(page.getByText(ZWEI_ZWEI).filter({ visible: true })).toHaveCount(0);
     // Karten-Ansicht: kein gespeicherter Stand, also keine Torzahl je Zeile (Gegenstück zu @OB-064 Z.1)
     await expect(page.getByTestId(`final-goals-${HF1}-home`)).toHaveCount(0);

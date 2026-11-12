@@ -100,7 +100,6 @@ describe('C-FINALRUNDE-MOBIL-EINGABE: offenes Finalrunden-Spiel am Handy eintrag
 });
 
 describe('@FU-101 Finalrunden-Karte (Handy, Tablet hochkant): zweistelliges Ergebnis', () => {
-  const karte = (container: HTMLElement) => within(container.querySelector<HTMLElement>('.mobile-view')!);
   const rendern = (scoreB: number | undefined, onScoreChange: (id: string, a: number, b: number) => ScoreCommitResult = vi.fn()) => {
     const view = render(<FinalStageSchedule matches={[halbfinale({ scoreB })]} tournament={{ teams }} editable onScoreChange={onScoreChange} />);
     return { ...view, onScoreChange };
@@ -186,14 +185,14 @@ describe('@FU-101 Finalrunden-Karte (Handy, Tablet hochkant): zweistelliges Erge
     });
   });
 
-  it('Buchstaben, negative und gebrochene Zahlen werden nicht gesendet, die Karte zeigt einen Hinweis', async () => {
+  it('Buchstaben, negative und gebrochene Zahlen bleiben nicht im Feld stehen (nur Ziffern, höchstens zwei Stellen), es wird nichts gesendet', async () => {
     const user = userEvent.setup();
-    const { container, onScoreChange } = rendern(2);
-    for (const text of ['-3', '2.5', '1e1']) {
+    const { onScoreChange } = rendern(2);
+    for (const [text, bleibt] of [['-3', '3'], ['2.5', '25'], ['1e1', '11'], ['abc', '']]) {
       await user.click(eingabe('home'));
-      fireEvent.change(eingabe('home'), { target: { value: text } });
-      await user.tab();
-      expect(karte(container).getByTestId(`final-score-hint-${HF1}`).textContent).toBeTruthy();
+      await user.clear(eingabe('home'));
+      await user.type(eingabe('home'), text);
+      expect(eingabe('home').value).toBe(bleibt);
     }
     expect(onScoreChange).not.toHaveBeenCalled();
   });

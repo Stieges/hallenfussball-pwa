@@ -3,9 +3,10 @@
  * in der Auswahl. Leere Felder (nie 0:0 vorbelegt), Cursor im ersten Feld, „−“/„+“ neben dem Feld; gespeichert wird erst mit „Ergebnis
  * speichern“ (@FU-101), die Rückfragen (läuft noch, noch nicht angepfiffen, abgesetzt) stellt der Speicherweg (`useScheduleResultEntry`).
  * - Laufendes Spiel: „Stand im Cockpit 1:0“ im Kopf, „Speichern beendet das Spiel.“ und „1:0 einsetzen“ (füllt beide Felder).
- * - Hinweis „inzwischen von Tom geändert (jetzt 3:1)“ (@FU-104): der Entwurf bleibt, nichts wird still gespeichert; im laufenden Spiel mit
- *   „3:1 einsetzen“ (nur hier, die Finalrunde bleibt unverändert).
- * - Darunter „Tore während des Spiels trägst du im Cockpit ein“ mit „Zum Cockpit“.
+ * - Hinweis „inzwischen von Tom geändert (jetzt 3:1)“ (@FU-104): der Entwurf bleibt, nichts wird still gespeichert; Olli bleibt mit „Meine Eingabe
+ *   behalten“ bei seinem Eintrag. Ein „einsetzen“ gibt es dort nicht: ein von außen eingetragenes Ergebnis beendet das Spiel, das Blatt ist dann kein
+ *   laufendes mehr (im laufenden Spiel ändert nur das Cockpit den Stand, und der steht in „Stand im Cockpit“).
+ * - Nur im laufenden Spiel darunter „Tore während des Spiels trägst du im Cockpit ein“ mit „Zum Cockpit“.
  * Die Fläche (`ScoreEntrySheet`) ist fachfrei; hier stehen Texte, Entwurf (`useScoreDraft`) und Verdrahtung.
  */
 import { useRef, type CSSProperties, type ReactElement } from 'react';
@@ -15,6 +16,7 @@ import type { ScheduledMatch } from '../../core/generators';
 import { ScoreDraftInput } from '../ui/atoms';
 import { ScoreChangedHint, ScoreDraftHint, ScoreEntrySheet, useScoreDraft, type ScoreCommitResult } from '../ui/molecules';
 import { Button } from '../ui/Button';
+import { InlineNotice } from '../ui/molecules/InlineNotice';
 import { sideDisplay, type SideContext } from './matchSides';
 
 export interface ResultEntrySheetProps {
@@ -58,7 +60,7 @@ export function ResultEntrySheet({ match, sides, saved, running, cockpit, time, 
     const inputRef = side === 'a'
       ? (element: HTMLInputElement | null) => { firstField.current = element; (props.inputRef as (e: HTMLInputElement | null) => void)(element); }
       : props.inputRef;
-    return <ScoreDraftInput {...props} inputRef={inputRef} ariaLabel={t('scoreCell.goalsOf', { team })} testId={testId} />;
+    return <ScoreDraftInput {...props} large inputRef={inputRef} ariaLabel={t('scoreCell.goalsOf', { team })} testId={testId} />;
   };
   const row = (side: 'a' | 'b', team: string) => {
     const key = side === 'a' ? 'home' : 'away';
@@ -77,38 +79,37 @@ export function ResultEntrySheet({ match, sides, saved, running, cockpit, time, 
 
   const cockpitScore = cockpit === null ? null : `${cockpit.a}:${cockpit.b}`;
   const meta = [t('header.timeValue', { time }), t('matchCard.field', { field: match.field })];
-  if (running && cockpitScore !== null) { meta.push(t('resultSheet.cockpitScore', { score: cockpitScore })); }
-  const changedScore = draft.changed === null ? null : `${draft.changed.goalsA ?? '–'}:${draft.changed.goalsB ?? '–'}`;
-  const takeOver = running && draft.changed?.goalsA !== undefined && draft.changed.goalsB !== undefined
-    ? () => { draft.fill(draft.changed?.goalsA ?? 0, draft.changed?.goalsB ?? 0); }
-    : undefined;
-
   const notice = (
     <>
       {draft.changed !== null && (
-        <ScoreChangedHint changed={draft.changed} testId={`score-changed-${match.id}`} keepTestId={`score-changed-keep-${match.id}`} onKeepDraft={draft.keepDraft} onTakeOver={takeOver} />
+        <ScoreChangedHint changed={draft.changed} testId={`score-changed-${match.id}`} keepTestId={`score-changed-keep-${match.id}`} onKeepDraft={draft.keepDraft} />
       )}
-      {running && (
-        <div style={rowStyle}>
+      {running && cockpit !== null && (
+        <>
+          <InlineNotice
+            tone="info"
+            data-testid="result-sheet-cockpit-score"
+            footer={<Button variant="secondary" size="md" onClick={() => { draft.fill(cockpit.a, cockpit.b); }} data-testid="result-sheet-take-cockpit">{t('scoreCell.takeOver', { score: cockpitScore })}</Button>}
+          >
+            {t('resultSheet.cockpitScore', { score: cockpitScore })}
+          </InlineNotice>
           <p style={noteStyle} data-testid="result-sheet-ends-match">{t('resultSheet.endsMatch')}</p>
-          {cockpit !== null && (
-            <Button variant="secondary" size="md" onClick={() => { draft.fill(cockpit.a, cockpit.b); }} data-testid="result-sheet-take-cockpit">
-              {t('scoreCell.takeOver', { score: cockpitScore })}
-            </Button>
-          )}
-        </div>
+        </>
       )}
+      {running && cockpit === null && <p style={noteStyle} data-testid="result-sheet-ends-match">{t('resultSheet.endsMatch')}</p>}
     </>
   );
   const hint = (
     <>
       {draft.invalid && <ScoreDraftHint id={draft.hintId} testId={`result-sheet-hint-${match.id}`} />}
-      <div style={rowStyle}>
-        <p style={noteStyle} data-testid="result-sheet-cockpit-note">{t('resultSheet.cockpitNote')}</p>
-        {onToCockpit !== undefined && (
-          <Button variant="secondary" size="md" onClick={() => { onToCockpit(match.id); }} data-testid="result-sheet-to-cockpit">{t('resultSheet.toCockpit')}</Button>
-        )}
-      </div>
+      {running && (
+        <div style={rowStyle}>
+          <p style={noteStyle} data-testid="result-sheet-cockpit-note">{t('resultSheet.cockpitNote')}</p>
+          {onToCockpit !== undefined && (
+            <Button variant="secondary" size="md" onClick={() => { onToCockpit(match.id); }} data-testid="result-sheet-to-cockpit">{t('resultSheet.toCockpit')}</Button>
+          )}
+        </div>
+      )}
     </>
   );
 
@@ -121,7 +122,7 @@ export function ResultEntrySheet({ match, sides, saved, running, cockpit, time, 
       teamHeading={t('resultSheet.team')}
       goalsHeading={t('resultSheet.goals')}
       rows={[row('a', home), row('b', away)]}
-      notice={changedScore === null && !running ? undefined : notice}
+      notice={draft.changed === null && !running ? undefined : notice}
       hint={hint}
       cancelLabel={t('resultSheet.cancel')}
       saveLabel={t('resultSheet.save')}

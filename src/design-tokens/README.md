@@ -209,7 +209,11 @@ breakpoints.desktop  // '1024px'
 
 mediaQueries.mobile  // '@media (max-width: 480px)'
 mediaQueries.desktop // '@media (min-width: 769px)'
+mediaQueries.tabletBand // '@media (min-width: 768px) and (max-width: 1024px)'  (G3-N N4: Tablet-Band der Spielplan-Tabelle)
+mediaQueries.print      // '@media print'                                      (G3-N N4: Spielplan druckt immer die Tabelle)
 ```
+
+**G3-N N4 (Blatt „Endergebnis“):** `cssVars.sizing.scoreField` 64 px (Tor-Feld im Blatt, Mockup Runde 4; `ScoreDraftInput large`), `cssVars.sizing.dragOverlayMinWidth` 280 px (Mindestbreite der Ziehen-Vorschau eines Spiels am Handy, wie vor dem Umbau der Tokens), `cssVars.borderWidth.strong` 3 px (Rahmen der Ziehen-Vorschau). Neue Werte brauchen Daniels Freigabe; diese drei stehen zur Durchsicht.
 
 ## Design Principles
 
