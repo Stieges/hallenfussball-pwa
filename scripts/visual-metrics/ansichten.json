@@ -920,6 +920,85 @@
       "erwarte": "[data-testid=\"public-current\"]",
       "profil": "app",
       "saat": "leibchen-vor-anpfiff"
+    },
+    {
+      "id": "karte-vor-anpfiff",
+      "titel": "Cockpit: Leibchen-Karte über der Daumenleiste vor dem Anpfiff (Blau gegen Blau, Hallenfarben Gelb und Orange, @SL-206)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/leibchen-7a/live?matchId=0000000b-0000-4000-9000-000000000003",
+      "erwarte": "[data-testid=\"leibchen-karte\"]",
+      "profil": "app",
+      "saat": "leibchen-vor-anpfiff"
+    },
+    {
+      "id": "karte-wahl-offen",
+      "titel": "Cockpit: Wahl von Team und Farbe offen (Vorschlag angetippt, @SL-218, @SL-221)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/leibchen-7a/live?matchId=0000000b-0000-4000-9000-000000000003",
+      "erwarte": "[data-testid=\"leibchen-wahl\"]",
+      "profil": "app",
+      "saat": "leibchen-vor-anpfiff",
+      "klick": [
+        "[data-testid=\"leibchen-vorschlag\"]",
+        "warte:300"
+      ]
+    },
+    {
+      "id": "karte-andere-farbe",
+      "titel": "Cockpit: „Andere Farbe …“ mit der Grundauswahl aus 8 Farben (@SL-219)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/leibchen-7a/live?matchId=0000000b-0000-4000-9000-000000000003",
+      "erwarte": "[data-testid=\"leibchen-farbe-neongruen\"]",
+      "profil": "app",
+      "saat": "leibchen-vor-anpfiff",
+      "klick": [
+        "[data-testid=\"leibchen-vorschlag\"]",
+        "[data-testid=\"leibchen-andere\"]",
+        "warte:300"
+      ]
+    },
+    {
+      "id": "karte-zeile",
+      "titel": "Cockpit: nach „Bestätigen“ die Zeile „TSV Waging 1 zieht Gelb · Ändern“ mit „wird gesendet“ (@SL-208, @SL-230)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/leibchen-7a/live?matchId=0000000b-0000-4000-9000-000000000003",
+      "erwarte": "[data-testid=\"leibchen-zeile\"]",
+      "profil": "app",
+      "saat": "leibchen-vor-anpfiff",
+      "klick": [
+        "[data-testid=\"leibchen-bestaetigen\"]",
+        "warte:300"
+      ]
+    },
+    {
+      "id": "karte-endstand",
+      "titel": "Endstand von Spiel 2 mit der Karte für Spiel 3 über „Weiter“ (@SL-215)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/leibchen-7a/live?matchId=0000000b-0000-4000-9000-000000000002",
+      "erwarte": "[data-testid=\"leibchen-karte\"]",
+      "profil": "app",
+      "saat": "leibchen-vor-anpfiff"
+    },
+    {
+      "id": "karte-lang",
+      "titel": "Cockpit: Karte mit langem Teamnamen „Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921“ (@SL-206)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/leibchen-lang/live?matchId=0000000b-0000-4000-9000-000000000003",
+      "erwarte": "[data-testid=\"leibchen-karte\"]",
+      "profil": "app",
+      "saat": "leibchen-vor-anpfiff"
     }
   ]
 }
