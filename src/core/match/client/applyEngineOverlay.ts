@@ -14,8 +14,8 @@
  * (W4: Platzhalter-Teams -> keine Kopie, IDs klein) und liefert `view`s aus `engine.view(matchId)`.
  */
 import { cacheColumns, type CacheDecidedBy, type CacheMatchStatus } from './cacheColumns';
-import { kitFromEvents } from './matchKitFromEvents';
-import type { MatchKit } from '../../models/kit';
+import { kitStartsOf, projectKitState, type KitStart } from './matchKitFromEvents';
+import type { KitDecision, MatchKit } from '../../models/kit';
 import type { ForfeitAbsent, MatchContext } from '../types';
 import type { MatchEngineView } from './MatchEngine';
 
@@ -34,8 +34,11 @@ export interface EngineOverlayFields {
    * räumt ein altes Merkmal nach Rücknahme oder Korrektur ab.
    */
   forfeitAbsent: ForfeitAbsent | undefined;
-  /** A-30a: getragene Farben aus dem eigenen MATCH_START (TS-Gegenstück zum Server-Trigger, `kitFromEvents`). */
-  kit: MatchKit | undefined;
+  /**
+   * A-30a / Leibchen 2b: die Anpfiffe mit `kit` aus dem eigenen Log (TS-Gegenstück zum Server-Trigger). Sie wirken auf den Stand der Wahl am Spiel
+   * (`projectKitState`), statt ihn zu überschreiben: ohne Anpfiff bleibt die vor dem Anpfiff bestätigte Wahl stehen (C-KIT-OVERLAY-UEBERSCHREIBT-VOR-ANPFIFF).
+   */
+  kitStarts: readonly KitStart[];
   /**
    * C-OVERLAY-LIVESTATE-BLEIBT (@OB-066): der Server leert `live_state` beim Beenden (und es gibt keinen
    * beim geplanten/abgesetzten Spiel); `true` heißt: auch den Feinstatus am Datensatz leeren. Sonst bleibt er
@@ -65,7 +68,7 @@ export function engineOverlayFields(view: MatchEngineView, ctx: MatchContext): E
     matchStatus: mapMatchStatus(columns.match_status),
     decidedBy: nullToUndefined(columns.decided_by),
     forfeitAbsent: nullToUndefined(columns.forfeit_absent),
-    kit: kitFromEvents(view.log),
+    kitStarts: kitStartsOf(view.log, view.confirmedCount),
     clearLiveState: columns.live_state === null,
   };
 }
@@ -84,6 +87,7 @@ export interface OverlayableMatch {
   decidedBy?: string;
   forfeitAbsent?: string;
   kit?: MatchKit;
+  kitDecision?: KitDecision;
   /** `matches.live_state` (Feinstatus fuer Abzeichen); die Ueberlagerung leert ihn nur (`clearLiveState`). */
   liveState?: unknown;
 }
@@ -97,7 +101,14 @@ function kitEqual(left: MatchKit | undefined, right: MatchKit | undefined): bool
   return left?.a === right?.a && left?.b === right?.b && left?.bibSide === right?.bibSide && (left === undefined) === (right === undefined);
 }
 
+/** Stand der Wahl nach der Projektion der Anpfiffe; `kit` nur, wenn es etwas zu zeigen gibt. */
+function projectedKit(match: OverlayableMatch, fields: EngineOverlayFields): { kit: MatchKit | undefined; kitDecision: KitDecision | undefined } {
+  const projected = projectKitState({ ...(match.kit === undefined ? {} : { kit: match.kit }), ...(match.kitDecision === undefined ? {} : { decision: match.kitDecision }) }, fields.kitStarts);
+  return { kit: projected.kit, kitDecision: projected.decision };
+}
+
 function fieldsEqual(match: OverlayableMatch, fields: EngineOverlayFields): boolean {
+  const projected = projectedKit(match, fields);
   return (
     match.scoreA === fields.scoreA &&
     match.scoreB === fields.scoreB &&
@@ -108,7 +119,8 @@ function fieldsEqual(match: OverlayableMatch, fields: EngineOverlayFields): bool
     match.matchStatus === fields.matchStatus &&
     match.decidedBy === fields.decidedBy &&
     match.forfeitAbsent === fields.forfeitAbsent &&
-    kitEqual(match.kit, fields.kit) &&
+    kitEqual(match.kit, projected.kit) &&
+    match.kitDecision === projected.kitDecision &&
     (!fields.clearLiveState || match.liveState === undefined)
   );
 }
@@ -132,8 +144,11 @@ export function applyEngineOverlay<TTournament extends OverlayableTournament<TMa
       return match;
     }
     changed = true;
-    const { clearLiveState, ...projection } = fields;
-    return clearLiveState ? { ...match, ...projection, liveState: undefined } : { ...match, ...projection };
+    const { clearLiveState, kitStarts, ...projection } = fields;
+    void kitStarts; // wirkt über `projectedKit`, nicht als Feld
+    const { kit, kitDecision } = projectedKit(match, fields);
+    const next = { ...match, ...projection, ...(kit === undefined ? {} : { kit }), ...(kitDecision === undefined ? {} : { kitDecision }) };
+    return clearLiveState ? { ...next, liveState: undefined } : next;
   });
   return changed ? { ...tournament, matches } : tournament;
 }

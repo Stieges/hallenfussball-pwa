@@ -72,7 +72,6 @@ describe('C-OVERLAY-LIVESTATE-BLEIBT: reines Aufräumen, Feinstatus nach dem Abp
       scoreB: fields.scoreB,
       matchStatus: fields.matchStatus,
       decidedBy: fields.decidedBy,
-      kit: fields.kit,
     };
     const tournament = { matches: [match] };
 

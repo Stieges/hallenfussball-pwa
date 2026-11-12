@@ -74,7 +74,7 @@ export {
   type OverlayableMatch,
   type OverlayableTournament,
 } from './applyEngineOverlay';
-export { kitFromEvents } from './matchKitFromEvents';
+export { foldKitStarts, kitFromEvents, kitStartsOf, projectKitState, type KitStart, type KitState } from './matchKitFromEvents';
 export { matchStartCommand, type MatchKit, type MatchStartCommand } from './matchStartCommand';
 export {
   undoTarget,
