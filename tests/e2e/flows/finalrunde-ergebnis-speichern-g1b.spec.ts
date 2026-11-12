@@ -3,7 +3,7 @@
  * leeren Feldern und „Spiel beenden und Ergebnis eintragen“ (@FU-112). Befund #7: Tippen von „2“ beendete das laufende
  * Halbfinale sofort mit 2:0. Tabelle (Desktop): `match-score-…`, Karte (Handy, bis 768 px): `final-score-…`.
  * Vitest: src/components/schedule/__tests__/FU-101-schnelleingabe-zweistellig.test.tsx, FinalStageSchedule.sk.test.tsx.
- * Die Rückfrage mit „Nein“ und die Rolle Helfer (@FU-113) laufen nur mit Konto und Server (Cloud-Spec, CI).
+ * Die Rückfrage mit „Abbrechen“ und die Rolle Helfer (@FU-113) laufen nur mit Konto und Server (Cloud-Spec, CI).
  */
 import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';

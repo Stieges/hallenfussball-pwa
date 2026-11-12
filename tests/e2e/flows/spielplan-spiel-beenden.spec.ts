@@ -2,7 +2,7 @@
  * Spiel beenden und Ergebnis eintragen im Spielplan (20261110_009, Review A3), T2-UI (b), offline (Gast, lokale Engine;
  * Vorbild spielplan-strafstoss.spec.ts). Zwei Seiten im selben Browser: Seite A ist das Cockpit (Olli hat Spiel 1
  * angepfiffen), Seite B der Spielplan. Die Engine-Kopien teilen sich IndexedDB und BroadcastChannel.
- *  - @FU-112: Rückfrage wörtlich, „Nein“ ändert nichts, „Ja“ → beendet; die Tafel im Cockpit zeigt „Ende – eingetragen im
+ *  - @FU-112: Rückfrage wörtlich, „Abbrechen“ ändert nichts, „Beenden“ → beendet; die Tafel im Cockpit zeigt „Ende – eingetragen im
  *    Spielplan“ statt einer gespielten Zeit.
  *  - @FU-114: nach abgelaufener Spielzeit (Uhr der Seite vorgestellt) „Spielzeit abgelaufen – jetzt mit 2:2 beenden?“.
  *  - @FU-118: im laufenden Strafstoßschießen „Strafstoßschießen läuft – im Cockpit zu Ende bringen“.
@@ -136,7 +136,7 @@ test.describe('Spiel beenden und Ergebnis eintragen im Spielplan (offline, Gast)
     test.skip(testInfo.project.name !== 'desktop' || browserName !== 'chromium', 'zwei Seiten, setzt Fenstergröße selbst');
   });
 
-  test('@FU-112 Rückfrage wörtlich, „Nein“ ändert nichts, „Ja“ beendet; Tafel „Ende – eingetragen im Spielplan“', async ({ page, context, seedIndexedDB }) => {
+  test('@FU-112 Rückfrage wörtlich, „Abbrechen“ ändert nichts, „Beenden“ beendet; Tafel „Ende – eingetragen im Spielplan“', async ({ page, context, seedIndexedDB }) => {
     await seedIndexedDB({ tournaments: [turnier('gruppe')] });
     await anpfiff(page);
     const plan = await spielplanEintrag(context, 3, 1);
@@ -144,11 +144,13 @@ test.describe('Spiel beenden und Ergebnis eintragen im Spielplan (offline, Gast)
     const frage = plan.getByTestId('result-entry-end-message');
     await expect(frage).toHaveText(/^Spiel 1 läuft noch – Uhr zeigt \d{1,2}:\d{2} Restzeit\. Jetzt mit 3:1 beenden\?$/, { timeout: 10_000 });
     await expect(plan.getByRole('heading', { name: 'Spiel beenden und Ergebnis eintragen' })).toBeVisible();
+    await expect(plan.getByTestId('confirm-dialog-confirm')).toHaveText('Beenden'); // @SL-195: laufendes Spiel „Beenden“ / „Abbrechen“ statt „Ja“ / „Nein“
+    await expect(plan.getByTestId('confirm-dialog-cancel')).toHaveText('Abbrechen');
     await plan.getByTestId('confirm-dialog-cancel').click();
     await expect(frage).toHaveCount(0);
     await expect(page.getByTestId('scoreboard-state')).toContainText('Live'); // läuft unverändert weiter
 
-    // Nochmal, diesmal „Ja“: nach „Nein“ bleibt das Blatt „Endergebnis“ offen (@SL-195), die Felder zeigen wieder keinen Stand
+    // Nochmal, diesmal „Beenden“: nach „Abbrechen“ bleibt das Blatt „Endergebnis“ offen (@SL-195), die Felder zeigen wieder keinen Stand
     const blatt = plan.getByTestId('result-sheet');
     await expect(blatt).toBeVisible();
     await expect(blatt.getByTestId('result-sheet-score-home')).toHaveValue('');

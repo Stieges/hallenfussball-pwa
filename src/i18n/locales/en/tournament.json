@@ -132,6 +132,8 @@
       "endPending": "Pending entries must be sent first – please try again in a moment",
       "endTitle": "End match and enter result",
       "endQuestionRunning": "Match {{number}} is still running – the clock shows {{rest}} remaining. End it now at {{score}}?",
+      "endConfirmRunning": "End match",
+      "endCancelRunning": "Cancel",
       "endQuestionExpired": "Playing time is up – end it now at {{score}}?",
       "endControlledBy": "Field {{field}} is currently controlled by {{name}}",
       "endControlledByOther": "Field {{field}} is currently controlled by another device",
