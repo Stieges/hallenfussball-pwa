@@ -32,7 +32,8 @@ async function box(el: Locator): Promise<Box> {
 async function oeffne(page: Page, fenster: { width: number; height: number }): Promise<{ tippe: (el: Locator) => Promise<void>; tipps: () => number }> {
   await page.setViewportSize({ width: fenster.width, height: fenster.height });
   await installiereSaat(page.context(), leseSaat('leibchen-vor-anpfiff'));
-  await page.goto(`/#/tournament/leibchen-7a/live?matchId=${SPIEL_3}`, { waitUntil: 'domcontentloaded' });
+  // Die App ersetzt beim Start einmal die Adresse; ein dadurch abgebrochenes `goto` ist kein Fehler, entscheidend ist die Karte im Bild
+  await page.goto(`/#/tournament/leibchen-7a/live?matchId=${SPIEL_3}`, { waitUntil: 'commit' }).catch(() => undefined);
   await expect(page.getByTestId('leibchen-karte')).toBeVisible({ timeout: 25000 });
   await page.evaluate(() => document.fonts.ready);
   let n = 0;
