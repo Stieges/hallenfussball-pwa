@@ -235,6 +235,28 @@
       "profil": "app"
     },
     {
+      "id": "verwaltung-spielplan-laeuft",
+      "titel": "Turnierverwaltung: Spielplan, Spiel 5 läuft (Karte „Läuft“ oben, @ZP-109)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/nikolaus-laeuft/schedule",
+      "erwarte": "[data-testid=\"schedule-current\"]",
+      "profil": "app",
+      "saat": "nikolaus-laeuft"
+    },
+    {
+      "id": "verwaltung-spielplan-vor-anpfiff",
+      "titel": "Turnierverwaltung: Spielplan vor dem Anpfiff (Karte „Nächstes Spiel“ oben, @ZP-109)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/nikolaus-vor-anpfiff/schedule",
+      "erwarte": "[data-testid=\"schedule-current\"]",
+      "profil": "app",
+      "saat": "nikolaus-vor-anpfiff"
+    },
+    {
       "id": "verwaltung-tabellen",
       "titel": "Turnierverwaltung: Tabellen",
       "gruppen": [

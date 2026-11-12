@@ -794,6 +794,18 @@
     "ariaLabel": "Match is currently running",
     "live": "Live"
   },
+  "scheduleCurrent": {
+    "live": "Running · {{name}} · Field {{field}}",
+    "next": "Next match · {{name}} · Field {{field}}",
+    "match": "Match {{number}}",
+    "clockUnit": "",
+    "kickOff": "Kick off match in the cockpit",
+    "kickOffHint": "Opens the cockpit. You start the clock there.",
+    "toCockpit": "Go to cockpit",
+    "after": "After that:",
+    "afterMatch": "{{name}} · {{time}}",
+    "jumpToLive": "To the running match"
+  },
   "resultSheet": {
     "title": "Final result, match {{number}}",
     "cockpitScore": "Score in the cockpit {{score}}",

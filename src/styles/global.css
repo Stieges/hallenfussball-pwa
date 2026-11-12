@@ -438,6 +438,7 @@
   /* Spaltenkopf im Cockpit: Streifenzeile + drei Namenszeilen, beide Köpfe gleich hoch (@OB-025, Altplan 3.3) */
   --sizing-qr-placeholder: 150px;
   /* Tor-Feld im Blatt „Endergebnis“ (Mockup Runde 4: 64 px Kantenlänge, große Ziffer) */
+  --sizing-content-max: 1400px;
   --sizing-score-field: 64px;
   /* Mindestbreite der Ziehen-Vorschau eines Spiels am Handy (Spielplan bearbeiten) */
   --sizing-drag-overlay-min-width: 280px;

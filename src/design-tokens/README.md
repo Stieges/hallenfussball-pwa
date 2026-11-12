@@ -213,6 +213,8 @@ mediaQueries.tabletBand // '@media (min-width: 768px) and (max-width: 1024px)'  
 mediaQueries.print      // '@media print'                                      (G3-N N4: Spielplan druckt immer die Tabelle)
 ```
 
+**G3-N N1a (Spielplan der Turnierleitung):** `cssVars.sizing.contentMax` 1400 px (größte Breite des Spielplan-Reiters, bisher fest in `ScheduleTab`). Neuer Wert, braucht Daniels Freigabe.
+
 **G3-N N4 (Blatt „Endergebnis“):** `cssVars.sizing.scoreField` 64 px (Tor-Feld im Blatt, Mockup Runde 4; `ScoreDraftInput large`), `cssVars.sizing.dragOverlayMinWidth` 280 px (Mindestbreite der Ziehen-Vorschau eines Spiels am Handy, wie vor dem Umbau der Tokens), `cssVars.borderWidth.strong` 3 px (Rahmen der Ziehen-Vorschau). Neue Werte brauchen Daniels Freigabe; diese drei stehen zur Durchsicht.
 
 ## Design Principles
