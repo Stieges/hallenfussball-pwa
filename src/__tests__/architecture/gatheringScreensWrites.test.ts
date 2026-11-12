@@ -7,13 +7,22 @@
  * 2. Kein Produktivcode schreibt per `.from('gatherings')` (insert/upsert/update/delete) – auch nicht
  *    `on_screen_tournament_id` oder `screen_location_name`; Lesen bleibt erlaubt.
  * Analyse mit der TypeScript-Compiler-API (AST), wie `scoreWritePaths.test.ts`.
+ *
+ * @TA-021: früher las der Wächter den ganzen src-Baum einzeln per readdirSync/readFileSync – im Commit-Hook unter Last
+ * über der Grenze von 5 s. Jetzt liefert ein nativer `git grep` (eingecheckte und neue, nicht ignorierte Dateien) nur die
+ * Dateien, in denen einer der Tabellennamen überhaupt vorkommt (wie `ob017Waechter.test.ts`); die Regel selbst ist unverändert.
  */
-import { readdirSync, readFileSync } from 'node:fs';
-import { join, relative, sep } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import ts from 'typescript';
 import { describe, it, expect } from 'vitest';
 
-const SRC = join(process.cwd(), 'src');
+const ROOT = resolve(__dirname, '../../..');
+const SRC = join(ROOT, 'src');
+/** Begründung (@TA-021): der Lauf startet einen `git`-Prozess und liest Dateien; bei sehr hoher Rechnerlast (Commit-Hook neben
+ *  anderen Läufen, Virenscanner) dauert allein das länger als die Standardgrenze von 5 s. Geprüft wird ein Zustand, keine Zeit. */
+const ZEITGRENZE_UNTER_LAST_MS = 30_000;
 const WRITE_METHODS = new Set(['insert', 'upsert', 'update', 'delete']);
 
 interface Finding { file: string; detail: string; line: number }
@@ -51,24 +60,28 @@ function scan(rel: string, text: string): Finding[] {
   return out;
 }
 
-function productionFiles(dir = SRC): string[] {
-  const files: string[] = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) { files.push(...productionFiles(full)); continue; }
-    const rel = relative(SRC, full).split(sep).join('/');
-    if (!/\.(ts|tsx)$/.test(rel) || rel.endsWith('.d.ts') || /\.(test|spec)\.(ts|tsx)$/.test(rel)) { continue; }
-    if (rel.split('/').includes('__tests__') || rel === 'types/supabase.ts') { continue; }
-    files.push(rel);
-  }
-  return files;
+/** Produktivdateien unter src/ (ohne Tests, Typ-Deklarationen und die erzeugten Supabase-Typen). */
+function isProductionFile(rel: string): boolean {
+  if (!/\.(ts|tsx)$/.test(rel) || rel.endsWith('.d.ts') || /\.(test|spec)\.(ts|tsx)$/.test(rel)) { return false; }
+  return !rel.split('/').includes('__tests__') && rel !== 'types/supabase.ts';
+}
+
+/** Produktivdateien, in denen einer der Tabellennamen als Text vorkommt (Pfade relativ zu src/). */
+function candidates(): string[] {
+  const r = spawnSync('git', ['grep', '-l', '--untracked', '-E', 'gathering_screens|gatherings', '--', 'src/*.ts', 'src/*.tsx'], { cwd: ROOT, encoding: 'utf8' });
+  expect(r.error).toBeUndefined();
+  expect([0, 1], r.stderr).toContain(r.status);
+  return r.stdout.split('\n').filter((p) => p !== '').map((p) => p.slice('src/'.length)).filter(isProductionFile);
 }
 
 describe('A1b Architektur-Wächter: Bildschirme der Veranstaltung nur über Server-Funktionen', () => {
   it('@VA-043 @VA-034 kein Produktivcode liest oder schreibt gathering_screens direkt, keiner schreibt gatherings', () => {
-    const findings = productionFiles().flatMap((rel) => scan(rel, readFileSync(join(SRC, rel), 'utf8')));
+    const files = candidates();
+    // Gegenprobe der Vorauswahl: die Dateien, die die Server-Funktionen aufrufen, nennen die Tabellennamen und müssen dabei sein.
+    expect(files.length).toBeGreaterThan(0);
+    const findings = files.flatMap((rel) => scan(rel, readFileSync(join(SRC, rel), 'utf8')));
     expect(findings.map((f) => `${f.file}:${f.line} ${f.detail}`)).toEqual([]);
-  });
+  }, ZEITGRENZE_UNTER_LAST_MS);
 
   it('Gegenprobe: der Wächter erkennt direkte Zugriffe', () => {
     const sample = [
@@ -77,5 +90,10 @@ describe('A1b Architektur-Wächter: Bildschirme der Veranstaltung nur über Serv
       "client.from('gatherings').select('id, name');",
     ].join('\n');
     expect(scan('probe.ts', sample).map((f) => f.detail)).toEqual(['gathering_screens', 'gatherings.update']);
+  });
+
+  it('Gegenprobe: Tests, Typ-Deklarationen und die erzeugten Supabase-Typen zählen nicht als Produktivcode', () => {
+    expect(['core/a.ts', 'features/x/B.tsx'].every(isProductionFile)).toBe(true);
+    expect(['core/a.test.ts', 'core/__tests__/a.ts', 'types/supabase.ts', 'vite-env.d.ts', 'core/a.json'].some(isProductionFile)).toBe(false);
   });
 });

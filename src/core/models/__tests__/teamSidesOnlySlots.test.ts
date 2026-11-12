@@ -73,7 +73,7 @@ describe('Quelltext-Wächter – kein Übergangsfeld teamA/teamB im Produktivcod
     expect(hits).toEqual([]);
   }, 30_000);
 
-  it('Gegenbeispiel: `teamA:`/`teamB:` nur noch als fremde Schlüssel (Anzeige-Parameter, Import-Dateiformat)', () => {
+  it('Gegenbeispiel: `teamA:`/`teamB:` nur noch als fremde Schlüssel (Anzeige-Parameter, Import-Dateiformat, Aufrufformat einer Datenbankfunktion)', () => {
     const writers = productive.filter((file) => /\bteam[AB]:\s/.test(readFileSync(join(SRC, file), 'utf8')));
 
     // ScheduleTab (i18n-Parameter), Korrektur-Dialog/-Banner und ReplanPanel (Anzeige-Props mit Namen),
@@ -82,6 +82,7 @@ describe('Quelltext-Wächter – kein Übergangsfeld teamA/teamB im Produktivcod
       'features/tournament-management/ScheduleTab.tsx', 'components/dialogs/ImportTemplates.ts',
       'components/dialogs/CorrectionDialog.tsx', 'components/schedule/CorrectionBanner.tsx',
       'features/tournament-creation/components/ReplanPanel.tsx',
+      'core/repositories/matchKitSetRpc.ts', // Aufrufformat der Datenbankfunktion match_kit_set (kit.teamA/teamB), kein Feld am Spiel
     ].includes(file));
     expect(unexpected).toEqual([]);
   }, 30_000);

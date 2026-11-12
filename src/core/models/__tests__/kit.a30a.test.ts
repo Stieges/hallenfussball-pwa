@@ -5,15 +5,16 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
+  compactKit,
   DEFAULT_BIB_COLOR,
   KIT_SIMILAR_DELTA_E,
-  defaultKit,
   kitConflict,
   kitWithBib,
   normalizeKitColor,
   wornColors,
 } from '../kit';
 import { hexDeltaE2000 } from '../kitColorDistance';
+import { kitBeimAnpfiff } from '../kitAnpfiff';
 import { teamSlot } from '../matchSlot';
 import { FALLBACK_PATTERN, resolveBoxColors, type BoxFill } from '../scoreBoxColors';
 import { DEFAULT_SPECTATOR_DISPLAY } from '../spectatorDisplay';
@@ -56,10 +57,10 @@ describe('A-30a @SL-139 Farbabstand ΔE2000, Hinweis unter 30', () => {
     expect(hexDeltaE2000(nord, berg) < 30).toBe(hinweis);
     expect(kitConflict(nord, berg)).toBe(hinweis ? 'similar' : 'none');
 
-    // Spiel 15 FC Nord gegen DJK Berg: mit Hinweis bietet die Vorbelegung „Leibchen“ an, ohne Hinweis nicht.
+    // Spiel 15 FC Nord gegen DJK Berg: auch mit Hinweis belegt der Anpfiff nichts vor (@SL-210) – die Karte schlägt vor, Tom bestätigt.
     const teams = [team(FC_NORD, 'FC Nord', nord), team(DJK_BERG, 'DJK Berg', berg)];
-    const kit = defaultKit(spiel('spiel-15', FC_NORD, DJK_BERG), teams, {});
-    expect(kit.bibSide).toBe(hinweis ? 'a' : undefined);
+    const kit = kitBeimAnpfiff(spiel('spiel-15', FC_NORD, DJK_BERG), teams, undefined);
+    expect(kit.bibSide).toBeUndefined();
   });
 
   it('@SL-139 Zusatzpaar Schwarz/Bordeaux (26,1) liegt unter der Grenze → Hinweis', () => {
@@ -99,8 +100,8 @@ describe('A-30a @SL-137 gleiche Farbe: Leibchen für eine Seite, nur in diesem S
     expect(kitConflict(ROT, ROT)).toBe('same');
   });
 
-  it('@SL-137 „Leibchen“ vorbelegt SV Süd als Heimseite, mit Gelb vorbelegt', () => {
-    expect(defaultKit(spiel12, teams, {})).toEqual({ a: DEFAULT_BIB_COLOR, b: ROT, bibSide: 'a' });
+  it('@SL-210 Gegenbeispiel zur alten Vorbelegung: bei gleicher Farbe pfeift der Anpfiff ohne Tipp ohne Leibchen an, SV Süd bleibt Rot', () => {
+    expect(kitBeimAnpfiff(spiel12, teams, undefined)).toEqual({ a: ROT, b: ROT });
   });
 
   it('@SL-137 Gelb ist änderbar: eine andere Leibchenfarbe gilt für die gewählte Seite', () => {
@@ -123,18 +124,18 @@ describe('A-30a @SL-138 ohne Farbkonflikt kein Hinweis, Anpfiff ohne Zusatzschri
   it('@SL-138 SV Süd in Rot, TSV Ost in Weiß: kein Hinweis, beide Farben, kein Leibchen', () => {
     const teams = [team(SV_SUED, 'SV Süd', ROT), team(TSV_OST, 'TSV Ost', WEISS)];
     expect(kitConflict(ROT, WEISS)).toBe('none');
-    const kit = defaultKit(spiel('spiel-14', SV_SUED, TSV_OST), teams, {});
+    const kit = kitBeimAnpfiff(spiel('spiel-14', SV_SUED, TSV_OST), teams, undefined);
     expect(kit).toEqual({ a: ROT, b: WEISS });
     expect(kit).not.toHaveProperty('bibSide');
   });
 
   it('@SL-138 Gegenbeispiel: ohne Teamfarben gibt es keinen Konflikt und keine Leibchen-Vorbelegung', () => {
-    const kit = defaultKit(spiel('spiel-14', SV_SUED, TSV_OST), [team(SV_SUED, 'SV Süd'), team(TSV_OST, 'TSV Ost')], {});
+    const kit = kitBeimAnpfiff(spiel('spiel-14', SV_SUED, TSV_OST), [team(SV_SUED, 'SV Süd'), team(TSV_OST, 'TSV Ost')], undefined);
     expect(kit).toEqual({});
   });
 
   it('@SL-138 Gegenbeispiel: ungültige Teamfarbe zählt als „keine Farbe“, kein Konflikt', () => {
-    const kit = defaultKit(spiel('spiel-14', SV_SUED, TSV_OST), [team(SV_SUED, 'SV Süd', 'rot'), team(TSV_OST, 'TSV Ost', 'rot')], {});
+    const kit = kitBeimAnpfiff(spiel('spiel-14', SV_SUED, TSV_OST), [team(SV_SUED, 'SV Süd', 'rot'), team(TSV_OST, 'TSV Ost', 'rot')], undefined);
     expect(kit).toEqual({});
   });
 });
@@ -143,20 +144,20 @@ describe('A-30a @W3-029 Leibchenfarbe des Turniers', () => {
   const teams = [team(SV_SUED, 'SV Süd', ROT), team(FC_NORD, 'FC Nord', ROT)];
   const spiel12 = spiel('spiel-12', SV_SUED, FC_NORD);
 
-  it('@W3-029 Leibchenfarbe auf Orange gestellt: Orange ist in jedem Spiel als Leibchenfarbe vorbelegt', () => {
-    expect(defaultKit(spiel12, teams, { bibColor: ORANGE })).toEqual({ a: ORANGE, b: ROT, bibSide: 'a' });
+  it('@W3-029 Leibchenfarbe auf Orange gestellt: Orange ist die Leibchenfarbe für jede gewählte Seite', () => {
+    expect(kitWithBib(spiel12, teams, { bibColor: ORANGE }, 'a')).toEqual({ a: ORANGE, b: ROT, bibSide: 'a' });
     expect(kitWithBib(spiel12, teams, { bibColor: ORANGE }, 'b')).toEqual({ a: ROT, b: ORANGE, bibSide: 'b' });
     const spiel20 = spiel('spiel-20', FC_NORD, SV_SUED);
-    expect(defaultKit(spiel20, teams, { bibColor: ORANGE }).a).toBe(ORANGE);
+    expect(kitWithBib(spiel20, teams, { bibColor: ORANGE }, 'a').a).toBe(ORANGE);
   });
 
-  it('@W3-029 ohne Einstellung ist Gelb vorbelegt', () => {
+  it('@W3-029 ohne Einstellung ist Gelb die Leibchenfarbe', () => {
     expect(DEFAULT_BIB_COLOR).toBe('#FFCC00');
-    expect(defaultKit(spiel12, teams, {}).a).toBe(DEFAULT_BIB_COLOR);
+    expect(kitWithBib(spiel12, teams, {}, 'a').a).toBe(DEFAULT_BIB_COLOR);
   });
 
   it('@W3-029 Gegenbeispiel: eine ungültige Einstellung fällt auf Gelb zurück, kein dritter Wert', () => {
-    expect(defaultKit(spiel12, teams, { bibColor: 'orange' }).a).toBe(DEFAULT_BIB_COLOR);
+    expect(kitWithBib(spiel12, teams, { bibColor: 'orange' }, 'a').a).toBe(DEFAULT_BIB_COLOR);
   });
 });
 
@@ -165,7 +166,8 @@ describe('A-30a @W3-028 Trikotfarbe am Turniertag', () => {
   const ohneFarbe = [team(SV_SUED, 'SV Süd'), team(FC_NORD, 'FC Nord', WEISS)];
   // Wenn Olli für SV Süd Schwarz aus der Palette wählt:
   const mitSchwarz = [team(SV_SUED, 'SV Süd', SCHWARZ), team(FC_NORD, 'FC Nord', WEISS)];
-  const anpfiffKit = defaultKit(spiel('x', SV_SUED, FC_NORD), ohneFarbe, {});
+  const beimAnpfiff = kitBeimAnpfiff(spiel('x', SV_SUED, FC_NORD), ohneFarbe, undefined);
+  const anpfiffKit = compactKit({ a: beimAnpfiff.a, b: beimAnpfiff.b });
 
   it('@W3-028 Schwarz gilt ab dem nächsten Spiel von SV Süd als Trikotfarbe', () => {
     const naechstes = spiel('spiel-9', SV_SUED, FC_NORD, { matchStatus: 'scheduled' });

@@ -29,7 +29,7 @@ import type {
   TiebreakChoice,
   TimePenaltyOptions,
 } from './matchCommandTypes';
-import { matchStartCommand, type MatchKit } from './matchStartCommand';
+import { matchStartCommand, type StartKit } from './matchStartCommand';
 export type { AmendFields, CardOptions, CommandTiming, FoulOptions, GoalOptions, SubstitutionOptions, TeamScores, TiebreakChoice, TimePenaltyOptions } from './matchCommandTypes';
 
 export interface MatchCommandsEngine {
@@ -82,7 +82,7 @@ export class MatchCommands {
 
   constructor(private readonly deps: MatchCommandsDeps) {}
 
-  start(matchId: string, ctx: MatchContext, actor: Actor, rules: MatchRules, kit?: MatchKit): CommandResult {
+  start(matchId: string, ctx: MatchContext, actor: Actor, rules: MatchRules, kit?: StartKit): CommandResult {
     const built = matchStartCommand(rules, kit); // A-30a (@SL-137, @W3-028): getragene Farben fahren im Anpfiff mit
     return built.ok ? this.submit(matchId, ctx, actor, built.spec) : Promise.reject(new MatchCommandRejectedError(built.code, built.detail));
   }

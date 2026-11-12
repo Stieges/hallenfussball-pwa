@@ -10,6 +10,7 @@ import { useRealtimeTournament } from './useRealtimeTournament';
 import { useRealtimePollFallback } from './realtimePollFallback';
 import { tournamentChannelStatusKey } from './realtimeChannelStatus';
 import { useEngineOverlayForTournament, useEngineOverlaidMatchIds } from './useEngineOverlayForTournament';
+import { useKitChoiceOverlay } from './useKitChoices';
 import { useKoResolutionAfterAck } from './useKoResolutionAfterAck';
 import { applySlotUpdates } from './koSlotResolution';
 import { useEngineCatchUpOnCloudChange } from './useEngineCatchUpOnCloudChange';
@@ -243,7 +244,7 @@ export function useTournamentManager(tournamentId: string) {
     // -- kein Versionssprung, kein syncUp, keine MutationQueue. `tournament` (State) bleibt die
     // Wahrheit fuer handleTournamentUpdate/applyRemote; nur die nach AUSSEN gegebene Form ist
     // ueberlagert.
-    const overlaidTournament = useEngineOverlayForTournament(tournament);
+    const overlaidTournament = useKitChoiceOverlay(useEngineOverlayForTournament(tournament)); // Leibchen 2b: lokale Wahl über der Kopie
     // A-08f3e2 Fixrunde 1 (I-1): K.-o.-Plätze nach Server-Bestätigung besetzen, auch ohne offenen Spielplan-Tab
     const applyKoSlots = useCallback((updates: MatchUpdate[]) => {
         if (lifecycleLock.closed) { return; } // R3-3: nach dem Abschluss besetzt niemand mehr K.-o.-Plätze (der Server lehnte ab)
