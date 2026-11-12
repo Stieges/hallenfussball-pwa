@@ -10,6 +10,7 @@
  * - `custom_sound_failed` ist bereit, mit dem ruhigen Hinweis „Hupe 1 statt eigener Ton“ (@HT-028), nie eine Störung.
  * - Ein Zustand, den dieser App-Stand nicht kennt (`zustandUnbekannt`), ist „nicht bereit“ ohne Wortgrund. „Status unbekannt“
  *   (@HT-041, die Verwaltung hat selbst kein Netz) ist davon getrennt: nur, wenn schon einmal ein Lautsprecher bekannt war.
+ * - „Handy ohne Netz“ (@HT-035) nur auf Feldern mit angepfiffenem Spiel: ist Spiel 11 beendet, meldet das Handy nichts mehr, und das ist kein Ausfall.
  * - Ohne Lautsprecher im Turnier: nichts (nie „bereit“, @HT-016, @HT-038).
  */
 import type { HallStatusAntwort } from '../../core/repositories/hallentonRpc';
@@ -55,6 +56,8 @@ export interface HallAnzeigeEingabe {
     antwort: HallStatusAntwort | null;
   };
   lokal: LokaleLage | null;
+  /** Felder mit angepfiffenem Spiel (aus dem Spielstand, `angepfiffeneFelder.ts`): nur dort ist ein stilles Handy ein Ausfall (@HT-035). */
+  angepfiffen: ReadonlySet<number>;
   /** Es war in dieser Sitzung schon ein Lautsprecher im Turnier bekannt (sonst bleibt „Status unbekannt“ aus, @HT-038). */
   lautsprecherBekannt: boolean;
 }
@@ -83,7 +86,7 @@ function serverAnzeige(lage: LautsprecherLage): FeldAnzeigeArt | null {
   }
 }
 
-export function hallAnzeige({ server, lokal, lautsprecherBekannt }: HallAnzeigeEingabe): HallAnzeige {
+export function hallAnzeige({ server, lokal, angepfiffen, lautsprecherBekannt }: HallAnzeigeEingabe): HallAnzeige {
   const jeFeld = new Map<number, FeldAnzeige>();
   for (const [schluessel, lage] of Object.entries(server.felder)) {
     const anzeige = serverAnzeige(lage);
@@ -102,7 +105,7 @@ export function hallAnzeige({ server, lokal, lautsprecherBekannt }: HallAnzeigeE
   const handyOhneNetz: number[] = [];
   const leads = server.antwort?.sicht === 'voll' ? server.antwort.leads : [];
   for (const l of leads) {
-    if (jeFeld.has(l.field) && leitungOhneNetz(l.ageMs, true)) {
+    if (jeFeld.has(l.field) && leitungOhneNetz(l.ageMs, angepfiffen.has(l.field))) {
       handyOhneNetz.push(l.field);
     }
   }

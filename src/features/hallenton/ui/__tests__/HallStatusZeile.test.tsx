@@ -4,7 +4,8 @@
  * Die Hooks sind Doppel; Texte aus den echten deutschen Sprachdateien.
  */
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
+import { matchRoute } from '../../../../core/routing/routeRegistry';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import common from '../../../../i18n/locales/de/common.json';
 import de from '../../../../i18n/locales/de/hallenton.json';
@@ -35,6 +36,7 @@ const doppel = vi.hoisted(() => ({
 vi.mock('../../../auth/hooks/useCan', () => ({ useCan: () => doppel.darf }));
 vi.mock('../../../../hooks/useKioskRoute', () => ({ useKioskRoute: () => doppel.kiosk }));
 vi.mock('../../useHallStatus', () => ({ useHallStatus: () => { doppel.statusAufrufe += 1; return doppel.status; } }));
+vi.mock('../../useAngepfiffeneFelder', () => ({ useAngepfiffeneFelder: () => new Set<number>() }));
 vi.mock('../../useHallLautsprecher', () => ({ useHallLautsprecher: () => doppel.lautsprecher }));
 const geraet = vi.hoisted(() => ({ einschaltung: null as { turnierId: string; felder: number[]; name: string } | null }));
 vi.mock('../../lautsprecherGeraet', () => ({
@@ -44,10 +46,11 @@ vi.mock('../../lautsprecherGeraet', () => ({
 
 import { AuthContext } from '../../../auth/context/authContextInstance';
 import { HallStatusZeile } from '../HallStatusZeile';
+import { hallentonZiel } from '../hallStatusEintraege';
 import { HallGeraetStreifen } from '../HallGeraetStreifen';
 
-const status = (felder: Record<number, LautsprecherLage>, stand: HallStatus['stand'] = 'aktuell'): HallStatus => ({
-  stand, antwort: null, felder, testtonAnfordern: vi.fn(), gehoert: vi.fn(),
+const status = (felder: Record<number, LautsprecherLage>, stand: HallStatus['stand'] = 'aktuell', lautsprecherBekannt = Object.keys(felder).length > 0): HallStatus => ({
+  stand, antwort: null, felder, lautsprecherBekannt, testtonAnfordern: vi.fn(), gehoert: vi.fn(),
 });
 const laufzeit = (rolle: LaufzeitSnapshot['rolle'], zustand: string): LaufzeitSnapshot => ({
   rolle, turnierId: 't1', felder: [1], geraeteZustand: 'ready', zustandJeFeld: { 'field-1': zustand as never },
@@ -93,12 +96,15 @@ describe('@HT-045 @HT-038 HallStatusZeile in der Kopfzeile', () => {
     zeige(<HallStatusZeile tournamentId="t1" probe={probe} />);
     expect(buttons()).toEqual(['Probe läuft']);
   });
-  it('@HT-041 kein Netz nach bekanntem Lautsprecher → „Lautsprecher: Status unbekannt“ (nicht schon beim ersten Laden)', () => {
-    doppel.status = status({ 1: { art: 'bereit', pruefen: false } });
-    const r = zeige(<HallStatusZeile tournamentId="t1" />);
-    doppel.status = status({}, 'unbekannt');
-    r.rerender(<AuthContext.Provider value={{} as never}><MemoryRouter><HallStatusZeile tournamentId="t1" /></MemoryRouter></AuthContext.Provider>);
+  it('@HT-041 kein Netz nach bekanntem Lautsprecher → „Lautsprecher: Status unbekannt“, auch gleich nach einem Seitenwechsel (neue Einbindung)', () => {
+    doppel.status = status({}, 'unbekannt', true);
+    zeige(<HallStatusZeile tournamentId="t1" />);
     expect(buttons()).toEqual(['Lautsprecher: Status unbekannt']);
+  });
+  it('Gegenbeispiel @HT-038: ohne je einen Lautsprecher zu kennen, ohne Netz keine Zeile', () => {
+    doppel.status = status({}, 'unbekannt', false);
+    zeige(<HallStatusZeile tournamentId="t1" />);
+    expect(screen.queryByTestId('hallenton-status-zeile')).toBeNull();
   });
   it('„Prüfen“ steht neben „bereit“ in derselben Gruppe', () => {
     doppel.status = status({ 1: { art: 'bereit', pruefen: true } });
@@ -109,6 +115,33 @@ describe('@HT-045 @HT-038 HallStatusZeile in der Kopfzeile', () => {
     doppel.status = status({ 1: { art: 'nichtBereit', grund: 'background', pruefen: false } });
     zeige(<HallStatusZeile tournamentId="t1" ohneLautsprecher />);
     expect(screen.queryByTestId('hallenton-status-zeile')).toBeNull();
+  });
+});
+
+describe('G1 das Ziel der Pillen ist bis H4-8 kein toter Klick', () => {
+  const Ort = () => <span data-testid="ort">{useLocation().pathname}</span>;
+  it('das Ziel ist eine echte Route (Admin-Hub des Turniers), nicht eine unbekannte Kategorie', () => {
+    expect(hallentonZiel('t1')).toBe('/tournament/t1/admin');
+    expect(matchRoute(hallentonZiel('t1'))).toMatchObject({ name: 'admin', params: { tournamentId: 't1' } });
+  });
+  it('ein Klick auf „Lautsprecher Feld 1 nicht bereit“ wechselt die Adresse zum Hub', () => {
+    doppel.status = status({ 1: { art: 'nichtBereit', grund: 'background', pruefen: false } });
+    zeige(<><HallStatusZeile tournamentId="t1" /><Ort /></>);
+    fireEvent.click(screen.getByRole('button', { name: 'Lautsprecher Feld 1 nicht bereit' }));
+    expect(screen.getByTestId('ort').textContent).toBe('/tournament/t1/admin');
+  });
+});
+
+describe('G3 Streifen und Kopfzeile nie zugleich', () => {
+  it('schon im ersten Bild mit Kopfzeile fehlt der Streifen (Host im Layout-Effekt)', () => {
+    geraet.einschaltung = { turnierId: 't1', felder: [1], name: 'Laptop Turnierleitung' };
+    doppel.lautsprecher = lautsprecher(laufzeit('wartet', 'not_activated'));
+    doppel.status = status({ 1: { art: 'bereit', pruefen: false } });
+    const bilder: number[] = [];
+    const Zaehler = () => { bilder.push(document.querySelectorAll('[data-testid="hallenton-geraet-streifen"]').length); return null; };
+    zeige(<><HallStatusZeile tournamentId="t1" /><HallGeraetStreifen /><Zaehler /></>);
+    expect(document.querySelectorAll('[data-testid="hallenton-geraet-streifen"]').length).toBe(0);
+    expect(bilder.at(-1)).toBe(0);
   });
 });
 

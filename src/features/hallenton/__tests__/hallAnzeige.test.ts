@@ -14,7 +14,7 @@ const server = (felder: Record<number, LautsprecherLage>, extra: Partial<HallAnz
 });
 const lokal = (zustand: FeldZustand, rolle: LokaleLage['rolle'] = 'toent'): LokaleLage => ({ felder: [1], rolle, zustandJeFeld: { 'field-1': zustand } });
 const bereit: LautsprecherLage = { art: 'bereit', pruefen: false };
-const eingabe = (e: Partial<HallAnzeigeEingabe>): HallAnzeigeEingabe => ({ server: server({}), lokal: null, lautsprecherBekannt: false, ...e });
+const eingabe = (e: Partial<HallAnzeigeEingabe>): HallAnzeigeEingabe => ({ server: server({}), lokal: null, angepfiffen: new Set([1]), lautsprecherBekannt: false, ...e });
 
 describe('@HT-012 @HT-011 @HT-037 am eigenen Gerät gilt der lokale Zustand, mit Grund', () => {
   it('@HT-012 Ton nicht aktiviert → „Ton nicht aktiv“ am eigenen Gerät', () => {
@@ -108,6 +108,15 @@ describe('@HT-035 Handy ohne Netz', () => {
   it('Lebenszeichen der Leitung älter als 10 s auf einem Feld mit Lautsprecher → „Feld 1: Handy ohne Netz“', () => {
     const a = hallAnzeige(eingabe({ server: server({ 1: bereit }, { antwort: antwort([{ field: 1, ageMs: 12_000 }]) }) }));
     expect(a.handyOhneNetz).toEqual([1]);
+  });
+  it('@HT-035 letzte Zeile: ist Spiel 11 beendet (kein angepfiffenes Spiel auf Feld 1), erscheint kein Hinweis, auch wenn das Lebenszeichen 40 s alt ist', () => {
+    const a = hallAnzeige(eingabe({ server: server({ 1: bereit }, { antwort: antwort([{ field: 1, ageMs: 40_000 }]) }), angepfiffen: new Set() }));
+    expect(a.handyOhneNetz).toEqual([]);
+  });
+  it('Gegenbeispiel: Spiel auf Feld 1 läuft, Lebenszeichen alt → der Hinweis erscheint; ein Spiel auf Feld 2 ändert für Feld 1 nichts', () => {
+    const s1 = server({ 1: bereit, 2: bereit }, { antwort: antwort([{ field: 1, ageMs: 40_000 }]) });
+    expect(hallAnzeige(eingabe({ server: s1, angepfiffen: new Set([1]) })).handyOhneNetz).toEqual([1]);
+    expect(hallAnzeige(eingabe({ server: s1, angepfiffen: new Set([2]) })).handyOhneNetz).toEqual([]);
   });
   it('Gegenbeispiele: frisches Lebenszeichen, oder Feld ohne Lautsprecher → kein Hinweis', () => {
     expect(hallAnzeige(eingabe({ server: server({ 1: bereit }, { antwort: antwort([{ field: 1, ageMs: 3000 }]) }) })).handyOhneNetz).toEqual([]);

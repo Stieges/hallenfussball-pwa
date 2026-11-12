@@ -13,6 +13,7 @@ import { __setzeGeraetFuerTests, GERAET_SCHLUESSEL, geraetStand } from '../lauts
 import type { LeitungLebenszeichen, LeitungStand } from '../runtime/leitungLebenszeichen';
 import { ManuelleUhr } from '../../../test/hallenton/manuelleUhr';
 import { noteFieldControlList, resetOwnFieldsForTests } from '../../../core/fieldControl/ownFields';
+import { __setzeHallStatusFuerTests } from '../useHallStatus';
 import { einzelnZugleich } from '../runtime/tonWahlWechsel';
 
 const sb = vi.hoisted((): { client: unknown } => ({ client: null }));
@@ -102,6 +103,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  __setzeHallStatusFuerTests();
   vi.unstubAllGlobals();
   __setzeGeraetFuerTests();
   setzeLeitung(null);

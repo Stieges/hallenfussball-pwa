@@ -4,7 +4,7 @@
  * und fragen den Server nicht); ohne Lautsprecher im Turnier und ohne Probe steht nichts da. Die Kopfzeile ist Host (`StatusZeileOrt`):
  * der Streifen ohne Kopf bleibt dann aus. `probe` ist der Platz der Probe-Sitzung (`StatusEintrag` mit `rang: 'probe'`).
  */
-import { useCallback, useContext, useMemo, useState, type ReactElement } from 'react';
+import { useCallback, useContext, useMemo, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { StatusZeile } from '../../../components/ui/molecules/StatusZeile';
@@ -13,6 +13,7 @@ import { AuthContext } from '../../auth/context/authContextInstance';
 import { useCan } from '../../auth/hooks/useCan';
 import { hallAnzeige, type HallAnzeige } from '../hallAnzeige';
 import { useHallLautsprecher } from '../useHallLautsprecher';
+import { useAngepfiffeneFelder } from '../useAngepfiffeneFelder';
 import { useHallStatus } from '../useHallStatus';
 import { baueStatusEintraege, hallentonZiel } from './hallStatusEintraege';
 import { useStatusZeileHost } from './StatusZeileOrt';
@@ -75,15 +76,14 @@ function HallStatusZeileMitRecht({ tournamentId, ohneLautsprecher = false, probe
     () => (laufzeit === null ? null : { felder, rolle: laufzeit.rolle, zustandJeFeld: laufzeit.zustandJeFeld }),
     [laufzeit, felder],
   );
-  // Einmal ein Lautsprecher bekannt: ein Netzausfall zeigt „Status unbekannt“ statt nichts (@HT-041); ohne bekannten bleibt es neutral (@HT-038)
-  const [bekannt, setBekannt] = useState(false);
-  const gesehen = Object.keys(status.felder).length > 0 || (lokal !== null && lokal.felder.length > 0);
-  if (gesehen && !bekannt) {
-    setBekannt(true);
-  }
+  // „Ein Lautsprecher war bekannt“ gilt je Turnier für die Sitzung (`useHallStatus`) oder wenn dieses Gerät selbst Lautsprecher ist (@HT-041, @HT-038)
+  const angepfiffen = useAngepfiffeneFelder(tournamentId);
   const anzeige = useMemo(
-    () => hallAnzeige({ server: { stand: status.stand, felder: status.felder, antwort: status.antwort }, lokal, lautsprecherBekannt: bekannt || gesehen }),
-    [status.stand, status.felder, status.antwort, lokal, bekannt, gesehen],
+    () => hallAnzeige({
+      server: { stand: status.stand, felder: status.felder, antwort: status.antwort }, lokal, angepfiffen,
+      lautsprecherBekannt: status.lautsprecherBekannt || (lokal !== null && lokal.felder.length > 0),
+    }),
+    [status.stand, status.felder, status.antwort, status.lautsprecherBekannt, lokal, angepfiffen],
   );
   const aktivieren = useCallback(() => { void tonAktivieren(); }, [tonAktivieren]);
   return <HallStatusZeileAnsicht anzeige={anzeige} tournamentId={tournamentId} tonAktivieren={aktivieren} ohneLautsprecher={ohneLautsprecher} probe={probe} />;

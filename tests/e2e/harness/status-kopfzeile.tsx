@@ -33,10 +33,13 @@ const probe: StatusEintrag = { id: 'probe', rang: 'probe', ton: 'info', rand: 'g
 const bereit: LautsprecherLage = { art: 'bereit', pruefen: false };
 const nicht: LautsprecherLage = { art: 'nichtBereit', grund: 'background', pruefen: false };
 const server = (felder: Record<number, LautsprecherLage>, stand: 'aktuell' | 'unbekannt' = 'aktuell'): HallAnzeigeEingabe['server'] => ({ stand, felder, antwort: null });
-const lokalSchlafen = { felder: [1], rolle: 'wartet' as const, zustandJeFeld: { 'field-1': 'slept' as const } };
+const eigen = (zustand: 'slept' | 'not_activated' | 'keineVerbindung' | 'ready', rolle: 'wartet' | 'toent' | 'andererTab' = 'wartet', felder = [1]) => ({
+  felder, rolle, zustandJeFeld: Object.fromEntries(felder.map((f) => [`field-${f}`, zustand])),
+});
+const lokalSchlafen = eigen('slept');
 
 interface Szenario { id: string; titel: string; eingabe: HallAnzeigeEingabe; probe?: boolean }
-const leer = (e: Partial<HallAnzeigeEingabe>): HallAnzeigeEingabe => ({ server: server({}), lokal: null, lautsprecherBekannt: false, ...e });
+const leer = (e: Partial<HallAnzeigeEingabe>): HallAnzeigeEingabe => ({ server: server({}), lokal: null, angepfiffen: new Set(), lautsprecherBekannt: false, ...e });
 const SZENARIEN: Szenario[] = [
   { id: 'bereit', titel: 'Ein Eintrag: Feld 1 bereit', eingabe: leer({ server: server({ 1: bereit }) }) },
   { id: 'probe-bereit', titel: 'Probe läuft, Feld 1 bereit', eingabe: leer({ server: server({ 1: bereit }) }), probe: true },
@@ -46,7 +49,17 @@ const SZENARIEN: Szenario[] = [
   { id: 'nur-probe', titel: 'Kein Lautsprecher, Probe läuft', eingabe: leer({}), probe: true },
   { id: 'unbekannt', titel: 'Verwaltung ohne Netz', eingabe: leer({ server: server({}, 'unbekannt'), lautsprecherBekannt: true }), probe: true },
   { id: 'mehr', titel: 'Mehr als zwei Einträge', eingabe: leer({ server: server({ 1: nicht, 2: bereit, 3: { art: 'bereit', pruefen: true } }) }), probe: true },
+  { id: 'ton-nicht-aktiv', titel: 'Am Lautsprecher-Gerät: Ton nicht aktiv (@HT-012)', eingabe: leer({ server: server({ 1: bereit }), lokal: eigen('not_activated') }), probe: true },
   { id: 'keiner', titel: 'Kein Eintrag', eingabe: leer({}) },
+];
+// Der Streifen zeigt nur den lokalen Zustand des eigenen Geräts (ohne Server, ohne Probe)
+const STREIFEN: Szenario[] = [
+  { id: 'ton-nicht-aktiv', titel: '@HT-012 Ton nicht aktiv – hier klicken', eingabe: leer({ lokal: eigen('not_activated') }) },
+  { id: 'zwei-felder', titel: '@HT-012 zwei Felder, ein Gerät: ein Eintrag', eingabe: leer({ lokal: eigen('not_activated', 'wartet', [1, 2]) }) },
+  { id: 'anderes-fenster', titel: '@HT-033 Zeile 8 läuft schon in einem anderen Fenster', eingabe: leer({ lokal: eigen('ready', 'andererTab') }) },
+  { id: 'schlafen', titel: '@HT-037 schlafen gelegt', eingabe: leer({ lokal: eigen('slept') }) },
+  { id: 'keine-verbindung', titel: '@HT-011 keine Verbindung', eingabe: leer({ lokal: eigen('keineVerbindung', 'toent') }) },
+  { id: 'bereit', titel: 'bereit', eingabe: leer({ lokal: eigen('ready', 'toent') }) },
 ];
 
 const zeile = (s: Szenario, testId: string) => (
@@ -59,7 +72,7 @@ export function Seite() {
   const ort = new URLSearchParams(window.location.search).get('ort') ?? 'verwaltung';
   return (
     <div style={{ padding: cssVars.spacing.sm, background: cssVars.colors.background, color: cssVars.colors.textPrimary, minHeight: '100vh' }}>
-      {SZENARIEN.map((s) => (
+      {(ort === 'streifen' ? STREIFEN : SZENARIEN).map((s) => (
         <section key={s.id} data-testid={`szenario-${s.id}`}>
           <h2 style={titelStil}>{s.titel}</h2>
           <div style={rahmen}>

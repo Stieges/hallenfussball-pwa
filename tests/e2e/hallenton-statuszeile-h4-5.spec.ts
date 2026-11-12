@@ -58,27 +58,41 @@ test.describe('@HT-045 H4-5 Statuszeile in den Kopfzeilen (Prüfstand)', () => {
   for (const ort of ORTE) {
     for (const g of GERAETE) {
       for (const thema of ['light', 'dark'] as const) {
-        test(`@HT-045 ${ort} ${g.name}, ${thema}: Probe und bereit nebeneinander, ohne Eintrag keine Zeile, nichts läuft über`, async ({ page }, testInfo) => {
+        test(`@HT-045 ${ort} ${g.name}, ${thema}: ${ort === 'streifen' ? 'Streifen-Fälle des eigenen Geräts' : 'Probe und bereit nebeneinander, ohne Eintrag keine Zeile'}, nichts läuft über`, async ({ page }, testInfo) => {
           await page.setViewportSize({ width: g.width, height: g.height });
           await page.emulateMedia({ colorScheme: thema });
           await page.goto(`/tests/e2e/harness/status-kopfzeile.html?ort=${ort}`);
-          await expect(page.getByTestId('zeile-bereit')).toBeVisible();
 
-          // @HT-045 Zeile 2: „Probe läuft“ und „Feld 1 bereit“ in einer Zeile (360 px: gekürzt „Feld 1 bereit“), Probe zuerst
-          const zwei = page.getByTestId('zeile-probe-bereit');
-          const probe = await zwei.getByRole('button').first().boundingBox();
-          const bereit = await zwei.getByRole('button').last().boundingBox();
-          expect(Math.abs((probe?.y ?? 0) - (bereit?.y ?? 99)), 'Probe und bereit nebeneinander').toBeLessThanOrEqual(2);
-          const reihenfolge = await zwei.getByRole('button').allTextContents();
-          expect(reihenfolge.at(0)).toBe('Probe läuft');
-          expect(reihenfolge.at(-1)).toBe(g.schmal ? 'Feld 1 bereit' : 'Lautsprecher Feld 1 bereit');
-          // Zeile 3 und 4: Störung zuerst; zwei Felder, ein Eintrag
-          expect((await page.getByTestId('zeile-stoerung-probe').getByRole('button').allTextContents()).at(0)).toMatch(/Feld 1 nicht bereit$/);
-          expect((await page.getByTestId('zeile-zwei-felder').getByRole('button').allTextContents()).at(0)).toMatch(/Feld 1, 2 nicht bereit$/);
-          // Zeile 5: kein Lautsprecher und keine Probe → die Zeile fehlt ganz
-          await expect(page.getByTestId('zeile-keiner')).toHaveCount(0);
-          // Mehr als zwei: „+n weitere“
-          await expect(page.getByTestId('zeile-mehr-weitere')).toBeVisible();
+          if (ort === 'streifen') {
+            // @HT-012, @HT-033 Zeile 8, @HT-037, @HT-011: die Wortlaute des eigenen Geräts stehen in jeder Ansicht
+            await expect(page.getByTestId('zeile-ton-nicht-aktiv')).toContainText('Ton nicht aktiv – hier klicken');
+            await expect(page.getByTestId('zeile-zwei-felder')).toContainText('Ton nicht aktiv – hier klicken');
+            await expect(page.getByTestId('zeile-anderes-fenster')).toContainText('Lautsprecher läuft schon in einem anderen Fenster');
+            await expect(page.getByTestId('zeile-schlafen')).toContainText('Lautsprecher schlafen gelegt');
+            await expect(page.getByTestId('zeile-keine-verbindung')).toContainText(g.schmal ? 'Feld 1 nicht bereit – keine Verbindung' : 'Lautsprecher Feld 1 nicht bereit – keine Verbindung');
+            await expect(page.getByTestId('zeile-bereit')).toContainText(g.schmal ? 'Feld 1 bereit' : 'Lautsprecher Feld 1 bereit');
+            // Fälle, die der Streifen nie zeigt (Probe, Server-Stände), kommen hier nicht vor
+            await expect(page.getByText('Probe läuft')).toHaveCount(0);
+            await expect(page.getByText('Lautsprecher: Status unbekannt')).toHaveCount(0);
+          } else {
+            await expect(page.getByTestId('zeile-bereit')).toBeVisible();
+            // @HT-045 Zeile 2: „Probe läuft“ und „Feld 1 bereit“ in einer Zeile (360 px: gekürzt „Feld 1 bereit“), Probe zuerst
+            const zwei = page.getByTestId('zeile-probe-bereit');
+            const probe = await zwei.getByRole('button').first().boundingBox();
+            const bereit = await zwei.getByRole('button').last().boundingBox();
+            expect(Math.abs((probe?.y ?? 0) - (bereit?.y ?? 99)), 'Probe und bereit nebeneinander').toBeLessThanOrEqual(2);
+            const reihenfolge = await zwei.getByRole('button').allTextContents();
+            expect(reihenfolge.at(0)).toBe('Probe läuft');
+            expect(reihenfolge.at(-1)).toBe(g.schmal ? 'Feld 1 bereit' : 'Lautsprecher Feld 1 bereit');
+            // Zeile 3 und 4: Störung zuerst; zwei Felder, ein Eintrag
+            expect((await page.getByTestId('zeile-stoerung-probe').getByRole('button').allTextContents()).at(0)).toMatch(/Feld 1 nicht bereit$/);
+            expect((await page.getByTestId('zeile-zwei-felder').getByRole('button').allTextContents()).at(0)).toMatch(/Feld 1, 2 nicht bereit$/);
+            // @HT-012 in der Kopfzeile: „Ton nicht aktiv – hier klicken“ vor der Probe
+            expect((await page.getByTestId('zeile-ton-nicht-aktiv').getByRole('button').allTextContents()).at(0)).toBe('Ton nicht aktiv – hier klicken');
+            // Zeile 5: kein Lautsprecher und keine Probe → die Zeile fehlt ganz
+            await expect(page.getByTestId('zeile-keiner')).toHaveCount(0);
+            await expect(page.getByTestId('zeile-mehr-weitere')).toBeVisible();
+          }
 
           for (const k of await page.locator('[data-testid^="zeile-"] button').all()) {
             const box = await k.boundingBox();

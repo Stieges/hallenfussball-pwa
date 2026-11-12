@@ -14,8 +14,12 @@ import type { FeldAnzeige, FeldAnzeigeArt, HallAnzeige } from '../hallAnzeige';
 
 const GROESSE = iconSizeValues.xs;
 
-/** Der Unterpunkt „Hallenton“ im Admin Center (Ziel der Pillen; der Unterpunkt selbst kommt mit H4-8, bis dahin öffnet die Adresse den Admin-Hub). */
-export const hallentonZiel = (turnierId: string): string => `/tournament/${turnierId}/admin/hallenton`;
+/**
+ * Ziel der Pillen: bis H4-8 der Admin-Hub des Turniers (`/tournament/<id>/admin`, eine echte Route). Der Unterpunkt „Hallenton“ gibt es
+ * noch nicht; eine unbekannte Kategorie ließe den Klick wirkungslos (das Admin Center ignoriert sie). H4-8 stellt hier auf
+ * `/admin/hallenton` um (Pflichtpunkt).
+ */
+export const hallentonZiel = (turnierId: string): string => `/tournament/${turnierId}/admin`;
 
 export interface EintragWerkzeug {
   t: TFunction<'hallenton'>;

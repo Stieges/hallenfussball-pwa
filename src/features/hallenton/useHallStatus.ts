@@ -22,6 +22,8 @@ import { erzeugeGeteilteAbfragen } from './runtime/hallStatusGeteilt';
 import { echterZeitgeber } from './runtime/zeitgeber';
 
 export interface HallStatus extends HallStatusSchnappschuss {
+  /** In dieser Sitzung war für das Turnier schon ein Lautsprecher bekannt (für „Status unbekannt“, @HT-041; je Turnier, nicht je Einbindung). */
+  lautsprecherBekannt: boolean;
   testtonAnfordern(feld: number): Promise<HallErgebnis<HallTestRequestAntwort>>;
   gehoert(feld: number): Promise<HallErgebnis<HallHeardAntwort>>;
 }
@@ -35,12 +37,18 @@ const geteilt = erzeugeGeteilteAbfragen((turnierId) => erzeugeHallStatusAbfrage(
   rpc: (args) => hallSoundStatus(supabase, args),
   online,
   zeitgeber: echterZeitgeber,
-}), () => (typeof window === 'undefined' ? null : window));
+}), () => (typeof window === 'undefined' ? null : window), echterZeitgeber);
+
+/** Nur für Tests: die geteilten Abfragen beenden und vergessen (der Nachlauf überlebt sonst den Test). */
+export function __setzeHallStatusFuerTests(): void {
+  geteilt.zuruecksetzen();
+}
 
 export function useHallStatus(tid: string): HallStatus {
   const abonniere = useCallback((fn: () => void) => geteilt.abonniere(tid, fn), [tid]);
   const holeStand = useCallback(() => geteilt.schnappschuss(tid), [tid]);
   const stand = useSyncExternalStore(abonniere, holeStand, holeStand);
+  const lautsprecherBekannt = geteilt.lautsprecherBekannt(tid);
 
   const testtonAnfordern = useCallback(async (feld: number): Promise<HallErgebnis<HallTestRequestAntwort>> => {
     if (geteilt.schnappschuss(tid).stand !== 'aktuell') {
@@ -57,5 +65,5 @@ export function useHallStatus(tid: string): HallStatus {
     return ergebnis;
   }, [tid]);
 
-  return useMemo(() => ({ ...stand, testtonAnfordern, gehoert }), [stand, testtonAnfordern, gehoert]);
+  return useMemo(() => ({ ...stand, lautsprecherBekannt, testtonAnfordern, gehoert }), [stand, lautsprecherBekannt, testtonAnfordern, gehoert]);
 }

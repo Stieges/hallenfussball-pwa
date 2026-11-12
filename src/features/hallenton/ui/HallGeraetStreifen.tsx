@@ -13,6 +13,7 @@ import { useHallLautsprecher } from '../useHallLautsprecher';
 import { HallStatusZeileAnsicht } from './HallStatusZeile';
 import { useHatStatusZeileHost } from './StatusZeileOrt';
 
+const KEINE_FELDER: ReadonlySet<number> = new Set();
 const OHNE_SERVER = { stand: 'laedt', felder: {}, antwort: null } as const;
 
 export function HallGeraetStreifen(): ReactElement | null {
@@ -31,6 +32,7 @@ function Streifen({ turnierId }: { turnierId: string }): ReactElement {
   const anzeige = useMemo(() => hallAnzeige({
     server: OHNE_SERVER,
     lokal: laufzeit === null ? null : { felder, rolle: laufzeit.rolle, zustandJeFeld: laufzeit.zustandJeFeld },
+    angepfiffen: KEINE_FELDER,
     lautsprecherBekannt: false,
   }), [laufzeit, felder]);
   const aktivieren = useCallback(() => { void tonAktivieren(); }, [tonAktivieren]);

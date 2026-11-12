@@ -4,7 +4,7 @@
  * eigenen Lautsprecher-Geräts kein Host eingebunden ist – so steht die Zeile in jeder Ansicht genau einmal (@HT-012).
  * Kleiner Speicher ohne React-Baum, weil der Streifen in `App.tsx` neben, nicht unter den Köpfen steht.
  */
-import { useEffect, useSyncExternalStore } from 'react';
+import { useLayoutEffect, useSyncExternalStore } from 'react';
 
 const hosts = new Map<string, number>();
 const hoerer = new Set<() => void>();
@@ -50,7 +50,8 @@ function abonniere(fn: () => void): () => void {
 
 /** Für die Kopfzeile: solange sie eingebunden ist, ist sie Host des Turniers. */
 export function useStatusZeileHost(turnierId: string): void {
-  useEffect(() => meldeStatusZeileHost(turnierId), [turnierId]);
+  // vor dem Malen: sonst stünden Streifen und Kopfzeile ein Bild lang gleichzeitig da
+  useLayoutEffect(() => meldeStatusZeileHost(turnierId), [turnierId]);
 }
 
 /** Für den Streifen: gibt es für das Turnier einen Host? */
