@@ -27,7 +27,7 @@ const e = (id: string, rang: StatusRang, text: string, extra: Partial<StatusEint
 });
 const weitereText = (n: number) => `+${n} weitere`;
 const zeige = (eintraege: StatusEintrag[], onNavigiere = vi.fn()) =>
-  render(<StatusZeile eintraege={eintraege} weitereText={weitereText} onNavigiere={onNavigiere} label="Status" />);
+  render(<StatusZeile eintraege={eintraege} weitereText={weitereText} wenigerText="weniger" onNavigiere={onNavigiere} label="Status" />);
 const sichtbar = () => screen.getAllByRole('button').map((b) => b.textContent);
 
 const BEREIT = e('f1', 'bereit', 'Lautsprecher Feld 1 bereit', { kurz: 'Feld 1 bereit', reihe: 1 });
@@ -113,7 +113,7 @@ describe('StatusZeile', () => {
       const weitere = screen.getByTestId('status-zeile-weitere');
       expect(weitere).toHaveAttribute('aria-expanded', 'false');
       await user.click(weitere);
-      expect(sichtbar()).toEqual(['Lautsprecher Feld 1 nicht bereit', 'Probe läuft', 'Lautsprecher Feld 1 bereit', '+1 weitere']);
+      expect(sichtbar()).toEqual(['Lautsprecher Feld 1 nicht bereit', 'Probe läuft', 'Lautsprecher Feld 1 bereit', 'weniger']);
       expect(screen.getByTestId('status-zeile-weitere')).toHaveAttribute('aria-expanded', 'true');
       await user.click(screen.getByTestId('status-zeile-weitere'));
       expect(sichtbar()).toEqual(['Lautsprecher Feld 1 nicht bereit', 'Probe läuft', '+1 weitere']);
@@ -172,7 +172,7 @@ describe('StatusZeile', () => {
 
   it('Befund 1: ohne `onNavigiere` kompiliert die Zeile nicht (Pflicht, damit eine antippbare Pille nie still nichts tut)', () => {
     // @ts-expect-error – onNavigiere fehlt
-    const ohne = <StatusZeile eintraege={[]} weitereText={weitereText} label="Status" />;
+    const ohne = <StatusZeile eintraege={[]} weitereText={weitereText} wenigerText="weniger" label="Status" />;
     expect(ohne).toBeTruthy();
   });
 
@@ -188,10 +188,24 @@ describe('StatusZeile', () => {
     const { rerender } = zeige(vier);
     await user.click(screen.getByTestId('status-zeile-weitere'));
     expect(sichtbar()).toHaveLength(5);
-    rerender(<StatusZeile eintraege={[{ ...BEREIT, id: 'f2' }, PROBE]} weitereText={weitereText} onNavigiere={vi.fn()} label="Status" />);
+    rerender(<StatusZeile eintraege={[{ ...BEREIT, id: 'f2' }, PROBE]} weitereText={weitereText} wenigerText="weniger" onNavigiere={vi.fn()} label="Status" />);
     expect(screen.queryByTestId('status-zeile-weitere')).toBeNull();
-    rerender(<StatusZeile eintraege={vier} weitereText={weitereText} onNavigiere={vi.fn()} label="Status" />);
+    rerender(<StatusZeile eintraege={vier} weitereText={weitereText} wenigerText="weniger" onNavigiere={vi.fn()} label="Status" />);
     expect(screen.getByTestId('status-zeile-weitere')).toHaveAttribute('aria-expanded', 'false');
     expect(sichtbar()).toEqual(['Lautsprecher Feld 1 nicht bereit', 'Probe läuft', '+2 weitere']);
+  });
+
+  it('Fixrunde 2: die Sammelpille heißt zugeklappt „+n weitere“, aufgeklappt „weniger“ (aria-expanded bleibt), danach wieder „+n weitere“', async () => {
+    const user = userEvent.setup();
+    zeige([{ ...BEREIT, id: 'f2' }, PROBE, NICHT, { ...BEREIT, id: 'f3' }]);
+    const sammel = screen.getByTestId('status-zeile-weitere');
+    expect(sammel).toHaveTextContent('+2 weitere');
+    expect(sammel).toHaveAttribute('aria-expanded', 'false');
+    await user.click(sammel);
+    expect(sammel).toHaveTextContent('weniger');
+    expect(sammel).not.toHaveTextContent('+2 weitere');
+    expect(sammel).toHaveAttribute('aria-expanded', 'true');
+    await user.click(sammel);
+    expect(sammel).toHaveTextContent('+2 weitere');
   });
 });

@@ -2,7 +2,7 @@
  * StatusZeile – die gemeinsame Statuszeile unter dem Kopf (G6, @HT-045): ordnet und kürzt ihre Pillen. Fachfrei: Verwaltung, Cockpit
  * und die Probe liefern nur `StatusEintrag`; hier steht kein Wissen über Lautsprecher oder Probe.
  *  - Reihenfolge: `rang` (stoerung → probe → hinweis → bereit), dann `reihe`.
- *  - Mehr als zwei Einträge: Störung und Probe bleiben, die übrigen werden zu „+n weitere“ (öffnet die Liste).
+ *  - Mehr als zwei Einträge: Störung und Probe bleiben, die übrigen werden zu „+n weitere“ (öffnet die Liste; aufgeklappt steht dort `wenigerText`).
  *  - Unter 480 px und bei zwei oder mehr Einträgen gilt `kurz` statt `text`.
  *  - Ohne Einträge rendert sie nichts (kein leerer Streifen).
  * Zusammenfassen mehrerer Felder zu einem Eintrag („Feld 1, 2 nicht bereit“) macht der Gastgeber vorher, nicht diese Zeile.
@@ -32,7 +32,7 @@ const zeileStil: CSSProperties = {
 
 const gruppeStil: CSSProperties = { display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', gap: cssVars.spacing.xs, maxWidth: '100%' };
 
-export function StatusZeile({ eintraege, weitereText, onNavigiere, label, 'data-testid': testId = 'status-zeile' }: StatusZeileProps): ReactElement | null {
+export function StatusZeile({ eintraege, weitereText, wenigerText, onNavigiere, label, 'data-testid': testId = 'status-zeile' }: StatusZeileProps): ReactElement | null {
   const schmal = useSchmaleBreite();
   const [aufgeklappt, setAufgeklappt] = useState(false);
   const sortiert = sortiereEintraege(eintraege);
@@ -72,7 +72,7 @@ export function StatusZeile({ eintraege, weitereText, onNavigiere, label, 'data-
           aria-expanded={aufgeklappt}
           data-testid={`${testId}-weitere`}
         >
-          {weitereText(weitere)}
+          {aufgeklappt ? wenigerText : weitereText(weitere)}
         </StatusPille>
       ) : null}
     </div>

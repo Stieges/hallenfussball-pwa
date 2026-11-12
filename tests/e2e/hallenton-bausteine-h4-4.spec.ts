@@ -83,10 +83,11 @@ test.describe('@HT-045 H4-4 Statuszeile und Feldkarten (Prüfstand)', () => {
         expect(mitPruefen.at(0)).toBe('Probe läuft');
         expect(mitPruefen.at(-1)).toBe('Prüfen');
 
-        // Vier Einträge: Störung, Probe, „+2 weitere“; Klick klappt auf
+        // Vier Einträge (@HT-045): Störung, Probe, „+2 weitere“ (Feld 2 bereit mit „Prüfen“ daneben und Feld 3 bereit); „Prüfen“ steht nie allein
         const vier = page.getByTestId('zeile-4');
         expect((await vier.getByRole('button').allTextContents()).map((t) => t.replace(/^(Lautsprecher )/, '')).at(-1)).toBe('+2 weitere');
         await expect(vier.getByTestId('zeile-4-weitere')).toHaveAttribute('aria-expanded', 'false');
+        await expect(vier).not.toContainText('Prüfen');
 
         // Tippflächen und Überlauf
         const knoepfe = page.locator('button');
@@ -103,7 +104,12 @@ test.describe('@HT-045 H4-4 Statuszeile und Feldkarten (Prüfstand)', () => {
 
         // Aufklappen zeigt alle vier
         await vier.getByTestId('zeile-4-weitere').click();
-        await expect(vier.getByRole('button')).toHaveCount(5);
+        await expect(vier.getByTestId('zeile-4-weitere')).toHaveText('weniger');
+        await expect(vier.getByTestId('zeile-4-weitere')).toHaveAttribute('aria-expanded', 'true');
+        // Alle vier Einträge plus „Prüfen“ neben Feld 2 plus die Sammelpille; „Prüfen“ direkt hinter „Feld 2 bereit“
+        await expect(vier.getByRole('button')).toHaveCount(6);
+        const aufgeklappt = await vier.getByRole('button').allTextContents();
+        expect(aufgeklappt.findIndex((t) => t === 'Prüfen')).toBe(aufgeklappt.findIndex((t) => t.endsWith('Feld 2 bereit')) + 1);
         await bild(page, testInfo.outputDir, `h4-4-${g.name}-${thema}-aufgeklappt`);
       });
     }

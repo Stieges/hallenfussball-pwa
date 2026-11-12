@@ -27,17 +27,18 @@ const ICON = iconSizeValues.xs;
 export function Seite() {
   const { t } = useTranslation('hallenton');
   const nav = { art: 'navigiere', ziel: ZIEL } as const;
-  const bereit: StatusEintrag = {
-    id: 'bereit', rang: 'bereit', reihe: 1, ton: 'ok', symbol: <Icons.Speaker size={ICON} />,
-    text: t('statuszeile.bereit', { feld: 1 }), kurz: t('statuszeile.bereitKurz', { feld: 1 }), lesetext: t('statuszeile.bereit', { feld: 1 }), aktion: nav,
-  };
+  const bereitFeld = (feld: number): StatusEintrag => ({
+    id: `bereit${feld}`, rang: 'bereit', reihe: feld, ton: 'ok', symbol: <Icons.Speaker size={ICON} />,
+    text: t('statuszeile.bereit', { feld }), kurz: t('statuszeile.bereitKurz', { feld }), lesetext: t('statuszeile.bereit', { feld }), aktion: nav,
+  });
+  const bereit = bereitFeld(1);
   const nicht: StatusEintrag = {
     id: 'nicht', rang: 'stoerung', reihe: 1, ton: 'warn', symbol: <Icons.SpeakerOff size={ICON} />,
     text: t('statuszeile.nichtBereit', { feld: 1 }), kurz: t('statuszeile.nichtBereitKurz', { feld: 1 }), lesetext: t('statuszeile.nichtBereit', { feld: 1 }), aktion: nav,
   };
   // Platzhalter der Probe-Sitzung: Text und Symbol liefert später sie
   const probe: StatusEintrag = {
-    id: 'probe', rang: 'probe', ton: 'info', rand: 'gestrichelt', symbol: <Icons.Info size={ICON} />, text: 'Probe läuft', aktion: { art: 'navigiere', ziel: '/probe' },
+    id: 'probe', rang: 'probe', ton: 'info', rand: 'gestrichelt', symbol: <Icons.Flask size={ICON} />, text: 'Probe läuft', aktion: { art: 'navigiere', ziel: '/probe' },
   };
   const pruefen: StatusEintrag = {
     id: 'pruefen', rang: 'hinweis', ton: 'info', rand: 'gestrichelt', symbol: <Icons.SpeakerQuestion size={ICON} />,
@@ -51,13 +52,13 @@ export function Seite() {
     <div style={{ padding: cssVars.spacing.md, background: cssVars.colors.background, color: cssVars.colors.textPrimary, minHeight: '100vh', display: 'flex', flexDirection: 'column', gap: cssVars.spacing.md }}>
       <h1 style={{ margin: 0, fontSize: cssVars.fontSizes.titleMd }}>Hallencup Süd</h1>
       <p style={titel}>Ein Eintrag</p>
-      <div style={rahmen}><StatusZeile data-testid="zeile-1" eintraege={[bereit]} weitereText={weitereText} onNavigiere={onNavigiere} label={t('statuszeile.titel')} /></div>
+      <div style={rahmen}><StatusZeile data-testid="zeile-1" eintraege={[bereit]} weitereText={weitereText} wenigerText={t('statuszeile.weniger')} onNavigiere={onNavigiere} label={t('statuszeile.titel')} /></div>
       <p style={titel}>Zwei Einträge (Probe, bereit)</p>
-      <div style={rahmen}><StatusZeile data-testid="zeile-2" eintraege={[bereit, probe]} weitereText={weitereText} onNavigiere={onNavigiere} label={t('statuszeile.titel')} /></div>
+      <div style={rahmen}><StatusZeile data-testid="zeile-2" eintraege={[bereit, probe]} weitereText={weitereText} wenigerText={t('statuszeile.weniger')} onNavigiere={onNavigiere} label={t('statuszeile.titel')} /></div>
       <p style={titel}>Zwei Einträge, bereit mit Hinweis „Prüfen“ daneben</p>
-      <div style={rahmen}><StatusZeile data-testid="zeile-2p" eintraege={[{ ...bereit, daneben: pruefen }, probe]} weitereText={weitereText} onNavigiere={onNavigiere} label={t('statuszeile.titel')} /></div>
-      <p style={titel}>Vier Einträge (Störung, Probe, Hinweis, bereit)</p>
-      <div style={rahmen}><StatusZeile data-testid="zeile-4" eintraege={[bereit, probe, nicht, { ...pruefen, id: 'hinweis' }]} weitereText={weitereText} onNavigiere={onNavigiere} label={t('statuszeile.titel')} /></div>
+      <div style={rahmen}><StatusZeile data-testid="zeile-2p" eintraege={[{ ...bereit, daneben: pruefen }, probe]} weitereText={weitereText} wenigerText={t('statuszeile.weniger')} onNavigiere={onNavigiere} label={t('statuszeile.titel')} /></div>
+      <p style={titel}>Vier Einträge (Feld 1 nicht bereit, Probe, Feld 2 bereit mit „Prüfen“ daneben, Feld 3 bereit)</p>
+      <div style={rahmen}><StatusZeile data-testid="zeile-4" eintraege={[nicht, probe, { ...bereitFeld(2), daneben: pruefen }, bereitFeld(3)]} weitereText={weitereText} wenigerText={t('statuszeile.weniger')} onNavigiere={onNavigiere} label={t('statuszeile.titel')} /></div>
       <p style={titel}>Feldkarten</p>
       <LautsprecherFeldKarte feld={1} zustand={{ art: 'bereit' }} geraet={{ name: 'Laptop Turnierleitung', art: 'laptop' }}
         pille={<StatusPille ton="info" rand="gestrichelt" symbol={<Icons.SpeakerQuestion size={ICON} />} aktion={{ art: 'ausloesen', onClick: () => undefined }}>{t('statuszeile.pruefen')}</StatusPille>} />

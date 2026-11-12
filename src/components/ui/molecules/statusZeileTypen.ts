@@ -26,6 +26,8 @@ export interface StatusZeileProps {
   eintraege: ReadonlyArray<StatusEintrag>;
   /** Text der Sammelpille, z. B. „+2 weitere“. */
   weitereText: (n: number) => string;
+  /** Text der Sammelpille im aufgeklappten Zustand, z. B. „weniger“ (Text vom Aufrufer, die Zeile kennt keine Sprache). */
+  wenigerText: string;
   /** Führt Einträge mit `aktion.art === 'navigiere'` aus (im Gastgeber `navigate()`). Pflicht: sonst täte eine antippbare Pille nichts. */
   onNavigiere: (ziel: string) => void;
   /** Name der Zeile für Vorlesehilfen (Bereich), z. B. „Status“. */

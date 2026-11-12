@@ -1,6 +1,7 @@
 {
   "statuszeile": {
     "weitere": "+{{count}} more",
+    "weniger": "show less",
     "bereit": "Field {{feld}} speaker ready",
     "bereitKurz": "Field {{feld}} ready",
     "nichtBereit": "Field {{feld}} speaker not ready",

@@ -36,6 +36,8 @@ export const iconsGeraet = {
   CheckCircle: zeichen(<><circle cx="12" cy="12" r="10" /><polyline points="8 12.5 11 15.5 16 9" /></>),
   /** Minus im Kreis (kein Hallen-Lautsprecher, neutral) */
   MinusCircle: zeichen(<><circle cx="12" cy="12" r="10" /><line x1="8" y1="12" x2="16" y2="12" /></>),
+  /** Kolben (Erlenmeyer, „Probe läuft“): Hals oben, Bauch unten, eine Füllmarke */
+  Flask: zeichen(<><path d="M9 3h6" /><path d="M10 3v6L4.5 19a1.5 1.5 0 0 0 1.3 2.2h12.4a1.5 1.5 0 0 0 1.3-2.2L14 9V3" /><line x1="7.5" y1="15" x2="16.5" y2="15" /></>),
   Laptop: zeichen(<><rect x="3" y="4" width="18" height="12" rx="2" /><line x1="2" y1="20" x2="22" y2="20" /></>),
   /** Mond (der Browser hat den Lautsprecher schlafen gelegt) */
   Moon: zeichen(<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />),
