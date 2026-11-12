@@ -324,6 +324,9 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
                 currentMatches={draft.draftTournament.matches}
                 tournamentTeams={tournament.teams}
                 editable={!closed}
+                showTournamentHeader={false}
+                participantsCollapsed
+                showListHead
                 editingSchedule={isEditing}
                 pendingChanges={isEditing ? draft.changed : undefined}
                 onScoreChange={closed ? undefined : handleScoreChange}

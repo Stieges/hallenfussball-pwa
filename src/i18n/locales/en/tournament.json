@@ -794,6 +794,10 @@
     "ariaLabel": "Match is currently running",
     "live": "Live"
   },
+  "scheduleHead": {
+    "title": "Matches",
+    "times": "Start {{start}} · End about {{end}}"
+  },
   "scheduleCurrent": {
     "live": "Running · {{name}} · Field {{field}}",
     "next": "Next match · {{name}} · Field {{field}}",

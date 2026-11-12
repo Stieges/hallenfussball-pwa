@@ -794,6 +794,10 @@
     "ariaLabel": "Spiel läuft gerade",
     "live": "Live"
   },
+  "scheduleHead": {
+    "title": "Spiele",
+    "times": "Beginn {{start}} Uhr · Ende etwa {{end}} Uhr"
+  },
   "scheduleCurrent": {
     "live": "Läuft · {{name}} · Feld {{field}}",
     "next": "Nächstes Spiel · {{name}} · Feld {{field}}",

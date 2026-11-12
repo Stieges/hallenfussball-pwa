@@ -22,6 +22,9 @@ import { ViewTimeNotes } from './schedule/ViewTimeNotes';
 import type { MatchForfeitActions } from './schedule/MatchForfeitAction';
 import type { MatchActionRights } from './schedule/actionMenu/matchActions';
 import { useSpectatorClocks } from './schedule/useSpectatorClocks';
+import { ScheduleListHead } from './schedule/ScheduleListHead';
+import { ScheduleDisplayStyles } from './ScheduleDisplayStyles';
+import { PublicParticipants } from '../features/public-view/components/PublicParticipants';
 import {
   TournamentHeader,
   ParticipantsAndGroups,
@@ -62,6 +65,13 @@ interface ScheduleDisplayProps {
    * die Teilnehmer eingeklappt über dem Spielplan (@ZM-196, `PublicParticipants`).
    */
   showParticipants?: boolean;
+  /**
+   * Teilnehmer eingeklappt als „Teilnehmer (6)“ statt der Teamlisten je Gruppe (Turnierleitung, @ZP-113: der Spielplan rückt nach oben); Vorgabe false.
+   * Gilt nur mit `showParticipants`.
+   */
+  participantsCollapsed?: boolean;
+  /** Listenkopf „Spiele · Beginn … · Ende etwa …“ über den Spielen (Turnierleitung, @ZP-113); Vorgabe false */
+  showListHead?: boolean;
   /** Engerer Innenabstand (Zuschauer-Seite am Handy, @ZM-196: der Spielplan rückt näher an den Kopf); Vorgabe false. */
   compact?: boolean;
   /** Zeige QR-Code für Live-Tracking */
@@ -119,6 +129,8 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   currentMatches,
   showTournamentHeader = true,
   showParticipants = true,
+  participantsCollapsed = false,
+  showListHead = false,
   compact = false,
   showQRCode = false,
   qrCodeUrl,
@@ -205,7 +217,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   // Container Style - full width, parent controls maxWidth
   const containerStyle: CSSProperties = {
     width: '100%',
-    padding: compact ? cssVars.spacing.sm : '40px 20px',
+    padding: compact ? cssVars.spacing.sm : `${cssVars.spacing.xl} ${cssVars.spacing.md}`,
     background: cssVars.colors.background,
     fontFamily: cssVars.fontFamilies.body,
     color: cssVars.colors.textPrimary,
@@ -226,13 +238,17 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
       )}
 
       {/* Participants (only for group tournaments) */}
-      {hasGroups && showParticipants && (
-        <ParticipantsAndGroups
-          teams={schedule.teams}
-          standings={participantStandings ?? standings}
-          tournament={groupsOnly}
-        />
-      )}
+      {hasGroups && showParticipants && (participantsCollapsed
+        ? <PublicParticipants teams={schedule.teams} />
+        : (
+          <ParticipantsAndGroups
+            teams={schedule.teams}
+            standings={participantStandings ?? standings}
+            tournament={groupsOnly}
+          />
+        ))}
+
+      {showListHead && <ScheduleListHead schedule={schedule} />}
 
       {/* Group Stage Schedule */}
       {filteredGroupPhaseMatches.length > 0 && (
@@ -301,38 +317,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
         contactInfo={contactInfo ?? schedule.tournament.contactInfo}
       />
 
-      {/* Global styles for responsive design */}
-      <style>{`
-        /* Tailwind-like utility: hide on medium screens and above */
-        @media (min-width: 769px) {
-          .md\\:hidden {
-            display: none !important;
-          }
-        }
-
-        @media (max-width: 768px) {
-          .schedule-display {
-            padding: 20px 12px !important;
-          }
-        }
-
-        @media print {
-          .schedule-display {
-            padding: 20px;
-            max-width: 100%;
-          }
-
-          @page {
-            size: A4;
-            margin: 15mm;
-          }
-
-          * {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-        }
-      `}</style>
+      <ScheduleDisplayStyles />
     </div>
     </ViewTimeNotes>
   );
