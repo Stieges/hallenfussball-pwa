@@ -8,7 +8,7 @@ import { Fragment, type CSSProperties, type ReactElement } from 'react';
 import { fillBaseColor, type BoxFill } from '../../../core/models/scoreBoxColors';
 import { cssVars, iconSizeValues } from '../../../design-tokens';
 import { MatchIcons } from '../IconsMatch';
-import { fillStreifenProzent, fillSurface, fillTextColor } from './scoreBoxStyle';
+import { fillSurface, fillTextColor } from './scoreBoxStyle';
 
 export interface TeamHeadBarProps {
   name: string;
@@ -53,9 +53,9 @@ function schmaleWeste(fill: BoxFill): CSSProperties {
 }
 
 /** Die zwei Streifen der Weste (Trikotfarbe, bei unbekannter Trikotfarbe das graue Muster) links und rechts, hinter dem Rand des Textes. */
-function Streifen({ fill, breite = cssVars.spacing.sm }: { fill: BoxFill; breite?: string }): ReactElement | null {
+function Streifen({ fill }: { fill: BoxFill }): ReactElement | null {
   if (fill.kind !== 'vest') { return null; }
-  const flaeche: CSSProperties = { position: 'absolute', top: 0, bottom: 0, width: breite, backgroundColor: fill.stripes, pointerEvents: 'none' };
+  const flaeche: CSSProperties = { position: 'absolute', top: 0, bottom: 0, width: cssVars.spacing.sm, backgroundColor: fill.stripes, pointerEvents: 'none' };
   return (
     <>
       <i aria-hidden="true" data-teil="streifen" style={{ ...flaeche, left: 0, borderRadius: `${cssVars.borderRadius.md} 0 0 ${cssVars.borderRadius.md}` }} />
@@ -122,7 +122,7 @@ function TeamHeadBarNormal({ name, label, fill, bib = null, breit = false, fuell
   const kopf: CSSProperties = {
     display: 'flex', flexDirection: gestapelt ? 'column-reverse' : 'row', alignItems: gestapelt ? 'stretch' : 'flex-start', justifyContent: 'space-between', gap: gestapelt ? (breit ? 0 : cssVars.spacing.xs) : cssVars.spacing.sm, boxSizing: 'border-box', minWidth: 0,
     // Die Schrift bleibt von den Weste-Streifen weg (N3: „Gast“ auf dem Streifen fiele unter 4,5 : 1)
-    padding: `${cssVars.spacing.xs} calc(${String(fillStreifenProzent(fill))}% + ${cssVars.spacing.sm})`, borderRadius: cssVars.borderRadius.md,
+    padding: `${cssVars.spacing.xs} ${fill.kind === 'vest' ? `calc(${cssVars.spacing.sm} + ${cssVars.spacing.sm})` : cssVars.spacing.sm}`, borderRadius: cssVars.borderRadius.md,
     border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderSolid}`, color: text, hyphens: 'manual',
     ...(fuellend ? { flex: '1 1 auto' } : {}),
     ...(breit ? { minHeight: 'var(--cockpit-kopf, var(--sizing-cockpit-kopf-normal))', alignItems: 'center' } : {}),
@@ -136,7 +136,7 @@ function TeamHeadBarNormal({ name, label, fill, bib = null, breit = false, fuell
   const seite: CSSProperties = { flex: 'none', textAlign: gestapelt ? 'right' : undefined, fontSize: cssVars.fontSizes.labelMd, fontWeight: cssVars.fontWeights.bold, textTransform: 'uppercase', lineHeight: cssVars.lineHeights.bodyMd };
   return (
     <div style={kopf} data-testid={testId} data-fill={fill.kind} data-gestapelt={gestapelt ? 'true' : undefined} data-color={fillBaseColor(fill)}>
-      <Streifen fill={fill} breite={`${String(fillStreifenProzent(fill))}%`} />
+      <Streifen fill={fill} />
       <p data-teamname="" data-testid={nameTestId} style={nameStil}>
         {bib && (
           <span role="img" aria-label={bib.ariaLabel} data-testid={`${testId}-leibchen`} style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', minHeight: cssVars.lineHeights.bodyMd }}>

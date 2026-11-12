@@ -282,7 +282,7 @@ const COCKPITS = [{ name: 'laptop', width: 1280, height: 720 }, { name: 'handy',
 for (const g of COCKPITS) {
   test.describe(`Leibchen-Anzeige Cockpit ${g.name}`, () => {
     for (const [lang, heim] of [['kurz', NAMEN[0]], ['lang', NAME_50]] as const) {
-      test(`@SL-176 @ZM-161 Cockpit-Kasten zeigt die Form des Trainingsleibchens, der flache Team-Kopf behält die Streifen, Name ${lang} (${g.name})`, async ({ page }) => {
+      test(`@SL-176 @ZM-161 Cockpit-Kasten zeigt die Form des Trainingsleibchens, der flache Team-Kopf trägt die Streifen als eigene Elemente, Name ${lang} (${g.name})`, async ({ page }) => {
         await oeffneCockpit(page, g, heim);
         await bild(page, `c-${g.name}-${lang}`);
         const kasten = page.getByTestId('scoreboard-box-links');
@@ -291,8 +291,8 @@ for (const g of COCKPITS) {
         // Der flache Kopf behält die Streifen: die Form des Trainingsleibchens trägt dort nicht (Bilder `kopf-versuch-*`, Bericht)
         const kopf = page.getByTestId('team-head-home');
         await expect(kopf).toHaveAttribute('data-fill', 'vest');
-        // …am Handy als zwei schmale Streifen am Rand neben dem Text (@SL-225), am Laptop als ganze Fläche; nie mit Hals- und Schulterteilen des Kastens
-        await expect(kopf.locator('[data-teil="streifen"]')).toHaveCount(g.name === 'handy' ? 2 : 0);
+        // …als zwei schmale Streifen am Rand neben dem Text, am Handy wie am Laptop (@SL-225); nie mit Hals- und Schulterteilen des Kastens
+        await expect(kopf.locator('[data-teil="streifen"]')).toHaveCount(2);
         await expect(kopf.locator('[data-teil]:not([data-teil="streifen"])')).toHaveCount(0);
       });
     }
