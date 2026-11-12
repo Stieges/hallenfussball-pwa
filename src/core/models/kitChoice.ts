@@ -1,28 +1,17 @@
 /**
- * Leibchen-Wahl in der Anpfiff-Ansicht (@SL-137, @SL-138, @SL-148, @SL-149, @SL-151, @SL-173): reine Regeln ohne React.
+ * Regeln der Leibchen-Wahl (@SL-137, @SL-138, @SL-148, @SL-151, @SL-173, @SL-219, @SL-231): reine Regeln ohne React.
  *
  * - `kitHinweis`: Hinweis auf gleiche bzw. zu ähnliche Trikotfarben (Farbabstand ΔE2000, `kitConflict`; die Helligkeit löst keine Karte aus, @SL-173).
- * - `ersteLeibchenWahl`: Vorbelegung – bei Konflikt die Heimseite mit der Leibchenfarbe des Turniers, sonst kein Leibchen; ist sie dem Gegner
- *   zu ähnlich (@SL-151), die erste wählbare Farbe ohne Konflikt (`leibchenFarbeFuer`).
- * - `leibchenGegenGegner`: @SL-151 – die Leibchenfarbe ist der Trikotfarbe des Gegners zu ähnlich.
- * - `kitAusWahl`: das `kit`, das beim Anpfiff mitgeht; die Wahl gilt nur für dieses Spiel.
- * - `vorschauKaesten`: Kästen und Team-Köpfe vor dem Anpfiff in den echten Trikotfarben, ohne Ausweichfarbe der Zuschauer-Kästen, Leibchen als Zeichen (@SL-196);
- *   eine Seite ohne Trikotfarbe zeigt das Fallback-Muster (@ZM-203).
+ * - `leibchenFarbeFuer`: erste wählbare Farbe ohne Konflikt mit dem Gegner (@SL-151).
  * - `LEIBCHEN_FARBEN`, `leibchenAuswahl`: die Grundauswahl aus 8 Farben (Gelb, Orange, Neongrün, Pink, Rot, Blau, Weiß, Schwarz) mit den Hallenfarben
  *   des Turniers zuerst, nichts doppelt (@SL-199, @SL-219, @W3-029); Werte aus der Trikot-Palette des Assistenten.
  * - `leibchenWieEigenesTrikot`: Warnung „Leibchen sieht aus wie das eigene Trikot“ bzw. Hinweis „gleich hell“ (@SL-231, @SL-173).
+ * Den Vorschlag der Karte rechnet `kitProposal.ts`, das `kit` des Anpfiffs `kitAnpfiff.ts`.
  */
 import { palette } from '../../design-tokens/colors/palette';
-import { DEFAULT_BIB_COLOR, kitConflict, kitSameBrightness, normalizeKitColor, type KitConflict, type KitSide, type MatchKit, compactKit } from './kit';
-import { unknownColorFill, type BoxFill, type SideBox } from './scoreBoxColors';
+import { DEFAULT_BIB_COLOR, kitConflict, kitSameBrightness, normalizeKitColor, type KitConflict, type KitSide } from './kit';
 import type { Match, Team } from '../../types/tournament';
 import { slotTeamId } from './matchSlot';
-
-/** Wahl vor dem Anpfiff: `bibSide` = Seite mit Leibchen (`null` = ohne Leibchen), `bibColor` = Farbe der Leibchen. */
-export interface LeibchenWahl {
-  bibSide: KitSide | null;
-  bibColor: string;
-}
 
 /** Trikotfarben beider Seiten (`a` = Heim, `b` = Gast), normalisiert oder `undefined` („keine Farbe“). */
 export interface TrikotFarben {
@@ -104,20 +93,6 @@ export function leibchenFarbeFuer(farben: TrikotFarben, seite: KitSide, turnierF
   return reihe.find((farbe) => !leibchenFarbeZuAehnlich(farben, seite, farbe)) ?? reihe[0];
 }
 
-export function ersteLeibchenWahl(farben: TrikotFarben, turnierFarbe: string): LeibchenWahl {
-  const konflikt = kitHinweis(farben) !== 'none';
-  return {
-    bibSide: konflikt ? 'a' : null,
-    bibColor: konflikt ? leibchenFarbeFuer(farben, 'a', turnierFarbe) : normalizeKitColor(turnierFarbe) ?? DEFAULT_BIB_COLOR,
-  };
-}
-
-/** @SL-151: Leibchenfarbe gegen die Trikotfarbe des Gegners (dieselbe Grenze wie der Hinweis); ohne Leibchen nie. */
-export function leibchenGegenGegner(farben: TrikotFarben, wahl: LeibchenWahl): boolean {
-  if (wahl.bibSide === null) { return false; }
-  return kitConflict(wahl.bibColor, farben[andere(wahl.bibSide)]) !== 'none';
-}
-
 /** Hinweis zu einer Leibchenfarbe in der Farbliste: `aehnlich` (ΔE2000 < 30 oder gleich), `gleichHell` (nur Helligkeit < 1,5 : 1, @SL-173), sonst `none`. */
 export type LeibchenFarbHinweis = 'none' | 'aehnlich' | 'gleichHell';
 
@@ -138,33 +113,6 @@ export function leibchenWieEigenesTrikot(farben: TrikotFarben, seite: KitSide, f
 /** Dasselbe gegen das Trikot des Gegners (@SL-151, Farbliste): `aehnlich` löst „Leibchen zu ähnlich wie der Gegner“ aus, `gleichHell` ist nur ein Hinweis. */
 export function leibchenGegenGegnerHinweis(farben: TrikotFarben, seite: KitSide, farbe: string): LeibchenFarbHinweis {
   return farbHinweis(farbe, farben[andere(seite)]);
-}
-
-/** Das `kit` des Anpfiffs: getragene Farben beider Seiten, bei Leibchen die Leibchenfarbe auf dieser Seite. */
-export function kitAusWahl(farben: TrikotFarben, wahl: LeibchenWahl): MatchKit {
-  const a = normalizeKitColor(farben.a);
-  const b = normalizeKitColor(farben.b);
-  if (wahl.bibSide === null) { return compactKit({ a, b }); }
-  const bib = normalizeKitColor(wahl.bibColor) ?? DEFAULT_BIB_COLOR;
-  return compactKit({ a: wahl.bibSide === 'a' ? bib : a, b: wahl.bibSide === 'b' ? bib : b, bibSide: wahl.bibSide });
-}
-
-/**
- * @SL-196: Kästen vor dem Anpfiff in den echten Trikotfarben („beide Kästen und Team-Köpfe Blau“), die gewählte Leibchen-Seite nur mit dem
- * Leibchen-Zeichen; die Weste (Leibchen über dem Trikot) zeigt die Anzeige erst ab dem Anpfiff. Eine Seite ohne Trikotfarbe zeigt das
- * Fallback-Muster (@ZM-203); haben beide Seiten keine, gelten die Standardfarben `standard` (Fall A, @ZM-159).
- */
-export function vorschauKaesten(farben: TrikotFarben, wahl: LeibchenWahl, standard: { a: SideBox; b: SideBox }): { a: SideBox; b: SideBox } {
-  const trikotA = normalizeKitColor(farben.a);
-  const trikotB = normalizeKitColor(farben.b);
-  if (trikotA === undefined && trikotB === undefined) {
-    return { a: { fill: standard.a.fill, bib: wahl.bibSide === 'a' }, b: { fill: standard.b.fill, bib: wahl.bibSide === 'b' } };
-  }
-  const seite = (s: KitSide, trikot: string | undefined): SideBox => {
-    const fill: BoxFill = trikot === undefined ? unknownColorFill() : { kind: 'solid', color: trikot };
-    return { fill, bib: wahl.bibSide === s };
-  };
-  return { a: seite('a', trikotA), b: seite('b', trikotB) };
 }
 
 /** Echte Trikotfarben eines Spiels (aktuelle Teamfarbe je Seite, normalisiert); offene Seite oder keine Farbe → `undefined`. */

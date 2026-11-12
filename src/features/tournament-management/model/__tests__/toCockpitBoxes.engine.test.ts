@@ -50,7 +50,7 @@ describe('@SL-176 Weste nach dem Anpfiff aus dem lokalen Engine-Log (ohne Netz)'
 
   it('Gegenbeispiel: unterscheidbare Farben (Rot gegen Weiß) bekommen keine Leibchen', () => {
     const rotWeiss: Team[] = [{ id: HEIM, name: 'FC Nord', colors: { primary: '#C62828' } }, { id: GAST, name: 'DJK Berg', colors: { primary: '#FFFFFF' } }];
-    const kit = kitBeimAnpfiff(spiel, rotWeiss, undefined);
+    const kit = kitBeimAnpfiff(spiel, rotWeiss);
     expect(kit.bibSide).toBeUndefined();
   });
 });

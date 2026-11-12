@@ -59,7 +59,7 @@ describe('A-30a @SL-139 Farbabstand ΔE2000, Hinweis unter 30', () => {
 
     // Spiel 15 FC Nord gegen DJK Berg: auch mit Hinweis belegt der Anpfiff nichts vor (@SL-210) – die Karte schlägt vor, Tom bestätigt.
     const teams = [team(FC_NORD, 'FC Nord', nord), team(DJK_BERG, 'DJK Berg', berg)];
-    const kit = kitBeimAnpfiff(spiel('spiel-15', FC_NORD, DJK_BERG), teams, undefined);
+    const kit = kitBeimAnpfiff(spiel('spiel-15', FC_NORD, DJK_BERG), teams);
     expect(kit.bibSide).toBeUndefined();
   });
 
@@ -101,7 +101,7 @@ describe('A-30a @SL-137 gleiche Farbe: Leibchen für eine Seite, nur in diesem S
   });
 
   it('@SL-210 Gegenbeispiel zur alten Vorbelegung: bei gleicher Farbe pfeift der Anpfiff ohne Tipp ohne Leibchen an, SV Süd bleibt Rot', () => {
-    expect(kitBeimAnpfiff(spiel12, teams, undefined)).toEqual({ a: ROT, b: ROT });
+    expect(kitBeimAnpfiff(spiel12, teams)).toEqual({ a: ROT, b: ROT });
   });
 
   it('@SL-137 Gelb ist änderbar: eine andere Leibchenfarbe gilt für die gewählte Seite', () => {
@@ -124,18 +124,18 @@ describe('A-30a @SL-138 ohne Farbkonflikt kein Hinweis, Anpfiff ohne Zusatzschri
   it('@SL-138 SV Süd in Rot, TSV Ost in Weiß: kein Hinweis, beide Farben, kein Leibchen', () => {
     const teams = [team(SV_SUED, 'SV Süd', ROT), team(TSV_OST, 'TSV Ost', WEISS)];
     expect(kitConflict(ROT, WEISS)).toBe('none');
-    const kit = kitBeimAnpfiff(spiel('spiel-14', SV_SUED, TSV_OST), teams, undefined);
+    const kit = kitBeimAnpfiff(spiel('spiel-14', SV_SUED, TSV_OST), teams);
     expect(kit).toEqual({ a: ROT, b: WEISS });
     expect(kit).not.toHaveProperty('bibSide');
   });
 
   it('@SL-138 Gegenbeispiel: ohne Teamfarben gibt es keinen Konflikt und keine Leibchen-Vorbelegung', () => {
-    const kit = kitBeimAnpfiff(spiel('spiel-14', SV_SUED, TSV_OST), [team(SV_SUED, 'SV Süd'), team(TSV_OST, 'TSV Ost')], undefined);
+    const kit = kitBeimAnpfiff(spiel('spiel-14', SV_SUED, TSV_OST), [team(SV_SUED, 'SV Süd'), team(TSV_OST, 'TSV Ost')]);
     expect(kit).toEqual({});
   });
 
   it('@SL-138 Gegenbeispiel: ungültige Teamfarbe zählt als „keine Farbe“, kein Konflikt', () => {
-    const kit = kitBeimAnpfiff(spiel('spiel-14', SV_SUED, TSV_OST), [team(SV_SUED, 'SV Süd', 'rot'), team(TSV_OST, 'TSV Ost', 'rot')], undefined);
+    const kit = kitBeimAnpfiff(spiel('spiel-14', SV_SUED, TSV_OST), [team(SV_SUED, 'SV Süd', 'rot'), team(TSV_OST, 'TSV Ost', 'rot')]);
     expect(kit).toEqual({});
   });
 });
@@ -166,7 +166,7 @@ describe('A-30a @W3-028 Trikotfarbe am Turniertag', () => {
   const ohneFarbe = [team(SV_SUED, 'SV Süd'), team(FC_NORD, 'FC Nord', WEISS)];
   // Wenn Olli für SV Süd Schwarz aus der Palette wählt:
   const mitSchwarz = [team(SV_SUED, 'SV Süd', SCHWARZ), team(FC_NORD, 'FC Nord', WEISS)];
-  const beimAnpfiff = kitBeimAnpfiff(spiel('x', SV_SUED, FC_NORD), ohneFarbe, undefined);
+  const beimAnpfiff = kitBeimAnpfiff(spiel('x', SV_SUED, FC_NORD), ohneFarbe);
   const anpfiffKit = compactKit({ a: beimAnpfiff.a, b: beimAnpfiff.b });
 
   it('@W3-028 Schwarz gilt ab dem nächsten Spiel von SV Süd als Trikotfarbe', () => {

@@ -20,7 +20,7 @@ const rundreise = (t: Tournament): Tournament => {
   const { tournamentRow } = mapTournamentToSupabase(t, 'owner-1');
   return mapTournamentFromSupabase({ ...createTournamentRow({ id: t.id }), config: tournamentRow.config ?? null }, [], []);
 };
-const ausConfig = (config: object): Tournament => mapTournamentFromSupabase({ ...createTournamentRow({ id: testUuid(902) }), config }, [], []);
+const ausConfig = (config: object): Tournament => mapTournamentFromSupabase({ ...createTournamentRow({ id: testUuid(902) }), config: config as never }, [], []);
 
 describe('@W3-029 Hallenfarben im config-JSON', () => {
   it('@W3-029 Gelb und Orange gespeichert → geladen: beide in der Reihenfolge der Eintragung, bibColor = erste', () => {

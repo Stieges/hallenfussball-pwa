@@ -38,36 +38,32 @@ describe('@SL-149 ausdrücklich „Keine Leibchen“ im Anpfiff', () => {
 
 describe('@SL-210 der Anpfiff belegt nichts vor', () => {
   it('@SL-210 beide Teams in Blau, nichts getippt: das Kit trägt die Trikotfarben und keinen Schlüssel bibSide', () => {
-    const kit = kitBeimAnpfiff(SPIEL2, TEAMS, undefined);
+    const kit = kitBeimAnpfiff(SPIEL2, TEAMS);
     expect(kit).toEqual({ a: BLAU, b: BLAU });
     expect('bibSide' in kit).toBe(false);
   });
 
   it('@SL-210 offene Wahl (kitDecision fehlt) trotz Farbgleichheit: keine Leibchen vorbelegt', () => {
-    expect(kitBeimAnpfiff({ ...SPIEL2 }, TEAMS, undefined).bibSide).toBeUndefined();
+    expect(kitBeimAnpfiff({ ...SPIEL2 }, TEAMS).bibSide).toBeUndefined();
   });
 
   it('@SL-149 „Keine Leibchen“ getippt: das Kit trägt ausdrücklich bibSide null', () => {
-    const kit = kitBeimAnpfiff({ ...SPIEL2, kitDecision: 'none' }, TEAMS, undefined);
+    const kit = kitBeimAnpfiff({ ...SPIEL2, kitDecision: 'none' }, TEAMS);
     expect(kit).toEqual({ a: BLAU, b: BLAU, bibSide: null });
   });
 
   it('@SL-202 bestätigt (TSV Waging 1 zieht Gelb): Leibchenfarbe auf der Leibchen-Seite, Trikot auf der anderen, Seite genannt', () => {
     const match: Match = { ...SPIEL2, kitDecision: 'bib', kit: { a: GELB, bibSide: 'a' } };
-    expect(kitBeimAnpfiff(match, TEAMS, undefined)).toEqual({ a: GELB, b: BLAU, bibSide: 'a' });
+    expect(kitBeimAnpfiff(match, TEAMS)).toEqual({ a: GELB, b: BLAU, bibSide: 'a' });
   });
 
   it('@SL-209 bestätigt für TSV Petting in Orange: nur die Gast-Seite trägt, Heim bleibt im Trikot', () => {
     const match: Match = { ...SPIEL2, kitDecision: 'bib', kit: { b: ORANGE, bibSide: 'b' } };
-    expect(kitBeimAnpfiff(match, TEAMS, undefined)).toEqual({ a: BLAU, b: ORANGE, bibSide: 'b' });
-  });
-
-  it('@SL-137 eine ausdrückliche Wahl der Anpfiff-Ansicht (bisheriger Weg bis zur Karte) gilt weiter', () => {
-    expect(kitBeimAnpfiff(SPIEL2, TEAMS, { bibSide: 'b', bibColor: ORANGE })).toEqual({ a: BLAU, b: ORANGE, bibSide: 'b' });
+    expect(kitBeimAnpfiff(match, TEAMS)).toEqual({ a: BLAU, b: ORANGE, bibSide: 'b' });
   });
 
   it('@SL-210 Gegenbeispiel: eine bestätigte Wahl ohne Leibchenfarbe im Spiel (kaputter Stand) wird nicht erfunden, sondern offen behandelt', () => {
     const match: Match = { ...SPIEL2, kitDecision: 'bib', kit: { bibSide: 'a' } };
-    expect(kitBeimAnpfiff(match, TEAMS, undefined)).toEqual({ a: BLAU, b: BLAU });
+    expect(kitBeimAnpfiff(match, TEAMS)).toEqual({ a: BLAU, b: BLAU });
   });
 });
