@@ -45,14 +45,18 @@ export function useKitChoiceOverlay(tournament: Tournament | null): Tournament |
       const match = tournament.matches.find((m) => m.id === entry.matchId);
       if (match) { rows.set(match.id, kitRowStateOf(match)); }
     }
-    queue.reconcile(rows);
-    if (!context) { return; }
     const started = new Set<string>();
-    for (const entry of buildValidMatches(tournament)) {
-      const view = context.engine.view(entry.matchId);
-      if (view && kitStartsOf(view.log).length > 0) { started.add(entry.externalId); }
+    if (context !== null) {
+      for (const entry of buildValidMatches(tournament)) {
+        const view = context.engine.view(entry.matchId);
+        const match = tournament.matches.find((m) => m.id === entry.externalId);
+        // Entscheidend ist der Zustand jetzt: nach „Anpfiff rückgängig“ bleibt der MATCH_START im Log, das Spiel ist aber wieder nicht angepfiffen (@SL-214)
+        const kicked = match?.matchStatus === 'running' || match?.matchStatus === 'paused';
+        if (view && kicked && kitStartsOf(view.log).length > 0) { started.add(entry.externalId); }
+      }
     }
-    queue.discardStarted(started);
+    queue.discardStarted(started); // zuerst: wer selbst angepfiffen hat, dessen Wahl trägt der Anpfiff
+    queue.reconcile(rows);
   }, [tournament, queue, context, entries]);
 
   // Wartende Einträge senden: sofort, bei Netz und regelmäßig
@@ -84,8 +88,9 @@ export function useKitChoices(): KitChoicesApi {
     const match = tournament.matches.find((m) => m.id === choice.matchId);
     if (!match) { return; }
     const row: KitRowState = kitRowStateOf(match);
+    const phase = row.kickedOff === true ? 'live' : 'before';
     const teams = row.teams?.a !== undefined && row.teams.b !== undefined ? { a: row.teams.a, b: row.teams.b } : undefined;
-    queue.submit({ ...choice, teams, deviceId: getDeviceId() }, row);
+    queue.submit({ ...choice, teams, deviceId: getDeviceId(), phase }, row);
     void queue.flush();
   }, [queue]);
   return useMemo(() => ({ entries, notices, choose, dismissNotice: (id: string) => { queue.dismissNotice(id); } }), [entries, notices, choose, queue]);

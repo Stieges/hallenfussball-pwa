@@ -22,6 +22,11 @@ export interface KitChoiceInput {
   teams?: { a: string; b: string } | undefined;
   deviceId?: string | undefined;
   controlEpoch?: number | null | undefined;
+  /**
+   * Zustand des Spiels beim Tippen: `before` = noch nicht angepfiffen, `live` = Nachtrag im laufenden Spiel (@SL-150). Eine Wahl vor dem Anpfiff darf nach
+   * einem Anpfiff nicht mehr als Nachtrag beim Server ankommen und das Leibchen des Anpfiffs überschreiben (@SL-229 Zeile 1). Fehlt es: `before`.
+   */
+  phase?: 'before' | 'live' | undefined;
 }
 
 export type KitChoiceStatus = 'pending' | 'sent';
@@ -40,12 +45,16 @@ export interface KitRowState {
   bibSide?: KitSide | undefined;
   bibColor?: string | undefined;
   teams?: { a: string | undefined; b: string | undefined } | undefined;
+  /** Die Zeile zeigt das Spiel als angepfiffen (`running`/`paused`). */
+  kickedOff?: boolean | undefined;
 }
 
 type KitChoiceNoticeBody =
   | { matchId: string; kind: 'rejected'; code: MatchKitRejectionCode; reason?: string }
   | { matchId: string; kind: 'failed' }
-  | { matchId: string; kind: 'changedElsewhere' };
+  | { matchId: string; kind: 'changedElsewhere' }
+  /** Das Spiel wurde angepfiffen, bevor die Wahl den Server erreichte (@SL-229 Zeile 1). */
+  | { matchId: string; kind: 'tooLate' };
 
 /** Meldung, die stehen bleibt, bis sie weggetippt oder die Wahl neu getroffen wird (@SL-228, @SL-229). */
 export type KitChoiceNotice = KitChoiceNoticeBody & { id: string };
@@ -88,6 +97,7 @@ export class KitChoiceQueue {
   private seq = 0;
   private noticeSeq = 0;
   private flushing = false;
+  private localStarts: ReadonlySet<string> = new Set();
   private readonly listeners = new Set<() => void>();
 
   constructor(private readonly deps: KitChoiceDeps) {
@@ -120,14 +130,21 @@ export class KitChoiceQueue {
     this.changed();
   }
 
-  /** Alle wartenden Einträge senden. Ohne Netz bleibt der Rest liegen; es läuft nie zweimal gleichzeitig. */
+  /**
+   * Alle wartenden Einträge senden, bis nichts mehr wartet (auch eine Wahl, die während einer Sendung dazukommt, @SL-202, @SL-230). Ohne Netz bleibt der
+   * Rest liegen; es läuft nie zweimal gleichzeitig.
+   */
   async flush(): Promise<void> {
     if (this.flushing) {
       return;
     }
     this.flushing = true;
     try {
-      for (const entry of this.list.filter((e) => e.status === 'pending').sort((a, b) => a.seq - b.seq)) {
+      for (;;) {
+        const entry = this.list.filter((e) => e.status === 'pending').sort((a, b) => a.seq - b.seq)[0];
+        if (entry === undefined) {
+          return;
+        }
         const result = await this.deps.send(this.toArgs(entry));
         if (result.kind === 'offline') {
           return;
@@ -151,7 +168,12 @@ export class KitChoiceQueue {
       if (row === undefined) {
         continue;
       }
-      if (entry.teams !== undefined && row.teams !== undefined && (row.teams.a !== entry.teams.a || row.teams.b !== entry.teams.b)) {
+      if (entry.status === 'pending' && (entry.phase ?? 'before') === 'before' && row.kickedOff === true && !this.localStarts.has(entry.matchId)) {
+        // @SL-229 Zeile 1: ein anderes Gerät hat angepfiffen; unsere alte Wahl käme als Nachtrag an und überschriebe das Leibchen des Anpfiffs
+        this.remove(entry);
+        this.notify({ matchId: entry.matchId, kind: 'tooLate' });
+        geaendert = true;
+      } else if (entry.teams !== undefined && row.teams !== undefined && (row.teams.a !== entry.teams.a || row.teams.b !== entry.teams.b)) {
         this.remove(entry);
         this.notify({ matchId: entry.matchId, kind: 'rejected', code: 'TEAMS_CHANGED' });
         geaendert = true;
@@ -172,11 +194,13 @@ export class KitChoiceQueue {
   }
 
   /**
-   * Das Spiel ist lokal angepfiffen: ein wartender Eintrag entfällt, denn der Anpfiff trägt die Wahl im `kit` (`kitBeimAnpfiff`, @SL-202) – sonst
-   * käme die Wahl als Nachtrag im laufenden Spiel beim Server an und würde dort als „nur Turnierleitung“ abgewiesen (@SL-150).
+   * Spiele, die dieses Gerät lokal angepfiffen hat und noch angepfiffen sind (nach „Anpfiff rückgängig“ nicht mehr, @SL-214): ein wartender Eintrag vor
+   * dem Anpfiff entfällt still, denn der Anpfiff trägt die Wahl im `kit` (`kitBeimAnpfiff`, @SL-202) – sonst käme sie als Nachtrag beim Server an und
+   * würde als „nur Turnierleitung“ abgewiesen (@SL-150). Entscheidend ist der Zustand jetzt, nicht ob je ein Anpfiff im Log stand.
    */
   discardStarted(matchIds: ReadonlySet<string>): void {
-    const rest = this.list.filter((entry) => !(entry.status === 'pending' && matchIds.has(entry.matchId)));
+    this.localStarts = new Set(matchIds);
+    const rest = this.list.filter((entry) => !(entry.status === 'pending' && (entry.phase ?? 'before') === 'before' && matchIds.has(entry.matchId)));
     if (rest.length !== this.list.length) {
       this.list = rest;
       this.changed();

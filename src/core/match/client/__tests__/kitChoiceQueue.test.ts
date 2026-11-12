@@ -212,3 +212,104 @@ describe('Abonnenten', () => {
     expect(horcher).toHaveBeenCalledTimes(n);
   });
 });
+
+describe('@SL-202 @SL-230 eine Wahl, die während einer Sendung dazukommt, geht im selben Lauf raus', () => {
+  function blockiert() {
+    const loesen: Array<(r: MatchKitSetResult) => void> = [];
+    const send = vi.fn(() => new Promise<MatchKitSetResult>((ok) => { loesen.push(ok); }));
+    const store = new Map<string, string>();
+    const queue = new KitChoiceQueue({ send, storage: { get: (k) => store.get(k) ?? null, set: (k, v) => { store.set(k, v); } }, storageKey: 'k', now: () => 1 });
+    return { queue, send, loesen };
+  }
+  const gespeichert: MatchKitSetResult = { kind: 'saved', phase: 'before', decision: 'bib' };
+
+  it('@SL-202 Gelb geht raus, währenddessen tippt Tom Orange: nach Gelb geht Orange raus, ohne dass ein neuer Auslöser nötig ist', async () => {
+    const { queue, send, loesen } = blockiert();
+    queue.submit(bestaetigen());
+    const lauf = queue.flush();
+    queue.submit(bestaetigen({ bibColor: ORANGE }));
+    loesen[0](gespeichert);
+    await vi.waitFor(() => { expect(send).toHaveBeenCalledTimes(2); });
+    loesen[1](gespeichert);
+    await lauf;
+    expect(send).toHaveBeenLastCalledWith(expect.objectContaining({ bibColor: ORANGE }));
+    expect(queue.entries()[0]).toMatchObject({ bibColor: ORANGE, status: 'sent' });
+  });
+
+  it('@SL-230 das Ergebnis der älteren Wahl setzt die neuere nicht auf „gesendet“: sie bleibt „wird gesendet“, bis ihre eigene Sendung zurück ist', async () => {
+    const { queue, loesen } = blockiert();
+    queue.submit(bestaetigen());
+    const lauf = queue.flush();
+    queue.submit(bestaetigen({ bibColor: ORANGE }));
+    loesen[0](gespeichert);
+    await vi.waitFor(() => { expect(loesen).toHaveLength(2); });
+    expect(queue.entries()[0]).toMatchObject({ bibColor: ORANGE, status: 'pending' });
+    loesen[1]({ kind: 'offline' });
+    await lauf;
+    expect(queue.entries()[0].status).toBe('pending');
+  });
+
+  it('@SL-229 die Abweisung der älteren Wahl (inzwischen ersetzt) meldet nichts und trifft die neuere nicht', async () => {
+    const { queue, loesen } = blockiert();
+    queue.submit(bestaetigen());
+    const lauf = queue.flush();
+    queue.submit(bestaetigen({ bibColor: ORANGE }));
+    loesen[0]({ kind: 'rejected', code: 'LEAD_ONLY' });
+    await vi.waitFor(() => { expect(loesen).toHaveLength(2); });
+    expect(queue.notices()).toHaveLength(0);
+    expect(queue.entries()).toHaveLength(1);
+    loesen[1](gespeichert);
+    await lauf;
+  });
+
+  it('@SL-221 Doppeltipp während der Sendung: dieselbe Wahl wird nicht ein zweites Mal gesendet', async () => {
+    const { queue, send, loesen } = blockiert();
+    queue.submit(bestaetigen());
+    const lauf = queue.flush();
+    queue.submit(bestaetigen());
+    loesen[0](gespeichert);
+    await lauf;
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(queue.entries()).toHaveLength(1);
+  });
+});
+
+describe('@SL-229 Zeile 1 eine alte Wahl vor dem Anpfiff wird nicht zum Nachtrag', () => {
+  const zeile = (kickedOff: boolean) => new Map([[SPIEL, { decision: undefined, teams: { a: WAGING, b: PETTING }, kickedOff }]]);
+
+  it('@SL-229 ein anderes Gerät hat angepfiffen, unsere Wahl vom Vorabend wartet noch: Eintrag weg, Meldung „zu spät“, nichts geht als Nachtrag raus', async () => {
+    const { queue, send } = aufbau([{ kind: 'offline' }]);
+    queue.submit(bestaetigen({ phase: 'before' }));
+    await queue.flush();
+    queue.reconcile(zeile(true));
+    expect(queue.entries()).toHaveLength(0);
+    expect(queue.notices()[0]).toMatchObject({ kind: 'tooLate', matchId: SPIEL });
+    await queue.flush();
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it('@SL-202 Gegenbeispiel: haben wir selbst angepfiffen, entfällt der Eintrag still (der Anpfiff trägt die Wahl)', async () => {
+    const { queue } = aufbau([{ kind: 'offline' }]);
+    queue.submit(bestaetigen({ phase: 'before' }));
+    queue.discardStarted(new Set([SPIEL]));
+    expect(queue.entries()).toHaveLength(0);
+    expect(queue.notices()).toHaveLength(0);
+  });
+
+  it('@SL-150 Gegenbeispiel: ein Nachtrag der Turnierleitung im laufenden Spiel (phase live) bleibt', async () => {
+    const { queue } = aufbau([{ kind: 'offline' }]);
+    queue.submit(bestaetigen({ phase: 'live' }));
+    await queue.flush();
+    queue.reconcile(zeile(true));
+    queue.discardStarted(new Set([SPIEL]));
+    expect(queue.entries()).toHaveLength(1);
+  });
+
+  it('@SL-214 Gegenbeispiel: ist das Spiel nach „Anpfiff rückgängig“ nicht mehr angepfiffen, bleibt die danach bestätigte Wahl', async () => {
+    const { queue } = aufbau([{ kind: 'offline' }]);
+    queue.submit(bestaetigen({ phase: 'before' }));
+    queue.discardStarted(new Set());
+    queue.reconcile(zeile(false));
+    expect(queue.entries()).toHaveLength(1);
+  });
+});
