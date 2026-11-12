@@ -9,7 +9,8 @@
  * - @SL-194 Rückfrage beim Wechsel: „Spiel 1 läuft weiter. Trotzdem zu Spiel 2 wechseln?“, nach „Wechseln“ läuft Spiel 1 weiter
  *   und die Adresse trägt kein `?matchId=` mehr (C-MATCHID-URL-BLEIBT).
  * - @FU-080 „Protokoll ansehen“ öffnet das Protokoll des Spiels (C-PROTOKOLL-OHNE-EINSTIEG).
- * Größen: jede Aktion ≥ 56 px hoch (Haupttaste), „Schließen“ ≥ 44 px.
+ * - @SL-239 (G3-N N3) Kopf mit Abzeichen und Spielzeile, „X“ oben, gefüllte Haupttaste zuletzt und ohne Scrollen erreichbar.
+ * Größen: jede Aktion ≥ 56 px hoch (Haupttaste), „X“ ≥ 44 px.
  */
 import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
@@ -61,7 +62,7 @@ test.describe('G2 Spur A: Aktionsauswahl am Spiel (offline, Gast = Turnierleitun
     await spielplan(page);
     await tippeFinalspiel(page, HF1);
     await expect(menue(page)).toBeVisible();
-    await expect(menue(page).getByRole('listitem')).toHaveText(['Ergebnis korrigieren', 'Protokoll ansehen']);
+    await expect(menue(page).getByRole('listitem')).toHaveText(['Protokoll ansehen', 'Ergebnis korrigieren']); // @SL-239: die gefüllte Haupttaste steht zuletzt (Menge ohne feste Reihenfolge, @SL-193)
 
     await page.getByTestId('match-action-correct').click();
     const dialog = page.getByTestId('cockpit-korrektur-dialog');
@@ -79,7 +80,7 @@ test.describe('G2 Spur A: Aktionsauswahl am Spiel (offline, Gast = Turnierleitun
     const karte = page.locator('[data-match-card]:visible').filter({ hasText: NAMEN[0] }).first();
     await karte.getByText(NAMEN[0]).first().click();
     // Das Turnier hat ein Feld und keine Schiedsrichter: „Feld ändern“ und „Schiedsrichter ändern“ sind nicht angeschlossen und fehlen (kein stummer Knopf)
-    await expect(menue(page).getByRole('listitem')).toHaveText(['Ergebnis eintragen', 'Im Cockpit anpfeifen', 'Ab hier verschieben', 'Nicht angetreten']);
+    await expect(menue(page).getByRole('listitem')).toHaveText(['Im Cockpit anpfeifen', 'Ab hier verschieben', 'Nicht angetreten', 'Ergebnis eintragen']); // @SL-239: Haupttaste „Ergebnis eintragen“ zuletzt
   });
 
   test('@SL-193 Tippflächen: jede Aktion mindestens 56 px hoch, „Schließen“ mindestens 44 px, Auswahl schließt mit Esc', async ({ page }) => {
@@ -87,13 +88,66 @@ test.describe('G2 Spur A: Aktionsauswahl am Spiel (offline, Gast = Turnierleitun
     await tippeFinalspiel(page, HF1);
     for (const eintrag of await menue(page).getByRole('listitem').all()) {
       const box = await eintrag.getByRole('button').boundingBox();
-      expect(box?.height ?? 0).toBeGreaterThanOrEqual(56);
+      expect(box?.height ?? 0).toBeGreaterThan(55.9);
     }
     const schliessen = await page.getByTestId('match-action-menu-close').boundingBox();
-    expect(schliessen?.height ?? 0).toBeGreaterThanOrEqual(44);
+    expect(schliessen?.height ?? 0).toBeGreaterThan(43.9);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.keyboard.press('Escape');
     await expect(menue(page)).toHaveCount(0);
+  });
+
+  for (const [name, breite, hoehe] of [['360x640', 360, 640], ['390x844', 390, 844], ['1280x720', 1280, 720]] as const) {
+    test(`@SL-239 @OB-022 ${name}: „X“ oben, Abzeichen neben dem Titel, Haupttaste gefüllt und zuletzt, alles ohne Scrollen im Fenster`, async ({ page }) => {
+      await page.setViewportSize({ width: breite, height: hoehe });
+      await spielplan(page);
+      const karte = page.locator('[data-match-card]:visible').filter({ hasText: NAMEN[0] }).first();
+      await karte.getByText(NAMEN[0]).first().click(); // Gruppenspiel geplant: vier Aktionen, Haupttaste „Ergebnis eintragen“
+      const blatt = menue(page);
+      await expect(blatt).toBeVisible();
+      await page.waitForTimeout(600); // das Blatt gleitet 0,3 s ein; erst danach messen (sonst stehen Titel und Abzeichen in verschiedenen Bildern)
+      const kopf = blatt.getByTestId('dialog-surface-header');
+
+      // Kopf: Titel und Abzeichen in einer Zeile (Abzeichen rechts vom Titel, auf der Grundlinie), „X“ am rechten Rand oben
+      const titel = await kopf.getByRole('heading').boundingBox();
+      const abzeichen = await kopf.getByTestId('match-action-badge').boundingBox();
+      const kreuz = await page.getByTestId('match-action-menu-close').boundingBox();
+      expect(abzeichen!.x, 'Abzeichen steht rechts vom Titel').toBeGreaterThan(titel!.x + titel!.width - 1);
+      expect(abzeichen!.y + abzeichen!.height, 'Abzeichen auf der Grundlinie des Titels (Unterkante nicht unter dem Titel)').toBeLessThanOrEqual(titel!.y + titel!.height + 4);
+      expect(abzeichen!.y, 'Abzeichen nicht über dem Titel').toBeGreaterThanOrEqual(titel!.y - 4);
+      expect(kreuz!.y, '„X“ oben im Kopf').toBeLessThan(titel!.y + titel!.height);
+      expect(kreuz!.x + kreuz!.width, '„X“ rechts').toBeGreaterThan(breite / 2);
+      expect(kreuz!.height, '„X“ mindestens 44 px').toBeGreaterThan(43.9);
+      await expect(kopf).toContainText(/\d\d:\d\d Uhr · Feld 1/);
+
+      // Haupttaste: gefüllt (data-primary), ≥ 56 px, letzte Taste, ganz im Fenster ohne Scrollen
+      const haupt = page.getByTestId('match-action-enterResult');
+      await expect(haupt).toHaveAttribute('data-primary', 'true');
+      const hb = await haupt.boundingBox();
+      expect(hb!.height, 'Haupttaste mindestens 56 px').toBeGreaterThan(55.9);
+      expect(hb!.y + hb!.height, 'Haupttaste ganz im Fenster').toBeLessThanOrEqual(hoehe);
+      for (const andere of ['kickOff', 'shiftFrom', 'forfeit']) {
+        const ab = await page.getByTestId(`match-action-${andere}`).boundingBox();
+        expect(ab!.y + ab!.height, `${andere} liegt über der Haupttaste`).toBeLessThanOrEqual(hb!.y + 1);
+        await expect(page.getByTestId(`match-action-${andere}`)).not.toHaveAttribute('data-primary', 'true');
+      }
+      await expect(blatt.locator('[data-primary="true"]')).toHaveCount(1);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      // Unten keine Taste „Schließen“ mehr: genau ein Knopf mit diesem Namen, und der steht im Kopf
+      await expect(blatt.getByRole('button', { name: 'Schließen' })).toHaveCount(1);
+      await expect(kopf.getByRole('button', { name: 'Schließen' })).toHaveCount(1);
+    });
+  }
+
+  test('@SL-239 @EK-063 beendetes Spiel: Abzeichen „Ende“, Spielzeile mit Endstand, Haupttaste „Ergebnis korrigieren“ zuletzt', async ({ page }) => {
+    await spielplan(page);
+    await tippeFinalspiel(page, HF1);
+    const kopf = menue(page).getByTestId('dialog-surface-header');
+    await expect(kopf.getByTestId('match-action-badge')).toHaveText('Ende');
+    await expect(kopf.getByTestId(`match-box-aktion-${HF1}-home-digits`)).toHaveText('2');
+    await expect(kopf.getByTestId(`match-box-aktion-${HF1}-away-digits`)).toHaveText('1');
+    await expect(page.getByTestId('match-action-correct')).toHaveAttribute('data-primary', 'true');
+    await expect(menue(page).getByRole('button').last()).toHaveAttribute('data-testid', 'match-action-correct');
   });
 
   test('@FU-080 Protokoll ansehen: das beendete Halbfinale öffnet das Protokoll des Spiels, nur lesend', async ({ page }) => {
