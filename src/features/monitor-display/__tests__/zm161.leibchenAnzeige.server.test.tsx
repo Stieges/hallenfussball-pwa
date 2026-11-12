@@ -93,12 +93,12 @@ describe('@ZM-161 @ZM-180 Leibchen am Monitor (Server-Antwort display_tournament
     expect(screen.queryByTestId('live-box-home-bib')).toBeNull();
   });
 
-  it('@ZM-195 @ZM-159 Folie „Nächstes Spiel“ aus der Server-Antwort: Kästen „0 : 0“, Rot gegen Rot ohne Leibchen → der Gast weicht auf Blau aus', async () => {
+  it('@ZM-195 @ZM-159 Folie „Nächstes Spiel“ aus der Server-Antwort: Kästen „0 : 0“, Rot gegen Rot ohne Leibchen → beide Kästen Rot (Fall D2, keine Ausweichfarbe)', async () => {
     await zeige(turnier(), 'scheduled', {});
     expect(screen.getByTestId('live-badge')).toHaveTextContent('Nächstes Spiel');
     expect(screen.getByTestId('live-box-home-digits')).toHaveTextContent('0');
     expect(screen.getByTestId('live-box-away-digits')).toHaveTextContent('0');
     expect(screen.getByTestId('live-box-home')).toHaveAttribute('data-color', ROT);
-    expect(screen.getByTestId('live-box-away')).toHaveAttribute('data-color', palette.kit.blue);
+    expect(screen.getByTestId('live-box-away')).toHaveAttribute('data-color', ROT);
   });
 });

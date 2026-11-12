@@ -998,6 +998,7 @@ export type Database = {
           is_public: boolean | null
           kit_color_a: string | null
           kit_color_b: string | null
+          kit_decision: string | null
           label: string | null
           last_modified_by: string | null
           live_state: Json | null
@@ -1051,6 +1052,7 @@ export type Database = {
           is_public?: boolean | null
           kit_color_a?: string | null
           kit_color_b?: string | null
+          kit_decision?: string | null
           label?: string | null
           last_modified_by?: string | null
           live_state?: Json | null
@@ -1104,6 +1106,7 @@ export type Database = {
           is_public?: boolean | null
           kit_color_a?: string | null
           kit_color_b?: string | null
+          kit_decision?: string | null
           label?: string | null
           last_modified_by?: string | null
           live_state?: Json | null
@@ -2461,6 +2464,17 @@ export type Database = {
         Returns: boolean
       }
       match_initial_state: { Args: { ctx: Json }; Returns: Json }
+      match_kit_set: {
+        Args: {
+          p_control_epoch?: number
+          p_decision: string
+          p_device_id?: string
+          p_kit?: Json
+          p_match_id: string
+        }
+        Returns: Json
+      }
+      match_kit_team_color: { Args: { p_team_id: string }; Returns: string }
       match_reduce: {
         Args: { ctx: Json; events: Json; mode?: string; transitions: Json }
         Returns: Json

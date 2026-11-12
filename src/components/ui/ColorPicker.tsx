@@ -1,24 +1,12 @@
 import React, { useState, useRef, useEffect, CSSProperties } from 'react';
 import { HexColorPicker } from 'react-colorful';
 import { cssVars } from '../../design-tokens';
+import { wizardJerseyPresets } from '../../design-tokens/colors/palette';
 
 /**
  * Default jersey color presets (common team colors)
  */
-const JERSEY_COLOR_PRESETS = [
-  '#FFFFFF', // White
-  '#000000', // Black
-  '#DC0000', // Red
-  '#0033CC', // Blue
-  '#009933', // Green
-  '#FFCC00', // Yellow
-  '#FF6600', // Orange
-  '#660099', // Purple
-  '#FF66B2', // Pink
-  '#009999', // Teal
-  '#666666', // Gray
-  '#663300', // Brown
-];
+const JERSEY_COLOR_PRESETS: string[] = [...wizardJerseyPresets];
 
 interface ColorPickerProps {
   /** Label text */

@@ -1,6 +1,6 @@
 /**
  * Aufgabe 2.3 (Spielanzeige): Einstellung „Anzeige für Zuschauer“ und ihre Wirkung am Hallenmonitor Feld 1.
- * @ZM-153 Olli stellt Gast auf Navy: Hinweis, speichern, Monitor zeigt den Gast-Kasten weiß · @ZM-154 Teamfarben aus: Blau/Rot,
+ * @ZM-153 Olli stellt Gast auf Navy: Hinweis, speichern, Monitor zeigt genau Navy (kein Ausweichen) · @ZM-154 Teamfarben aus: Blau/Rot,
  * Kästen gleich groß · @ZM-159 Fälle A, B, C am Monitor Feld 1 · @ZM-152 Vorbelegung und Vorschau.
  *
  * Saat `hallencup-messlauf`: das Finale (Feld 1, läuft 2:1) ist das gezeigte Spiel; die Saat-Teams tragen keine Farbe. Getragene Farben
@@ -24,7 +24,9 @@ const MONITOR = '/#/display/hallencup-messlauf/mon-live';
 const BLAU = 'rgb(21, 101, 192)';
 const ROT = 'rgb(198, 40, 40)';
 const GELB = 'rgb(250, 204, 21)';
-const WEISS = 'rgb(255, 255, 255)';
+const NAVY_RGB = 'rgb(13, 27, 76)';
+/** @ZM-203: Kasten einer Seite ohne Trikotfarbe (Fallback-Muster) */
+const MUSTER = 'muster';
 
 interface Kit { a?: string; b?: string; bibSide?: 'a' | 'b' }
 interface Saat { datenbanken: Array<{ eintraege: { tournaments: Array<{ id: string; matches: Array<{ id: string; kit?: Kit }> }> } }> }
@@ -83,7 +85,7 @@ test.describe('@ZM-152 @ZM-153 Anzeige für Zuschauer in den Einstellungen', () 
     await expect(page.getByTestId('spectator-display-similar-hint')).toHaveCount(0);
   });
 
-  test('@ZM-153 Olli stellt Gast auf Navy: Hinweis, speichern, Monitor Feld 1 zeigt den Gast-Kasten weiß', async ({ page }) => {
+  test('@ZM-153 Olli stellt Gast auf Navy: Hinweis, speichern, Monitor Feld 1 zeigt den Gast-Kasten in Navy, wie eingestellt', async ({ page }) => {
     await starte(page);
     await zeigeEinstellung(page);
     await waehle(page, 'away', palette.kit.navy);
@@ -92,7 +94,7 @@ test.describe('@ZM-152 @ZM-153 Anzeige für Zuschauer in den Einstellungen', () 
     await expect(page.getByText('Gespeichert')).toBeVisible();
     await zeigeMonitor(page);
     // der Monitor übernimmt die gespeicherte Einstellung spätestens beim nächsten Abruf (Poll-Takt)
-    await expect.poll(() => flaeche(page, 'away'), { timeout: 30000 }).toBe(WEISS);
+    await expect.poll(() => flaeche(page, 'away'), { timeout: 30000 }).toBe(NAVY_RGB);
     expect(await flaeche(page, 'home')).toBe(BLAU);
   });
 
@@ -133,14 +135,20 @@ test.describe('@ZM-154 Teamfarben aus', () => {
 test.describe('@ZM-159 Farbe der Kästen am Monitor Feld 1', () => {
   const faelle: Array<{ name: string; kit: Kit | undefined; heim: string; gast: string }> = [
     { name: 'A keine Farbe / keine Farbe', kit: undefined, heim: BLAU, gast: ROT },
-    { name: 'B keine Farbe / Gelb', kit: { b: palette.yellow[400] }, heim: BLAU, gast: GELB },
+    { name: 'B keine Farbe / Gelb', kit: { b: palette.yellow[400] }, heim: MUSTER, gast: GELB },
     { name: 'C Gelb / Blau', kit: { a: palette.yellow[400], b: palette.kit.blue }, heim: GELB, gast: BLAU },
   ];
   for (const fall of faelle) {
     test(`@ZM-159 Fall ${fall.name}`, async ({ page }) => {
       await starte(page, fall.kit);
       await zeigeMonitor(page);
-      expect(await flaeche(page, 'home')).toBe(fall.heim);
+      if (fall.heim === MUSTER) {
+        // @ZM-203: Seite ohne Trikotfarbe = schräg grau gestreift (Hintergrundbild), weiße Ziffer
+        await expect(kasten(page, 'home')).toHaveAttribute('data-fill', 'striped');
+        expect(await kasten(page, 'home').evaluate((el) => getComputedStyle(el).backgroundImage)).toContain('repeating-linear-gradient');
+      } else {
+        expect(await flaeche(page, 'home')).toBe(fall.heim);
+      }
       expect(await flaeche(page, 'away')).toBe(fall.gast);
       await bild(page, `monitor-fall-${fall.name.charAt(0).toLowerCase()}`);
     });

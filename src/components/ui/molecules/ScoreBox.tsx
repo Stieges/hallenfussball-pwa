@@ -8,8 +8,9 @@
  * (die gedämpfte Verlierer-Farbe und der Ziffern-Kontrast werden daraus gerechnet).
  */
 import type { ReactElement } from 'react';
-import type { BoxFill } from '../../../core/models/scoreBoxColors';
+import { fillBaseColor, fillColorUnknown, type BoxFill } from '../../../core/models/scoreBoxColors';
 import { cssVars } from '../../../design-tokens';
+import { useTranslation } from 'react-i18next';
 import { Icons } from '../Icons';
 import { VestPieces } from './VestPieces';
 import {
@@ -25,6 +26,7 @@ import {
   shownColorsOf,
   vestFrameStyle,
   vestLayerStyle,
+  vestPatternImage,
   vestSizeOf,
   type ScoreBoxSize,
 } from './scoreBoxStyle';
@@ -90,18 +92,23 @@ export function ScoreBox({
   role = 'img',
   cupTestId,
 }: ScoreBoxProps): ReactElement {
+  const { t } = useTranslation('tournament');
   const marks = { background, textColor, ringColor };
+  // @ZM-203/@ZM-204: das Muster ist das Zeichen für „Farbe unbekannt“, nicht die Farbe allein – es wird mitgesprochen
+  const spokenLabel = fillColorUnknown(fill) ? `${ariaLabel}, ${t('matchCard.shirtUnknown')}` : ariaLabel;
   const frame = frameOf(fill, outcome, background, textColor, size, frameStrength);
   return (
     <span
       role={role}
-      aria-label={ariaLabel}
+      aria-label={spokenLabel}
       style={boxStyle({ fill, size, background, textColor, outcome, ringColor, frameStrength })}
       data-testid={testId}
       {...(position !== undefined ? { 'data-position': position } : {})}
       data-fill={fill.kind}
-      data-color={fill.kind === 'vest' ? fill.center : fill.color}
+      data-color={fillBaseColor(fill)}
       {...(fill.kind === 'vest' ? { 'data-stripes': fill.stripes, 'data-frame-color': frame.color } : {})}
+      {...(fill.kind === 'striped' ? { 'data-stripes': fill.dark } : {})}
+      {...(fillColorUnknown(fill) ? { 'data-shirt-unknown': 'true' } : {})}
       {...(outcome !== undefined ? { 'data-outcome': outcome } : {})}
       data-digit-color={digitColor(fill, outcome, background)}
       data-frame={frameStrength ?? (needsStrongFrame(fill, background, outcome) ? 'strong' : 'subtle')}
@@ -109,7 +116,7 @@ export function ScoreBox({
     >
       {fill.kind === 'vest' && (
         <span style={vestLayerStyle()} aria-hidden="true" data-testid={`${testId}-vest`}>
-          <VestPieces size={vestSizeOf(size)} color={shownColorsOf(fill, outcome, background).stripes} />
+          <VestPieces size={vestSizeOf(size)} color={shownColorsOf(fill, outcome, background).stripes} patternImage={vestPatternImage(fill, outcome, background, size)} />
           <span style={vestFrameStyle(frame)} data-testid={`${testId}-vest-frame`} />
         </span>
       )}

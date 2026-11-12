@@ -110,23 +110,23 @@ describe('@ZM-153 Die Vorschau weist auf zu ähnliche Standardfarben hin', () =>
     expect(screen.queryByTestId('spectator-display-similar-hint')).toBeNull();
   });
 
-  it('@ZM-153 Navy gespeichert: der Monitor zeigt in einem Spiel ohne Farben Heim Blau und Gast Weiß', () => {
+  it('@ZM-153 Navy gespeichert: der Monitor zeigt in einem Spiel ohne Farben genau die Einstellung – Heim Blau, Gast Navy (kein Ausweichen)', () => {
     const onUpdate = zeige();
     waehle('spectator-display-away-color', NAVY);
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     const boxes = buildMonitorView(gespeichert(onUpdate)).byId.get('match-7')!.boxes;
     expect(boxes.home.fill).toEqual({ kind: 'solid', color: BLAU });
-    expect(boxes.away.fill).toEqual({ kind: 'solid', color: palette.neutral[0] });
+    expect(boxes.away.fill).toEqual({ kind: 'solid', color: NAVY });
   });
 
-  it('RF2 Blau/Blau: Hinweis, speicherbar, der Monitor zeigt Gast Weiß', () => {
+  it('@ZM-153 Blau/Blau: Hinweis, speicherbar, der Monitor zeigt Gast Blau wie eingestellt', () => {
     const onUpdate = zeige();
     waehle('spectator-display-away-color', BLAU);
     expect(screen.getByTestId('spectator-display-similar-hint')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     const saved = gespeichert(onUpdate);
     expect(saved.spectatorDisplay).toEqual({ teamColors: true, homeColor: BLAU, awayColor: BLAU });
-    expect(buildMonitorView(saved).byId.get('match-7')!.boxes.away.fill).toEqual({ kind: 'solid', color: palette.neutral[0] });
+    expect(buildMonitorView(saved).byId.get('match-7')!.boxes.away.fill).toEqual({ kind: 'solid', color: BLAU });
   });
 });
 

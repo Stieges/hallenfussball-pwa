@@ -1735,4 +1735,48 @@ UNION ALL
 SELECT 'hallenton-heartbeat-closed-tournament',
        coalesce((SELECT position('PERFORM public.hall_require_open(p_tournament_id);' IN p.prosrc) > 0
                    FROM pg_proc p WHERE p.oid = to_regprocedure('public.hall_speaker_heartbeat(uuid,uuid,integer[],text,boolean)')), false)
+
+-- ---------------------------------------------------------------------------------------------------------------
+-- Leibchen Schritt 2a (20261124_002_leibchen_schritt2.sql, Record Spiel leiten @SL-150, @SL-201, @SL-202, @SL-213, @SL-227 bis
+-- @SL-229, @SL-236): Pruefskript scripts/leibchen-kit-check.sh. Vor dem Live-Einspielen "f".
+-- ---------------------------------------------------------------------------------------------------------------
+-- (1) match_kit_set: SECURITY DEFINER, search_path fest, EXECUTE nur authenticated (anon nicht, service_role nicht, kein PUBLIC);
+--     prueft die drei Rechte (Anpfiff-Recht, Turnierleitung im laufenden Spiel, Vorab-Festlegung) und sperrt die Spielzeile.
+UNION ALL
+SELECT 'leibchen-kit-set-rpc-authenticated-only',
+       coalesce((SELECT p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                        AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('service_role', p.oid, 'EXECUTE')
+                        AND p.proacl IS NOT NULL
+                        AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+                        AND position('public.has_tournament_permission(v_tid, ''writeMatchData'')' IN p.prosrc) > 0
+                        AND position('public.has_tournament_permission(v_tid, ''leadMatches'')' IN p.prosrc) > 0
+                        AND position('public.has_tournament_permission(v_tid, ''manageSchedule'')' IN p.prosrc) > 0
+                        AND position('WHERE id = p_match_id FOR UPDATE' IN p.prosrc) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.match_kit_set(uuid,text,jsonb,uuid,integer)')), false)
+-- (2) Form: Spalte mit Pruefregel, Waechter und Anpfiff-Projektion kennen kit_decision, die Zuruecknahme bei Teamwechsel ist aktiv und
+--     sortiert nach dem Waechter, der Hilfsbaustein hat kein EXECUTE fuer Client-Rollen.
+UNION ALL
+SELECT 'leibchen-kit-set-shape',
+       coalesce((SELECT count(*) = 1 FROM pg_attribute a
+                  WHERE a.attrelid = 'public.matches'::regclass AND a.attname = 'kit_decision' AND NOT a.attisdropped
+                    AND format_type(a.atttypid, a.atttypmod) = 'text'), false)
+       AND coalesce((SELECT position('''bib''::text' IN pg_get_constraintdef(con.oid)) > 0
+                            AND position('''none''::text' IN pg_get_constraintdef(con.oid)) > 0 AND con.convalidated
+                       FROM pg_constraint con
+                      WHERE con.conrelid = 'public.matches'::regclass AND con.conname = 'matches_kit_decision_valid'), false)
+       AND coalesce((SELECT position('NEW.kit_decision IS DISTINCT FROM OLD.kit_decision' IN p.prosrc) > 0
+                       FROM pg_proc p WHERE p.oid = to_regprocedure('public.matches_guard_kit_columns()')), false)
+       AND coalesce((SELECT position('kit_decision' IN p.prosrc) > 0
+                       FROM pg_proc p WHERE p.oid = to_regprocedure('public.matches_kit_from_match_start()')), false)
+       AND coalesce((SELECT t.tgenabled = 'O' AND t.tgtype & 2 = 2 AND t.tgtype & 16 = 16
+                            AND pg_get_triggerdef(t.oid) LIKE '%UPDATE OF team_a_id, team_b_id%'
+                            AND 'matches_guard_kit_columns' < t.tgname
+                       FROM pg_trigger t
+                      WHERE t.tgrelid = 'public.matches'::regclass AND t.tgname = 'matches_kit_reset_on_team_change'), false)
+       AND coalesce((SELECT NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                            AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                            AND NOT has_function_privilege('service_role', p.oid, 'EXECUTE')
+                       FROM pg_proc p WHERE p.oid = to_regprocedure('public.match_kit_team_color(uuid)')), false)
 ;

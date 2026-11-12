@@ -2,13 +2,13 @@
  * NextMatchArea – bindet die Zeile „Nächstes“ an das nächste Spiel, die Trikotfarben und die Vorwarnung (Plan LT-3).
  *
  * Löst das alte Banner „Nächstes →“ ab (Befunde C-COCKPIT-NAECHSTES-WIE-FEHLER, C-COCKPIT-VORWARNUNG-VERLOREN): die Zeile steht im
- * Fluss unter der Tafel und verdeckt Uhr und Stand nie. Das Leibchen-Zeichen kommt aus `kitConflictWithLuminance` (Grenzen `KIT_SIMILAR_DELTA_E` und `KIT_SIMILAR_LUMINANCE_RATIO`,
+ * Fluss unter der Tafel und verdeckt Uhr und Stand nie. Das Leibchen-Zeichen kommt aus `kitConflict` (Grenze `KIT_SIMILAR_DELTA_E`; „gleich hell“ löst kein Zeichen aus, @SL-173;
  * keine eigene Rechnung, @SL-160). Die Vorwarnung rechnet `vorwarnungAktiv`; geblinkt wird je Spiel einmal beim ersten Aktivwerden und nie
  * bei „Bewegung reduzieren“ (@SL-156).
  */
 import { useEffect, useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { kitConflictWithLuminance } from '../../../core/models/kit';
+import { kitConflict } from '../../../core/models/kit';
 import { usePrefersReducedMotion } from '../../../hooks/usePrefersReducedMotion';
 import { NextMatchRow } from '../../ui/molecules/NextMatchRow';
 import type { CockpitPhase } from '../model/cockpitPhase';
@@ -52,7 +52,7 @@ export function NextMatchArea({ naechstes, phase, restSpielMs, layout = 'breit',
       spielText={t('naechstes.spiel', { nummer: naechstes.number })}
       teams={[{ name: naechstes.homeTeam.name, farbe: farben.home }, { name: naechstes.awayTeam.name, farbe: farben.away }]}
       anstossText={t('naechstes.anstoss', { zeit: naechstes.scheduledKickoff })}
-      leibchen={kitConflictWithLuminance(farben.home, farben.away) !== 'none' ? { ariaLabel: t('naechstes.leibchen') } : null}
+      leibchen={kitConflict(farben.home, farben.away) !== 'none' ? { ariaLabel: t('naechstes.leibchen') } : null}
       modus={aktiv ? 'vorwarnung' : 'normal'}
       blinken={aktiv && !reduziert && blinktNoch && geblinktFuer === id}
       onBlinkEnde={() => setBlinktNoch(false)}

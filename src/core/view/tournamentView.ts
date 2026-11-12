@@ -111,8 +111,10 @@ export function matchBoxes(match: Match, teams: TournamentViewInput['teams'], se
   const bibSide: KitSide | undefined = match.kit?.bibSide;
   const bibTeamId = bibSide === undefined ? undefined : slotTeamId(bibSide === 'a' ? match.slotA : match.slotB);
   const shirt = bibTeamId === undefined ? undefined : normalizeKitColor(teams.find((t) => t.id === bibTeamId)?.colors?.primary);
+  const open = { a: slotTeamId(match.slotA) === undefined, b: slotTeamId(match.slotB) === undefined };
   const boxes = resolveBoxColors({
     worn: wornColors(match, teams),
+    open,
     ...(bibSide === undefined ? {} : { bibSide }),
     ...(shirt === undefined ? {} : { shirt }),
     settings,

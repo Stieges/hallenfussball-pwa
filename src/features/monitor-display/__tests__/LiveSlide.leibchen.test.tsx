@@ -1,6 +1,6 @@
 /**
  * Leibchen-Anzeige Schritt 1 am Monitor (Live-Folie Feld 1): @ZM-161 Trainingsleibchen, @ZM-157 Zeichen oben links, @ZM-195 Folie „Nächstes Spiel“
- * mit Kästen „0 : 0“, @ZM-159 Gast weicht aus (Entscheidung 1b: vor UND nach dem Anpfiff), @ZM-140 Team ohne Trikotfarbe, @ZM-192 Zeitstrafen-Kreis.
+ * mit Kästen „0 : 0“, @ZM-159 Fall D2 ohne Ausweichfarbe (vor UND nach dem Anpfiff), @ZM-140 Team ohne Trikotfarbe, @ZM-192 Zeitstrafen-Kreis.
  * Spiel 7 „FC Nord – SV Süd“ steht auf Feld 1: läuft (1 : 0) bzw. – für die Folie „Nächstes Spiel“ – geplant. Farben kommen aus `match.kit`.
  */
 import { describe, it, expect, vi } from 'vitest';
@@ -8,6 +8,7 @@ import { render, screen } from '@testing-library/react';
 import { LiveSlide } from '../slides/LiveSlide';
 import type { PerformanceSettings } from '../../../types/monitor';
 import type { MatchKit } from '../../../core/models/kit';
+import { FALLBACK_PATTERN } from '../../../core/models/scoreBoxColors';
 import type { Match, RuntimeMatchEvent } from '../../../types/tournament';
 import { NowSourceContext } from '../../../components/schedule/useTickingNow';
 import { displayLayout } from '../../../design-tokens';
@@ -105,11 +106,15 @@ describe('@ZM-161 Spiel läuft: der Kasten mit Leibchen zeigt das Trainingsleibc
     expect(displayLayout.scoreArea.vest.digitsFontShare * 100 * 1.3).toBeLessThan(100 - 2 * edge);
   });
 
-  it('@ZM-140 Team ohne Trikotfarbe mit Leibchen Orange: die Form liegt über der Standardfarbe Heim (Blau), der Gegner bleibt Blau', () => {
+  it('@ZM-204 Team ohne Trikotfarbe mit Leibchen Orange: die Form liegt über dem grauen Streifenmuster (nicht Blau, nicht Rot), der Gegner bleibt Blau', () => {
     zeige(kit({ a: ORANGE, b: BLAU, bibSide: 'a' }), { 'team-nord': undefined, 'team-sued': BLAU });
     expect(heim()).toHaveAttribute('data-fill', 'vest');
     expect(heim()).toHaveAttribute('data-color', ORANGE);
-    expect(heim()).toHaveAttribute('data-stripes', BLAU);
+    expect(heim()).toHaveAttribute('data-stripes', FALLBACK_PATTERN.dark);
+    expect(heim()).toHaveAttribute('data-shirt-unknown', 'true');
+    // das Muster selbst (Hintergrundbild in cq-Einheiten) kennt jsdom nicht; es steht in ScoreBox.fallback.test.tsx (kleine Größe) und in `stripedImage`
+    expect(teile(heim())).toHaveLength(3);
+    expect(heim().getAttribute('aria-label')).toContain('Trikotfarbe unbekannt');
     expect(screen.getByTestId('live-box-home-bib')).toBeInTheDocument();
     expect(gast()).toHaveAttribute('data-fill', 'solid');
   });
@@ -155,22 +160,22 @@ describe('@ZM-195 Folie „Nächstes Spiel“: Kästen „0 : 0“ in Größe un
     expect(maße()).toEqual(vor);
   });
 
-  it('@ZM-159 Entscheidung 1b: gleiche Trikotfarbe ohne Leibchen – der Gast weicht schon vor dem Anpfiff auf die Standardfarbe Heim (Blau) aus', () => {
+  it('@ZM-159 Fall D2 (@ZM-200): gleiche Trikotfarbe ohne Leibchen – jeder Kasten zeigt schon vor dem Anpfiff seine echte Farbe, der Gast weicht nicht aus', () => {
     zeige({ ...geplant, ...kit({ a: ROT, b: ROT }) }, FARBEN);
     expect(heim()).toHaveAttribute('data-color', ROT);
-    expect(gast()).toHaveAttribute('data-color', BLAU);
+    expect(gast()).toHaveAttribute('data-color', ROT);
     expect(gast()).toHaveAttribute('data-fill', 'solid');
     expect(screen.queryByTestId('live-box-away-bib')).toBeNull();
   });
 
-  it('@ZM-159 Entscheidung 1b, derselbe Fall vorher und nachher: Rot gegen Rot ohne Leibchen zeigt vor dem Anpfiff dieselben Farben wie im laufenden Spiel (kein Springen beim Anpfiff)', () => {
+  it('@ZM-159 Fall D2, derselbe Fall vorher und nachher: Rot gegen Rot ohne Leibchen zeigt vor dem Anpfiff dieselben Farben wie im laufenden Spiel (kein Springen beim Anpfiff)', () => {
     const farben = () => [heim().getAttribute('data-color'), gast().getAttribute('data-color'), gast().getAttribute('data-fill')];
     const { unmount } = zeige({ ...geplant, ...kit({ a: ROT, b: ROT }) }, FARBEN);
     const vor = farben();
     unmount();
     zeige({ ...kit({ a: ROT, b: ROT }), liveState: UHR }, FARBEN);
     expect(farben()).toEqual(vor);
-    expect(vor).toEqual([ROT, BLAU, 'solid']);
+    expect(vor).toEqual([ROT, ROT, 'solid']);
   });
 
   it('@ZM-159 Gegenbeispiel: verschiedene Farben vor dem Anpfiff – jede Seite trägt ihre Trikotfarbe', () => {

@@ -84,7 +84,8 @@ done <<< "$(migrations_newer_than_baseline "$MIGRATIONS_DIR" "$BASELINE_FILE")"
 # Ebenso spaetere Migrationen mit eigenem Harness, die das Schema aendern (sonst stuenden sie nach dem Rueckweg als Unterschied
 # zu "vorher" da, Pruefung X):
 #   20261123_001_hallenton_torhymne.sql (hall_sound_settings.goal_anthem_paths, hall_goal_anthems_set) -> scripts/hallenton-check.sh
-OWN_HARNESS_LATER=" 20261123_001_hallenton_torhymne.sql 20261124_001_zeitstrafe_endet_bei_gegentor.sql "
+#   20261124_002_leibchen_schritt2.sql (matches.kit_decision, match_kit_set, Trigger auf matches) -> scripts/leibchen-kit-check.sh
+OWN_HARNESS_LATER=" 20261123_001_hallenton_torhymne.sql 20261124_001_zeitstrafe_endet_bei_gegentor.sql 20261124_002_leibchen_schritt2.sql "
 KEPT=()
 for f in ${AFTER[@]+"${AFTER[@]}"}; do [[ "$OWN_HARNESS_LATER" == *" $(basename "$f") "* ]] || KEPT+=("$f"); done
 AFTER=(${KEPT[@]+"${KEPT[@]}"})

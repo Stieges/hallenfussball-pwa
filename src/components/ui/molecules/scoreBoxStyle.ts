@@ -9,7 +9,7 @@
  * - Die Kastengröße hängt nie vom Zustand ab: Rahmen innen (border-box), Ring als outline, Ecken absolut außerhalb (@ZM-151, @ZM-160).
  */
 import type { CSSProperties } from 'react';
-import { BOX_BLACK, BOX_WHITE, type BoxFill } from '../../../core/models/scoreBoxColors';
+import { BOX_BLACK, BOX_WHITE, FALLBACK_PATTERN, type BoxFill } from '../../../core/models/scoreBoxColors';
 import { borderWidths, cssVars, displayLayout, displayList, scoreDigitFontSize } from '../../../design-tokens';
 import { getContrastRatio } from '../../../design-tokens/display';
 import { getBlockFrame, mixHex, type BlockFrame, type BlockFrameWidths } from '../../../design-tokens/displayColor';
@@ -27,9 +27,40 @@ export const LOSER_DIM_SHARE = parseFloat(L.loserDimShare) / 100;
 /** Farben, wie sie auf dem Kasten erscheinen: beim Verlierer um `LOSER_DIM_SHARE` zum Hintergrund hin gemischt. */
 export function shownColorsOf(fill: BoxFill, outcome: ScoreBoxOutcome | undefined, background: string): { center: string; stripes: string } {
   const dim = (color: string): string => (outcome === 'loser' ? mixHex(color, background, LOSER_DIM_SHARE) : color);
-  return fill.kind === 'vest'
-    ? { center: dim(fill.center), stripes: dim(fill.stripes) }
-    : { center: dim(fill.color), stripes: dim(fill.color) };
+  switch (fill.kind) {
+    case 'vest':
+      return { center: dim(fill.center), stripes: dim(fill.stripes) };
+    case 'striped':
+      // Fallback-Muster: Mitte = heller Ton (schwächerer Kontrast zur weißen Ziffer), Streifen = dunkler Ton
+      return { center: dim(fill.light), stripes: dim(fill.dark) };
+    case 'solid':
+      return { center: dim(fill.color), stripes: dim(fill.color) };
+  }
+}
+
+/**
+ * Fallback-Muster „Trikotfarbe unbekannt“ (@ZM-203, @ZM-204) als Hintergrundbild: schräg in zwei Grautönen (`FALLBACK_PATTERN`, beim Verlierer wie die
+ * übrigen Farben gedämpft), Streifenbreite am Monitor in cq-Einheiten, sonst im Raster. Kleinere Elemente (Köpfe, Karten) nehmen die kleine Breite.
+ */
+export function stripedImage(light: string, dark: string, size: ScoreBoxSize | 'flat'): string {
+  const { angle, stripeDisplay, periodDisplay, stripeSmall, periodSmall } = L.unknownPattern;
+  const stripe = size === 'display' ? stripeDisplay : stripeSmall;
+  const period = size === 'display' ? periodDisplay : periodSmall;
+  return `repeating-linear-gradient(${angle}, ${dark} 0, ${dark} ${stripe}, ${light} ${stripe}, ${light} ${period})`;
+}
+
+/** Hintergrundbild des Kastens: nur das Fallback-Muster als ganzer Kasten hat eines; die Weste mit unbekanntem Trikot malt es auf den Randteilen (`vestPatternImage`). */
+function boxImage(fill: BoxFill, outcome: ScoreBoxOutcome | undefined, background: string, size: ScoreBoxSize): CSSProperties {
+  if (fill.kind !== 'striped') { return {}; }
+  const colors = shownColorsOf(fill, outcome, background);
+  return { backgroundImage: stripedImage(colors.center, colors.stripes, size) };
+}
+
+/** Muster für die Randteile der Weste, wenn das Trikot unbekannt ist (`undefined` = einfarbige Teile). */
+export function vestPatternImage(fill: BoxFill, outcome: ScoreBoxOutcome | undefined, background: string, size: ScoreBoxSize): string | undefined {
+  if (fill.kind !== 'vest' || fill.stripesUnknown !== true) { return undefined; }
+  const dim = (color: string): string => (outcome === 'loser' ? mixHex(color, background, LOSER_DIM_SHARE) : color);
+  return stripedImage(dim(FALLBACK_PATTERN.light), dim(FALLBACK_PATTERN.dark), size);
 }
 
 /** Farbe, auf der die Ziffer steht (Mitte der Weste), mit Dämpfung des Verlierers. */
@@ -173,6 +204,7 @@ export function boxStyle({ fill, size, background, textColor, outcome, ringColor
     // Bei der Weste zeichnet die Rahmenschicht über den Teilen den Rahmen (`vestFrameStyle`, innen, gleiche Breite): kein eigener Rand,
     // damit die Teile bis an den Kastenrand reichen und nichts über die Kasten-Box hinausragt (Überlauf-Messung)
     borderWidth: fill.kind === 'vest' ? 0 : frame.width,
+    ...boxImage(fill, outcome, background, size),
     borderColor: frame.color,
     color: digitColor(fill, outcome, background),
     backgroundColor: colors.center,
@@ -267,6 +299,7 @@ export function fillSurface(fill: BoxFill): CSSProperties {
   const stripe = percent(L.vestStripeShare);
   return {
     backgroundColor: colors.center,
+    ...(fill.kind === 'striped' ? { backgroundImage: stripedImage(colors.center, colors.stripes, 'flat') } : {}),
     ...(fill.kind === 'vest'
       ? { backgroundImage: `linear-gradient(90deg, ${colors.stripes} ${stripe}%, ${colors.center} ${stripe}%, ${colors.center} ${100 - stripe}%, ${colors.stripes} ${100 - stripe}%)` }
       : {}),

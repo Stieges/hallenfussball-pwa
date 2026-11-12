@@ -290,6 +290,9 @@ export const displayLayout = {
     loserDimShare: '30%',
     // Flache Köpfe und Streifen im Cockpit (Team-Kopf, Zeitstrafen-Karte): Breite je Streifen der Weste als Anteil der Breite (Mockup --vest: 14 %)
     vestStripeShare: 0.14,
+    // Fallback-Muster „Trikotfarbe unbekannt“ (@ZM-203, @ZM-204; Daniel 2026-11-09): schräg in zwei ruhigen Grautönen gestreift (Grautöne aus
+    // `palette.neutral`, siehe `FALLBACK_PATTERN`), Streifenbreite je Kastengröße (Monitor in cq-Einheiten, kleine Kästen in Rastermaßen)
+    unknownPattern: { angle: '135deg', stripeDisplay: '3.2cqh', periodDisplay: '6.4cqh', stripeSmall: '4px', periodSmall: '8px' },
     // Trainingsleibchen (@ZM-161, Mockup leibchen-weste-3 Form E1): Maße in % der Kastenbreite bzw. -höhe. `edge` = Seitenkante des Leibchens,
     // `strap` = äußere Kante des Trägers oben, `armRise` = Höhe, auf der der gerade, schräge Armausschnitt in die Seitenkante übergeht,
     // `neckHalf` = linke Kante des Halsausschnitts (rechts gespiegelt), `neckDepth` = seine Tiefe. `small` = Handy-Kasten (schmaler, flacher Hals).

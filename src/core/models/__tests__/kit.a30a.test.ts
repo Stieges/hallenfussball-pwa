@@ -9,14 +9,13 @@ import {
   KIT_SIMILAR_DELTA_E,
   defaultKit,
   kitConflict,
-  kitConflictWithLuminance,
   kitWithBib,
   normalizeKitColor,
   wornColors,
 } from '../kit';
 import { hexDeltaE2000 } from '../kitColorDistance';
 import { teamSlot } from '../matchSlot';
-import { resolveBoxColors, type BoxFill } from '../scoreBoxColors';
+import { FALLBACK_PATTERN, resolveBoxColors, type BoxFill } from '../scoreBoxColors';
 import { DEFAULT_SPECTATOR_DISPLAY } from '../spectatorDisplay';
 import type { Match, Team } from '../../../types/tournament';
 import { palette } from '../../../design-tokens/colors/palette';
@@ -49,14 +48,13 @@ describe('A-30a @SL-139 Farbabstand ΔE2000, Hinweis unter 30', () => {
     { zeile: 'Schwarz/Dunkelblau', nord: palette.kit.black, berg: palette.kit.navy, abstand: 21.6, hinweis: true },
     { zeile: 'Blau/Navy', nord: palette.kit.blue, berg: palette.kit.navy, abstand: 26.8, hinweis: true },
     { zeile: 'Weiß/Gelb', nord: palette.neutral[0], berg: '#FFEB3B', abstand: 29.2, hinweis: true },
-    // @SL-139 Zeile 4 (seit 2026-10-23): Abstand 30,5 liegt über der Grenze, aber die Helligkeit 1,07:1 (@SL-173) löst den Hinweis aus.
-    { zeile: 'Weiß/Zitronengelb', nord: palette.neutral[0], berg: '#FFFF00', abstand: 30.5, hinweis: true, nurAbstand: false },
+    // @SL-139 Zeile 4 (seit 2026-11-10): Abstand 30,5 liegt über der Grenze – keine Karte; die Helligkeit 1,07:1 (@SL-173) ergibt nur den Hinweis „gleich hell“.
+    { zeile: 'Weiß/Zitronengelb', nord: palette.neutral[0], berg: '#FFFF00', abstand: 30.5, hinweis: false },
     { zeile: 'Rot/Weiß', nord: palette.kit.red, berg: palette.neutral[0], abstand: 50.8, hinweis: false },
-  ])('@SL-139 $zeile: Abstand $abstand → Hinweis $hinweis', ({ nord, berg, abstand, hinweis, nurAbstand = hinweis }) => {
+  ])('@SL-139 $zeile: Abstand $abstand → Karte $hinweis', ({ nord, berg, abstand, hinweis }) => {
     expect(Math.round(hexDeltaE2000(nord, berg) * 10) / 10).toBe(abstand);
-    expect(hexDeltaE2000(nord, berg) < 30).toBe(nurAbstand);
-    expect(kitConflict(nord, berg)).toBe(nurAbstand ? 'similar' : 'none');
-    expect(kitConflictWithLuminance(nord, berg)).toBe(hinweis ? 'similar' : 'none');
+    expect(hexDeltaE2000(nord, berg) < 30).toBe(hinweis);
+    expect(kitConflict(nord, berg)).toBe(hinweis ? 'similar' : 'none');
 
     // Spiel 15 FC Nord gegen DJK Berg: mit Hinweis bietet die Vorbelegung „Leibchen“ an, ohne Hinweis nicht.
     const teams = [team(FC_NORD, 'FC Nord', nord), team(DJK_BERG, 'DJK Berg', berg)];
@@ -214,19 +212,20 @@ describe('A-30a @W3-028 Trikotfarbe am Turniertag', () => {
 });
 
 describe('A-30a @ZM-140 getragene Farbe am Spiel → Kasten (Farbregel Spielanzeige 2.1, Vorbelegung Heim Blau, Gast Rot)', () => {
-  // Gherkin @ZM-140 (angepasst 2026-10-18): Weste statt nur Leibchenfarbe, ohne Farbe die Standardfarbe der Seite mit Ausweichregel.
+  // Gherkin @ZM-140 (angepasst 2026-11-09): Weste statt nur Leibchenfarbe, ohne Farbe das Fallback-Muster (@ZM-203, @ZM-204).
   const GELB = DEFAULT_BIB_COLOR;
   const BLAU = '#0033CC';
   const teams = [team(SV_SUED, 'SV Süd', ROT), team(FC_NORD, 'FC Nord', WEISS)];
   const solid = (color: string): BoxFill => ({ kind: 'solid', color });
   const vest = (center: string, stripes: string): BoxFill => ({ kind: 'vest', center, stripes });
+  const muster: BoxFill = { kind: 'striped', light: FALLBACK_PATTERN.light, dark: FALLBACK_PATTERN.dark };
 
   it.each([
     { farbe: 'gelbe Leibchen über roten Trikots', gast: 'Weiß', kit: { a: GELB, b: WEISS, bibSide: 'a' as const }, shirt: ROT, kasten: vest(GELB, ROT) },
     { farbe: 'Schwarz', gast: 'Weiß', kit: { a: SCHWARZ, b: WEISS }, shirt: undefined, kasten: solid(SCHWARZ) },
-    { farbe: 'keine eingetragene Farbe', gast: 'Weiß', kit: { b: WEISS }, shirt: undefined, kasten: solid(palette.kit.blue) },
-    { farbe: 'keine eingetragene Farbe', gast: 'Blau', kit: { b: BLAU }, shirt: undefined, kasten: solid(palette.kit.red) },
-    { farbe: 'gelbe Leibchen, ohne eingetragene Trikotfarbe', gast: 'Weiß', kit: { a: GELB, b: WEISS, bibSide: 'a' as const }, shirt: undefined, kasten: vest(GELB, palette.kit.blue) },
+    { farbe: 'keine eingetragene Farbe', gast: 'Weiß', kit: { b: WEISS }, shirt: undefined, kasten: muster },
+    { farbe: 'keine eingetragene Farbe', gast: 'Blau', kit: { b: BLAU }, shirt: undefined, kasten: muster },
+    { farbe: 'gelbe Leibchen, ohne eingetragene Trikotfarbe', gast: 'Weiß', kit: { a: GELB, b: WEISS, bibSide: 'a' as const }, shirt: undefined, kasten: { kind: 'vest', center: GELB, stripes: FALLBACK_PATTERN.dark, stripesUnknown: true } },
   ])('@ZM-140 Heimseite trägt $farbe, Gast $gast → Kasten', ({ kit, shirt, kasten }) => {
     const spiel12 = spiel('spiel-12', SV_SUED, FC_NORD, { matchStatus: 'running', kit });
     const boxes = resolveBoxColors({
@@ -238,7 +237,7 @@ describe('A-30a @ZM-140 getragene Farbe am Spiel → Kasten (Farbregel Spielanze
     expect(boxes.a.fill).toEqual(kasten);
   });
 
-  it('@ZM-140 „keine eingetragene Farbe“ ist die Standardfarbe Heim (Blau #1565C0, Vorgabe der Einstellung)', () => {
+  it('@ZM-159 Fall A: Standardfarbe Heim bleibt Blau #1565C0 (beide Seiten ohne Farbe, Vorgabe der Einstellung)', () => {
     expect(DEFAULT_SPECTATOR_DISPLAY.homeColor).toBe(palette.kit.blue);
   });
 });

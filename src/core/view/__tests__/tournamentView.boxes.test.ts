@@ -3,6 +3,7 @@
  * derselben Ansicht (@ZM-160, @ZM-161, @ZM-140, @ZM-154, @ZM-163:teil, @W3-028).
  * Gherkin: docs/anforderungen/2026-10-02_zuschauer-und-monitor.md, 2026-09-27_wizard-turniertag-vorbereiten.md (@W3-028).
  */
+import { FALLBACK_PATTERN } from '../../models/scoreBoxColors';
 import { describe, expect, it } from 'vitest';
 import { buildTournamentView } from '../tournamentView';
 import type { TournamentViewInput } from '../types';
@@ -80,10 +81,10 @@ describe('@ZM-161 @ZM-140 Weste in der Ansicht (bis D.1 ohne gespeicherte Trikot
     expect(boxes?.away).toEqual({ fill: { kind: 'solid', color: WEISS }, bib: false });
   });
 
-  it('@ZM-140 Team ohne Teamfarbe in Leibchen: Streifen Blau (Standardfarbe Heim)', () => {
+  it('@ZM-204 Team ohne Teamfarbe in Leibchen: die Ränder der Weste tragen das graue Streifenmuster (nicht die Standardfarbe Heim)', () => {
     const teams = [team(SUED, 'SV Süd'), team(NORD, 'FC Nord', WEISS)];
     const spiel12 = spiel('spiel-12', 12, SUED, NORD, { matchStatus: 'running', kit: { a: GELB, b: WEISS, bibSide: 'a' } });
-    expect(boxesOf(input(teams, [spiel12]), 'spiel-12')?.home.fill).toEqual({ kind: 'vest', center: GELB, stripes: BLAU_STD });
+    expect(boxesOf(input(teams, [spiel12]), 'spiel-12')?.home.fill).toEqual({ kind: 'vest', center: GELB, stripes: FALLBACK_PATTERN.dark, stripesUnknown: true });
   });
 });
 
@@ -109,9 +110,14 @@ describe('@ZM-163:teil @W3-028 Runde und Farbe ab dem Anpfiff', () => {
     expect(view.byId.get('spiel-14')?.boxes.home.fill).toEqual({ kind: 'solid', color: GRUEN });
   });
 
-  it('@ZM-159 offene Spielseite („Erster Gruppe B“, noch kein Team): Kasten in der Standardfarbe der Seite', () => {
+  it('@ZM-159 offene Spielseite („Erster Gruppe B“, noch kein Team): Kasten in der Standardfarbe der Seite, kein Muster (das Muster gilt nur für ein echtes Team ohne Trikotfarbe, @ZM-203)', () => {
     const teams = [team(NORD, 'FC Nord', WEISS)];
     const offen: Match = { ...spiel('hf-1', 13, NORD, NORD), slotB: pendingSlot({ kind: 'groupRank', group: 'B', rank: 1 }) };
     expect(boxesOf(input(teams, [offen]), 'hf-1')?.away.fill).toEqual({ kind: 'solid', color: ROT_STD });
+  });
+
+  it('@ZM-203 Gegenbeispiel: ein echtes Team ohne Trikotfarbe (kein Platzhalter) zeigt das Muster', () => {
+    const teams = [team(NORD, 'FC Nord', WEISS), team(SUED, 'SV Süd')];
+    expect(boxesOf(input(teams, [spiel('s', 14, NORD, SUED)]), 's')?.away.fill).toEqual({ kind: 'striped', light: FALLBACK_PATTERN.light, dark: FALLBACK_PATTERN.dark });
   });
 });

@@ -5,7 +5,7 @@
  * Der Name wird nie gekürzt und nie getrennt (VISUAL-DESIGN § 1/§ 2): er bricht um.
  */
 import { Fragment, type CSSProperties, type ReactElement } from 'react';
-import type { BoxFill } from '../../../core/models/scoreBoxColors';
+import { fillBaseColor, type BoxFill } from '../../../core/models/scoreBoxColors';
 import { cssVars, iconSizeValues } from '../../../design-tokens';
 import { MatchIcons } from '../IconsMatch';
 import { fillStreifenProzent, fillSurface, fillTextColor } from './scoreBoxStyle';
@@ -43,6 +43,7 @@ export function TeamHeadBar(props: TeamHeadBarProps): ReactElement {
 
 /** Weste am Handy: schmale Streifen fester Breite statt eines Anteils der Fläche (der Name behält die Breite, K11). */
 function schmaleWeste(fill: BoxFill): CSSProperties {
+  if (fill.kind === 'striped') { return fillSurface(fill); }
   if (fill.kind !== 'vest') { return { backgroundColor: fill.color }; }
   const breite = cssVars.spacing.sm;
   return {
@@ -88,7 +89,7 @@ function TeamHeadBarKompakt({ name, label, fill, bib = null, fuellend = false, t
     fontSize: langesWort ? cssVars.fontSizes.xs : lang ? cssVars.fontSizes.sm : cssVars.fontSizes.md, fontWeight: cssVars.fontWeights.bold,
   };
   return (
-    <div style={kopf} data-testid={testId} data-fill={fill.kind} data-kompakt="true" data-color={fill.kind === 'vest' ? fill.center : fill.color}>
+    <div style={kopf} data-testid={testId} data-fill={fill.kind} data-kompakt="true" data-color={fillBaseColor(fill)}>
       <span style={seite}>{label}</span>
       <p data-teamname="" data-testid={nameTestId} style={nameStil}>
         {bib && (
@@ -121,7 +122,7 @@ function TeamHeadBarNormal({ name, label, fill, bib = null, breit = false, fuell
   };
   const seite: CSSProperties = { flex: 'none', textAlign: gestapelt ? 'right' : undefined, fontSize: cssVars.fontSizes.labelMd, fontWeight: cssVars.fontWeights.bold, textTransform: 'uppercase', lineHeight: cssVars.lineHeights.bodyMd };
   return (
-    <div style={kopf} data-testid={testId} data-fill={fill.kind} data-gestapelt={gestapelt ? 'true' : undefined} data-color={fill.kind === 'vest' ? fill.center : fill.color}>
+    <div style={kopf} data-testid={testId} data-fill={fill.kind} data-gestapelt={gestapelt ? 'true' : undefined} data-color={fillBaseColor(fill)}>
       <p data-teamname="" data-testid={nameTestId} style={nameStil}>
         {bib && (
           <span role="img" aria-label={bib.ariaLabel} data-testid={`${testId}-leibchen`} style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', minHeight: cssVars.lineHeights.bodyMd }}>

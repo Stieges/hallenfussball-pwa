@@ -42,9 +42,10 @@ describe('NextMatchArea – Farben und Leibchen', () => {
     expect(screen.getByTestId('cockpit-naechstes-leibchen')).toHaveTextContent('');
   });
 
-  it('@SL-173 Rot #C62828 / Blau #1565C0 → Leibchen-Zeichen nur wegen der Helligkeit (1,02:1, Farbabstand über 30)', () => {
+  // Geändert 2026-11-10: die Helligkeit löst kein Leibchen-Zeichen mehr aus; der Hinweis „gleich hell“ in dieser Zeile kommt mit Schritt 2b.
+  it('@SL-173 Rot #C62828 / Blau #1565C0 (1,02:1, Farbabstand über 30) → kein Leibchen-Zeichen, die Karte öffnet nur bei Farbabstand unter 30', () => {
     zeige(spiel('#C62828', '#1565C0'));
-    expect(screen.getByRole('img', { name: 'Leibchen nötig, die Farben sind zu ähnlich' })).toBeInTheDocument();
+    expect(screen.queryByTestId('cockpit-naechstes-leibchen')).toBeNull();
   });
 
   it('@SL-173 Gegenbeispiel Gelb #FFEB3B / Blau #1565C0 (1:4,71) → kein Leibchen-Zeichen', () => {
