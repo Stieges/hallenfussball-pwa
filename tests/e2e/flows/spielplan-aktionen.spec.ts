@@ -14,6 +14,7 @@
  */
 import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
+import { animationenFertig } from '../helpers/animationenFertig';
 import { cup, ID, NAMEN, TEAMS, anpfeifen } from '../helpers/laptopCup';
 
 const HF1 = '00000000-0000-4000-8000-000000000a01';
@@ -105,7 +106,7 @@ test.describe('G2 Spur A: Aktionsauswahl am Spiel (offline, Gast = Turnierleitun
       await karte.getByText(NAMEN[0]).first().click(); // Gruppenspiel geplant: vier Aktionen, Haupttaste „Ergebnis eintragen“
       const blatt = menue(page);
       await expect(blatt).toBeVisible();
-      await page.waitForTimeout(600); // das Blatt gleitet 0,3 s ein; erst danach messen (sonst stehen Titel und Abzeichen in verschiedenen Bildern)
+      await animationenFertig(page); // das Blatt gleitet 0,3 s ein; erst danach messen (sonst stehen Titel und Abzeichen in verschiedenen Bildern)
       const kopf = blatt.getByTestId('dialog-surface-header');
 
       // Kopf: Titel und Abzeichen in einer Zeile (Abzeichen rechts vom Titel, auf der Grundlinie), „X“ am rechten Rand oben

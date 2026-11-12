@@ -9,6 +9,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Page } from '@playwright/test';
 import { test, expect } from './helpers/test-fixtures';
+import { animationenFertig } from './helpers/animationenFertig';
 // @ts-expect-error – .mjs ohne Typen; die echte Messfunktion von `npm run visual:metrics`
 import { messeSeite } from '../../scripts/visual-metrics/browser-messung.mjs';
 
@@ -40,7 +41,7 @@ function grenzen(art: string): { g: Record<string, unknown>; hart: Set<string> }
 async function hartBefunde(page: Page, art: string): Promise<string[]> {
   const { g, hart } = grenzen(art);
   // Übergänge der Tasten (transition: all) abwarten, sonst misst der Kontrast eine Zwischenfarbe
-  await page.waitForTimeout(400);
+  await animationenFertig(page);
   await page.evaluate(() => document.fonts.ready.then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))));
   const m: { befunde: { metrik: string; selektor: string; ist: string }[] } = await page.evaluate(messeSeite, {
     art, g, randPx: 0, monitorSchrift: null, ebuPruefen: false, extraInhalte: [],
