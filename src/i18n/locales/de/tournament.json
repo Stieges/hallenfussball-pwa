@@ -317,6 +317,20 @@
       "upload": "Logo hochladen",
       "remove": "Logo entfernen"
     },
+    "jerseyColorNames": {
+      "white": "Weiß",
+      "black": "Schwarz",
+      "red": "Rot",
+      "blue": "Blau",
+      "green": "Grün",
+      "yellow": "Gelb",
+      "orange": "Orange",
+      "purple": "Lila",
+      "pink": "Rosa",
+      "teal": "Türkis",
+      "gray": "Grau",
+      "brown": "Braun"
+    },
     "jerseyColorLabel": "Trikotfarbe:",
     "rename": "Umbenennen",
     "delete": "Löschen",
