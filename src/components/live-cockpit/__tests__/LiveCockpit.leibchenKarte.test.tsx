@@ -153,7 +153,7 @@ describe('@SL-215 die Leibchen lassen sich schon im Endstand klären', () => {
     const karte = screen.getByTestId('leibchen-karte');
     expect(screen.getByTestId('leibchen-vorschlag')).toHaveTextContent('TSV Waging 1 zieht Gelb');
     expect(karte.parentElement).toContainElement(screen.getByTestId('match-next-button'));
-    expect(screen.getByTestId('leibchen-ueberschrift')).toHaveTextContent('Leibchen für dieses Spiel · Spiel 2'); // im Endstand gilt die Karte dem NÄCHSTEN Spiel
+    expect(screen.getByTestId('leibchen-ueberschrift')).toHaveTextContent('Leibchen für das nächste Spiel · Spiel 2'); // im Endstand gilt die Karte dem NÄCHSTEN Spiel (@SL-215)
   });
 
   it('@SL-215 „Bestätigen“ im Endstand: die Karte schrumpft zur Zeile, „Weiter“ bleibt', async () => {
@@ -302,7 +302,9 @@ describe('@SL-202 @SL-230 @SL-212 Epoche, Status aus der Zeile, zurückgenommene
     const props = makeProps(live2());
     const k = zeige(basis({ kitDecision: 'bib', kit: { a: GELB, bibSide: 'a' } }), live2());
     expect(screen.getByTestId('leibchen-zeile')).toBeInTheDocument();
-    k.rerender(<Rahmen basis={basis()} props={props} />);
+    // auf der Seite des Gastes steht jetzt ein anderes Team (ebenfalls Blau, TSV Anders statt TSV Petting): der Server hat die Wahl zurückgenommen
+    const ANDERS = '00000000-0000-4000-8000-0000000000a5';
+    k.rerender(<Rahmen basis={turnier([...gleicheFarbe, team(ANDERS, 'TSV Anders', BLAU)], [spiel('spiel-2', WAGING, ANDERS)])} props={props} />);
     expect(screen.getByTestId('leibchen-karte')).toBeInTheDocument();
     expect(await screen.findByText('Leibchen zurückgenommen, bitte neu bestätigen')).toBeInTheDocument();
   });
