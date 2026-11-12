@@ -47,7 +47,8 @@ export const PublicBottomNav: React.FC<PublicBottomNavProps> = ({
     display: 'flex',
     justifyContent: 'space-around',
     alignItems: 'center',
-    background: cssVars.colors.surface,
+    // deckend: `surface` ist im dunklen Thema nur 5 % Weiß, Ergebniskästen schienen durch (C-ZUSCHAUER-NAV-KONTRAST-INFO)
+    background: cssVars.colors.surfaceSolid,
     borderTop: `1px solid ${cssVars.colors.border}`,
     paddingBottom: 'env(safe-area-inset-bottom, 0px)',
     zIndex: cssVars.zIndex.navigation,
