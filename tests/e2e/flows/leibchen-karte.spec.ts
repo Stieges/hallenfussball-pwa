@@ -19,7 +19,7 @@ const FENSTER = [
   { name: 'desktop 1440×900', width: 1440, height: 900, handy: false },
 ] as const;
 
-test.use({ locale: 'de-DE', timezoneId: 'Europe/Berlin' });
+test.use({ locale: 'de-DE', timezoneId: 'Europe/Berlin', serviceWorkers: 'block' });
 
 interface Box { x: number; y: number; width: number; height: number }
 
