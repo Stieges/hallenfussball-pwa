@@ -9,7 +9,7 @@
  * - Score-Circle Zustände (Geplant/Live/Beendet)
  * - Progress-Ring für Live-Spiele
  * - Tap-/Click-Logik
- * - Inline-Expand (QuickScore, Detail, Live, Start)
+ * - Inline-Expand (Detail, Live, Start) und das Blatt „Endergebnis“
  * - Score-Eingabe via Stepper
  * - Cockpit-Integration
  *
@@ -208,7 +208,7 @@ test.describe('Spielplan 2.0 - Mobile Layout', () => {
     }
   });
 
-  test('Mobile: Card-Tap öffnet die Aktionsauswahl, „Ergebnis eintragen“ dann die Quick-Score Eingabe (@SL-193)', async ({ page }) => {
+  test('Mobile: Card-Tap öffnet die Aktionsauswahl, „Ergebnis eintragen“ dann das Blatt „Endergebnis“ (@SL-193, @SL-195)', async ({ page }) => {
     // GIVEN - Navigate to Spielplan
     await navigateToSpielplan(page);
 
@@ -218,16 +218,9 @@ test.describe('Spielplan 2.0 - Mobile Layout', () => {
     await matchCard.click();
     await page.getByTestId('match-action-enterResult').click();
 
-    // THEN - Quick-Score Expand should be visible
-    // Wait for expand animation
-    await page.waitForTimeout(500);
-
-    // Look for "Speichern" button which is unique to the QuickScoreExpand
-    // Use getByRole for more reliable selection
-    const speichernButton = page.getByRole('button', { name: t('tournament:common.save') });
-
-    // Assert the expand is visible
-    await expect(speichernButton).toBeVisible({ timeout: 3000 });
+    // THEN - das Blatt „Endergebnis“ steht offen (@SL-195), „Ergebnis speichern“ ist gesperrt (leere Felder)
+    await expect(page.getByTestId('result-sheet')).toBeVisible({ timeout: 3000 });
+    await expect(page.getByTestId('result-sheet-save')).toBeDisabled();
   });
 });
 

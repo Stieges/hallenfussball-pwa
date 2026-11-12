@@ -305,19 +305,20 @@ test.describe('Offline & Persistence', () => {
     // WHEN - Go offline
     await context.setOffline(true);
 
-    // Click on a match card to open QuickScoreExpand
+    // Click on a match card (Aktionsauswahl → Blatt „Endergebnis“, @SL-195)
     const matchCard = page.locator('[role="article"], [role="row"]').first();
     if (await matchCard.isVisible()) {
       await matchCard.click();
       await page.waitForTimeout(300);
 
-      // Try to increment score
-      const incrementBtn = page.locator('[data-testid="stepper-increment"]').first();
-      if (await incrementBtn.isVisible({ timeout: 2000 })) {
-        await incrementBtn.click();
+      // Try to enter a score in the sheet
+      const homeField = page.getByTestId('result-sheet-score-home');
+      if (await homeField.isVisible({ timeout: 2000 })) {
+        await homeField.fill('1');
+        await page.getByTestId('result-sheet-score-away').fill('0');
 
         // Try to save
-        const saveBtn = page.getByTestId('quick-score-save-btn');
+        const saveBtn = page.getByTestId('result-sheet-save');
         if (await saveBtn.isEnabled()) {
           await saveBtn.click();
           await page.waitForTimeout(300);
@@ -563,7 +564,7 @@ test.describe('Panel schließen', () => {
     await page.waitForTimeout(300);
 
     // Verify expand is open (look for any expand indicator)
-    const expandVisible = await page.locator('[data-testid="quick-score-expand"], [data-testid="start-match-expand"], [data-testid="live-info-expand"]')
+    const expandVisible = await page.locator('[data-testid="result-sheet"], [data-testid="start-match-expand"], [data-testid="live-info-expand"]')
       .first()
       .isVisible({ timeout: 2000 })
       .catch(() => false);
@@ -574,7 +575,7 @@ test.describe('Panel schließen', () => {
       await page.waitForTimeout(300);
 
       // THEN - Expand should be closed
-      await expect(page.locator('[data-testid="quick-score-expand"], [data-testid="start-match-expand"]').first()).not.toBeVisible();
+      await expect(page.locator('[data-testid="result-sheet"], [data-testid="start-match-expand"]').first()).not.toBeVisible();
     }
   });
 

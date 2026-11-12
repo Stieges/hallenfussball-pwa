@@ -36,15 +36,10 @@ async function enter31(page: Page): Promise<void> {
   const card = page.locator('[data-match-card]:visible').filter({ hasText: ids.homeTeamName }).first();
   await card.getByText(ids.homeTeamName).first().click();
   await page.getByTestId('match-action-enterResult').click(); // @SL-193: Tipp aufs Spiel, dann „Ergebnis eintragen“
-  const expand = card.getByTestId('quick-score-expand');
-  // Bei 360 px liegen die schwebenden Tasten „Teilen“/„Als PDF“ über der Schnelleingabe (Nebenbefund, älterer
-  // Code); dieser Test prüft den Kopf, die Tasten werden deshalb direkt ausgelöst.
-  const tap = async (target: Locator): Promise<void> => {
-    await target.dispatchEvent('click');
-  };
-  for (let i = 0; i < 3; i++) { await tap(expand.getByLabel(`${ids.homeTeamName} Tor hinzufügen`)); }
-  await tap(expand.getByLabel(`${ids.awayTeamName} Tor hinzufügen`));
-  await tap(expand.getByTestId('quick-score-save-btn'));
+  const sheet = page.getByTestId('result-sheet'); // @SL-195: Blatt „Endergebnis“; es liegt über den schwebenden Tasten
+  await sheet.getByTestId('result-sheet-score-home').fill('3');
+  await sheet.getByTestId('result-sheet-score-away').fill('1');
+  await sheet.getByTestId('result-sheet-save').click();
   await page.evaluate(() => window.scrollTo(0, 0));
 }
 

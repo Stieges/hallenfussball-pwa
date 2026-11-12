@@ -81,12 +81,11 @@ async function beendenImSpielplan(plan: Page, heim: number, gast: number): Promi
   // Pause klickt Playwright vorher und der Test bliebe auch mit dem alten Fehler (@FU-112: Eingabe klappt sofort zu) grün.
   await plan.waitForTimeout(300);
   await plan.getByTestId('match-action-endAndEnter').click(); // @SL-193: Tipp aufs Spiel, dann „Spiel beenden und Ergebnis eintragen“
-  const expand = plan.getByTestId('quick-score-expand').filter({ visible: true }).first();
-  await expect(expand).toBeVisible();
-  const plus = expand.getByRole('button', { name: /Tor hinzufügen/ });
-  for (let i = 0; i < heim; i++) { await plus.nth(0).click(); }
-  for (let i = 0; i < gast; i++) { await plus.nth(1).click(); }
-  await expand.getByTestId('quick-score-save-btn').click();
+  const blatt = plan.getByTestId('result-sheet'); // @SL-195: das Blatt „Endergebnis“ mit leeren Feldern
+  await expect(blatt).toBeVisible();
+  await blatt.getByTestId('result-sheet-score-home').fill(String(heim));
+  await blatt.getByTestId('result-sheet-score-away').fill(String(gast));
+  await blatt.getByTestId('result-sheet-save').click();
 }
 
 /** Seite B öffnen und das Spiel im Spielplan beenden. */
@@ -149,8 +148,13 @@ test.describe('Spiel beenden und Ergebnis eintragen im Spielplan (offline, Gast)
     await expect(frage).toHaveCount(0);
     await expect(page.getByTestId('scoreboard-state')).toContainText('Live'); // läuft unverändert weiter
 
-    // Nochmal, diesmal „Ja“
-    await beendenImSpielplan(plan, 3, 1);
+    // Nochmal, diesmal „Ja“: nach „Nein“ bleibt das Blatt „Endergebnis“ offen (@SL-195), die Felder zeigen wieder keinen Stand
+    const blatt = plan.getByTestId('result-sheet');
+    await expect(blatt).toBeVisible();
+    await expect(blatt.getByTestId('result-sheet-score-home')).toHaveValue('');
+    await blatt.getByTestId('result-sheet-score-home').fill('3');
+    await blatt.getByTestId('result-sheet-score-away').fill('1');
+    await blatt.getByTestId('result-sheet-save').click();
     await expect(frage).toBeVisible({ timeout: 10_000 });
     await plan.getByTestId('confirm-dialog-confirm').click();
     await expect(frage).toHaveCount(0);
