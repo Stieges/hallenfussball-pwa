@@ -80,11 +80,11 @@ export function LeibchenWahlFelder(p: LeibchenWahlFelderProps): ReactElement {
     if (h.gegner) { return t('anpfiff.farbeZuAehnlich', { farbe: name(farbe), gegner: gegnerName }); }
     return t(h.art === 'gleichHell' ? 'leibchenKarte.gleichHellVon' : 'leibchenKarte.eigenesTrikotVon', { farbe: name(farbe), team: eigen });
   };
-  const farbTaste = (farbe: string, gross: boolean): ReactElement => {
+  const farbTaste = (farbe: string, gross: boolean, imBlatt = false): ReactElement => {
     const gewaehlt = p.farbe === farbe;
     const warnung = hinweisText(farbe, gross);
     return (
-      <ChipButton key={farbe} selected={gewaehlt} size="minimum" onClick={() => { p.onFarbe(farbe); }}
+      <ChipButton key={farbe} selected={gewaehlt} size="minimum" onClick={() => { p.onFarbe(farbe); if (imBlatt) { setAndere(false); } }}
         aria-label={vollerSatz(farbe) ?? t('leibchenKarte.farbeAria', { farbe: name(farbe) })}
         data-testid={`${p.testIdPrefix}-farbe-${leibchenFarbName(farbe) ?? 'turnier'}`}>
         <span style={punkt(farbe)} aria-hidden="true" />
@@ -118,10 +118,7 @@ export function LeibchenWahlFelder(p: LeibchenWahlFelderProps): ReactElement {
           <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm, padding: cssVars.spacing.md }}>
             <h2 style={{ fontSize: cssVars.fontSizes.lg, margin: 0 }}>{t('leibchenKarte.andere')}</h2>
             <div style={reihe} role="group" aria-label={t('leibchenKarte.andere')}>
-              {weitere.map((f) => {
-                const taste = farbTaste(f, false);
-                return <span key={f} onClickCapture={() => { setAndere(false); }} style={{ display: 'contents' }}>{taste}</span>;
-              })}
+              {weitere.map((f) => farbTaste(f, false, true))}
             </div>
             {satz !== null && <p style={{ ...beschriftung, color: cssVars.colors.textPrimary }} role="status" data-testid={`${p.testIdPrefix}-satz`}>{satz}</p>}
             <DialogActions primary={{ label: t('leibchenKarte.schliessen'), onClick: () => { setAndere(false); }, 'data-testid': `${p.testIdPrefix}-andere-schliessen` }} />

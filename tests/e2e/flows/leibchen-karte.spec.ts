@@ -166,6 +166,10 @@ for (const f of FENSTER) {
         }
       }
       expect(await blatt.evaluate((el) => [el, ...el.querySelectorAll('*')].filter((e) => e.scrollHeight > e.clientHeight + 1 && ['auto', 'scroll'].includes(getComputedStyle(e).overflowY)).length), 'nichts rollt im Blatt').toBe(0);
+      // eine Farbe antippen: das Blatt schließt, die Karte zeigt die Wahl (im Browser geprüft: die Wahl darf beim Schließen nicht verloren gehen)
+      await page.getByTestId('leibchen-farbe-pink').click();
+      await expect(blatt).toBeHidden();
+      await expect(page.getByTestId('leibchen-vorschlag')).toContainText('Pink');
     });
 
     if (f.name.startsWith('desktop')) {
