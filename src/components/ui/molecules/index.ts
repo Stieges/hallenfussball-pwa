@@ -76,3 +76,7 @@ export type { ZeitstrafeHinweisProps } from './ZeitstrafeHinweis';
 
 export { ScoreEntrySheet } from './ScoreEntrySheet';
 export type { ScoreEntrySheetProps, ScoreEntryRow } from './ScoreEntrySheet';
+
+// H4-4 (Hallenton): gemeinsame Statuszeile unter dem Kopf (@HT-045), fachfrei
+export { StatusZeile } from './StatusZeile';
+export type { StatusEintrag, StatusRang, StatusZeileProps } from './StatusZeile';

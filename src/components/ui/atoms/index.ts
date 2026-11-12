@@ -22,3 +22,6 @@ export { ToggleSwitch } from './ToggleSwitch';
 export type { ToggleSwitchProps } from './ToggleSwitch';
 export { ChipButton } from './ChipButton';
 export type { ChipButtonProps } from './ChipButton';
+// H4-4 (Hallenton): Pille der gemeinsamen Statuszeile (@HT-045)
+export { StatusPille } from './StatusPille';
+export type { StatusPilleProps, StatusPilleTon, StatusPilleRand, StatusPilleAktion } from './StatusPille';

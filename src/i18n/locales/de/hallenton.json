@@ -1,0 +1,55 @@
+{
+  "statuszeile": {
+    "weitere": "+{{count}} weitere",
+    "bereit": "Lautsprecher Feld {{feld}} bereit",
+    "bereitKurz": "Feld {{feld}} bereit",
+    "nichtBereit": "Lautsprecher Feld {{feld}} nicht bereit",
+    "nichtBereitKurz": "Feld {{feld}} nicht bereit",
+    "nichtBereitKeineVerbindung": "Lautsprecher Feld {{feld}} nicht bereit – keine Verbindung",
+    "nichtBereitKeineVerbindungKurz": "Feld {{feld}} nicht bereit – keine Verbindung",
+    "tonNichtAktiv": "Ton nicht aktiv – hier klicken",
+    "schlafenGelegt": "Lautsprecher schlafen gelegt",
+    "statusUnbekannt": "Lautsprecher: Status unbekannt",
+    "pruefen": "Prüfen",
+    "pruefenLesetext": "Lautsprecher Feld {{feld}}: Ausgang eventuell geändert, bitte prüfen",
+    "hupeStattEigenerTon": "Hupe 1 statt eigener Ton",
+    "titel": "Status"
+  },
+  "feld": {
+    "titel": "Feld {{feld}}",
+    "keinLautsprecherHinweis": "Hier ertönt nur der Ton im Cockpit der leitenden Person. Das Anpfeifen bleibt möglich.",
+    "zustand": {
+      "bereit": "bereit",
+      "nichtBereit": "nicht bereit – {{grund}}",
+      "zustandUnbekannt": "nicht bereit",
+      "meldetSichNicht": "meldet sich nicht (zuletzt {{zeit}})",
+      "statusUnbekannt": "Status unbekannt",
+      "keinLautsprecher": "kein Hallen-Lautsprecher"
+    },
+    "grund": {
+      "tonNichtAktiviert": "Ton nicht aktiviert",
+      "keineVerbindung": "keine Verbindung",
+      "hintergrund": "Hintergrund",
+      "schlafenGelegt": "schlafen gelegt",
+      "lautstaerkeNull": "Lautstärke 0 %",
+      "ausgangVerloren": "Ausgang verloren",
+      "ausgangBestaetigen": "Ausgang bestätigen"
+    },
+    "art": {
+      "laptop": "Laptop",
+      "monitor": "Monitor",
+      "handy": "Handy"
+    },
+    "geraetLabel": "Hallen-Lautsprecher:",
+    "geraetZusatzMonitor": "(Monitor)"
+  },
+  "cockpit": {
+    "titel": "Hallen-Lautsprecher aus – Ende selbst anzeigen",
+    "grund": "Grund: {{grund}}",
+    "ausgangGeaendert": "Hallenton-Ausgang geändert"
+  },
+  "geraet": {
+    "uebernommen": "Feld {{feld}} von einem anderen Gerät übernommen",
+    "abgemeldet": "Die Turnierleitung hat dieses Gerät als Hallen-Lautsprecher für Feld {{feld}} abgemeldet."
+  }
+}

@@ -13,15 +13,19 @@ const BESTAND = [
   'Restore', 'AlertTriangle', 'Search', 'Filter', 'MoreVertical', 'ExternalLink', 'Info', 'WifiOff', 'QrCode', 'ArrowRightLeft',
 ] as const;
 
+/** Seit H4-4 (Hallenton): Lautsprecher, Geräte, Zustände. */
+const NEU = ['Speaker', 'SpeakerQuestion', 'CheckCircle', 'MinusCircle', 'SpeakerLow', 'SpeakerOff', 'Phone', 'Laptop', 'Moon', 'QuestionMark', 'HelpCircle', 'Swap'] as const;
+const ALLE = [...BESTAND, ...NEU] as const;
+
 describe('Icons: Sammel-Export', () => {
   it('führt alle bisherigen Symbole unter ihrem Namen', () => {
     const namen = Object.keys(Icons);
-    for (const name of BESTAND) {
+    for (const name of ALLE) {
       expect(namen, name).toContain(name);
     }
   });
 
-  it.each(BESTAND)('%s zeichnet ein SVG in der verlangten Größe', (name) => {
+  it.each(ALLE)('%s zeichnet ein SVG in der verlangten Größe', (name) => {
     const Symbol = Icons[name];
     const { container } = render(<Symbol size={32} color="red" />);
     const svg = container.querySelector('svg');

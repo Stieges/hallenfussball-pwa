@@ -3,6 +3,7 @@
  * Name und Aufruf (`Icons.Plus`) bleiben gleich. Neue Symbole kommen in die passende Gruppe.
  */
 import { iconsAktion } from './icons/iconsAktion';
+import { iconsGeraet } from './icons/iconsGeraet';
 import { iconsNavigation } from './icons/iconsNavigation';
 import { iconsPfeile } from './icons/iconsPfeile';
 import { iconsStatus } from './icons/iconsStatus';
@@ -12,4 +13,5 @@ export const Icons = {
   ...iconsPfeile,
   ...iconsNavigation,
   ...iconsStatus,
+  ...iconsGeraet,
 };
