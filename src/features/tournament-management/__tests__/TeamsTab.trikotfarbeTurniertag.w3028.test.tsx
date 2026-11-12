@@ -35,6 +35,8 @@ const GRUEN = '#2E7D32';
 const GELB = '#FFCC00';
 const BLAU = '#0033CC';
 const SCHWARZ = '#000000';
+/** Vorgelesener Name der Palettenfarben im Farbwähler */
+const NAME: Record<string, string> = { [WEISS]: 'Weiß', [SCHWARZ]: 'Schwarz', [BLAU]: 'Blau', '#DC0000': 'Rot' };
 const NORD = '00000000-0000-4000-8000-000000000001';
 const SUED = '00000000-0000-4000-8000-000000000002';
 const OST = '00000000-0000-4000-8000-000000000003';
@@ -80,8 +82,8 @@ async function farbeEintragen(teamId: string, hex: string): Promise<void> {
   const user = userEvent.setup();
   await user.click(screen.getByTestId(`team-expand-toggle-${teamId}`));
   const karte = screen.getByTestId(`team-card-${teamId}`);
-  await user.click(within(karte).getByRole('button', { name: /^#[0-9A-F]{6}/i })); // Auslöser des Farbwählers (zeigt die aktuelle Farbe)
-  await user.click(screen.getByRole('option', { name: `Farbe ${hex}` }));
+  await user.click(within(karte).getByRole('button', { name: /#[0-9A-F]{6}/i })); // Auslöser des Farbwählers (zeigt die aktuelle Farbe)
+  await user.click(screen.getByRole('option', { name: NAME[hex] }));
 }
 
 beforeEach(() => { vi.clearAllMocks(); resetClosedTournaments(); role.current = 'owner'; aktuell = laufendesTurnier(); });
@@ -122,15 +124,15 @@ describe('@W3-028 Trikotfarbe am Turniertag eintragen', () => {
     render(<Verwaltung start={laufendesTurnier()} />);
     await farbeEintragen(NORD, BLAU);
     const user = userEvent.setup();
-    await user.click(within(screen.getByTestId(`team-card-${NORD}`)).getByRole('button', { name: /^#0033CC/i }));
-    await user.click(screen.getByRole('option', { name: `Farbe ${WEISS}` }));
+    await user.click(within(screen.getByTestId(`team-card-${NORD}`)).getByRole('button', { name: /#0033CC/i }));
+    await user.click(screen.getByRole('option', { name: NAME[WEISS] }));
     expect(kasten('s2')?.home.fill).toEqual({ kind: 'solid', color: ROT });
     expect(kasten('s3')?.home.fill).toEqual({ kind: 'solid', color: WEISS });
   });
 });
 
 describe('@W3-028 Rechte: wer Farben eintragen darf', () => {
-  const farbwaehler = (teamId: string) => within(screen.getByTestId(`team-card-${teamId}`)).queryByRole('button', { name: /^#[0-9A-F]{6}/i });
+  const farbwaehler = (teamId: string) => within(screen.getByTestId(`team-card-${teamId}`)).queryByRole('button', { name: /#[0-9A-F]{6}/i });
 
   it('Turnierleitung (Besitzer) sieht den Farbwähler, auch wenn das Turnier läuft', async () => {
     render(<Verwaltung start={laufendesTurnier()} />);

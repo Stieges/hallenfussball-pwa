@@ -25,6 +25,7 @@ export const spielId = (nr: number): string => `0000000b-0000-4000-8000-00000000
 export const TEAM_NORD = teamId(1);
 export const TEAM_OST = teamId(3);
 export const TEAM_MITTE = teamId(5);
+export const TEAM_UFER = teamId(6);
 export const NAMEN: Record<number, string> = { 1: 'FC Nord', 2: 'SV Süd', 3: 'TSV Ost', 4: 'FC West', 5: 'SG Mitte', 6: 'VfB Ufer' };
 
 type Zeile = Record<string, unknown>;

@@ -313,6 +313,20 @@
       "upload": "Upload logo",
       "remove": "Remove logo"
     },
+    "jerseyColorNames": {
+      "white": "White",
+      "black": "Black",
+      "red": "Red",
+      "blue": "Blue",
+      "green": "Green",
+      "yellow": "Yellow",
+      "orange": "Orange",
+      "purple": "Purple",
+      "pink": "Pink",
+      "teal": "Teal",
+      "gray": "Gray",
+      "brown": "Brown"
+    },
     "jerseyColorLabel": "Jersey color:",
     "rename": "Rename",
     "delete": "Delete",

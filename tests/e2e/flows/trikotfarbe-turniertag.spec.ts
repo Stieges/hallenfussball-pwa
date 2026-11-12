@@ -14,17 +14,19 @@ import type { Locator, Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
 import { neuLaden } from '../helpers/neuLaden';
 import { abpfiffHalten } from '../helpers/abpfiff';
-import { GELB, MONITOR_LIVE, MONITOR_LIVE_2, ROT, SHARE_CODE, TEAM_MITTE, TEAM_NORD, TEAM_OST, TURNIER_ID, WEISS, spielId, trikotfarbeTurnier } from '../helpers/trikotfarbeSaat';
+import { GELB, MONITOR_LIVE, MONITOR_LIVE_2, ROT, SHARE_CODE, TEAM_MITTE, TEAM_NORD, TEAM_OST, TEAM_UFER, TURNIER_ID, WEISS, spielId, trikotfarbeTurnier } from '../helpers/trikotfarbeSaat';
 
 const BILDER = process.env.TRIKOT_BILDER;
 const PHASE = process.env.TRIKOT_PHASE ?? 'nachher';
 const GERAETE = [{ name: 'handy', width: 390, height: 844 }, { name: 'desktop', width: 1440, height: 900 }] as const;
-type Geraet = (typeof GERAETE)[number];
+interface Geraet { name: string; width: number; height: number }
 
 const PALETTE_BLAU = '#0033CC';
 const PALETTE_SCHWARZ = '#000000';
 const PALETTE_ROT = '#DC0000';
 const PALETTE_WEISS = '#FFFFFF';
+/** Vorgelesener Name der Palettenfarben (de) */
+const NAME: Record<string, string> = { [PALETTE_BLAU]: 'Blau', [PALETTE_SCHWARZ]: 'Schwarz', [PALETTE_ROT]: 'Rot', [PALETTE_WEISS]: 'Weiß' };
 
 test.use({ locale: 'de-DE', timezoneId: 'Europe/Berlin', navigationTimeout: 60000 });
 
@@ -76,7 +78,7 @@ async function oeffneFarbwahl(page: Page, teamId: string): Promise<Locator> {
 /** Trikotfarbe aus der Palette: Farbwähler öffnen, Farbe antippen, den neuen Wert am Auslöser abwarten. */
 async function farbeWaehlen(page: Page, teamId: string, hex: string): Promise<void> {
   const karte = await oeffneFarbwahl(page, teamId);
-  await page.getByRole('option', { name: `Farbe ${hex}` }).click();
+  await page.getByRole('option', { name: NAME[hex], exact: true }).click();
   await expect(karte.locator('button[aria-haspopup="true"]')).toContainText(hex);
 }
 
@@ -165,49 +167,6 @@ for (const g of GERAETE) {
       await expect(page.getByTestId('scoreboard-farb-hinweis')).toHaveCount(0);
     });
 
-    test(`@W3-028 C-TEAMFARBE-WAEHLER-ABGESCHNITTEN Farbpalette: alle zwölf Farben der Trikot-Palette liegen sichtbar und antippbar im Farbwähler (${g.name})`, async ({ page, seedIndexedDB }) => {
-      test.fail(true, 'C-TEAMFARBE-WAEHLER-ABGESCHNITTEN – Befund: Farbwähler von der Teamkarte abgeschnitten (TeamsTab.tsx teamCardStyle overflow: hidden)');
-      await oeffne(page, seedIndexedDB, g);
-      await oeffneFarbwahl(page, TEAM_NORD);
-      const farben = page.getByRole('option');
-      expect(await farben.count()).toBe(12);
-      for (let i = 0; i < 12; i++) {
-        const antippbar = await farben.nth(i).evaluate((el) => {
-          const b = el.getBoundingClientRect();
-          const treffer = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
-          return treffer !== null && el.contains(treffer);
-        });
-        expect(antippbar, `Farbe ${i + 1} (${(await farben.nth(i).getAttribute('aria-label')) ?? ''}) ohne Blättern antippbar`).toBe(true);
-      }
-    });
-
-    test(`@W3-028 C-TEAMFARBE-WAEHLER-ABGESCHNITTEN Eigene Farbe: der freie Farbwähler (Hellblau) ist über Farbton-Regler und Farbfläche erreichbar und die Farbe gilt für das nächste Spiel (${g.name})`, async ({ page, seedIndexedDB }) => {
-      // Befund 12.11.: die aufgeklappte Teamkarte schneidet den Farbwähler ab (TeamsTab.tsx teamCardStyle `overflow: 'hidden'`); der Farbton-Regler
-      // liegt außerhalb der Karte und ist mit dem Finger nicht erreichbar (Playwright blättert die Karte von selbst, ein Mensch nicht)
-      test.fail(true, 'C-TEAMFARBE-WAEHLER-ABGESCHNITTEN – Befund: Farbwähler von der Teamkarte abgeschnitten (TeamsTab.tsx teamCardStyle overflow: hidden)');
-      await oeffne(page, seedIndexedDB, g);
-      const karte = await oeffneFarbwahl(page, TEAM_NORD);
-      const regler = page.locator('.react-colorful__hue');
-      const flaeche = page.locator('.react-colorful__saturation');
-      // Hellblau #4FC3F7 liegt bei Farbton 199° (55 % der Breite), Sättigung 68 %, Helligkeit 97 %
-      const erreichbar = (ort: Locator): Promise<boolean> => ort.evaluate((el) => {
-        const b = el.getBoundingClientRect();
-        const treffer = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
-        return treffer !== null && el.contains(treffer);
-      });
-      expect(await erreichbar(regler), 'Farbton-Regler ist antippbar').toBe(true);
-      const r = (await regler.boundingBox())!;
-      await page.mouse.click(r.x + r.width * 0.553, r.y + r.height / 2);
-      const f = (await flaeche.boundingBox())!;
-      await page.mouse.click(f.x + f.width * 0.68, f.y + f.height * 0.03);
-      const wert = (await karte.locator('button[aria-haspopup="true"]').innerText()).match(/#[0-9A-Fa-f]{6}/)?.[0].toUpperCase() ?? '';
-      const [rot, , blau] = [1, 3, 5].map((i) => parseInt(wert.slice(i, i + 2), 16));
-      expect(rot, `Hellblau, nicht Rot (${wert})`).toBeLessThan(0xA0);
-      expect(blau, `Hellblau (${wert})`).toBeGreaterThan(0xD0);
-      await bild(page, g, '10-teams-eigene-farbe');
-      await page.goto(`/#/tournament/${TURNIER_ID}/live`);
-      await expect(page.getByTestId('scoreboard-box-links')).toHaveAttribute('data-color', wert);
-    });
   });
 }
 
@@ -223,15 +182,118 @@ test.describe('@W3-028 Trikotfarbe am Turniertag: Bedienung am Handy', () => {
     await expect(page.getByText('Trikotfarbe:')).toBeVisible(); // die Stelle ist beschriftet
     const ausloeser = page.getByTestId(`team-card-${TEAM_NORD}`).locator('button[aria-haspopup="true"]');
     await ausloeser.click(); // 4
-    for (const ziel of [ausloeser, page.getByRole('option', { name: `Farbe ${PALETTE_BLAU}` })]) {
+    for (const ziel of [ausloeser, page.getByRole('option', { name: NAME[PALETTE_BLAU], exact: true })]) {
       const box = (await ziel.boundingBox())!;
       expect(Math.min(box.width, box.height), 'Touch-Ziel mindestens 44 px').toBeGreaterThanOrEqual(44);
     }
     await bild(page, GERAETE[0], '11-handy-farbwahl');
-    await page.getByRole('option', { name: `Farbe ${PALETTE_BLAU}` }).click(); // 5
+    await page.getByRole('option', { name: NAME[PALETTE_BLAU], exact: true }).click(); // 5
     await expect(ausloeser).toContainText(PALETTE_BLAU);
     await neuLaden(page);
     await page.getByTestId(`team-expand-toggle-${TEAM_NORD}`).click();
     await expect(page.getByTestId(`team-card-${TEAM_NORD}`).locator('button[aria-haspopup="true"]')).toContainText(PALETTE_BLAU);
   });
+});
+
+/** Ganz im Fenster und nicht verdeckt: Mitte und vier Ecken (3 px innen) treffen das Element selbst (kein Blättern, kein Scrollen). */
+async function sichtbarImFenster(ort: Locator): Promise<boolean> {
+  return ort.evaluate((el) => {
+    const b = el.getBoundingClientRect();
+    if (b.left < 0 || b.top < 0 || b.right > window.innerWidth || b.bottom > window.innerHeight) { return false; }
+    const punkte: Array<[number, number]> = [[b.left + b.width / 2, b.top + b.height / 2], [b.left + 3, b.top + 3], [b.right - 3, b.top + 3], [b.left + 3, b.bottom - 3], [b.right - 3, b.bottom - 3]];
+    return punkte.every(([x, y]) => { const t = document.elementFromPoint(x, y); return t !== null && el.contains(t); });
+  });
+}
+
+const PICKER_GERAETE = [
+  { name: 'handy390', width: 390, height: 844, dunkel: false }, { name: 'handy360', width: 360, height: 640, dunkel: false },
+  { name: 'desktop1440', width: 1440, height: 900, dunkel: false }, { name: 'handy390-dunkel', width: 390, height: 844, dunkel: true },
+] as const;
+
+// Der Farbwähler im Reiter Teams liegt ganz im Fenster, auch beim letzten Team der Liste (C-TEAMFARBE-WAEHLER-ABGESCHNITTEN, behoben).
+// Die Aufgaben prüfen die Lage jedes Feldes im Fenster, ohne dass der Test die Karte blättert.
+for (const a of PICKER_GERAETE) {
+  test.describe(`@W3-028 Farbwähler im Reiter Teams (${a.name})`, () => {
+    const start = async (page: Page, seed: Seed): Promise<void> => {
+      await page.emulateMedia({ colorScheme: a.dunkel ? 'dark' : 'light' });
+      await oeffne(page, seed, { name: 'handy', width: a.width, height: a.height });
+    };
+
+    for (const [teamId, ort] of [[TEAM_NORD, 'erstes Team'], [TEAM_UFER, 'letztes Team']] as const) {
+      test(`@W3-028 ${ort}: alle zwölf Farbfelder liegen ganz im Fenster, nicht verdeckt, mindestens 44 px, mit vorgelesenem Namen (${a.name})`, async ({ page, seedIndexedDB }) => {
+        await start(page, seedIndexedDB);
+        await oeffneFarbwahl(page, teamId);
+        const felder = page.getByRole('option');
+        expect(await felder.count()).toBe(12);
+        for (let i = 0; i < 12; i++) {
+          const feld = felder.nth(i);
+          const name = (await feld.getAttribute('aria-label')) ?? '';
+          expect(name, 'Name statt Hex-Wert').toMatch(/^[A-ZÄÖÜ][a-zäöüß]+$/);
+          expect(await sichtbarImFenster(feld), `Farbfeld ${name} ganz im Fenster`).toBe(true);
+          const box = (await feld.boundingBox())!;
+          expect(Math.min(box.width, box.height), `Farbfeld ${name} mindestens 44 px`).toBeGreaterThanOrEqual(44);
+        }
+      });
+
+      test(`@W3-028 ${ort}: freier Farbwähler (Fläche und Farbton-Regler) liegt ganz im Fenster, Hellblau lässt sich wählen und gilt für das nächste Spiel (${a.name})`, async ({ page, seedIndexedDB }) => {
+        await start(page, seedIndexedDB);
+        const karte = await oeffneFarbwahl(page, teamId);
+        const regler = page.locator('.react-colorful__hue');
+        const flaeche = page.locator('.react-colorful__saturation');
+        expect(await sichtbarImFenster(regler), 'Farbton-Regler ganz im Fenster').toBe(true);
+        expect(await sichtbarImFenster(flaeche), 'Farbfläche ganz im Fenster').toBe(true);
+        // Hellblau #4FC3F7 liegt bei Farbton 199° (55 % der Breite), Sättigung 68 %, Helligkeit 97 %
+        const r = (await regler.boundingBox())!;
+        await page.mouse.click(r.x + r.width * 0.553, r.y + r.height / 2);
+        const f = (await flaeche.boundingBox())!;
+        await page.mouse.click(f.x + f.width * 0.68, f.y + f.height * 0.03);
+        const lies = async (): Promise<string> => (await karte.locator('button[aria-haspopup="true"]').innerText()).match(/#[0-9A-Fa-f]{6}/)?.[0].toUpperCase() ?? '';
+        const istHellblau = (hex: string): boolean => hex !== '' && parseInt(hex.slice(1, 3), 16) < 0xA0 && parseInt(hex.slice(5, 7), 16) > 0xD0;
+        await expect.poll(async () => istHellblau(await lies()), { message: 'Hellblau, nicht Rot oder Gelb' }).toBe(true);
+        const wert = await lies();
+        if (teamId === TEAM_NORD) {
+          await page.keyboard.press('Escape'); // gespeichert wird beim Loslassen, nicht erst beim Schließen
+          await page.goto(`/#/tournament/${TURNIER_ID}/live`);
+          await expect(page.getByTestId('scoreboard-box-links')).toHaveAttribute('data-color', wert);
+        }
+      });
+    }
+
+    test(`@W3-028 Escape und Tipp daneben schließen den Farbwähler, Tastatur erreicht die Farbfelder mit sichtbarem Fokus (${a.name})`, async ({ page, seedIndexedDB }) => {
+      await start(page, seedIndexedDB);
+      const karte = await oeffneFarbwahl(page, TEAM_NORD);
+      const dialog = page.getByRole('dialog', { name: 'Farbauswahl' });
+      await page.keyboard.press('Escape');
+      await expect(dialog).toHaveCount(0);
+      await karte.locator('button[aria-haspopup="true"]').click();
+      await expect(dialog).toBeVisible();
+      await page.getByRole('heading', { name: /Aktive Teams/ }).click({ position: { x: 2, y: 2 } }); // daneben
+      await expect(dialog).toHaveCount(0);
+      await karte.locator('button[aria-haspopup="true"]').click();
+      await page.keyboard.press('Tab');
+      const fokus = page.getByRole('option', { name: 'Weiß', exact: true });
+      await expect(fokus).toBeFocused();
+      expect(await fokus.evaluate((el) => getComputedStyle(el).outlineStyle), 'sichtbarer Fokusring').not.toBe('none');
+    });
+  });
+}
+
+// Bilder vorher/nachher (gleiche Daten): TRIKOT_BILDER=<Ordner> TRIKOT_PHASE=vorher|nachher, nur mit Ordner
+const FIX_ANSICHTEN = [
+  { name: 'handy390', width: 390, height: 844, dunkel: false }, { name: 'handy360', width: 360, height: 640, dunkel: false },
+  { name: 'desktop1440', width: 1440, height: 900, dunkel: false }, { name: 'handy390-dunkel', width: 390, height: 844, dunkel: true },
+] as const;
+test.describe('@W3-028 Bilder: Farbwähler im Reiter Teams', () => {
+  for (const a of FIX_ANSICHTEN) {
+    test(`Bilder ${a.name}`, async ({ page, seedIndexedDB }) => {
+      test.skip(!BILDER, 'nur mit TRIKOT_BILDER');
+      test.setTimeout(90000);
+      await page.emulateMedia({ colorScheme: a.dunkel ? 'dark' : 'light' });
+      await oeffne(page, seedIndexedDB, { name: a.name, width: a.width, height: a.height });
+      for (const [teamId, ort] of [[TEAM_NORD, 'erstes-team'], [TEAM_UFER, 'letztes-team']] as const) {
+        await oeffneFarbwahl(page, teamId);
+        await page.screenshot({ path: join(BILDER ?? '', `${PHASE}-${a.name}-${ort}.png`) });
+      }
+    });
+  }
 });
