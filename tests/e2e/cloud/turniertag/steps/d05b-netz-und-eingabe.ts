@@ -60,7 +60,11 @@ async function netzwechsel({ browser }: StepContext): Promise<void> {
   expect(await momentaufnahme(), 'Turniertag-Cup unverändert').toEqual(vorher);
 }
 
-/** D5c: widersprüchliche Offline-Einträge zweier Geräte landen in der Klärungsliste (Besitzer A-35/B-50). */
+/**
+ * D5c: widersprüchliche Offline-Einträge zweier Geräte landen in der Klärungsliste (Besitzer A-35/B-50). Ohne Kennung (V1, 09.11.): der Schritt prüft nur den Marker
+ * `review-list`, den es nicht gibt; die gebaute Klärungsliste (`klaerungsliste-*`) belegen für @FU-037 und @FU-038 `scripts/klaerungsliste-check.sh` und die
+ * Bestandstests (`reviewCases.test.ts`). Ein Ablauf mit zwei Geräten bekommt die Kennungen erst, wenn er sie wirklich prüft.
+ */
 async function klaerungsliste({ asRole }: StepContext): Promise<void> {
   const ownerPage = await asRole('owner');
   await openTurniertagPath(ownerPage, '/admin/dashboard');
@@ -158,7 +162,7 @@ async function updateImSpiel({ asRole }: StepContext): Promise<void> {
 
 export const steps: readonly TurniertagStep[] = [
   { id: 'D5b', title: 'Netzwechsel in der Halle: Änderung kommt ohne Neuladen an, kein Fehler', scenarios: ['@FU-025', '@FU-102'], befunde: ['C-REALTIME-RESUBSCRIBE-WIRFT'], owner: 'Paket RS (Realtime-Neuabo, #281 geliefert)', expectedFail: false, run: netzwechsel },
-  { id: 'D5c', title: 'Widersprüchliche Offline-Einträge zweier Geräte: Klärungsliste', scenarios: ['@FU-037', '@FU-038'], befunde: ['C-KLAERUNGSLISTE-OHNE-PAKET'], owner: 'A-35/B-50', expectedFail: true, run: klaerungsliste },
+  { id: 'D5c', title: 'Widersprüchliche Offline-Einträge zweier Geräte: Klärungsliste', scenarios: [], befunde: ['C-KLAERUNGSLISTE-OHNE-PAKET'], owner: 'A-35/B-50', expectedFail: true, run: klaerungsliste },
   { id: 'D5d', title: 'Schnelleingabe in der Finalrunden-Tabelle: zweistelliges Ergebnis 10:2', scenarios: ['@FU-101'], befunde: ['C-SCHNELLEINGABE-TASTENDRUCK'], owner: 'H-Rest Kleinfix (Schnelleingabe, #278 gebaut)', expectedFail: false, run: schnelleingabe },
 ];
 

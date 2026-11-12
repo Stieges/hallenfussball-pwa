@@ -2,6 +2,9 @@
  * D3 Helfer per QR (anonyme Gerätesitzung, Zulassung mit Feld). Besitzer: A-16 / A-17.
  * Besitzer: A-16/A-17 -- Soll-Marker: die Turnierleitung zeigt unter "Team & Helfer" einen
  * QR-Code zum Beitritt (`helper-join-qr`).
+ * Ohne Kennung (V1, 09.11.): die Marker dieses Schritts (`helper-join-qr`, `helper-join-field-select`, `helper-join-submit`) gibt es nicht; der gebaute
+ * Beitritt (Name, Prüfzahl, Zulassen mit Feld) läuft anders. Der Schritt prüft @HE-001 nicht und trägt es deshalb nicht. @HE-001 belegt jetzt `helfer-beitritt.cloud.spec.ts` (Scan, Name, Zulassen, Tor auf Feld 2
+ * binnen 2 Minuten, ohne Konto; als `:teil`, weil „Olli höchstens 3 Tipps“ eine Oberflächen-Aussage ist) und die Anfrage mit Prüfzahl `helper-join-check.sh`.
  */
 import { expect } from '@playwright/test';
 import { expectPageAnchor, expectSollMarker, getRows, openTurniertagPath, SOLL_TIMEOUT_MS, TURNIERTAG_ID } from './shared';
@@ -34,5 +37,5 @@ async function helferPerQr({ asRole, browser }: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'D3', title: 'Helfer tritt per QR bei, Zulassung mit Feld', scenarios: ['@HE-001'], owner: 'A-16/A-17', expectedFail: true, run: helferPerQr },
+  { id: 'D3', title: 'Helfer tritt per QR bei, Zulassung mit Feld', scenarios: [], owner: 'A-16/A-17', expectedFail: true, run: helferPerQr },
 ];
