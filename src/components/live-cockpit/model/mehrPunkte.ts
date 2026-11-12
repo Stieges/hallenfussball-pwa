@@ -8,7 +8,10 @@
 import type { CockpitPhase } from './cockpitPhase';
 import { darfImZustand } from './darf';
 
-export type MehrPunkt = 'uhrKorrigieren' | 'seitenTauschen' | 'einstellungen' | 'nichtAngetreten';
+export type MehrPunkt = 'uhrKorrigieren' | 'seitenTauschen' | 'einstellungen' | 'nichtAngetreten' | 'leibchenNachtragen';
+
+/** Zustände mit angepfiffenem, noch nicht beendetem Spiel: dort trägt nur die Turnierleitung Leibchen nach (@SL-150). */
+const IM_SPIEL: ReadonlySet<CockpitPhase['zustand']> = new Set(['laeuft', 'pausiert', 'halbzeitpause', 'pauseVorVerlaengerung', 'entscheidung', 'strafstoss']);
 
 /** Welche Punkte „Mehr“ im Zustand anbietet (ohne Rücksicht darauf, ob der Aufrufer eine Aktion liefert). */
 /**
@@ -20,6 +23,8 @@ export function mehrPunkteGrundgeruest(phase: CockpitPhase, k: { kannSteuern: bo
   if (darfImZustand(phase.zustand, k.kannSteuern, 'uhrKorrigieren')) { punkte.push('uhrKorrigieren'); }
   if (darfImZustand(phase.zustand, k.kannSteuern, 'seitenTauschen')) { punkte.push('seitenTauschen'); }
   if (k.istLeitung === true && darfImZustand(phase.zustand, true, 'nichtAngetreten')) { punkte.push('nichtAngetreten'); }
+  // @SL-150: Leibchen nachtragen, entfernen oder die Seite wechseln – im laufenden Spiel nur Turnierleitung und Co-Admin, nie der Helfer
+  if (k.istLeitung === true && IM_SPIEL.has(phase.zustand)) { punkte.push('leibchenNachtragen'); }
   punkte.push('einstellungen');
   return punkte;
 }

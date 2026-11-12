@@ -120,14 +120,14 @@ export function LeibchenKarte(p: LeibchenKarteProps): ReactElement | null {
         </p>
       ) : aktuell !== null && (
         <button type="button" style={vorschlagKnopf} aria-expanded={offen} aria-label={`${satz(aktuell.seite, aktuell.farbe)}. ${t('leibchenKarte.aendernVorschlag')}`}
-          disabled={p.lesen} onClick={() => { setzeOffen(!offen); }} data-testid={`${prefix}-vorschlag`}>
+          disabled={p.lesen} onClick={() => { if (offen) { setEntwurf(null); } setzeOffen(!offen); }} data-testid={`${prefix}-vorschlag`}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: cssVars.spacing.xs, minWidth: 0 }}><MatchIcons.Shirt />{satz(aktuell.seite, aktuell.farbe)}</span>
           {!p.lesen && <span style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary }}>{t('leibchenKarte.aendernVorschlag')} {offen ? '▴' : '▾'}</span>}
         </button>
       )}
       {(offen || (keinPassendes && offen)) && !p.lesen && (
         <LeibchenWahlFelder teams={p.teams} seite={(entwurf ?? aktuell ?? { seite: regelSeite }).seite} farbe={(entwurf ?? aktuell ?? { farbe: '' }).farbe ?? ''}
-          hallenFarben={p.hallenFarben} trikot={p.trikot} andereOffen={keinPassendes} testIdPrefix={prefix}
+          hallenFarben={p.hallenFarben} trikot={p.trikot} andereOffen={p.vorschlag?.kind === 'keinPassendes'} testIdPrefix={prefix}
           onSeite={(seite) => { setEntwurf({ seite, farbe: (entwurf ?? aktuell)?.farbe ?? '' }); }}
           onFarbe={(farbe) => { setEntwurf({ seite: (entwurf ?? aktuell)?.seite ?? regelSeite, farbe }); }} />
       )}

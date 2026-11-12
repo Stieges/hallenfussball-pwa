@@ -11,7 +11,7 @@
  * darunter `daumen` (gestapelt, Ereignisse über den Leisten-Knopf). Die Daumenleiste steht unten (Aufgabe 3.6).
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBreakpoint, useMatchTimerExtended, useMatchSound } from '../../hooks';
 import { breakpointValues } from '../../design-tokens';
@@ -25,7 +25,6 @@ import { useRejectedOutboxDialog } from '../../features/collaboration/outbox/use
 import { useMatchEngineContextOptional } from '../../features/match-engine/useMatchEngineContext';
 import { getEffectiveScore } from '../../utils/matchScore';
 import type { SperrHinweis } from '../../core/match';
-import type { KitChoiceNotice } from '../../core/match/client/kitChoiceQueue';
 import type { LiveCockpitProps } from './types';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../types/tournament';
 import { ScoreboardArea } from './areas/ScoreboardArea';
@@ -57,10 +56,7 @@ import { usePenaltyExpiryNotice } from './hooks/usePenaltyExpiryNotice';
 import { alsUebersetzer } from './model/alsUebersetzer';
 import { kastenOderStandard } from './model/kastenOderStandard';
 import { hatSchonGelb as hatSchonGelbIn } from './model/secondYellow';
-import { useLeibchenKarte } from './hooks/useLeibchenKarte';
-import { LeibchenKarte } from '../ui/molecules/LeibchenKarte';
-import { kitHinweis } from '../../core/models/kitChoice';
-import { trikotFarben } from '../../core/models/kitChoice';
+import { useLeibchenBereich } from './hooks/useLeibchenBereich';
 
 const NO_SPERREN: readonly SperrHinweis[] = [];
 const NO_TEAMS = { home: { id: '', name: '' }, away: { id: '', name: '' } };
@@ -137,25 +133,10 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
 
   // Kästen wie am Hallenmonitor (@SL-176): vor dem Anpfiff die echten Trikotfarben bzw. die bestätigte Weste (@ZM-195, @ZM-200)
   const kasten = useMemo(() => kastenOderStandard(props.kasten), [props.kasten]);
-  // Leibchen-Karte (@SL-206, Lage B): Meldungen der Warteschlange kommen in die Meldezeile (@SL-228, @SL-229)
-  const meldungText = useCallback((n: KitChoiceNotice): string => t(
-    n.kind === 'rejected' ? (n.code === 'NOT_CONTROLLER' && n.reason === 'OTHER_DEVICE' ? 'leibchenKarte.meldung.nurSteuerndes' : n.code === 'TEAMS_CHANGED' ? 'leibchenKarte.meldung.zurueckgenommen' : 'leibchenKarte.meldung.nichtUebernommen')
-      : n.kind === 'changedElsewhere' ? 'leibchenKarte.meldung.anderesGeraet' : n.kind === 'tooLate' ? 'leibchenKarte.meldung.zuSpaet' : 'leibchenKarte.meldung.fehlgeschlagen',
-  ), [t]);
-  const karteDaten = useLeibchenKarte({ tournament: props.leibchenTurnier?.tournament, matchId: currentMatch?.id, zustand: phase.zustand, melde: notices.melde, meldungText, epoche: props.leibchenTurnier?.epoche });
-  const [wahlOffen, setWahlOffen] = useState(false);
-  const farbKonflikt = useMemo(() => {
-    const turnier = props.leibchenTurnier?.tournament;
-    const spiel = turnier?.matches.find((m) => m.id === currentMatch?.id);
-    return turnier && spiel && phase.zustand === 'vorAnpfiff' ? kitHinweis(trikotFarben(spiel, turnier.teams)) : undefined;
-  }, [props.leibchenTurnier, currentMatch?.id, phase.zustand]);
-  const karte = karteDaten === null ? null : (
-    <LeibchenKarte
-      key={karteDaten.matchId} teams={karteDaten.teams} trikot={karteDaten.trikot} hallenFarben={karteDaten.hallenFarben} gewaehlt={karteDaten.gewaehlt}
-      vorschlag={karteDaten.vorschlag} nurFestlegen={karteDaten.nurFestlegen} senden={karteDaten.senden} lesen={!kannSteuern}
-      onUebernehmen={props.steuerung?.onUebernehmen} onBestaetigen={karteDaten.onBestaetigen} onKeine={karteDaten.onKeine} onWahlOffen={setWahlOffen}
-    />
-  );
+  // Leibchen: Karte über der Daumenleiste (@SL-206, Lage B), Nachtragen unter „Mehr“ (@SL-150), Hinweis in der Tafel
+  const leibchen = useLeibchenBereich({
+    turnier: props.leibchenTurnier, matchId: currentMatch?.id, zustand: phase.zustand, melde: notices.melde, kannSteuern, onUebernehmen: props.steuerung?.onUebernehmen,
+  });
   const cmd = useCockpitCommands({
     props, settings: cockpitSettings, sound, flows, sides, melde: notices.melde, engineView, view,
   });
@@ -203,7 +184,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
       uebernahmeVon={props.uebernahmeVon}
       eingetragenVon={eingetragenVon}
       naechstes={isMobile ? naechstesZeile : null}
-      farbKonflikt={farbKonflikt} spielzeit={props.spielzeit}
+      farbKonflikt={leibchen.farbKonflikt} spielzeit={props.spielzeit}
       naechstesNamen={naechstesSpiel ? [naechstesSpiel.homeTeam.name, naechstesSpiel.awayTeam.name] : undefined}
       // A4 (C-SYNC): rendert selbst nichts außerhalb des Cloud-Modus. I4 (W1, Nachtrag
       // Fixrunde 1): rejectedCount/reviewCount aus dem echten Sender (useEngineOutboxSummary).
@@ -245,7 +226,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   const effectiveScore = getEffectiveScore(match);
 
   return (
-    <div className={shell.container} data-layout={layout} data-stufe={layout === 'breit' ? stufe : undefined} data-testid="live-cockpit" data-leibchen-offen={wahlOffen && isMobile ? 'true' : undefined}>
+    <div className={shell.container} data-layout={layout} data-stufe={layout === 'breit' ? stufe : undefined} data-testid="live-cockpit" data-leibchen-offen={leibchen.wahlOffen && isMobile ? 'true' : undefined}>
       <main className={isMobile ? `${shell.content} ${shell.contentMobile}` : shell.content}>
         <LegacyPlayArea
           kopf={(
@@ -286,7 +267,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
         steuerung={props.steuerung}
         controls={cmd.controls}
         tastenAn={tastenAktiv}
-        karte={karte}
+        karte={leibchen.karte}
         onWeiterNaechstes={() => { props.onLoadNextMatch(match.fieldId); }}
         onKorrigieren={props.onKorrigieren ? () => { props.onKorrigieren?.(match.id); } : undefined}
         onChooseTiebreak={props.onChooseTiebreak ? (wahl) => { props.onChooseTiebreak?.(match.id, wahl); } : undefined}
@@ -306,10 +287,11 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
         rejectedOutbox={rejectedOutbox}
         mehr={{
           punkte: mehrPunkteGrundgeruest(phase, { kannSteuern, istLeitung: istLeitung && props.onNichtAngetreten !== undefined }),
-          aktionen: { ...cmd.mehrAktionen, nichtAngetreten: () => { props.onNichtAngetreten?.(match.id); } },
+          aktionen: { ...cmd.mehrAktionen, nichtAngetreten: () => { props.onNichtAngetreten?.(match.id); }, ...leibchen.mehrAktion },
         }}
         entrySheets={{ flows, teams: teams ?? NO_TEAMS, ausloeserSeite: (seite) => (sides.links === seite ? 'links' : 'rechts'), kartenArten: cockpitSettings.enabledCards, t: tx }}
       />
+      {leibchen.nachtragBlatt}
     </div>
   );
 };

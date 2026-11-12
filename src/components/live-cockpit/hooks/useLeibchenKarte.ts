@@ -94,3 +94,36 @@ export function useLeibchenKarte({ tournament, matchId, zustand, melde, meldungT
     };
   }, [ziel, tournament, zustand, entries, choose, epoche]);
 }
+
+export interface LeibchenNachtragDaten {
+  teams: { a: string; b: string };
+  trikot: TrikotFarben;
+  hallenFarben: string[];
+  /** Was im laufenden Spiel gilt (Vorbelegung der Wahl). */
+  aktuell: { seite: KitSide; farbe: string } | null;
+  onSpeichern: (seite: KitSide, farbe: string) => void;
+  onEntfernen: () => void;
+}
+
+/**
+ * Nachtragen im laufenden Spiel (@SL-150, nur Turnierleitung und Co-Admin): Leibchen nachtragen, entfernen oder die Seite wechseln; die Anzeige stellt
+ * sofort um (Monitor ≤ 1 s, Zuschauer ≤ 10 s, @SL-226). Der Weg zum Server ist derselbe (`match_kit_set`, Zustand live, ohne Übernahme des Felds).
+ */
+export function useLeibchenNachtrag(tournament: Tournament | undefined, matchId: string | undefined, epoche: number | null | undefined): LeibchenNachtragDaten | null {
+  const { choose } = useKitChoices();
+  return useMemo(() => {
+    const spiel = tournament?.matches.find((m) => m.id === matchId);
+    if (tournament === undefined || spiel === undefined) { return null; }
+    const a = teamName(tournament, spiel.slotA);
+    const b = teamName(tournament, spiel.slotB);
+    if (a === null || b === null) { return null; }
+    const seite = spiel.kit?.bibSide;
+    const farbe = seite === undefined ? undefined : spiel.kit?.[seite];
+    return {
+      teams: { a, b }, trikot: trikotFarben(spiel, tournament.teams), hallenFarben: hallenFarbenOf(tournament),
+      aktuell: seite !== undefined && farbe !== undefined ? { seite, farbe } : null,
+      onSpeichern: (s, f) => { choose({ matchId: spiel.id, decision: 'bib', bibSide: s, bibColor: f, controlEpoch: epoche }, tournament); },
+      onEntfernen: () => { choose({ matchId: spiel.id, decision: 'none', controlEpoch: epoche }, tournament); },
+    };
+  }, [tournament, matchId, choose, epoche]);
+}

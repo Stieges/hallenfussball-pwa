@@ -104,3 +104,9 @@
   color: var(--color-text-primary);
   font-weight: var(--font-weight-semibold);
 }
+
+/* Leibchen-Karte (@SL-221): solange die Wahl von Team und Farbe am Handy offen ist, weichen Tafel und Einträge aus dem Bild; die Karte und die Daumenleiste
+   (klebend unten) bleiben, „Weiter“ bzw. „Anpfeifen“ ändern ihre Lage nicht. Auf Tablet und Laptop bleibt alles stehen (das Attribut steht nur am Handy). */
+.container[data-leibchen-offen='true'] .content {
+  display: none;
+}
