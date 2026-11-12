@@ -9,6 +9,7 @@ import { mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Page } from '@playwright/test';
 import { test, expect } from './helpers/test-fixtures';
+import { animationenFertig } from './helpers/animationenFertig';
 // @ts-expect-error – .mjs ohne Typen; die echte Messfunktion von `npm run visual:metrics`
 import { messeSeite } from '../../scripts/visual-metrics/browser-messung.mjs';
 
@@ -36,7 +37,7 @@ function grenzen(art: string): { g: Record<string, unknown>; hart: Set<string> }
 
 async function hartBefunde(page: Page, art: string): Promise<string[]> {
   const { g, hart } = grenzen(art);
-  await page.waitForTimeout(400); // Übergänge der Tasten abwarten, sonst misst der Kontrast eine Zwischenfarbe
+  await animationenFertig(page); // Übergänge der Tasten abwarten, sonst misst der Kontrast eine Zwischenfarbe
   const m: { befunde: { metrik: string; selektor: string; ist: string }[] } = await page.evaluate(messeSeite, {
     art, g, randPx: 0, monitorSchrift: null, ebuPruefen: false, extraInhalte: [],
     primarySelektor: '[data-primary], [data-variant="primary"]',
@@ -62,7 +63,7 @@ test.describe('@SL-239 Aktionsblatt: Darstellung (Prüfstand)', () => {
               await page.locator('[data-testid^="match-name-"]:visible, [data-testid^="match-row-time-"]:visible').first().click();
               const blatt = page.getByTestId('match-action-menu');
               await expect(blatt).toBeVisible();
-              await page.waitForTimeout(600); // das Blatt gleitet 0,3 s ein; erst danach messen
+              await animationenFertig(page); // das Blatt gleitet 0,3 s ein; erst danach messen
 
               expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
               const ueberlauf = await blatt.evaluate((el) => [el, ...Array.from(el.querySelectorAll('*'))].map((k) => k.scrollWidth - k.clientWidth));
