@@ -1,0 +1,79 @@
+{
+  "title": "E1-Junioren Hallenturnier",
+  "organizer": "TSV 1888 Waging am See",
+  "ageClass": "E1-Junioren",
+  "date": "2026-11-29",
+  "startDate": "2026-11-29",
+  "timeSlot": "16:00",
+  "startTime": "16:00",
+  "location": {
+    "name": "Bergader SportARENA",
+    "street": "Mühlberger Weg 5",
+    "postalCode": "83329",
+    "city": "Waging am See",
+    "country": "Deutschland"
+  },
+  "sport": "football",
+  "sportId": "football-indoor",
+  "tournamentType": "classic",
+  "mode": "classic",
+  "numberOfFields": 1,
+  "groupSystem": "roundRobin",
+  "numberOfGroups": 1,
+  "groupPhaseGameDuration": 9,
+  "groupPhaseBreakDuration": 1,
+  "gamePeriods": 1,
+  "finalsConfig": {
+    "preset": "none"
+  },
+  "matchCockpitSettings": {
+    "timePenaltyDurationSeconds": 120
+  },
+  "teams": [
+    {
+      "id": "t1",
+      "name": "Waging E1",
+      "colors": {
+        "primary": "#1565C0"
+      }
+    },
+    {
+      "id": "t2",
+      "name": "Petting E1",
+      "colors": {
+        "primary": "#C62828"
+      }
+    },
+    {
+      "id": "t3",
+      "name": "Otting E1",
+      "colors": {
+        "primary": "#C62828"
+      }
+    },
+    {
+      "id": "t4",
+      "name": "Anschöring E1",
+      "colors": {
+        "primary": "#1565C0"
+      }
+    },
+    {
+      "id": "t5",
+      "name": "Tengling E1",
+      "colors": {
+        "primary": "#FFFFFF"
+      }
+    },
+    {
+      "id": "t6",
+      "name": "Saaldorf E1",
+      "colors": {
+        "primary": "#C62828"
+      }
+    }
+  ],
+  "contactInfo": {
+    "email": "fussballjugend@tsv-waging.de"
+  }
+}
