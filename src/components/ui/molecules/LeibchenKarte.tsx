@@ -102,7 +102,7 @@ export function LeibchenKarte(p: LeibchenKarteProps): ReactElement | null {
   if (p.gewaehlt !== null && !aendern) {
     const text = p.gewaehlt.art === 'keine' ? t('leibchenKarte.keine') : satz(p.gewaehlt.seite, p.gewaehlt.farbe);
     return (
-      <div style={{ ...flaeche, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }} data-testid={`${prefix}-zeile`} data-art={p.gewaehlt.art}>
+      <div style={{ ...flaeche, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }} data-leibchen-flaeche="" data-testid={`${prefix}-zeile`} data-art={p.gewaehlt.art}>
         {/* Zeichen und Satz in einem Element: ein langer Teamname umbricht zwischen den Wörtern über die ganze Breite, das Zeichen bleibt davor (`ueberlauf.element`) */}
         <span style={{ flex: '1 1 auto', minWidth: 0, fontSize: cssVars.fontSizes.md }}>
           <span style={{ display: 'inline-flex', verticalAlign: 'middle', marginRight: cssVars.spacing.xs }}><MatchIcons.Shirt /></span>{text}

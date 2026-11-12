@@ -168,6 +168,18 @@ for (const f of FENSTER) {
       expect(await blatt.evaluate((el) => [el, ...el.querySelectorAll('*')].filter((e) => e.scrollHeight > e.clientHeight + 1 && ['auto', 'scroll'].includes(getComputedStyle(e).overflowY)).length), 'nichts rollt im Blatt').toBe(0);
     });
 
+    if (f.name.startsWith('desktop')) {
+      test(`@SL-218 am Laptop liegt die Karte unten rechts über der Leiste, nicht über die ganze Breite (${f.name})`, async ({ page }) => {
+        await oeffne(page, f);
+        const karte = await box(page.getByTestId('leibchen-karte'));
+        const anpfiff = await box(page.getByTestId('match-start-button'));
+        expect(karte.x, 'rechte Hälfte').toBeGreaterThanOrEqual(f.width / 2);
+        expect(karte.x + karte.width, 'bis zum rechten Rand').toBeGreaterThanOrEqual(f.width - 40);
+        expect(karte.width, 'höchstens ein Drittel der Breite').toBeLessThanOrEqual(f.width * 0.36);
+        expect(karte.y + karte.height, 'über der Leiste').toBeLessThanOrEqual(anpfiff.y + 1);
+      });
+    }
+
     test(`@SL-224 „Ändern“ in der Zeile und jede Farbe der Wahl sind mindestens 44×44 groß (${f.name})`, async ({ page }) => {
       await oeffne(page, f);
       await page.getByTestId('leibchen-bestaetigen').click();
