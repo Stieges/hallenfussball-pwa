@@ -205,6 +205,28 @@ async function sichtbarImFenster(ort: Locator): Promise<boolean> {
   });
 }
 
+/**
+ * Kein Vorfahr des Wählers ist in sich gerollt (`scrollTop > 0` bei `overflow: hidden`; das Rollen der Seite selbst ist erlaubt): sonst hätte nur das Blättern der Karte die Felder
+ * ins Fenster geholt und Kopf, Name und Auslöser wären aus der Karte geschoben (der ursprüngliche Fehler, nur versteckt).
+ */
+async function unverschoben(ort: Locator): Promise<string[]> {
+  return ort.evaluate((el) => {
+    const treffer: string[] = [];
+    for (let a = el.parentElement; a !== null; a = a.parentElement) {
+      const o = getComputedStyle(a);
+      if (a.scrollTop > 0 && (o.overflowY === 'hidden' || o.overflowY === 'clip')) { treffer.push(`${a.tagName} overflow=${o.overflowY} scrollTop=${String(Math.round(a.scrollTop))}`); }
+    }
+    return treffer;
+  });
+}
+
+/** Der Kopf einer Karte liegt nicht über der Oberkante seiner Karte (nicht herausgeschoben). */
+async function kopfInKarte(kopf: Locator, karte: Locator): Promise<boolean> {
+  const k = (await kopf.boundingBox())!;
+  const c = (await karte.boundingBox())!;
+  return k.y >= c.y - 1 && k.y + k.height <= c.y + c.height + 1;
+}
+
 const PICKER_GERAETE = [
   { name: 'handy390', width: 390, height: 844, dunkel: false }, { name: 'handy360', width: 360, height: 640, dunkel: false },
   { name: 'desktop1440', width: 1440, height: 900, dunkel: false }, { name: 'handy390-dunkel', width: 390, height: 844, dunkel: true },
@@ -222,7 +244,9 @@ for (const a of PICKER_GERAETE) {
     for (const [teamId, ort] of [[TEAM_NORD, 'erstes Team'], [TEAM_UFER, 'letztes Team']] as const) {
       test(`@W3-028 ${ort}: alle zwölf Farbfelder liegen ganz im Fenster, nicht verdeckt, mindestens 44 px, mit vorgelesenem Namen (${a.name})`, async ({ page, seedIndexedDB }) => {
         await start(page, seedIndexedDB);
-        await oeffneFarbwahl(page, teamId);
+        const karte0 = await oeffneFarbwahl(page, teamId);
+        expect(await unverschoben(page.getByRole('dialog', { name: 'Farbauswahl' })), 'keine Karte in sich gerollt').toEqual([]);
+        expect(await kopfInKarte(page.getByTestId(`team-expand-toggle-${teamId}`), karte0), 'Kopf der Karte bleibt in der Karte').toBe(true);
         const felder = page.getByRole('option');
         expect(await felder.count()).toBe(12);
         for (let i = 0; i < 12; i++) {
@@ -240,6 +264,7 @@ for (const a of PICKER_GERAETE) {
         const karte = await oeffneFarbwahl(page, teamId);
         const regler = page.locator('.react-colorful__hue');
         const flaeche = page.locator('.react-colorful__saturation');
+        expect(await unverschoben(regler), 'keine Karte in sich gerollt').toEqual([]);
         expect(await sichtbarImFenster(regler), 'Farbton-Regler ganz im Fenster').toBe(true);
         expect(await sichtbarImFenster(flaeche), 'Farbfläche ganz im Fenster').toBe(true);
         // Hellblau #4FC3F7 liegt bei Farbton 199° (55 % der Breite), Sättigung 68 %, Helligkeit 97 %
@@ -276,6 +301,33 @@ for (const a of PICKER_GERAETE) {
       expect(await fokus.evaluate((el) => getComputedStyle(el).outlineStyle), 'sichtbarer Fokusring').not.toBe('none');
     });
   });
+}
+
+// Zweite Stelle desselben Fehlers: Verwaltung → Sichtbarkeit → „Anzeige für Zuschauer“ (C-SICHTBARKEIT-FARBWAEHLER-ABGESCHNITTEN, behoben)
+for (const a of PICKER_GERAETE.filter((g) => !g.dunkel && g.name !== 'handy360')) {
+  for (const seite of ['home', 'away'] as const) {
+    test(`@W3-028 @ZM-152 Sichtbarkeit, Standardfarbe ${seite === 'home' ? 'Heim' : 'Gast'}: alle Farbfelder und der freie Farbwähler liegen ganz im Fenster, nichts in sich gerollt (${a.name})`, async ({ page, seedIndexedDB }) => {
+      await oeffne(page, seedIndexedDB, a);
+      await page.goto(`/#/tournament/${TURNIER_ID}/admin/visibility`);
+      const gruppe = page.getByTestId(`spectator-display-${seite}-color`);
+      await gruppe.locator('button[aria-haspopup="true"]').click({ timeout: 30000 });
+      const dialog = page.getByRole('dialog', { name: 'Farbauswahl' });
+      await expect(dialog).toBeVisible();
+      await bild(page, a, `sichtbarkeit-${seite}`);
+      expect(await unverschoben(dialog), 'kein Abschnitt in sich gerollt').toEqual([]);
+      const kopf = page.getByTestId('spectator-display-section').getByRole('button', { name: /Anzeige für Zuschauer/ });
+      expect(await kopfInKarte(kopf, page.getByTestId('spectator-display-section')), 'Kopf des Abschnitts bleibt im Abschnitt').toBe(true);
+      const felder = page.getByRole('option');
+      const n = await felder.count();
+      expect(n).toBeGreaterThanOrEqual(6);
+      for (let i = 0; i < n; i++) {
+        expect(await sichtbarImFenster(felder.nth(i)), `Farbfeld ${String(i + 1)} ganz im Fenster`).toBe(true);
+      }
+      for (const teil of ['.react-colorful__saturation', '.react-colorful__hue']) {
+        expect(await sichtbarImFenster(page.locator(teil)), `${teil} ganz im Fenster`).toBe(true);
+      }
+    });
+  }
 }
 
 // Bilder vorher/nachher (gleiche Daten): TRIKOT_BILDER=<Ordner> TRIKOT_PHASE=vorher|nachher, nur mit Ordner

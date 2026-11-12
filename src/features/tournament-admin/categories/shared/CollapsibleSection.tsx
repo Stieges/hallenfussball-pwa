@@ -91,6 +91,8 @@ interface CollapsibleSectionProps {
   title: string;
   badge?: string;
   defaultOpen?: boolean;
+  /** Inhalt darf über den Rand ragen (Aufklapp-Farbwähler); die Rundungen trägt dann die Kopfzeile selbst. Vorgabe: abgeschnitten. */
+  overflowVisible?: boolean;
   children: ReactNode;
 }
 
@@ -103,16 +105,18 @@ export function CollapsibleSection({
   title,
   badge,
   defaultOpen = false,
+  overflowVisible = false,
   children,
 }: CollapsibleSectionProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [isHovered, setIsHovered] = useState(false);
 
   return (
-    <div style={styles.container}>
+    <div style={overflowVisible ? { ...styles.container, overflow: 'visible' } : styles.container}>
       <div
         style={{
           ...styles.header,
+          ...(overflowVisible ? { borderRadius: isOpen ? `${cssVars.borderRadius.lg} ${cssVars.borderRadius.lg} 0 0` : cssVars.borderRadius.lg } : {}),
           ...(isHovered ? styles.headerHover : {}),
         }}
         onClick={() => setIsOpen(!isOpen)}

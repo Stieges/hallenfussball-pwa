@@ -198,7 +198,7 @@ export function SpectatorDisplaySection({ tournament, onTournamentUpdate, canEdi
   return (
     <>
     <div ref={cardRef} data-testid="spectator-display-section">
-      <CollapsibleSection icon="🎨" title={t('spectatorDisplay.title')} defaultOpen>
+      <CollapsibleSection icon="🎨" title={t('spectatorDisplay.title')} defaultOpen overflowVisible>
         <p style={S.lead}>{t('spectatorDisplay.description')}</p>
 
         <div style={S.preview} data-testid="spectator-display-preview">
