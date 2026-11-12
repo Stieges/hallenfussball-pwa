@@ -288,7 +288,12 @@
                 "updatedAt": "2026-12-06T08:00:00.000Z"
               }
             ],
-            "publishedAt": "2026-12-06T08:00:00.000Z"
+            "publishedAt": "2026-12-06T08:00:00.000Z",
+            "bibColors": [
+              "#FFCC00",
+              "#FF6600"
+            ],
+            "bibRule": "home"
           },
           {
             "sport": "football",
@@ -574,7 +579,12 @@
                 "updatedAt": "2026-12-06T08:00:00.000Z"
               }
             ],
-            "publishedAt": "2026-12-06T08:00:00.000Z"
+            "publishedAt": "2026-12-06T08:00:00.000Z",
+            "bibColors": [
+              "#FFCC00",
+              "#FF6600"
+            ],
+            "bibRule": "home"
           },
           {
             "sport": "football",
@@ -852,7 +862,12 @@
                 "updatedAt": "2026-12-06T08:00:00.000Z"
               }
             ],
-            "publishedAt": "2026-12-06T08:00:00.000Z"
+            "publishedAt": "2026-12-06T08:00:00.000Z",
+            "bibColors": [
+              "#FFCC00",
+              "#FF6600"
+            ],
+            "bibRule": "home"
           },
           {
             "sport": "football",
@@ -1135,7 +1150,12 @@
                 "updatedAt": "2026-12-06T08:00:00.000Z"
               }
             ],
-            "publishedAt": "2026-12-06T08:00:00.000Z"
+            "publishedAt": "2026-12-06T08:00:00.000Z",
+            "bibColors": [
+              "#FFCC00",
+              "#FF6600"
+            ],
+            "bibRule": "home"
           },
           {
             "sport": "football",
@@ -1410,7 +1430,12 @@
                 "updatedAt": "2026-12-06T08:00:00.000Z"
               }
             ],
-            "publishedAt": "2026-12-06T08:00:00.000Z"
+            "publishedAt": "2026-12-06T08:00:00.000Z",
+            "bibColors": [
+              "#FFCC00",
+              "#FF6600"
+            ],
+            "bibRule": "home"
           },
           {
             "sport": "football",
@@ -1696,7 +1721,12 @@
                 "updatedAt": "2026-12-06T08:00:00.000Z"
               }
             ],
-            "publishedAt": "2026-12-06T08:00:00.000Z"
+            "publishedAt": "2026-12-06T08:00:00.000Z",
+            "bibColors": [
+              "#FFCC00",
+              "#FF6600"
+            ],
+            "bibRule": "home"
           }
         ]
       }

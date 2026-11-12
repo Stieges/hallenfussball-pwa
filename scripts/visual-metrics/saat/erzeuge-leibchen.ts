@@ -24,6 +24,7 @@ export const LEIBCHEN_SAAT_NAME = 'leibchen-vor-anpfiff'
 const ZEIT = '2026-12-06T08:00:00.000Z'
 const BLAU = '#1565C0'
 const GELB = '#FFCC00'
+const ORANGE = '#FF6600'
 const LANG = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921'
 
 const uuid = (n: number): string => `0000000b-0000-4000-8000-${String(n).padStart(12, '0')}`
@@ -83,7 +84,8 @@ export async function erzeugeFall(fall: LeibchenFall): Promise<Tournament> {
   } as unknown as Parameters<TournamentCreationService['publish']>[0])
   // feste Zeitstempel: die Datei ist eingefroren und muss bei jeder Erzeugung gleich sein
   // Turnierdatum: "heute" (der Lader löst die Marke auf), die Zeiten der gespielten Spiele bleiben fest
-  Object.assign(t, { createdAt: ZEIT, updatedAt: ZEIT, publishedAt: ZEIT, date: '@heute', startDate: '@heute' })
+  // Hallenfarben Gelb und Orange, bei gleicher Farbe zieht Heim (@W3-029, @W3-041)
+  Object.assign(t, { createdAt: ZEIT, updatedAt: ZEIT, publishedAt: ZEIT, date: '@heute', startDate: '@heute', bibColor: GELB, bibColors: [GELB, ORANGE], bibRule: 'home' })
   const matches = [...t.matches].sort((a, b) => (a.matchNumber ?? 0) - (b.matchNumber ?? 0))
   t.matches = matches.map((m, i): Match => {
     const id = `0000000b-0000-4000-9000-${String(i + 1).padStart(12, '0')}`
