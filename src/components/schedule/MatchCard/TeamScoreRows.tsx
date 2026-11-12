@@ -44,6 +44,8 @@ export interface TeamScoreRowsProps {
    * `cup`: Pokal beim Sieger (nur Finalrunde); „nach Verlängerung“ klein unter dem Namen des Siegers. Nur zusammen mit `kasten`.
    */
   ende?: { cup: boolean };
+  /** Kästen eines Spiels ohne Stand bleiben leer statt 0 zu zeigen (Aktionsblatt eines geplanten Spiels, @SL-239); wirkt nur mit `kasten` */
+  blankWithoutScore?: boolean;
 }
 
 type Side = 'a' | 'b';
@@ -73,7 +75,7 @@ const goalsStyle: CSSProperties = {
   fontFamily: 'inherit',
 };
 
-export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam, awayTeam, result, status, onScoreClick, disabled = false, zeitstrafen, kasten, ende }) => {
+export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam, awayTeam, result, status, onScoreClick, disabled = false, zeitstrafen, kasten, ende, blankWithoutScore = false }) => {
   const { t } = useTranslation('tournament');
   const { colors } = useTheme();
   const decided = result?.winner !== undefined && result.winner !== null;
@@ -155,7 +157,7 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
         >
           {kasten === undefined ? (goals ?? '–') : (
             <ScoreBox
-              score={goals ?? 0}
+              score={goals === undefined && blankWithoutScore ? null : (goals ?? 0)}
               fill={(first ? kasten.home : kasten.away).fill}
               size="compact"
               background={hintergrund}
@@ -164,7 +166,7 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
               outcome={finished && decided ? (isWinner ? 'winner' : 'loser') : undefined}
               cup={finished && isWinner && ende.cup}
               frameStrength={rahmen}
-              ariaLabel={[`${team.name}: ${String(goals ?? 0)}`, finished && isWinner ? t('matchCard.winnerAria') : null, (first ? kasten.home : kasten.away).bib ? t('matchCard.bibAria') : null].filter((x) => x !== null).join(', ')}
+              ariaLabel={[goals === undefined && blankWithoutScore ? team.name : `${team.name}: ${String(goals ?? 0)}`, finished && isWinner ? t('matchCard.winnerAria') : null, (first ? kasten.home : kasten.away).bib ? t('matchCard.bibAria') : null].filter((x) => x !== null).join(', ')}
               testId={`match-box-${matchId}-${seite}`}
               position={seite}
             />
