@@ -160,6 +160,7 @@ test.describe('Leibchen: Wahl, Server und Anzeige (zwei Kontexte, lokaler Stack)
       await olli.page.getByTestId('cockpit-more-button').click();
       await olli.page.getByTestId('mehr-leibchen-nachtragen').click();
       await olli.page.getByTestId('nachtrag-team-gast').click();
+      await olli.page.getByTestId('nachtrag-andere').click(); // ohne eingetragene Hallenfarben steht die Grundauswahl hinter „Andere Farbe …“
       await olli.page.locator('[data-testid^="nachtrag-farbe-"]:not([disabled])').first().click();
       await olli.page.getByTestId('nachtrag-speichern').click();
       await expect.poll(async () => (await zeile(ids.matchId)).kit_decision, { timeout: 20_000, message: 'der Server hat den Nachtrag gespeichert' }).toBe('bib');
