@@ -477,7 +477,7 @@
     },
     "hallHorn": {
       "de": "Hallenton",
-      "en": "hall horn",
+      "en": "hall audio",
       "forbidden_de": [],
       "reason": "Record Hallenton: der Ton in der Halle (Abpfiff, Halbzeit, Torhymne) über den Hallen-Lautsprecher, getrennt vom Ton im Cockpit der leitenden Person. Bewusst kein globales Verbot von „Sound“ (Plan H4, G10): nur die Hallenton-Texte vermeiden das Wort, geprüft durch einen Scan des Namensraums „hallenton“. kuerzel:true nur, damit die Lint-Regel das Wort in Code-Texten nicht meldet.",
       "i18nKey": "hallenton.hallenton",

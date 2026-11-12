@@ -1,37 +1,37 @@
 {
   "statuszeile": {
     "weitere": "+{{count}} more",
-    "bereit": "Speaker field {{feld}} ready",
+    "bereit": "Field {{feld}} speaker ready",
     "bereitKurz": "Field {{feld}} ready",
-    "nichtBereit": "Speaker field {{feld}} not ready",
+    "nichtBereit": "Field {{feld}} speaker not ready",
     "nichtBereitKurz": "Field {{feld}} not ready",
-    "nichtBereitKeineVerbindung": "Speaker field {{feld}} not ready – no connection",
+    "nichtBereitKeineVerbindung": "Field {{feld}} speaker not ready – no connection",
     "nichtBereitKeineVerbindungKurz": "Field {{feld}} not ready – no connection",
-    "tonNichtAktiv": "Audio not active – click here",
-    "schlafenGelegt": "Speaker put to sleep",
+    "tonNichtAktiv": "Audio off – click to enable",
+    "schlafenGelegt": "Speaker suspended by browser",
     "statusUnbekannt": "Speaker: status unknown",
     "pruefen": "Check",
-    "pruefenLesetext": "Speaker field {{feld}}: output may have changed, please check",
+    "pruefenLesetext": "Field {{feld}} speaker: output may have changed, please check",
     "hupeStattEigenerTon": "Horn 1 instead of custom tone",
     "titel": "Status"
   },
   "feld": {
     "titel": "Field {{feld}}",
-    "keinLautsprecherHinweis": "Here you only hear the tone in the cockpit of the person in charge. Kicking off the match stays possible.",
+    "keinLautsprecherHinweis": "Only the match lead's cockpit plays the tone here. You can still kick off.",
     "zustand": {
       "bereit": "ready",
       "nichtBereit": "not ready – {{grund}}",
       "zustandUnbekannt": "not ready",
       "meldetSichNicht": "not responding (last seen {{zeit}})",
-      "statusUnbekannt": "Status unknown",
+      "statusUnbekannt": "status unknown",
       "keinLautsprecher": "no hall speaker"
     },
     "grund": {
-      "tonNichtAktiviert": "audio not activated",
+      "tonNichtAktiviert": "audio not enabled",
       "keineVerbindung": "no connection",
       "hintergrund": "in the background",
-      "schlafenGelegt": "put to sleep",
-      "lautstaerkeNull": "volume 0 %",
+      "schlafenGelegt": "suspended",
+      "lautstaerkeNull": "volume 0%",
       "ausgangVerloren": "output lost",
       "ausgangBestaetigen": "confirm output"
     },
@@ -44,12 +44,12 @@
     "geraetZusatzMonitor": "(monitor)"
   },
   "cockpit": {
-    "titel": "Hall speaker off – show the end yourself",
+    "titel": "Hall speaker off – signal the end yourself",
     "grund": "Reason: {{grund}}",
-    "ausgangGeaendert": "Hall horn output changed"
+    "ausgangGeaendert": "Hall audio output changed"
   },
   "geraet": {
     "uebernommen": "Field {{feld}} taken over by another device",
-    "abgemeldet": "The tournament director has signed this device off as the hall speaker for field {{feld}}."
+    "abgemeldet": "The tournament director removed this device as the hall speaker for field {{feld}}."
   }
 }
