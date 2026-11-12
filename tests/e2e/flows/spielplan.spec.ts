@@ -411,9 +411,12 @@ test.describe('Spielplan 2.0 - Tap/Click Logik', () => {
     // Erste Karte (nichts ist angepfiffen, also geplant) und ihr Ergebnisfeld (`data-score-circle`, in jedem Layout vorhanden)
     const karte = page.locator('[data-match-card]:visible').first();
     await expect(karte).toBeVisible({ timeout: 10_000 });
+    // Spielnummer der Karte (Beschriftung „Spiel n: Heim gegen Gast“) muss im Titel des Blatts stehen
+    const nummer = /Spiel (\d+)/.exec((await page.locator('[role="article"]:visible').first().getAttribute('aria-label')) ?? '')?.[1];
+    expect(nummer, 'Karte nennt ihre Spielnummer').toBeDefined();
     await karte.locator('[data-score-circle]:visible').first().click();
 
-    await expect(page.getByTestId('result-sheet')).toContainText(/Endergebnis Spiel \d+/);
+    await expect(page.getByRole('heading', { name: `Endergebnis Spiel ${nummer ?? ''}` })).toBeVisible();
     await expect(page.getByTestId('match-action-menu')).toHaveCount(0);
   });
 
@@ -423,7 +426,7 @@ test.describe('Spielplan 2.0 - Tap/Click Logik', () => {
     // Ein Teamname der ersten Karte: weder Ergebnisfeld noch Taste, in jedem Layout derselbe Weg
     const karte = page.locator('[data-match-card]:visible').first();
     await expect(karte).toBeVisible({ timeout: 10_000 });
-    await karte.getByText(/^(FC Bayern|BVB Dortmund|RB Leipzig|VfB Stuttgart|1\. FC Nürnberg|SpVgg Fürth)$/).first().click();
+    await karte.getByTestId(/^match-name-/).first().click();
 
     await expect(page.getByTestId('match-action-menu')).toBeVisible({ timeout: 5000 });
     await expect(page.getByTestId('match-action-kickOff')).toHaveText('Im Cockpit anpfeifen');

@@ -56,7 +56,7 @@ export const MatchCardSides: React.FC<MatchCardSidesProps> = ({
       {/* Home Team (right-aligned) */}
       <div style={teamStyle('right')}>
         <ZeitstrafeHinweis liste={clock?.zeitstrafen?.home} testId={`match-time-penalty-${matchId}-home`} align="end">
-          <span style={teamNameStyle('a')} data-winner={decided && result?.winner === 'a' ? 'true' : undefined}>{homeTeam.name}</span>
+          <span style={teamNameStyle('a')} data-testid={`match-name-${matchId}-home`} data-winner={decided && result?.winner === 'a' ? 'true' : undefined}>{homeTeam.name}</span>
         </ZeitstrafeHinweis>
         <TeamAvatar team={homeTeam} size="sm" />
       </div>
@@ -84,7 +84,7 @@ export const MatchCardSides: React.FC<MatchCardSidesProps> = ({
       <div style={teamStyle('left')}>
         <TeamAvatar team={awayTeam} size="sm" />
         <ZeitstrafeHinweis liste={clock?.zeitstrafen?.away} testId={`match-time-penalty-${matchId}-away`}>
-          <span style={teamNameStyle('b')} data-winner={decided && result?.winner === 'b' ? 'true' : undefined}>{awayTeam.name}</span>
+          <span style={teamNameStyle('b')} data-testid={`match-name-${matchId}-away`} data-winner={decided && result?.winner === 'b' ? 'true' : undefined}>{awayTeam.name}</span>
         </ZeitstrafeHinweis>
       </div>
     </>
