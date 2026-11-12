@@ -341,7 +341,9 @@ describe('@SL-219 @SL-221 „Andere Farbe …“ öffnet die Grundauswahl als ei
     await a.tippe(byId('andere'));
     const blatt = byId('andere-blatt');
     expect(blatt).toBeInTheDocument();
-    expect(blatt.querySelectorAll('[data-testid^="leibchen-farbe-"]')).toHaveLength(6); // 8 Grundfarben minus 2 Hallenfarben
+    // @SL-219: Hallenfarben zuerst (Gelb, Orange), darunter Neongrün, Pink, Rot, Blau, Weiß, Schwarz – nichts doppelt, auch nicht in der Karte dahinter
+    const namen = [...blatt.querySelectorAll('[data-testid^="leibchen-farbe-"]')].map((e) => e.getAttribute('data-testid')?.replace('leibchen-farbe-', ''));
+    expect(namen).toEqual(['gelb', 'orange', 'neongruen', 'pink', 'rot', 'blau', 'weiss', 'schwarz']);
     expect(screen.getAllByTestId('leibchen-farbe-gelb')).toHaveLength(1);
     expect(screen.getAllByTestId('leibchen-farbe-pink')).toHaveLength(1);
   });
@@ -394,5 +396,53 @@ describe('@SL-215 Karte im Endstand: „Leibchen für das nächste Spiel · Spie
     aufbau({ spielNummer: 3 });
     expect(byId('ueberschrift')).toHaveTextContent('Leibchen für dieses Spiel · Spiel 3');
     expect(screen.queryByTestId('leibchen-grund')).toBeNull();
+  });
+});
+
+describe('@SL-219 Blatt „Andere Farbe …“: Hallenfarben zuerst, jede Tabellenzeile, und die Wahl geht beim Schließen nicht verloren', () => {
+  const namenIm = (blatt: HTMLElement) => [...blatt.querySelectorAll('[data-testid^="leibchen-farbe-"]')].map((e) => e.getAttribute('data-testid')?.replace('leibchen-farbe-', ''));
+
+  it('@SL-219 Hallenfarben Gelb und Grün (Grün steht nicht in der Grundauswahl): zuerst Gelb und Grün, darunter Orange, Neongrün, Pink, Rot, Blau, Weiß, Schwarz', async () => {
+    const a = aufbau({ hallenFarben: [GELB, palette.jersey.green] });
+    await a.tippe(byId('vorschlag'));
+    await a.tippe(byId('andere'));
+    expect(namenIm(byId('andere-blatt'))).toEqual(['gelb', 'gruen', 'orange', 'neongruen', 'pink', 'rot', 'blau', 'weiss', 'schwarz']);
+  });
+
+  it('@SL-219 keine Hallenfarben eingetragen: die 8 Felder der Grundauswahl', async () => {
+    const a = aufbau({ hallenFarben: [] });
+    await a.tippe(byId('vorschlag'));
+    await a.tippe(byId('andere'));
+    expect(namenIm(byId('andere-blatt'))).toEqual(['gelb', 'orange', 'neongruen', 'pink', 'rot', 'blau', 'weiss', 'schwarz']);
+  });
+
+  it('@SL-219 die gewählte Farbe trägt im Blatt den Haken (aria-pressed), eine Hallenfarbe im Blatt lässt sich wählen', async () => {
+    const a = aufbau();
+    await a.tippe(byId('vorschlag'));
+    await a.tippe(byId('andere'));
+    expect(byId('farbe-gelb')).toHaveAttribute('aria-pressed', 'true');
+    await a.tippe(byId('farbe-orange'));
+    await a.tippe(byId('bestaetigen'));
+    expect(a.onBestaetigen).toHaveBeenCalledWith('a', ORANGE);
+  });
+
+  it('@SL-219 die Wahl im Blatt geht beim Schließen nicht verloren: die Farbe steht danach im Vorschlag, genau eine Wahl kommt an (im Browser war sie einmal verloren, weil ein Fangelement um die Felder das Schließen vor die Wahl zog)', async () => {
+    const a = aufbau();
+    await a.tippe(byId('vorschlag'));
+    await a.tippe(byId('andere'));
+    const pink = byId('farbe-pink');
+    expect(pink.parentElement?.style.display, 'die Felder hängen direkt in der Reihe, ohne eigenes Fangelement').not.toBe('contents');
+    await a.tippe(pink);
+    expect(screen.queryByTestId('leibchen-andere-blatt')).toBeNull();
+    expect(byId('vorschlag')).toHaveTextContent('Pink');
+  });
+
+  it('Gegenbeispiel: das Schließen mit „X“ wählt nichts', async () => {
+    const a = aufbau();
+    await a.tippe(byId('vorschlag'));
+    await a.tippe(byId('andere'));
+    await a.tippe(byId('andere-schliessen'));
+    expect(screen.queryByTestId('leibchen-andere-blatt')).toBeNull();
+    expect(byId('vorschlag')).toHaveTextContent('Gelb');
   });
 });

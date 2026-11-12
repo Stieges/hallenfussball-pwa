@@ -13,7 +13,6 @@ import {
 } from '../../../core/models/kitChoice';
 import { wahlFarben } from '../../../core/models/kitProposal';
 import { ChipButton } from '../atoms/ChipButton';
-import { DialogActions } from './DialogActions';
 import { DialogSurface } from './DialogSurface';
 import { Icons } from '../Icons';
 
@@ -47,6 +46,10 @@ const linkTaste: CSSProperties = {
   color: cssVars.colors.primary, fontFamily: 'inherit', fontSize: cssVars.fontSizes.md, textDecoration: 'underline', cursor: 'pointer',
 };
 const beschriftung: CSSProperties = { fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, margin: 0 };
+const blattSchliessen: CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: cssVars.touchTargets.minimum, height: cssVars.touchTargets.minimum, flex: 'none',
+  background: 'transparent', color: cssVars.colors.textPrimary, border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}`, borderRadius: cssVars.borderRadius.md, cursor: 'pointer',
+};
 const punkt = (farbe: string): CSSProperties => ({
   width: cssVars.spacing.md, height: cssVars.spacing.md, borderRadius: cssVars.borderRadius.full, background: farbe,
   border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}`, flex: 'none',
@@ -108,20 +111,27 @@ export function LeibchenWahlFelder(p: LeibchenWahlFelderProps): ReactElement {
         ))}
       </div>
       <p style={beschriftung}>{t('leibchenKarte.farbe')}</p>
-      <div style={reihe} role="group" aria-label={t('leibchenKarte.farbe')}>
-        {halle.map((f) => farbTaste(f, true))}
-      </div>
+      {!(p.andereAlsBlatt === true && andere) && (
+        <div style={reihe} role="group" aria-label={t('leibchenKarte.farbe')}>
+          {halle.map((f) => farbTaste(f, true))}
+        </div>
+      )}
       <button type="button" style={linkTaste} aria-expanded={andere} aria-haspopup={p.andereAlsBlatt === true ? 'dialog' : undefined} onClick={() => { setAndere(!andere); }} data-testid={`${p.testIdPrefix}-andere`}>{t('leibchenKarte.andere')}</button>
       {andere && p.andereAlsBlatt !== true && <div style={reihe} role="group" aria-label={t('leibchenKarte.andere')}>{weitere.map((f) => farbTaste(f, false))}</div>}
       {p.andereAlsBlatt === true && (
         <DialogSurface isOpen={andere} onClose={() => { setAndere(false); }} placement="sheet" ariaLabel={t('leibchenKarte.andere')} testId={`${p.testIdPrefix}-andere-blatt`}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm, padding: cssVars.spacing.md }}>
-            <h2 style={{ fontSize: cssVars.fontSizes.lg, margin: 0 }}>{t('leibchenKarte.andere')}</h2>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: cssVars.spacing.sm }}>
+              <h2 style={{ fontSize: cssVars.fontSizes.lg, margin: 0 }}>{t('leibchenKarte.andere')}</h2>
+              <button type="button" style={blattSchliessen} onClick={() => { setAndere(false); }} aria-label={t('leibchenKarte.schliessen')} data-testid={`${p.testIdPrefix}-andere-schliessen`}>
+                <Icons.X size={iconSizeValues.md} />
+              </button>
+            </div>
+            {/* Hallenfarben zuerst, darunter die Grundauswahl (@SL-219); die gewählte trägt den Haken */}
             <div style={reihe} role="group" aria-label={t('leibchenKarte.andere')}>
-              {weitere.map((f) => farbTaste(f, false, true))}
+              {[...halle, ...weitere].map((f) => farbTaste(f, false, true))}
             </div>
             {satz !== null && <p style={{ ...beschriftung, color: cssVars.colors.textPrimary }} role="status" data-testid={`${p.testIdPrefix}-satz`}>{satz}</p>}
-            <DialogActions primary={{ label: t('leibchenKarte.schliessen'), onClick: () => { setAndere(false); }, 'data-testid': `${p.testIdPrefix}-andere-schliessen` }} />
           </div>
         </DialogSurface>
       )}
