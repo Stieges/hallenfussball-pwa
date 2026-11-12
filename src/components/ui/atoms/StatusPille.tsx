@@ -35,7 +35,7 @@ const TONEN: Record<StatusPilleTon, { border: string; symbol: string; tint?: str
   ok: { border: cssVars.colors.borderControl, symbol: cssVars.colors.primary, strong: false },
   neutral: { border: cssVars.colors.borderControl, symbol: cssVars.colors.textSecondary, strong: false },
   warn: { border: cssVars.colors.warningSolid, symbol: cssVars.colors.warningSolid, tint: cssVars.colors.warningLight, strong: true },
-  info: { border: cssVars.colors.info, symbol: cssVars.colors.info, tint: cssVars.colors.infoLight, strong: true },
+  info: { border: cssVars.colors.infoStrong, symbol: cssVars.colors.infoStrong, tint: cssVars.colors.infoLight, strong: true },
 };
 
 export function StatusPille({ ton, symbol, children, rand = 'fest', aktion, onNavigiere, lesetext, 'aria-expanded': expanded, 'data-testid': testId }: StatusPilleProps): ReactElement {

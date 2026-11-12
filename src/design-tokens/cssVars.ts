@@ -176,6 +176,7 @@ export const cssColors = {
   info: 'var(--color-info)',
   infoLight: 'var(--color-info-light)',
   infoBorder: 'var(--color-info-border)',
+  infoStrong: 'var(--color-info-strong)',
 
   // ---------------------------------------------------------------------------
   // Status Colors (for tournament states)
