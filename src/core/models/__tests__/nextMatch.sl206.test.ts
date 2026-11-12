@@ -46,6 +46,15 @@ describe('@SL-215 @SL-216 das nächste Spiel des Felds', () => {
     expect(nextMatchOnField([...matches].reverse(), 1)?.id).toBe('slot-1-nr-6');
   });
 
+  it('@SL-216 der Slot geht der Spielnummer vor: Slot 1 mit Nummer 9 kommt vor Slot 2 mit Nummer 5', () => {
+    const gleichZeit = um(11, 0);
+    const matches = [
+      spiel('slot-2-nr-5', 5, { scheduledTime: gleichZeit, slot: 2 }),
+      spiel('slot-1-nr-9', 9, { scheduledTime: gleichZeit, slot: 1 }),
+    ];
+    expect(nextMatchOnField(matches, 1)?.id).toBe('slot-1-nr-9');
+  });
+
   it('@SL-216 ein Spiel ohne Uhrzeit kommt nach denen mit Uhrzeit (NULLS LAST)', () => {
     const matches = [spiel('ohne', 2, { scheduledTime: undefined }), spiel('mit', 3)];
     expect(nextMatchOnField(matches, 1)?.id).toBe('mit');

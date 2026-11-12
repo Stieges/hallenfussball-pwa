@@ -40,6 +40,13 @@ describe('@SL-216 @SL-220 eine vor dem Anpfiff bestätigte Wahl geht lokal nicht
     expect(ergebnis.kitDecision).toBe('bib');
   });
 
+  it('@SL-216 Anpfiff ohne kit-Objekt (älterer Stand): das Spiel läuft lokal, die bestätigte Wahl und die Weste der Zeile bleiben (früher setzte die Überlagerung kit auf „leer“)', () => {
+    const ergebnis = ueberlagere(bestaetigt, [anpfiff(undefined)]);
+    expect(ergebnis.matchStatus).toBe('running');
+    expect(ergebnis.kit).toEqual({ a: GELB, bibSide: 'a' });
+    expect(ergebnis.kitDecision).toBe('bib');
+  });
+
   it('@SL-216 Gegenbeispiel: eine zweite Überlagerung mit demselben Ergebnis lässt die Turnierkopie dieselbe Referenz (kein Flackern)', () => {
     const ereignis = hfEvent('PAUSE', T0, 1, null, { payload: {} });
     const fields = engineOverlayFields(ansicht([anpfiff({ a: BLAU, b: BLAU })], 0), CTX);
