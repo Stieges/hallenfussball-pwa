@@ -29,6 +29,7 @@ import type { LiveCockpitProps } from './types';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../types/tournament';
 import { ScoreboardArea } from './areas/ScoreboardArea';
 import { LegacyPlayArea } from './areas/LegacyPlayArea';
+import { Rollbar } from './areas/Rollbar';
 import { CockpitOverlays } from './areas/CockpitOverlays';
 import { ThumbBarArea } from './areas/ThumbBarArea';
 import { LeerLeiste } from './areas/LeerLeiste';
@@ -199,7 +200,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
     if (leer) {
       return (
         <div className={shell.container} data-layout={layout} data-stufe={layout === 'breit' ? stufe : undefined} data-testid="live-cockpit">
-          <main className={isMobile ? `${shell.content} ${shell.contentMobile}` : shell.content}>{tafel}</main>
+          <Rollbar als="main" className={isMobile ? `${shell.content} ${shell.contentMobile}` : shell.content}>{tafel}</Rollbar>
           {leer.art === 'wartetAufHerkunft' && (
             <LeerLeiste
               phase={phase} layout={layout} kannSteuern={kannSteuern} istLeitung={istLeitung} fieldName={fieldName}
@@ -227,7 +228,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
 
   return (
     <div className={shell.container} data-layout={layout} data-stufe={layout === 'breit' ? stufe : undefined} data-testid="live-cockpit" data-leibchen-offen={leibchen.wahlOffen && isMobile ? 'true' : undefined}>
-      <main className={isMobile ? `${shell.content} ${shell.contentMobile}` : shell.content}>
+      <Rollbar als="main" className={isMobile ? `${shell.content} ${shell.contentMobile}` : shell.content}>
         <LegacyPlayArea
           kopf={(
             <>
@@ -255,8 +256,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
           zusammenfassung={zusammenfassung}
           sidebar={{ strafen, onEventEdit: cmd.onSidebarEventEdit }}
         />
-      </main>
-
+      </Rollbar>
       <ThumbBarArea
         phase={phase}
         layout={layout}

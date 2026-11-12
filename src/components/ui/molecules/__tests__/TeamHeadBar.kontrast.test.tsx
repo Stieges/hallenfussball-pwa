@@ -42,10 +42,8 @@ describe('@SL-225 Schrift auf dem Teamkopf', () => {
     const kopf = screen.getByTestId('kopf');
     expect(kopf.style.color).toBe('rgb(0, 0, 0)');
     expect(kopf.style.backgroundColor).toBe('rgb(255, 204, 0)');
-    if (kompakt) {
-      // kein Farbverlauf mit der Trikotfarbe unter der Schrift: der Kontrast wird gegen Gelb gemessen
-      expect(kopf.style.backgroundImage).toBe('');
-      expect(kopf.querySelectorAll('[data-teil="streifen"]')).toHaveLength(2);
-    }
+    // kein Farbverlauf mit der Trikotfarbe unter der Schrift (auch am Laptop, `visual:metrics` kontrast.text „schlechteste Verlaufsfarbe“): der Kontrast wird gegen Gelb gemessen
+    expect(kopf.style.backgroundImage).toBe('');
+    expect(kopf.querySelectorAll('[data-teil="streifen"]')).toHaveLength(2);
   });
 });

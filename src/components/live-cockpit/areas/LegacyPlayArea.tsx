@@ -15,6 +15,7 @@ import type { TeamSummaryModel } from '../model/toTeamSummaryModel';
 import type { StrafenModel } from '../model/toStrafenModel';
 import { TeamColumn, type TeamColumnProps } from './TeamColumn';
 import { TeamSummary } from './TeamSummary';
+import { Rollbar } from './Rollbar';
 import styles from './LegacyAreas.module.css';
 
 export interface LegacyPlayAreaProps {
@@ -50,7 +51,7 @@ export function LegacyPlayArea(props: LegacyPlayAreaProps): ReactElement {
 
   return (
     <div className={cls(styles.flaeche, isDesktop && styles.flaecheBreit, !isDesktop && styles.flaecheDaumen)} data-testid="cockpit-flaeche">
-      <div className={cls(styles.links, isDesktop && styles.linksBreit, isMobile && styles.linksMobile, !isDesktop && styles.linksDaumen)}>
+      <Rollbar als="div" className={cls(styles.links, isDesktop && styles.linksBreit, isMobile && styles.linksMobile, !isDesktop && styles.linksDaumen)}>
         {kopf}
         {naechstes}
         <div data-testid="cockpit-tastenflaeche" className={cls(styles.scoreboard, isMobile && styles.scoreboardMobile, isDesktop && styles.scoreboardBreit, !isDesktop && styles.scoreboardDaumen)}>
@@ -62,7 +63,7 @@ export function LegacyPlayArea(props: LegacyPlayAreaProps): ReactElement {
             </div>
           )}
         </div>
-      </div>
+      </Rollbar>
 
       {/* Liste der Einträge neben der Fläche – nur ab 1024 px, eigenes Scrollen (Plan LT-2) */}
       {isDesktop && (

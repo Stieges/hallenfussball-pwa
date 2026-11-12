@@ -50,6 +50,11 @@ const karteFlaeche: CSSProperties = {
   ...flaeche, background: cssVars.colors.warningSubtle, border: `${cssVars.borderWidth.medium} solid ${cssVars.colors.warningBorder}`, borderRadius: cssVars.borderRadius.md,
   margin: `${cssVars.spacing.xs} ${cssVars.spacing.xs} 0`,
 };
+/** „Bestätigen“ und „Keine Leibchen“ bleiben am unteren Rand der Karte sichtbar, auch wenn die Wahl so lang ist, dass die Karte rollt (deckend, im Ton der Karte). */
+const aktionen: CSSProperties = {
+  display: 'flex', gap: cssVars.spacing.sm, position: 'sticky', bottom: 0, paddingTop: cssVars.spacing.xs,
+  backgroundColor: cssVars.colors.background, backgroundImage: `linear-gradient(${cssVars.colors.warningSubtle}, ${cssVars.colors.warningSubtle})`,
+};
 const ueberschriftStil: CSSProperties = {
   margin: 0, fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.04em',
 };
@@ -96,8 +101,10 @@ export function LeibchenKarte(p: LeibchenKarteProps): ReactElement | null {
     const text = p.gewaehlt.art === 'keine' ? t('leibchenKarte.keine') : satz(p.gewaehlt.seite, p.gewaehlt.farbe);
     return (
       <div style={{ ...flaeche, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }} data-testid={`${prefix}-zeile`} data-art={p.gewaehlt.art}>
-        <MatchIcons.Shirt />
-        <span style={{ flex: '1 1 0', minWidth: 0, fontSize: cssVars.fontSizes.md }}>{text}</span>
+        {/* Zeichen und Satz in einem Element: ein langer Teamname umbricht zwischen den Wörtern über die ganze Breite, das Zeichen bleibt davor (`ueberlauf.element`) */}
+        <span style={{ flex: '1 1 auto', minWidth: 0, fontSize: cssVars.fontSizes.md }}>
+          <span style={{ display: 'inline-flex', verticalAlign: 'middle', marginRight: cssVars.spacing.xs }}><MatchIcons.Shirt /></span>{text}
+        </span>
         {status !== null && (
           <span style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, display: 'inline-flex', alignItems: 'center', gap: cssVars.spacing.xs }} data-testid={`${prefix}-status`} data-status={p.senden}>
             {p.senden === 'sent' && <Icons.Check size={iconSizeValues.sm} />}{status}
@@ -159,7 +166,7 @@ export function LeibchenKarte(p: LeibchenKarteProps): ReactElement | null {
           {p.onUebernehmen !== undefined && <button type="button" style={{ ...klein, marginLeft: cssVars.spacing.sm }} onClick={p.onUebernehmen} data-testid={`${prefix}-uebernehmen`}>{t('leibchenKarte.uebernehmen')}</button>}
         </p>
       ) : (
-        <div style={{ display: 'flex', gap: cssVars.spacing.sm }}>
+        <div style={aktionen} data-testid={`${prefix}-aktionen`}>
           {!keinPassendes && (
             <button type="button" style={taste} data-testid={`${prefix}-bestaetigen`} disabled={aktuell === null || aktuell.farbe === ''}
               onClick={() => { if (aktuell !== null && aktuell.farbe !== '') { zuletzt.current = Date.now(); p.onBestaetigen(aktuell.seite, aktuell.farbe); schliesse(); } }}>
