@@ -22,20 +22,29 @@ export function karteNoetig(farben: TrikotFarben): boolean {
 }
 
 /**
- * Die Farbe passt für `seite`: nicht die eigene Trikotfarbe der Seite („spielt selbst in dieser Farbe“ = `same`, @SL-151/@SL-217) und dem Gegner nicht zu ähnlich.
- * Eine dem eigenen Trikot nur ÄHNLICHE Farbe schließt der Vorschlag nicht aus: die Karte warnt bei der Wahl („sieht aus wie das eigene Trikot“, @SL-231, bestätigen
- * bleibt erlaubt); die Beispielwerte von @SL-217 (Gast Braun zieht Rot) verlangen das.
+ * Schalter (Entscheidung Daniel offen, Stand 2026-11-13): schließt der Vorschlag auch eine dem EIGENEN Trikot nur ÄHNLICHE Hallenfarbe aus (@SL-151 „spielt selbst
+ * in dieser Farbe“)? `true` (Vorgabe): ja, das ähnliche Gelb bleibt über die Wahl erreichbar und trägt dort die Warnung (@SL-231). `false`: nur die GLEICHE Farbe
+ * (`same`) fällt weg. Achtung: mit `true` kann der Vorschlag der ANDEREN Seite (@SL-217) nie vorkommen, denn dafür muss die Farbe dem Trikot dieser Seite ähneln.
  */
-function passt(farbe: string, seite: KitSide, farben: TrikotFarben): boolean {
-  return kitConflict(farbe, farben[seite]) !== 'same' && kitConflict(farbe, farben[andere(seite)]) === 'none';
+export const AEHNLICHES_EIGENES_TRIKOT_AUSSCHLIESSEN = true;
+
+export interface KitProposalOptions {
+  aehnlichesEigenesAusschliessen?: boolean;
 }
 
-export function kitProposal(farben: TrikotFarben, hallenFarben: readonly string[], regel: 'home' | 'away'): KitProposal {
+/** Die Farbe passt für `seite`: nicht die eigene Trikotfarbe der Seite (je nach Schalter auch keine ähnliche) und dem Gegner nicht zu ähnlich. */
+function passt(farbe: string, seite: KitSide, farben: TrikotFarben, eigenStreng: boolean): boolean {
+  const eigen = kitConflict(farbe, farben[seite]);
+  return (eigenStreng ? eigen === 'none' : eigen !== 'same') && kitConflict(farbe, farben[andere(seite)]) === 'none';
+}
+
+export function kitProposal(farben: TrikotFarben, hallenFarben: readonly string[], regel: 'home' | 'away', optionen: KitProposalOptions = {}): KitProposal {
+  const eigenStreng = optionen.aehnlichesEigenesAusschliessen ?? AEHNLICHES_EIGENES_TRIKOT_AUSSCHLIESSEN;
   const reihe = hallenFarben.map((f) => normalizeKitColor(f)).filter((f): f is string => f !== undefined);
   const kandidaten = reihe.length > 0 ? reihe : [DEFAULT_BIB_COLOR];
   const zuerst: KitSide = regel === 'away' ? 'b' : 'a';
   for (const seite of [zuerst, andere(zuerst)]) {
-    const farbe = kandidaten.find((f) => passt(f, seite, farben));
+    const farbe = kandidaten.find((f) => passt(f, seite, farben, eigenStreng));
     if (farbe !== undefined) {
       return { kind: 'vorschlag', seite, farbe };
     }

@@ -33,17 +33,17 @@ describe('@SL-207 die Karte schlägt Seite und Farbe nach den Einstellungen des 
   });
 });
 
-describe('@SL-217 passt für die ziehende Seite keine Farbe, schlägt die Karte die andere Seite vor', () => {
+describe('@SL-217 passt für die ziehende Seite keine Farbe, schlägt die Karte die andere Seite vor (Schalter „ähnliches eigenes Trikot erlaubt“)', () => {
   const SCHWARZ = '#000000';
   const BRAUN = '#663300';
   const DUNKELROT = '#DC0000';
 
   it('@SL-217 für Heim (Schwarz) ist Rot dem Trikot des Gastes (Braun) zu ähnlich, für Gast passt Rot: „Gast zieht Rot“, Tom kann auf Heim zurückstellen', () => {
-    expect(kitProposal(FELDER(SCHWARZ, BRAUN), [DUNKELROT], 'home')).toEqual({ kind: 'vorschlag', seite: 'b', farbe: DUNKELROT });
+    expect(kitProposal(FELDER(SCHWARZ, BRAUN), [DUNKELROT], 'home', { aehnlichesEigenesAusschliessen: false })).toEqual({ kind: 'vorschlag', seite: 'b', farbe: DUNKELROT });
   });
 
   it('@SL-217 Gegenbeispiel: die Regel „Gast“ bleibt bei Gast, wenn dort eine Farbe passt', () => {
-    expect(kitProposal(FELDER(SCHWARZ, BRAUN), [DUNKELROT], 'away')).toEqual({ kind: 'vorschlag', seite: 'b', farbe: DUNKELROT });
+    expect(kitProposal(FELDER(SCHWARZ, BRAUN), [DUNKELROT], 'away', { aehnlichesEigenesAusschliessen: false })).toEqual({ kind: 'vorschlag', seite: 'b', farbe: DUNKELROT });
   });
 
   it('@SL-217 für keine Seite passt eine Farbe: „Kein passendes Leibchen vorhanden“, die Seite nach der Turnierregel ist vorgewählt', () => {
@@ -69,15 +69,33 @@ describe('@SL-206 @SL-138 wann die Karte erscheint', () => {
   });
 });
 
-describe('@SL-151 @SL-217 „spielt selbst in dieser Farbe“ heißt gleiche Farbe, eine ähnliche warnt nur (Frage an Daniel)', () => {
+describe('@SL-151 Schalter „ähnlich zum eigenen Trikot ausschließen“ (Entscheidung Daniel offen; Vorgabe: ausschließen)', () => {
   const GELB_HELL = '#FFEB3B';
+  const AUS = { aehnlichesEigenesAusschliessen: true };
+  const ERLAUBT = { aehnlichesEigenesAusschliessen: false };
 
-  it('@SL-151 Weiß gegen Gelb (#FFEB3B), Hallenfarbe nur Gelb (#FFCC00): der Vorschlag nennt Gelb für das gelbe Team (Gast) – die Karte warnt bei der Wahl „sieht aus wie das eigene Trikot“', () => {
-    expect(kitProposal(FELDER(WEISS, GELB_HELL), [GELB], 'home')).toEqual({ kind: 'vorschlag', seite: 'b', farbe: GELB });
+  it('Weiß gegen Gelb (#FFEB3B), Hallenfarbe nur Gelb (#FFCC00), Vorgabe: dem gelben Team wird KEIN Gelb vorgeschlagen, dem weißen auch nicht (dem Gegner zu ähnlich): „Kein passendes Leibchen vorhanden“', () => {
+    expect(kitProposal(FELDER(WEISS, GELB_HELL), [GELB], 'home')).toEqual({ kind: 'keinPassendes', seite: 'a' });
+    expect(kitProposal(FELDER(WEISS, GELB_HELL), [GELB], 'home', AUS)).toEqual({ kind: 'keinPassendes', seite: 'a' });
   });
 
-  it('@SL-151 Gegenbeispiel: dieselbe Farbe (Gelb #FFCC00 auf Gelb) wird nie vorgeschlagen', () => {
-    expect(kitProposal(FELDER(GELB, GELB), [GELB, ORANGE], 'home')).toEqual({ kind: 'vorschlag', seite: 'a', farbe: ORANGE });
-    expect(kitProposal(FELDER(GELB, GELB), [GELB], 'home')).toEqual({ kind: 'keinPassendes', seite: 'a' });
+  it('Schalter aus (ähnlich erlaubt): derselbe Fall schlägt dem gelben Team (Gast) Gelb vor, die Karte warnt dann bei der Wahl (@SL-231)', () => {
+    expect(kitProposal(FELDER(WEISS, GELB_HELL), [GELB], 'home', ERLAUBT)).toEqual({ kind: 'vorschlag', seite: 'b', farbe: GELB });
+  });
+
+  it('mit Orange als zweiter Hallenfarbe zieht in der Vorgabe das gelbe Team Orange, nicht Gelb', () => {
+    expect(kitProposal(FELDER(WEISS, GELB_HELL), [GELB, ORANGE], 'away')).toEqual({ kind: 'vorschlag', seite: 'b', farbe: ORANGE });
+  });
+
+  it('Gegenbeispiel (beide Schalterstellungen): dieselbe Farbe (Gelb auf Gelb) wird nie vorgeschlagen, Blau gegen Blau schlägt Gelb vor', () => {
+    for (const o of [AUS, ERLAUBT]) {
+      expect(kitProposal(FELDER(GELB, GELB), [GELB], 'home', o)).toEqual({ kind: 'keinPassendes', seite: 'a' });
+      expect(kitProposal(FELDER(BLAU, BLAU), [GELB], 'home', o)).toEqual({ kind: 'vorschlag', seite: 'a', farbe: GELB });
+    }
+  });
+
+  it('Folge der Vorgabe: der Vorschlag der ANDEREN Seite (@SL-217) kommt nur bei erlaubter Ähnlichkeit vor – in der Vorgabe nie (Seite = Regel)', () => {
+    expect(kitProposal(FELDER('#000000', '#663300'), ['#DC0000'], 'home', AUS).kind).toBe('keinPassendes');
+    expect(kitProposal(FELDER('#000000', '#663300'), ['#DC0000'], 'home', ERLAUBT)).toEqual({ kind: 'vorschlag', seite: 'b', farbe: '#DC0000' });
   });
 });
