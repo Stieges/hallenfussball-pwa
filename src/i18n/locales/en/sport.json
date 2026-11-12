@@ -170,5 +170,8 @@
   },
   "organisations": {
     "bfv": "Bavarian Football Association"
+  },
+  "equipment": {
+    "bib": "bib"
   }
 }

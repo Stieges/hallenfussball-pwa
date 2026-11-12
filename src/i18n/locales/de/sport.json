@@ -170,5 +170,8 @@
   },
   "organisations": {
     "bfv": "Bayerischer Fußball-Verband"
+  },
+  "equipment": {
+    "bib": "Leibchen"
   }
 }
