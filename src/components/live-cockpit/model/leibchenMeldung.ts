@@ -6,7 +6,7 @@
 import type { KitChoiceNotice } from '../../../core/match/client/kitChoiceQueue';
 
 export type LeibchenMeldungKey =
-  | 'nichtUebernommen' | 'nurSteuerndes' | 'zurueckgenommen' | 'anderesGeraet' | 'zuSpaet' | 'fehlgeschlagen';
+  | 'nichtUebernommen' | 'nurSteuerndes' | 'zurueckgenommen' | 'anderesGeraet' | 'zuSpaet' | 'alsNachtrag' | 'fehlgeschlagen';
 
 export function leibchenMeldungKey(n: KitChoiceNotice): LeibchenMeldungKey {
   switch (n.kind) {
@@ -15,6 +15,7 @@ export function leibchenMeldungKey(n: KitChoiceNotice): LeibchenMeldungKey {
       return n.code === 'TEAMS_CHANGED' ? 'zurueckgenommen' : 'nichtUebernommen';
     case 'changedElsewhere': return 'anderesGeraet';
     case 'tooLate': return 'zuSpaet';
+    case 'lateSaved': return 'alsNachtrag';
     case 'withdrawn': return 'zurueckgenommen';
     case 'failed': return 'fehlgeschlagen';
   }

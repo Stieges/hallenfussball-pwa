@@ -24,6 +24,7 @@ describe('Meldungen zur Leibchen-Wahl', () => {
   it('@SL-228 @SL-229 die übrigen Fälle', () => {
     expect(leibchenMeldungKey({ ...A, kind: 'changedElsewhere' })).toBe('anderesGeraet');
     expect(leibchenMeldungKey({ ...A, kind: 'tooLate' })).toBe('zuSpaet');
+    expect(leibchenMeldungKey({ ...A, kind: 'lateSaved' })).toBe('alsNachtrag');
     expect(leibchenMeldungKey({ ...A, kind: 'rejected', code: 'MATCH_FINISHED' })).toBe('nichtUebernommen');
     expect(leibchenMeldungKey({ ...A, kind: 'failed' })).toBe('fehlgeschlagen');
   });

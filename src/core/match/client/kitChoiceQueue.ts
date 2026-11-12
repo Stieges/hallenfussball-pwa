@@ -55,6 +55,8 @@ type KitChoiceNoticeBody =
   | { matchId: string; kind: 'changedElsewhere' }
   /** Das Spiel wurde angepfiffen, bevor die Wahl den Server erreichte (@SL-229 Zeile 1). */
   | { matchId: string; kind: 'tooLate' }
+  /** Das Spiel lief schon, als die alte Wahl ankam: der Server hat sie als Nachtrag ins laufende Spiel übernommen (@SL-229 Zeile 1, Restfenster). */
+  | { matchId: string; kind: 'lateSaved' }
   /** Der Server hat die Wahl zurückgenommen, weil ein anderes Team auf eine Seite kam (@SL-212, @SL-235). */
   | { matchId: string; kind: 'withdrawn' };
 
@@ -68,6 +70,11 @@ export interface KitChoiceStorage {
 
 export interface KitChoiceDeps {
   send: (args: MatchKitSetArgs) => Promise<MatchKitSetResult>;
+  /**
+   * Frischer Stand der Zeilen vom Server (nur `kickedOff`) – vor dem Senden einer Wahl „vor dem Anpfiff“ geladen, nicht aus der alten Turnierkopie
+   * (@SL-229 Zeile 1). `null` = nicht ladbar (kein Netz): dann wird gesendet bzw. wartet die Wahl wie bisher.
+   */
+  fresh?: (matchIds: readonly string[]) => Promise<ReadonlyMap<string, { kickedOff: boolean }> | null>;
   storage: KitChoiceStorage;
   /** Konto (und Gerät) im Speicherschlüssel: ein Kontowechsel sieht fremde Einträge nicht. */
   storageKey: string;
@@ -147,6 +154,16 @@ export class KitChoiceQueue {
         const entry = this.list.filter((e) => e.status === 'pending').sort((a, b) => a.seq - b.seq)[0];
         if (entry === undefined) {
           return;
+        }
+        if ((entry.phase ?? 'before') === 'before' && this.deps.fresh !== undefined) {
+          const rows = await this.deps.fresh([entry.matchId]);
+          if (rows?.get(entry.matchId)?.kickedOff === true && !this.localStarts.has(entry.matchId) && this.list.some((e) => e.seq === entry.seq)) {
+            // ein anderes Gerät hat angepfiffen: die alte Wahl ginge als Nachtrag ins laufende Spiel – nicht senden, verwerfen und es sagen
+            this.remove(entry);
+            this.notify({ matchId: entry.matchId, kind: 'tooLate' });
+            this.changed();
+            continue;
+          }
         }
         const result = await this.deps.send(this.toArgs(entry));
         if (result.kind === 'offline') {
@@ -266,8 +283,8 @@ export class KitChoiceQueue {
     if (result.kind === 'saved') {
       this.list = this.list.map((e) => (e.seq === entry.seq ? { ...e, status: 'sent' as const } : e));
       if (result.phase === 'live' && (entry.phase ?? 'before') === 'before') {
-        // @SL-229 Zeile 1: der Server hat die alte Wahl als Nachtrag ins laufende Spiel genommen (ein anderes Gerät hatte angepfiffen) – nicht stumm „gesendet“
-        this.notify({ matchId: entry.matchId, kind: 'tooLate' });
+        // @SL-229 Zeile 1 (Restfenster): der Server hat die alte Wahl als Nachtrag ins laufende Spiel genommen – wahrheitsgemäß sagen, nicht „nicht übernommen“
+        this.notify({ matchId: entry.matchId, kind: 'lateSaved' });
       }
     } else {
       this.remove(entry);

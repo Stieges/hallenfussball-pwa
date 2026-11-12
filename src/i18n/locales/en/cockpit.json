@@ -756,6 +756,7 @@
       "zurueckgenommen": "Bibs withdrawn, please confirm again",
       "nurSteuerndes": "Only the controlling device can confirm bibs.",
       "zuSpaet": "The match has already kicked off, bibs not accepted",
+      "alsNachtrag": "The match was already running – bibs saved as a late entry. Change them under “More”.",
       "fehlgeschlagen": "Bibs not accepted"
     },
     "eigenesTrikotVon": "{{farbe}} – looks like the own jersey of {{team}}",

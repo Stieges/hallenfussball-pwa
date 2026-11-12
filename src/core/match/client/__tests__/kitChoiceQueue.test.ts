@@ -17,11 +17,12 @@ const bestaetigen = (extra: Partial<KitChoiceInput> = {}): KitChoiceInput => ({
   matchId: SPIEL, decision: 'bib', bibSide: 'a', bibColor: GELB, teams: { a: WAGING, b: PETTING }, deviceId: 'gerät-1', controlEpoch: 2, ...extra,
 });
 
-function aufbau(antworten: MatchKitSetResult[] = []) {
+function aufbau(antworten: MatchKitSetResult[] = [], fresh?: KitChoiceDeps['fresh']) {
   const store = new Map<string, string>();
   const send = vi.fn(async (): Promise<MatchKitSetResult> => antworten.shift() ?? { kind: 'saved', phase: 'before', decision: 'bib' });
   const deps: KitChoiceDeps = {
     send,
+    ...(fresh === undefined ? {} : { fresh }),
     storage: { get: (k) => store.get(k) ?? null, set: (k, v) => { store.set(k, v); } },
     storageKey: 'konto-1',
     now: () => 1_000,
@@ -316,11 +317,12 @@ describe('@SL-229 Zeile 1 eine alte Wahl vor dem Anpfiff wird nicht zum Nachtrag
 });
 
 describe('@SL-229 Zeile 1 Rest: die Antwort „live“ auf eine Wahl vor dem Anpfiff', () => {
-  it('@SL-229 kommt für einen Eintrag vor dem Anpfiff die Antwort phase live, meldet das Gerät „zu spät“ und zeigt nicht stumm „gesendet“', async () => {
+  it('@SL-229 kommt für einen Eintrag vor dem Anpfiff die Antwort phase live, sagt das Gerät die Wahrheit („als Nachtrag übernommen“), nicht „nicht übernommen“', async () => {
     const { queue } = aufbau([{ kind: 'saved', phase: 'live', decision: 'bib' }]);
     queue.submit(bestaetigen({ phase: 'before' }));
     await queue.flush();
-    expect(queue.notices()[0]).toMatchObject({ kind: 'tooLate', matchId: SPIEL });
+    expect(queue.notices()[0]).toMatchObject({ kind: 'lateSaved', matchId: SPIEL });
+    expect(queue.notices().some((n) => n.kind === 'tooLate')).toBe(false);
   });
 
   it('@SL-150 Gegenbeispiel: ein Nachtrag der Leitung (phase live) und die Antwort live sind in Ordnung, keine Meldung', async () => {
@@ -373,5 +375,52 @@ describe('@SL-212 @SL-235 der Server nimmt die Wahl nach einem Teamwechsel zurü
     b.queue.submit(bestaetigen());
     b.queue.observeRows(zeile(undefined));
     expect(b.queue.notices()).toHaveLength(0);
+  });
+});
+
+describe('@SL-229 Zeile 1 erst den frischen Stand laden, dann entscheiden', () => {
+  const frisch = (kickedOff: boolean): KitChoiceDeps['fresh'] => vi.fn(async () => new Map([[SPIEL, { kickedOff }]]));
+
+  it('@SL-229 Netz kommt zurück, ein anderes Gerät hat inzwischen angepfiffen (alte Turnierkopie zeigt es noch nicht): NICHT senden, verwerfen, „zu spät“', async () => {
+    const { queue, send } = aufbau([], frisch(true));
+    queue.submit(bestaetigen({ phase: 'before' }));
+    await queue.flush();
+    expect(send).not.toHaveBeenCalled();
+    expect(queue.entries()).toHaveLength(0);
+    expect(queue.notices()[0]).toMatchObject({ kind: 'tooLate', matchId: SPIEL });
+  });
+
+  it('@SL-202 Gegenbeispiel: läuft das Spiel noch nicht, geht die Wahl raus', async () => {
+    const { queue, send } = aufbau([], frisch(false));
+    queue.submit(bestaetigen({ phase: 'before' }));
+    await queue.flush();
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(queue.notices()).toHaveLength(0);
+  });
+
+  it('@SL-150 Gegenbeispiel: ein Nachtrag der Leitung (phase live) wird nicht gegen den Anpfiff geprüft', async () => {
+    const fresh = frisch(true);
+    const { queue, send } = aufbau([], fresh);
+    queue.submit(bestaetigen({ phase: 'live' }));
+    await queue.flush();
+    expect(fresh).not.toHaveBeenCalled();
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it('@SL-202 Gegenbeispiel: hat dieses Gerät selbst angepfiffen, bleibt die Wahl nicht liegen (der Anpfiff trägt sie)', async () => {
+    const { queue, send } = aufbau([], frisch(true));
+    queue.submit(bestaetigen({ phase: 'before' }));
+    queue.discardStarted(new Set([SPIEL]));
+    await queue.flush();
+    expect(send).not.toHaveBeenCalled();
+    expect(queue.notices()).toHaveLength(0);
+  });
+
+  it('@SL-216 ist der Stand nicht ladbar (kein Netz), wartet die Wahl wie bisher und es wird gesendet', async () => {
+    const { queue, send } = aufbau([{ kind: 'offline' }], vi.fn(async () => null));
+    queue.submit(bestaetigen({ phase: 'before' }));
+    await queue.flush();
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(queue.entries()[0].status).toBe('pending');
   });
 });

@@ -756,6 +756,7 @@
       "zurueckgenommen": "Leibchen zurückgenommen, bitte neu bestätigen",
       "nurSteuerndes": "Nur das steuernde Gerät kann Leibchen bestätigen.",
       "zuSpaet": "Das Spiel wurde schon angepfiffen, Leibchen nicht übernommen",
+      "alsNachtrag": "Das Spiel lief schon – Leibchen als Nachtrag übernommen. Ändern unter „Mehr“.",
       "fehlgeschlagen": "Leibchen nicht übernommen"
     },
     "eigenesTrikotVon": "{{farbe}} – sieht aus wie das eigene Trikot von {{team}}",
