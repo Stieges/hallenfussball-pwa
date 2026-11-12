@@ -51,4 +51,18 @@ describe('@HT-035 useAngepfiffeneFelder', () => {
     await act(async () => { engine.hoerer.forEach((fn) => fn()); await Promise.resolve(); });
     expect(h.result.current.size).toBe(0);
   });
+
+  it('R1: Spielende in der Kopie → spätestens bei der nächsten Status-Antwort ist das Feld nicht mehr angepfiffen (nicht erst nach 30 s)', async () => {
+    turnier.wert = { matches: [{ id: 'm11', field: 1, matchStatus: 'running' }] };
+    engine.status = undefined;
+    const h = renderHook(({ antwort }) => useAngepfiffeneFelder('t1', antwort), { initialProps: { antwort: {} } });
+    await act(async () => { await Promise.resolve(); });
+    expect([...h.result.current]).toEqual([1]);
+    turnier.wert = { matches: [{ id: 'm11', field: 1, matchStatus: 'finished' }] }; // Spiel beendet, die Zeit steht still
+    await act(async () => { await Promise.resolve(); });
+    expect([...h.result.current]).toEqual([1]); // ohne Anlass wird nicht gelesen
+    h.rerender({ antwort: {} }); // die nächste Status-Antwort (neues Objekt)
+    await act(async () => { await Promise.resolve(); });
+    expect(h.result.current.size).toBe(0);
+  });
 });

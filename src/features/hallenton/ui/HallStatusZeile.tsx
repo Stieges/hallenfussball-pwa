@@ -77,7 +77,7 @@ function HallStatusZeileMitRecht({ tournamentId, ohneLautsprecher = false, probe
     [laufzeit, felder],
   );
   // „Ein Lautsprecher war bekannt“ gilt je Turnier für die Sitzung (`useHallStatus`) oder wenn dieses Gerät selbst Lautsprecher ist (@HT-041, @HT-038)
-  const angepfiffen = useAngepfiffeneFelder(tournamentId);
+  const angepfiffen = useAngepfiffeneFelder(tournamentId, status.antwort);
   const anzeige = useMemo(
     () => hallAnzeige({
       server: { stand: status.stand, felder: status.felder, antwort: status.antwort }, lokal, angepfiffen,

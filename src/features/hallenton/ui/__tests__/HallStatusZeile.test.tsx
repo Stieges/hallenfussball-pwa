@@ -32,11 +32,12 @@ const doppel = vi.hoisted(() => ({
   status: null as HallStatus | null,
   lautsprecher: null as HallLautsprecher | null,
   statusAufrufe: 0,
+  angepfiffen: new Set<number>(),
 }));
 vi.mock('../../../auth/hooks/useCan', () => ({ useCan: () => doppel.darf }));
 vi.mock('../../../../hooks/useKioskRoute', () => ({ useKioskRoute: () => doppel.kiosk }));
 vi.mock('../../useHallStatus', () => ({ useHallStatus: () => { doppel.statusAufrufe += 1; return doppel.status; } }));
-vi.mock('../../useAngepfiffeneFelder', () => ({ useAngepfiffeneFelder: () => new Set<number>() }));
+vi.mock('../../useAngepfiffeneFelder', () => ({ useAngepfiffeneFelder: () => doppel.angepfiffen }));
 vi.mock('../../useHallLautsprecher', () => ({ useHallLautsprecher: () => doppel.lautsprecher }));
 const geraet = vi.hoisted(() => ({ einschaltung: null as { turnierId: string; felder: number[]; name: string } | null }));
 vi.mock('../../lautsprecherGeraet', () => ({
@@ -64,7 +65,7 @@ const zeige = (ui: React.ReactElement) => render(<AuthContext.Provider value={{}
 const buttons = () => screen.getAllByRole('button').map((b) => b.textContent);
 
 beforeEach(() => {
-  doppel.darf = true; doppel.kiosk = false; doppel.statusAufrufe = 0;
+  doppel.darf = true; doppel.kiosk = false; doppel.statusAufrufe = 0; doppel.angepfiffen = new Set<number>();
   doppel.status = status({}); doppel.lautsprecher = lautsprecher(null);
   geraet.einschaltung = null;
 });
@@ -115,6 +116,25 @@ describe('@HT-045 @HT-038 HallStatusZeile in der Kopfzeile', () => {
     doppel.status = status({ 1: { art: 'nichtBereit', grund: 'background', pruefen: false } });
     zeige(<HallStatusZeile tournamentId="t1" ohneLautsprecher />);
     expect(screen.queryByTestId('hallenton-status-zeile')).toBeNull();
+  });
+});
+
+describe('R2 @HT-035 der Adapter gibt die angepfiffenen Felder an hallAnzeige weiter', () => {
+  const antwort = (ageMs: number) => ({
+    sicht: 'voll', serverNow: 1, closed: false, speakers: [], leads: [{ field: 1, ageMs }],
+    settings: { halftimeSound: 'horn-1', halftimeCustomPath: null, endCustomPath: null, goalToneFields: [], goalAnthemPaths: [] },
+  }) as never;
+  it('Spiel läuft auf Feld 1, Lebenszeichen 40 s alt → „Feld 1: Handy ohne Netz“', () => {
+    doppel.status = { ...status({ 1: { art: 'bereit', pruefen: false } }), antwort: antwort(40_000) };
+    doppel.angepfiffen = new Set([1]);
+    zeige(<HallStatusZeile tournamentId="t1" />);
+    expect(buttons()).toContain('Feld 1: Handy ohne Netz');
+  });
+  it('Gegenbeispiel: Spiel beendet (kein Feld angepfiffen), Lebenszeichen 40 s alt → kein Hinweis', () => {
+    doppel.status = { ...status({ 1: { art: 'bereit', pruefen: false } }), antwort: antwort(40_000) };
+    doppel.angepfiffen = new Set<number>();
+    zeige(<HallStatusZeile tournamentId="t1" />);
+    expect(buttons()).toEqual(['Lautsprecher Feld 1 bereit']);
   });
 });
 
