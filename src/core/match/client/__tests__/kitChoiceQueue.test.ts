@@ -185,7 +185,7 @@ describe('@SL-216 @SL-220 die Wahl übersteht das Neuladen', () => {
     const a = aufbau([{ kind: 'offline' }]);
     a.queue.submit(bestaetigen());
     await a.queue.flush();
-    const neu = new KitChoiceQueue({ ...a.deps, send: vi.fn(async () => ({ kind: 'saved', phase: 'before', decision: 'bib' }) as MatchKitSetResult) });
+    const neu = new KitChoiceQueue({ ...a.deps, send: vi.fn((): Promise<MatchKitSetResult> => Promise.resolve({ kind: 'saved', phase: 'before', decision: 'bib' })) });
     expect(neu.entries()).toHaveLength(1);
     expect(neu.entries()[0]).toMatchObject({ matchId: SPIEL, status: 'pending', bibColor: GELB });
     await neu.flush();

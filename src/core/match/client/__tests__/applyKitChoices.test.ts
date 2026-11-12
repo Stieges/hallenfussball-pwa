@@ -102,7 +102,7 @@ describe('kitRowStateOf: was die Zeile (Server) zur Wahl sagt', () => {
   });
 
   it('@SL-212 Gegenbeispiel: eine offene Seite (Platzhalter) hat kein Team', () => {
-    const zeile = kitRowStateOf({ ...spiel(), slotA: { kind: 'pending', source: { kind: 'groupRank', group: 'B', rank: 1 } } as Match['slotA'] });
+    const zeile = kitRowStateOf({ ...spiel(), slotA: { kind: 'pending', source: { kind: 'groupRank', group: 'B', rank: 1 } } });
     expect(zeile.teams).toEqual({ a: undefined, b: PETTING });
   });
 });
