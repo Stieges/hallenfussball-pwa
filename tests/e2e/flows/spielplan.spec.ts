@@ -405,27 +405,29 @@ test.describe('Spielplan 2.0 - Tap/Click Logik', () => {
     }
   });
 
-  test('Circle-Tap bei geplantem Spiel zeigt die Aktionsauswahl mit „Im Cockpit anpfeifen“ (@SL-193)', async ({ page }) => {
-    // GIVEN - Navigate to Spielplan
+  test('@SL-195 Tipp aufs Ergebnisfeld eines geplanten Spiels öffnet sofort das Blatt „Endergebnis Spiel n“, nicht die Aktionsauswahl', async ({ page }) => {
     await navigateToSpielplan(page);
 
-    // WHEN - Click on score circle of a SCHEDULED match (use specific selector)
-    // Use data-match-status="scheduled" to target only scheduled matches
-    const scheduledCircle = page.locator('[data-match-status="scheduled"]').first();
+    // Erste Karte (nichts ist angepfiffen, also geplant) und ihr Ergebnisfeld (`data-score-circle`, in jedem Layout vorhanden)
+    const karte = page.locator('[data-match-card]:visible').first();
+    await expect(karte).toBeVisible({ timeout: 10_000 });
+    await karte.locator('[data-score-circle]:visible').first().click();
 
-    if (await scheduledCircle.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await scheduledCircle.click();
+    await expect(page.getByTestId('result-sheet')).toContainText(/Endergebnis Spiel \d+/);
+    await expect(page.getByTestId('match-action-menu')).toHaveCount(0);
+  });
 
-      // THEN - Start match dialog should appear
-      await page.waitForTimeout(300);
+  test('@SL-193 Tipp auf den Rest der Karte eines geplanten Spiels zeigt die Aktionsauswahl mit „Im Cockpit anpfeifen“, nicht das Blatt', async ({ page }) => {
+    await navigateToSpielplan(page);
 
-      // Die Auswahl des Spiels mit „Im Cockpit anpfeifen“ (statt des früheren Start-Fensters in der Karte)
-      await expect(page.getByTestId('match-action-menu')).toBeVisible({ timeout: 5000 });
-      await expect(page.getByTestId('match-action-kickOff')).toHaveText('Im Cockpit anpfeifen');
-    } else {
-      // If no scheduled matches are visible, skip test (all matches may have started)
-      test.skip(true, 'No scheduled matches visible - test conditions not met');
-    }
+    // Ein Teamname der ersten Karte: weder Ergebnisfeld noch Taste, in jedem Layout derselbe Weg
+    const karte = page.locator('[data-match-card]:visible').first();
+    await expect(karte).toBeVisible({ timeout: 10_000 });
+    await karte.getByText(/^(FC Bayern|BVB Dortmund|RB Leipzig|VfB Stuttgart|1\. FC Nürnberg|SpVgg Fürth)$/).first().click();
+
+    await expect(page.getByTestId('match-action-menu')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId('match-action-kickOff')).toHaveText('Im Cockpit anpfeifen');
+    await expect(page.getByTestId('result-sheet')).toHaveCount(0);
   });
 
   test('Circle-Tap bei laufendem Spiel zeigt Events + Cockpit-Link', async ({ page }) => {
