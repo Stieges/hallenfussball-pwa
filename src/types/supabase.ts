@@ -2474,6 +2474,7 @@ export type Database = {
         }
         Returns: Json
       }
+      match_kit_team_color: { Args: { p_team_id: string }; Returns: string }
       match_reduce: {
         Args: { ctx: Json; events: Json; mode?: string; transitions: Json }
         Returns: Json
