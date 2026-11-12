@@ -332,3 +332,43 @@ describe('@SL-221 Doppeltipp: die Zeile liegt an derselben Stelle wie die Taste'
     expect(screen.queryByTestId('leibchen-ueberschrift')).toBeNull();
   });
 });
+
+describe('@SL-219 @SL-221 „Andere Farbe …“ öffnet die Grundauswahl als eigenes Blatt (ohne Rollen am kleinen Handy)', () => {
+  it('@SL-219 „Andere Farbe …“ zeigt die übrigen Farben im Blatt; die Hallenfarben bleiben in der Karte, keine Farbe steht doppelt', async () => {
+    const a = aufbau();
+    await a.tippe(byId('vorschlag'));
+    expect(screen.queryByTestId('leibchen-andere-blatt')).toBeNull();
+    await a.tippe(byId('andere'));
+    const blatt = byId('andere-blatt');
+    expect(blatt).toBeInTheDocument();
+    expect(blatt.querySelectorAll('[data-testid^="leibchen-farbe-"]')).toHaveLength(6); // 8 Grundfarben minus 2 Hallenfarben
+    expect(screen.getAllByTestId('leibchen-farbe-gelb')).toHaveLength(1);
+    expect(screen.getAllByTestId('leibchen-farbe-pink')).toHaveLength(1);
+  });
+
+  it('@SL-219 eine Farbe im Blatt antippen wählt sie und schließt das Blatt; die Karte zeigt sie mit Haken', async () => {
+    const a = aufbau();
+    await a.tippe(byId('vorschlag'));
+    await a.tippe(byId('andere'));
+    await a.tippe(byId('farbe-pink'));
+    expect(screen.queryByTestId('leibchen-andere-blatt')).toBeNull();
+    await a.tippe(byId('bestaetigen'));
+    expect(a.onBestaetigen).toHaveBeenCalledWith('a', PINK);
+  });
+
+  it('Gegenbeispiel: „Schließen“ im Blatt wählt nichts und schließt es', async () => {
+    const a = aufbau();
+    await a.tippe(byId('vorschlag'));
+    await a.tippe(byId('andere'));
+    await a.tippe(byId('andere-schliessen'));
+    expect(screen.queryByTestId('leibchen-andere-blatt')).toBeNull();
+    await a.tippe(byId('bestaetigen'));
+    expect(a.onBestaetigen).toHaveBeenCalledWith('a', GELB);
+  });
+
+  it('@SL-217 „Kein passendes Leibchen“: „Andere Farbe …“ öffnet gleich das Blatt', async () => {
+    const a = aufbau({ trikot: { a: GELB, b: GELB }, hallenFarben: [GELB], vorschlag: { kind: 'keinPassendes', seite: 'a' } });
+    await a.tippe(byId('andere-farbe'));
+    expect(byId('andere-blatt')).toBeInTheDocument();
+  });
+});

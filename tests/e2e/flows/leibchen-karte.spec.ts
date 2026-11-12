@@ -140,6 +140,34 @@ for (const f of FENSTER) {
       await expect(page.getByTestId('goal-button-home')).toBeVisible(); // Tor-Taste nicht versteckt (die offene Wahl endet mit der Karte)
     });
 
+    test(`@SL-219 @OB-083 @SL-221 „Andere Farbe …“: alle Farbfelder und „Schließen“ stehen im Fenster, nichts überlappt, kein Rollen, Ziele mindestens 44 px (${f.name})`, async ({ page }) => {
+      await oeffne(page, f);
+      await page.getByTestId('leibchen-vorschlag').click();
+      await page.getByTestId('leibchen-andere').click();
+      const blatt = page.getByTestId('leibchen-andere-blatt');
+      await expect(blatt).toBeVisible();
+      const felder = await page.locator('[data-testid="leibchen-andere-blatt"] [data-testid^="leibchen-farbe-"]').all();
+      expect(felder).toHaveLength(6); // 8 Grundfarben, 2 davon Hallenfarben (stehen in der Karte)
+      const boxen: Box[] = [];
+      for (const el of felder) { boxen.push(await box(el)); }
+      const schliessen = await box(page.getByTestId('leibchen-andere-schliessen'));
+      for (const b of [...boxen, schliessen]) {
+        expect(b.height).toBeGreaterThanOrEqual(44);
+        expect(b.width).toBeGreaterThanOrEqual(44);
+        expect(b.y).toBeGreaterThanOrEqual(0);
+        expect(b.y + b.height).toBeLessThanOrEqual(f.height);
+        expect(b.x + b.width).toBeLessThanOrEqual(f.width);
+      }
+      for (let i = 0; i < boxen.length; i++) {
+        expect(boxen[i].y + boxen[i].height, 'Felder über „Schließen“').toBeLessThanOrEqual(schliessen.y + 1);
+        for (let j = i + 1; j < boxen.length; j++) {
+          const a = boxen[i]; const c = boxen[j];
+          expect(a.x < c.x + c.width && c.x < a.x + a.width && a.y < c.y + c.height && c.y < a.y + a.height, `Felder ${String(i)} und ${String(j)} überlappen nicht`).toBe(false);
+        }
+      }
+      expect(await blatt.evaluate((el) => [el, ...el.querySelectorAll('*')].filter((e) => e.scrollHeight > e.clientHeight + 1 && ['auto', 'scroll'].includes(getComputedStyle(e).overflowY)).length), 'nichts rollt im Blatt').toBe(0);
+    });
+
     test(`@SL-224 „Ändern“ in der Zeile und jede Farbe der Wahl sind mindestens 44×44 groß (${f.name})`, async ({ page }) => {
       await oeffne(page, f);
       await page.getByTestId('leibchen-bestaetigen').click();

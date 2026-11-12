@@ -13,6 +13,8 @@ import {
 } from '../../../core/models/kitChoice';
 import { wahlFarben } from '../../../core/models/kitProposal';
 import { ChipButton } from '../atoms/ChipButton';
+import { DialogActions } from './DialogActions';
+import { DialogSurface } from './DialogSurface';
 import { Icons } from '../Icons';
 
 export interface LeibchenWahlFelderProps {
@@ -25,6 +27,11 @@ export interface LeibchenWahlFelderProps {
   onFarbe: (farbe: string) => void;
   /** „Andere Farbe …“ von Anfang an offen (Karte „Kein passendes Leibchen“). */
   andereOffen?: boolean;
+  /**
+   * „Andere Farbe …“ öffnet die Grundauswahl als eigenes Blatt statt unter den Hallenfarben (Karte am Handy, @SL-219: die ganze Auswahl mit 8 Farben, Hallenfarben und
+   * Warnzeichen ohne Rollen bei 360 × 640). Im Nachtragen-Blatt bleibt sie in der Reihe (dort ist schon ein Blatt).
+   */
+  andereAlsBlatt?: boolean;
   testIdPrefix: string;
 }
 
@@ -104,9 +111,24 @@ export function LeibchenWahlFelder(p: LeibchenWahlFelderProps): ReactElement {
       <div style={reihe} role="group" aria-label={t('leibchenKarte.farbe')}>
         {halle.map((f) => farbTaste(f, true))}
       </div>
-      <button type="button" style={linkTaste} aria-expanded={andere} onClick={() => { setAndere(!andere); }} data-testid={`${p.testIdPrefix}-andere`}>{t('leibchenKarte.andere')}</button>
-      {andere && <div style={reihe} role="group" aria-label={t('leibchenKarte.andere')}>{weitere.map((f) => farbTaste(f, false))}</div>}
-      {satz !== null && <p style={{ ...beschriftung, color: cssVars.colors.textPrimary }} role="status" data-testid={`${p.testIdPrefix}-satz`}>{satz}</p>}
+      <button type="button" style={linkTaste} aria-expanded={andere} aria-haspopup={p.andereAlsBlatt === true ? 'dialog' : undefined} onClick={() => { setAndere(!andere); }} data-testid={`${p.testIdPrefix}-andere`}>{t('leibchenKarte.andere')}</button>
+      {andere && p.andereAlsBlatt !== true && <div style={reihe} role="group" aria-label={t('leibchenKarte.andere')}>{weitere.map((f) => farbTaste(f, false))}</div>}
+      {p.andereAlsBlatt === true && (
+        <DialogSurface isOpen={andere} onClose={() => { setAndere(false); }} placement="sheet" ariaLabel={t('leibchenKarte.andere')} testId={`${p.testIdPrefix}-andere-blatt`}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm, padding: cssVars.spacing.md }}>
+            <h2 style={{ fontSize: cssVars.fontSizes.lg, margin: 0 }}>{t('leibchenKarte.andere')}</h2>
+            <div style={reihe} role="group" aria-label={t('leibchenKarte.andere')}>
+              {weitere.map((f) => {
+                const taste = farbTaste(f, false);
+                return <span key={f} onClickCapture={() => { setAndere(false); }} style={{ display: 'contents' }}>{taste}</span>;
+              })}
+            </div>
+            {satz !== null && <p style={{ ...beschriftung, color: cssVars.colors.textPrimary }} role="status" data-testid={`${p.testIdPrefix}-satz`}>{satz}</p>}
+            <DialogActions primary={{ label: t('leibchenKarte.schliessen'), onClick: () => { setAndere(false); }, 'data-testid': `${p.testIdPrefix}-andere-schliessen` }} />
+          </div>
+        </DialogSurface>
+      )}
+      {satz !== null && !(p.andereAlsBlatt === true && andere) && <p style={{ ...beschriftung, color: cssVars.colors.textPrimary }} role="status" data-testid={`${p.testIdPrefix}-satz`}>{satz}</p>}
     </div>
   );
 }

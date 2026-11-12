@@ -156,7 +156,7 @@ export function LeibchenKarte(p: LeibchenKarteProps): ReactElement | null {
       )}
       {(offen || (keinPassendes && offen)) && !p.lesen && (
         <LeibchenWahlFelder teams={p.teams} seite={(entwurf ?? aktuell ?? { seite: regelSeite }).seite} farbe={(entwurf ?? aktuell ?? { farbe: '' }).farbe ?? ''}
-          hallenFarben={p.hallenFarben} trikot={p.trikot} andereOffen={p.vorschlag?.kind === 'keinPassendes'} testIdPrefix={prefix}
+          hallenFarben={p.hallenFarben} trikot={p.trikot} andereOffen={p.vorschlag?.kind === 'keinPassendes'} andereAlsBlatt testIdPrefix={prefix}
           onSeite={(seite) => { setEntwurf({ seite, farbe: (entwurf ?? aktuell)?.farbe ?? '' }); }}
           onFarbe={(farbe) => { setEntwurf({ seite: (entwurf ?? aktuell)?.seite ?? regelSeite, farbe }); }} />
       )}
