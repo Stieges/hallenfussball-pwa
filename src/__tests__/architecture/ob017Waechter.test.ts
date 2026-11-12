@@ -13,6 +13,9 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 const ROOT = resolve(__dirname, '../../..');
+/** Begründung (@TA-021): der Lauf startet einen `git`-Prozess und liest Dateien; bei sehr hoher Rechnerlast (Commit-Hook neben
+ *  anderen Läufen, Virenscanner) dauert allein das länger als die Standardgrenze von 5 s. Geprüft wird ein Zustand, keine Zeit. */
+const ZEITGRENZE_UNTER_LAST_MS = 30_000;
 const isTest = (p: string) => /(\.test\.|\.spec\.)/.test(p) || /(^|\/)(__tests__|test)\//.test(p);
 /** Kommentare entfernen, damit Hinweise wie „statt window.confirm“ nicht anschlagen. */
 const ohneKommentare = (code: string) => code.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
@@ -36,7 +39,7 @@ describe('@OB-017 Wächter: im Produktcode steht kein Fenster des Browsers mehr'
   it('@OB-017 @TA-021 kein window.confirm|alert|prompt und kein loses confirm(/alert(/prompt( in src/ (ohne Tests)', () => {
     const treffer = kandidaten().flatMap((datei) => verstoesse(readFileSync(join(ROOT, datei), 'utf8')).map((m) => `${datei}: ${m}`));
     expect(treffer).toEqual([]);
-  });
+  }, ZEITGRENZE_UNTER_LAST_MS);
 
   it('@OB-017 Gegenbeispiel: die Regel erkennt confirm(, window.alert und prompt(, nicht aber Kommentare und ein lokales confirm', () => {
     expect(verstoesse('if (confirm("Sicher?")) {}')).not.toEqual([]);

@@ -197,6 +197,7 @@
   --color-info: #00B0FF;
   --color-info-light: rgba(0, 176, 255, 0.15);
   --color-info-border: rgba(0, 176, 255, 0.2);
+  --color-info-strong: #00B0FF;
 
   /* ===========================================
      Colors - Status (Tournament States)
@@ -437,6 +438,10 @@
   --sizing-team-stripe-width: var(--spacing-xs);
   /* Spaltenkopf im Cockpit: Streifenzeile + drei Namenszeilen, beide Köpfe gleich hoch (@OB-025, Altplan 3.3) */
   --sizing-qr-placeholder: 150px;
+  /* Tor-Feld im Blatt „Endergebnis“ (Mockup Runde 4: 64 px Kantenlänge, große Ziffer) */
+  --sizing-score-field: 64px;
+  /* Mindestbreite der Ziehen-Vorschau eines Spiels am Handy (Spielplan bearbeiten) */
+  --sizing-drag-overlay-min-width: 280px;
   /* Vorschau-Kästen „Anzeige für Zuschauer“ (Mockup `.sb.v`: 112 × 84) aus der Primär-Touchgröße */
   --sizing-score-preview-width: calc(var(--touch-target-primary) * 2);
   --sizing-score-preview-height: calc(var(--touch-target-primary) * 1.5);
@@ -789,6 +794,7 @@ html[data-font-size="x-large"] {
   --color-info: #0096E6;
   --color-info-light: rgba(0, 150, 230, 0.1);
   --color-info-border: rgba(0, 150, 230, 0.2);
+  --color-info-strong: #007ACC;
 
   /* ===========================================
      Colors - Status (Tournament States)

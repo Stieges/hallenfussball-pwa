@@ -21,14 +21,16 @@
  * ```
  */
 
-import { type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../../design-tokens'
 import { Button } from '../../ui/Button';
 import { MatchStatusBadge } from '../../ui/molecules/MatchStatusBadge';
 import type { MatchBadgeModel, SpectatorClock } from '../../../core/view';
 import { MatchClock } from '../../ui/molecules/MatchClock';
 import { getEventIcon, getEventLabel, showsMinuteInLabel } from './liveInfoEventLine';
+import {
+  actionButtonStyle, actionsStyle, containerStyle, eventIconStyle, eventItemStyle, eventTextStyle, eventTimeStyle, eventsContainerStyle,
+  eventsHeaderStyle, headerStyle, noEventsStyle, scoreContainerStyle, scoreSeparatorStyle, scoreValueStyle, teamNameStyle, teamScoreStyle,
+} from './liveInfoExpandStyles';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -117,118 +119,6 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
     .slice(0, maxEvents);
 
   // ---------------------------------------------------------------------------
-  // Styles
-  // ---------------------------------------------------------------------------
-
-  const containerStyle: CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.md,
-  };
-
-  const headerStyle: CSSProperties = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  };
-
-  const scoreContainerStyle: CSSProperties = {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: cssVars.spacing.md,
-    padding: cssVars.spacing.md,
-    backgroundColor: cssVars.colors.surfaceLight,
-    borderRadius: cssVars.borderRadius.md,
-  };
-
-  const teamScoreStyle: CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: cssVars.spacing.xs,
-    minWidth: '80px',
-  };
-
-  const teamNameStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textSecondary,
-    textAlign: 'center',
-    // MOBILE-UX: No truncation - team names must be fully visible
-    wordBreak: 'break-word',
-    overflowWrap: 'break-word',
-    maxWidth: '120px',
-  };
-
-  const scoreValueStyle: CSSProperties = {
-    fontSize: '32px',
-    fontWeight: 900,
-    color: cssVars.colors.textPrimary,
-    lineHeight: 1,
-  };
-
-  const scoreSeparatorStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.xxl,
-    fontWeight: cssVars.fontWeights.bold,
-    color: cssVars.colors.textSecondary,
-  };
-
-  const eventsContainerStyle: CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.xs,
-  };
-
-  const eventsHeaderStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.xs,
-    color: cssVars.colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-  };
-
-  const eventItemStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.sm,
-    padding: cssVars.spacing.xs,
-    fontSize: cssVars.fontSizes.sm,
-  };
-
-  const eventIconStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.md,
-    flexShrink: 0,
-  };
-
-  const eventTextStyle: CSSProperties = {
-    flex: 1,
-    color: cssVars.colors.textPrimary,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-  };
-
-  const eventTimeStyle: CSSProperties = {
-    color: cssVars.colors.textSecondary,
-    fontVariantNumeric: 'tabular-nums',
-    flexShrink: 0,
-  };
-
-  const noEventsStyle: CSSProperties = {
-    textAlign: 'center',
-    padding: cssVars.spacing.sm,
-    color: cssVars.colors.textMuted,
-    fontSize: cssVars.fontSizes.sm,
-  };
-
-  const actionsStyle: CSSProperties = {
-    display: 'flex',
-    gap: cssVars.spacing.sm,
-    justifyContent: 'flex-end',
-    paddingTop: cssVars.spacing.sm,
-    borderTop: `1px solid ${cssVars.colors.border}`,
-  };
-
-  // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
 
@@ -276,18 +166,19 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
       </div>
 
       {/* Action Buttons */}
-      <div style={actionsStyle}>
+      <div style={actionsStyle} data-testid="live-info-actions">
         {onClose && (
           <Button
             variant="secondary"
             size="md"
             onClick={onClose}
+            style={actionButtonStyle}
           >
             {t('matchExpand.liveInfo.close')}
           </Button>
         )}
         {onEndAndEnter && (
-          <Button variant="secondary" size="md" onClick={onEndAndEnter} data-testid="end-and-enter-btn">
+          <Button variant="secondary" size="md" onClick={onEndAndEnter} style={actionButtonStyle} data-testid="end-and-enter-btn">
             {t('matchExpand.liveInfo.endAndEnter')}
           </Button>
         )}
@@ -296,6 +187,7 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
             variant="primary"
             size="md"
             onClick={onNavigateToCockpit}
+            style={actionButtonStyle}
             data-testid="goto-cockpit-btn"
           >
             {t('matchExpand.liveInfo.gotoCockpit')}

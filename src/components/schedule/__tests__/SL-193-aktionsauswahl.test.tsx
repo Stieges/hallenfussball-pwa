@@ -124,8 +124,10 @@ describe('@SL-193 Auswahl beim Tipp auf ein Spiel – Gruppenphase und Finalrund
       it(`@SL-193 ${runde} ${zustand}: die Turnierleitung sieht ${WORTLAUT[`${zustand}/leitung`].join(', ')}`, () => {
         const ziel = zeige(runde, zustand, LEITUNG);
         tippe(runde, ziel.id);
-        // Eintrag ohne den Satz eines gesperrten Eintrags: erste Textzeile des Buttons
-        expect(eintraege().map((text) => WORTLAUT[`${zustand}/leitung`].find((w) => text.startsWith(w)))).toEqual(WORTLAUT[`${zustand}/leitung`]);
+        // Eintrag ohne den Satz eines gesperrten Eintrags: erste Textzeile des Buttons; die Aktionen sind eine Menge ohne feste
+        // Reihenfolge (@SL-193 in der Fassung vom 10.11.; die gefüllte Haupttaste steht zuletzt, das prüft @SL-239 in SL-239-aktionsblatt.test.tsx)
+        const gezeigt = eintraege().map((text) => WORTLAUT[`${zustand}/leitung`].find((w) => text.startsWith(w)));
+        expect([...gezeigt].sort()).toEqual([...WORTLAUT[`${zustand}/leitung`]].sort());
       });
 
       it(`@SL-193 ${runde} ${zustand}: der Helfer sieht dort nur ${WORTLAUT[`${zustand}/helfer`].join(', ')}`, () => {
@@ -136,8 +138,8 @@ describe('@SL-193 Auswahl beim Tipp auf ein Spiel – Gruppenphase und Finalrund
     }
   }
 
-  it('@SL-193 eine Tippfläche: Karte und Torzahl der Gruppenphase öffnen dieselbe Auswahl', () => {
-    const ziel = zeige('Gruppenphase', 'geplant', LEITUNG);
+  it('@SL-193 eine Tippfläche: Karte und Torzahl eines laufenden Spiels der Gruppenphase öffnen dieselbe Auswahl (ohne Ergebnis öffnet die Torzahl das Blatt, @SL-195)', () => {
+    const ziel = zeige('Gruppenphase', 'läuft', LEITUNG);
     act(() => { fireEvent.click(screen.getAllByTestId(`match-goals-${ziel.id}-home`)[0]); });
     expect(screen.getAllByTestId('match-action-menu')).toHaveLength(1);
   });
@@ -319,11 +321,11 @@ describe('@SL-193 die Aktionen führen die vorhandenen Wege aus', () => {
     });
   }
 
-  it('@SL-193 Gruppenphase geplant: „Ergebnis eintragen“ öffnet die Schnelleingabe der Karte; gespeichert wird erst dort', () => {
+  it('@SL-193 Gruppenphase geplant: „Ergebnis eintragen“ öffnet das Blatt „Endergebnis“ (@SL-195); gespeichert wird erst dort', () => {
     const ziel = zeige('Gruppenphase', 'geplant', LEITUNG);
     tippe('Gruppenphase', ziel.id);
     act(() => { fireEvent.click(aktion('enterResult')); });
-    expect(screen.getAllByTestId('quick-score-expand').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('result-sheet')).toBeInTheDocument();
     expect(spies.score).not.toHaveBeenCalled();
   });
 
@@ -331,7 +333,7 @@ describe('@SL-193 die Aktionen führen die vorhandenen Wege aus', () => {
     const ziel = zeige('Gruppenphase', 'läuft', LEITUNG);
     tippe('Gruppenphase', ziel.id);
     act(() => { fireEvent.click(aktion('endAndEnter')); });
-    expect(screen.getAllByTestId('quick-score-expand').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('result-sheet')).toBeInTheDocument();
   });
 
   it('@SL-193 Finalrunde geplant: „Ergebnis eintragen“ setzt den Fokus auf das Eingabefeld der Heim-Tore dieses Spiels', () => {

@@ -176,6 +176,7 @@ export const cssColors = {
   info: 'var(--color-info)',
   infoLight: 'var(--color-info-light)',
   infoBorder: 'var(--color-info-border)',
+  infoStrong: 'var(--color-info-strong)',
 
   // ---------------------------------------------------------------------------
   // Status Colors (for tournament states)
@@ -379,6 +380,7 @@ export const cssBorderRadius = {
 export const cssBorderWidth = {
   thin: borderWidths.thin,
   medium: borderWidths.medium,
+  strong: borderWidths.strong,
 } as const;
 
 // =============================================================================
@@ -589,6 +591,8 @@ export const cssSizing = {
   noticeLineHeightRegular: 'var(--sizing-notice-line-height-regular)',
   teamStripeWidth: 'var(--sizing-team-stripe-width)',
   qrPlaceholder: 'var(--sizing-qr-placeholder)',
+  scoreField: 'var(--sizing-score-field)',
+  dragOverlayMinWidth: 'var(--sizing-drag-overlay-min-width)',
   scorePreviewWidth: 'var(--sizing-score-preview-width)',
   scorePreviewHeight: 'var(--sizing-score-preview-height)',
 } as const;

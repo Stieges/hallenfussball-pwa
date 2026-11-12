@@ -7,8 +7,8 @@
  *   Und Olli kann mit „0“ weitertippen und 10:2 bestätigen
  * Beispiele: das Turnier im Hintergrund neu geladen · Spiel 7 auf Feld 1 bekommt per Live-Abgleich 3:1 · die Uhr eines
  * laufenden Spiels auf einem anderen Feld läuft weiter. SV Süd zeigt schon 2 (wie @FU-101), daher 10:2.
- * Geprüft in der Finalrunden-Tabelle (Laptop) und auf der Finalrunden-Karte (Handy); die Gruppen-Schnelleingabe
- * (aufgeklappt, Stepper) als Absicherung.
+ * Geprüft in der Finalrunden-Tabelle (Laptop) und auf der Finalrunden-Karte (Handy) und im Blatt „Endergebnis“ der Gruppenphase (@SL-195;
+ * dort ist auch das Feld für SV Süd getippt, nicht vorbelegt).
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -105,21 +105,27 @@ describe.each([
   });
 });
 
-describe('@FU-103 Gruppen-Schnelleingabe (aufgeklappt, Stepper): der angefangene Stand bleibt (Absicherung)', () => {
-  it.each(ereignisse)('@FU-103 Wenn %s: der Stand 1 für FC Nord bleibt im aufgeklappten Feld', async (_name, ereignis) => {
+describe('@FU-103 Blatt „Endergebnis“ der Gruppenphase (@SL-195): der angefangene Stand bleibt', () => {
+  it.each(ereignisse)('@FU-103 Wenn %s: „1“ bleibt im Feld für FC Nord, der Cursor bleibt, „0“ + „Ergebnis speichern“ ergibt 10:2', async (_name, ereignis) => {
     const user = userEvent.setup();
+    const onScoreChange = vi.fn();
     const erst = spiele('groupStage');
-    const { rerender } = render(<GroupStageSchedule matches={erst} hasGroups tournament={ansicht(erst)} editable onScoreChange={vi.fn()} />);
+    const { rerender } = render(<GroupStageSchedule matches={erst} hasGroups tournament={ansicht(erst)} editable onScoreChange={onScoreChange} />);
     await user.click(screen.getByTestId(`match-row-time-${SPIEL_9}`));
-    await user.click(screen.getByRole('button', { name: 'FC Nord Tor hinzufügen' }));
-    const stand = () => screen.getByRole('button', { name: 'FC Nord Tor hinzufügen' }).previousElementSibling?.textContent;
-    expect(stand()).toBe('1');
+    const feld = () => screen.getByTestId<HTMLInputElement>('result-sheet-score-home');
+    await user.type(feld(), '1');
+    await user.type(screen.getByTestId('result-sheet-score-away'), '2');
+    await user.click(feld());
 
     for (const neu of ereignis('groupStage')) {
-      rerender(<GroupStageSchedule matches={neu.matches} hasGroups tournament={neu.tournament} editable onScoreChange={vi.fn()} clockOf={neu.clockOf} />);
+      rerender(<GroupStageSchedule matches={neu.matches} hasGroups tournament={neu.tournament} editable onScoreChange={onScoreChange} clockOf={neu.clockOf} />);
     }
 
-    expect(screen.getAllByTestId('quick-score-expand').length).toBeGreaterThan(0);
-    expect(stand()).toBe('1');
+    expect(feld().value).toBe('1');
+    expect(document.activeElement).toBe(feld());
+    expect(onScoreChange).not.toHaveBeenCalled();
+    await user.keyboard('0');
+    await user.click(screen.getByTestId('result-sheet-save'));
+    expect(onScoreChange).toHaveBeenCalledWith(SPIEL_9, 10, 2);
   });
 });

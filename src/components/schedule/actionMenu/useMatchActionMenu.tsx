@@ -9,6 +9,8 @@
  * - Nicht angetreten / Wertung zurücknehmen: `forfeit`
  * - Ergebnis korrigieren: `onCorrect` – derselbe Dialog wie im Cockpit (@EK-063)
  * - Protokoll ansehen: `MatchProtocolSheet` (@FU-080, @FU-082)
+ * Das Blatt (@SL-239): Kopf mit Abzeichen, Meta-Zeile und Spielzeile (`MatchActionSummary`), Symbol je Eintrag, „X“ oben, die Haupttaste je
+ * Zustand und Recht (`primaryActionOf`) gefüllt und zuletzt; die Aktionen selbst sind eine Menge ohne feste Reihenfolge (@SL-193).
  * Ohne `rights` ist die Auswahl aus (Zuschauer, Vorschau): `open` tut nichts.
  */
 import { useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
@@ -23,7 +25,9 @@ import type { RefereeChoice } from '../refereeChoices';
 import { MatchChoiceDialog, type MatchChoiceKind } from './MatchChoiceDialog';
 import { MatchProtocolSheet } from './MatchProtocolSheet';
 import { useOptionalToast } from '../../ui/Toast';
-import { actionPhaseOf, matchActionsFor, NEEDS_BOTH_TEAMS, type MatchActionId, type MatchActionRights } from './matchActions';
+import { actionPhaseOf, DANGER_ACTIONS, matchActionsFor, NEEDS_BOTH_TEAMS, primaryActionOf, type MatchActionId, type MatchActionRights } from './matchActions';
+import { MatchActionIcon } from './matchActionIcons';
+import { MatchActionBadge, MatchActionSummary } from './MatchActionSummary';
 
 export interface UseMatchActionMenuArgs {
   /** Rechte (`useCan`); fehlt = Auswahl aus */
@@ -47,6 +51,11 @@ export interface MatchActionMenu {
   enabled: boolean;
   /** Öffnet die Auswahl des Spiels; ohne Aktion (kein Recht) geschieht nichts */
   open: (matchId: string) => void;
+  /**
+   * Tipp aufs Ergebnisfeld (@SL-195): hat das Spiel noch kein Ergebnis (geplant, beide Teams bekannt) und darf der Nutzer eintragen, öffnet sofort
+   * die Eingabe des Endergebnisses; sonst (läuft, beendet, gewertet, abgesetzt, Helfer, Paarung offen) die Auswahl wie `open`.
+   */
+  openFromScore: (matchId: string) => void;
   /** Auswahl und ihre Folge-Fenster; in die Ansicht einhängen */
   element: ReactNode;
 }
@@ -88,6 +97,14 @@ export function useMatchActionMenu(args: UseMatchActionMenuArgs): MatchActionMen
   }, [actionsOf, sides, rights, toast, t]);
   const close = useCallback(() => { setOpenId(null); }, []);
 
+  const openFromScore = useCallback((id: string) => {
+    const match = matchOf(id);
+    const direct = match !== undefined && actionPhaseOf(matchViewOf(sides, id)?.status) === 'planned' && actionsOf(id).includes('enterResult')
+      && !sideDisplay(match, 'A', sides).pending && !sideDisplay(match, 'B', sides).pending;
+    if (direct) { onEnterResult?.(id); return; }
+    open(id);
+  }, [matchOf, sides, actionsOf, onEnterResult, open]);
+
   const run = useCallback((action: MatchActionId, id: string) => {
     setOpenId(null);
     switch (action) {
@@ -105,6 +122,27 @@ export function useMatchActionMenu(args: UseMatchActionMenuArgs): MatchActionMen
     }
   }, [onEnterResult, onNavigateToCockpit, shiftFrom, forfeit, onCorrect]);
 
+  // @SL-239: jeder Eintrag mit Symbol; die Haupttaste je Zustand und Recht (`primaryActionOf`) steht gefüllt zuletzt, „Nicht angetreten“ trägt die rote Randfarbe
+  const sheetItems = useCallback((id: string, match: ScheduledMatch): ActionSheetItem[] => {
+    const actions = actionsOf(id);
+    const main = primaryActionOf(matchViewOf(sides, id)?.status, actions);
+    const pending = sideDisplay(match, 'A', sides).pending || sideDisplay(match, 'B', sides).pending;
+    return actions.map<ActionSheetItem>((action) => {
+      const missing = NEEDS_BOTH_TEAMS.has(action) && pending;
+      return {
+        id: action,
+        label: t(`actionMenu.actions.${action}`),
+        icon: <MatchActionIcon action={action} />,
+        primary: action === main,
+        danger: DANGER_ACTIONS.has(action),
+        disabled: missing,
+        reason: missing ? t('actionMenu.teamsMissing') : undefined,
+        testId: `match-action-${action}`,
+        onSelect: () => { run(action, id); },
+      };
+    });
+  }, [actionsOf, sides, t, run]);
+
   const element = useMemo<ReactNode>(() => {
     const sheetMatch = openId === null ? undefined : matchOf(openId);
     const followMatch = follow === null ? undefined : matchOf(follow.matchId);
@@ -116,20 +154,11 @@ export function useMatchActionMenu(args: UseMatchActionMenuArgs): MatchActionMen
             isOpen
             onClose={close}
             title={t('actionMenu.title', { number: number(sheetMatch) })}
-            subtitle={t('actionMenu.pairing', { home: sideDisplay(sheetMatch, 'A', sides).name, away: sideDisplay(sheetMatch, 'B', sides).name })}
+            badge={<MatchActionBadge match={matchViewOf(sides, openId)} />}
+            summary={<MatchActionSummary match={sheetMatch} view={matchViewOf(sides, openId)} sides={sides} />}
             closeLabel={t('actionMenu.close')}
             testId="match-action-menu"
-            items={actionsOf(openId).map<ActionSheetItem>((action) => {
-              const missing = NEEDS_BOTH_TEAMS.has(action) && (sideDisplay(sheetMatch, 'A', sides).pending || sideDisplay(sheetMatch, 'B', sides).pending);
-              return {
-                id: action,
-                label: t(`actionMenu.actions.${action}`),
-                disabled: missing,
-                reason: missing ? t('actionMenu.teamsMissing') : undefined,
-                testId: `match-action-${action}`,
-                onSelect: () => { run(action, openId); },
-              };
-            })}
+            items={sheetItems(openId, sheetMatch)}
           />
         )}
         {follow?.kind === 'referee' && followMatch !== undefined && (
@@ -163,7 +192,7 @@ export function useMatchActionMenu(args: UseMatchActionMenuArgs): MatchActionMen
         )}
       </>
     );
-  }, [openId, follow, matchOf, close, t, sides, actionsOf, run, refereeChoices, numberOfFields, onRefereeChange, onFieldChange, liveMatches]);
+  }, [openId, follow, matchOf, close, t, sides, sheetItems, refereeChoices, numberOfFields, onRefereeChange, onFieldChange, liveMatches]);
 
-  return { enabled: rights !== undefined, open, element };
+  return { enabled: rights !== undefined, open, openFromScore, element };
 }

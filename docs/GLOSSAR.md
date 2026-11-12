@@ -118,3 +118,23 @@ immer freiwillig. „Weste“ ist nur der interne Name der Darstellung im Ergebn
 rechts in Trikotfarbe, dazu das Leibchen-Zeichen) und steht in keinem sichtbaren Text; ein Text „in Leibchen“ unter dem Teamnamen
 entfällt. Nicht verwechseln mit dem Trikot (dem Spielhemd, dessen Farbe je Team im Assistenten steht) und mit dem „Ausweichtrikot“
 (einer zweiten Trikotfarbe je Team, MVP+). Glossar-Eintrag: `bib` (de „Leibchen“, en „bib“, Schlüssel `equipment.bib` in `sport.json`); bei Widerspruch gilt `glossary.json`.
+
+## Hallenton, Hallen-Lautsprecher, Gerät, Ausgang, Inhalt
+
+**Bevorzugt:** Hallenton, Hallen-Lautsprecher, Gerät, Ausgang, Inhalt
+**Vermeiden in deutschen Texten:** „Sound“ (stattdessen „Ton“)
+
+Der **Hallenton** ist der Ton, der in der Halle für alle zu hören ist: Abpfiff, Halbzeit und Torhymne eines Felds. Er ist
+getrennt vom Ton im Cockpit der Person, die das Spiel leitet. Der **Hallen-Lautsprecher** ist das Gerät, das für ein Feld den
+Hallenton gibt, meist der Laptop der Turnierleitung an der Hallenanlage; je Feld gibt es höchstens einen.
+
+Drei Wörter halten die Technik auseinander (Daniel 07.11.2026):
+- **Gerät:** eine angemeldete App auf einer Maschine (Laptop, Fernseher, Handy).
+- **Ausgang:** wo Ton oder Bild herauskommt (Hallenanlage per USB- oder Dock-Anschluss, eingebaute Lautsprecher, HDMI). Der
+  Ausgang gehört zu einem Gerät.
+- **Inhalt:** was gespielt oder gezeigt wird (Hallenton und Torhymne eines Felds, Cockpit-Ton, Monitor-Folien). Ein Inhalt
+  wird einem Gerät mit Ausgang zugeordnet.
+
+In Statuszeile und Pillen steht kurz „Lautsprecher Feld 1 …“; gemeint ist dort das Gerät (der Hallen-Lautsprecher). In Erklärungen zur Technik heißt der Ausgang „Ausgang“, nicht „Lautsprecher“. Glossar-Einträge: `hallHorn`, `hallSpeaker`,
+`hallDevice`, `hallOutput`, `hallContent` (i18n-Namensraum `hallenton`). Gerät, Ausgang und Inhalt sind Alltagswörter;
+deshalb meldet die Glossar-Prüfung sie nicht als Kürzel (`kuerzel: true`), und sie sind nicht im Code-Lint gesperrt (`tsLint: false`).

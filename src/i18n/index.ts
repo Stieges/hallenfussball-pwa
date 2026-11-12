@@ -15,6 +15,7 @@ import deSport from './locales/de/sport.json';
 import deShort from './locales/de/short.json';
 import dePublicView from './locales/de/publicView.json';
 import deHelpers from './locales/de/helpers.json';
+import deHallenton from './locales/de/hallenton.json';
 
 import enCommon from './locales/en/common.json';
 import enAuth from './locales/en/auth.json';
@@ -29,6 +30,7 @@ import enSport from './locales/en/sport.json';
 import enShort from './locales/en/short.json';
 import enPublicView from './locales/en/publicView.json';
 import enHelpers from './locales/en/helpers.json';
+import enHallenton from './locales/en/hallenton.json';
 
 // Import types for module augmentation side-effect
 import './types';
@@ -90,6 +92,7 @@ export const NAMESPACES = [
   'short',
   'publicView',
   'helpers',
+  'hallenton',
 ] as const;
 
 export type Namespace = (typeof NAMESPACES)[number];
@@ -114,6 +117,7 @@ void i18n.use(initReactI18next).init({
       short: deShort,
       publicView: dePublicView,
       helpers: deHelpers,
+      hallenton: deHallenton,
     },
     en: {
       common: enCommon,
@@ -129,6 +133,7 @@ void i18n.use(initReactI18next).init({
       short: enShort,
       publicView: enPublicView,
       helpers: enHelpers,
+      hallenton: enHallenton,
     },
   },
 

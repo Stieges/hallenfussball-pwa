@@ -9,7 +9,7 @@
  * - Score-Circle Zustände (Geplant/Live/Beendet)
  * - Progress-Ring für Live-Spiele
  * - Tap-/Click-Logik
- * - Inline-Expand (QuickScore, Detail, Live, Start)
+ * - Inline-Expand (Detail, Live, Start) und das Blatt „Endergebnis“
  * - Score-Eingabe via Stepper
  * - Cockpit-Integration
  *
@@ -208,7 +208,7 @@ test.describe('Spielplan 2.0 - Mobile Layout', () => {
     }
   });
 
-  test('Mobile: Card-Tap öffnet die Aktionsauswahl, „Ergebnis eintragen“ dann die Quick-Score Eingabe (@SL-193)', async ({ page }) => {
+  test('Mobile: Card-Tap öffnet die Aktionsauswahl, „Ergebnis eintragen“ dann das Blatt „Endergebnis“ (@SL-193, @SL-195)', async ({ page }) => {
     // GIVEN - Navigate to Spielplan
     await navigateToSpielplan(page);
 
@@ -218,16 +218,9 @@ test.describe('Spielplan 2.0 - Mobile Layout', () => {
     await matchCard.click();
     await page.getByTestId('match-action-enterResult').click();
 
-    // THEN - Quick-Score Expand should be visible
-    // Wait for expand animation
-    await page.waitForTimeout(500);
-
-    // Look for "Speichern" button which is unique to the QuickScoreExpand
-    // Use getByRole for more reliable selection
-    const speichernButton = page.getByRole('button', { name: t('tournament:common.save') });
-
-    // Assert the expand is visible
-    await expect(speichernButton).toBeVisible({ timeout: 3000 });
+    // THEN - das Blatt „Endergebnis“ steht offen (@SL-195), „Ergebnis speichern“ ist gesperrt (leere Felder)
+    await expect(page.getByTestId('result-sheet')).toBeVisible({ timeout: 3000 });
+    await expect(page.getByTestId('result-sheet-save')).toBeDisabled();
   });
 });
 
@@ -412,27 +405,32 @@ test.describe('Spielplan 2.0 - Tap/Click Logik', () => {
     }
   });
 
-  test('Circle-Tap bei geplantem Spiel zeigt die Aktionsauswahl mit „Im Cockpit anpfeifen“ (@SL-193)', async ({ page }) => {
-    // GIVEN - Navigate to Spielplan
+  test('@SL-195 Tipp aufs Ergebnisfeld eines geplanten Spiels öffnet sofort das Blatt „Endergebnis Spiel n“, nicht die Aktionsauswahl', async ({ page }) => {
     await navigateToSpielplan(page);
 
-    // WHEN - Click on score circle of a SCHEDULED match (use specific selector)
-    // Use data-match-status="scheduled" to target only scheduled matches
-    const scheduledCircle = page.locator('[data-match-status="scheduled"]').first();
+    // Erste Karte (nichts ist angepfiffen, also geplant) und ihr Ergebnisfeld (`data-score-circle`, in jedem Layout vorhanden)
+    const karte = page.locator('[data-match-card]:visible').first();
+    await expect(karte).toBeVisible({ timeout: 10_000 });
+    // Spielnummer der Karte (Beschriftung „Spiel n: Heim gegen Gast“) muss im Titel des Blatts stehen
+    const nummer = /Spiel (\d+)/.exec((await page.locator('[role="article"]:visible').first().getAttribute('aria-label')) ?? '')?.[1];
+    expect(nummer, 'Karte nennt ihre Spielnummer').toBeDefined();
+    await karte.locator('[data-score-circle]:visible').first().click();
 
-    if (await scheduledCircle.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await scheduledCircle.click();
+    await expect(page.getByRole('heading', { name: `Endergebnis Spiel ${nummer ?? ''}` })).toBeVisible();
+    await expect(page.getByTestId('match-action-menu')).toHaveCount(0);
+  });
 
-      // THEN - Start match dialog should appear
-      await page.waitForTimeout(300);
+  test('@SL-193 Tipp auf den Rest der Karte eines geplanten Spiels zeigt die Aktionsauswahl mit „Im Cockpit anpfeifen“, nicht das Blatt', async ({ page }) => {
+    await navigateToSpielplan(page);
 
-      // Die Auswahl des Spiels mit „Im Cockpit anpfeifen“ (statt des früheren Start-Fensters in der Karte)
-      await expect(page.getByTestId('match-action-menu')).toBeVisible({ timeout: 5000 });
-      await expect(page.getByTestId('match-action-kickOff')).toHaveText('Im Cockpit anpfeifen');
-    } else {
-      // If no scheduled matches are visible, skip test (all matches may have started)
-      test.skip(true, 'No scheduled matches visible - test conditions not met');
-    }
+    // Ein Teamname der ersten Karte: weder Ergebnisfeld noch Taste, in jedem Layout derselbe Weg
+    const karte = page.locator('[data-match-card]:visible').first();
+    await expect(karte).toBeVisible({ timeout: 10_000 });
+    await karte.getByTestId(/^match-name-/).first().click();
+
+    await expect(page.getByTestId('match-action-menu')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId('match-action-kickOff')).toHaveText('Im Cockpit anpfeifen');
+    await expect(page.getByTestId('result-sheet')).toHaveCount(0);
   });
 
   test('Circle-Tap bei laufendem Spiel zeigt Events + Cockpit-Link', async ({ page }) => {

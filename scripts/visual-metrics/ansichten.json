@@ -802,9 +802,9 @@
     },
     {
       "id": "zuschauer-naechstes-7a",
-      "titel": "Zuschauer-Seite, Kopf „Als Nächstes“ vor dem Anpfiff, Blau gegen Blau, Leibchen nicht geklärt (@ZM-200, @ZM-195) – BEFUND: axe color-contrast der unteren Navigation (Taste „Info“, dunkel, 360) über blauen Kästen, nicht aus diesem Paket; Gruppe befund-zuschauer-nav statt pflicht",
+      "titel": "Zuschauer-Seite, Kopf „Als Nächstes“ vor dem Anpfiff, Blau gegen Blau, Leibchen nicht geklärt (@ZM-200, @ZM-195)",
       "gruppen": [
-        "befund-zuschauer-nav"
+        "pflicht"
       ],
       "app": "/#/live/LBX2A7",
       "erwarte": "[data-testid=\"public-current\"]",
@@ -890,9 +890,9 @@
     },
     {
       "id": "zuschauer-naechstes-7e",
-      "titel": "Zuschauer-Seite, Kopf „Als Nächstes“ vor dem Anpfiff, beide Teams ohne Trikotfarbe: Standardfarben (@ZM-203) – BEFUND: axe color-contrast der unteren Navigation (Taste „Info“, dunkel, 360) über blauen Kästen, nicht aus diesem Paket; Gruppe befund-zuschauer-nav statt pflicht",
+      "titel": "Zuschauer-Seite, Kopf „Als Nächstes“ vor dem Anpfiff, beide Teams ohne Trikotfarbe: Standardfarben (@ZM-203)",
       "gruppen": [
-        "befund-zuschauer-nav"
+        "pflicht"
       ],
       "app": "/#/live/LBX2E7",
       "erwarte": "[data-testid=\"public-current\"]",

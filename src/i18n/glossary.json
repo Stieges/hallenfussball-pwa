@@ -456,6 +456,51 @@
       "i18nKey": "equipment.bib",
       "kuerzel": true,
       "tsLint": false
+    },
+    "hallDevice": {
+      "de": "Gerät",
+      "en": "device",
+      "forbidden_de": [],
+      "reason": "Daniel 07.11.2026, Record Hallenton (Gerät, Ausgang, Inhalt): Ein Gerät ist eine angemeldete App auf einer Maschine (Laptop, Fernseher, Handy), nicht der Lautsprecher und nicht der Ausgang. kuerzel:true nur, damit die Lint-Regel das alltägliche Wort in Code-Texten nicht als hartkodierten Begriff meldet.",
+      "i18nKey": "hallenton.geraet",
+      "kuerzel": true,
+      "tsLint": false
+    },
+    "hallOutput": {
+      "de": "Ausgang",
+      "en": "output",
+      "forbidden_de": [],
+      "reason": "Daniel 07.11.2026, Record Hallenton (Gerät, Ausgang, Inhalt): Ein Ausgang ist, wo Ton oder Bild herauskommt (Hallenanlage per USB, interne Lautsprecher, HDMI). Der Ausgang gehört zu einem Gerät; die Wahl im Unterpunkt „Hallenton“ gilt je Gerät (@HT-053). kuerzel:true nur, damit die Lint-Regel das alltägliche Wort in Code-Texten nicht als hartkodierten Begriff meldet.",
+      "i18nKey": "hallenton.ausgang",
+      "kuerzel": true,
+      "tsLint": false
+    },
+    "hallContent": {
+      "de": "Inhalt",
+      "en": "content",
+      "forbidden_de": [],
+      "reason": "Daniel 07.11.2026, Record Hallenton (Gerät, Ausgang, Inhalt): Ein Inhalt ist, was gespielt oder gezeigt wird (Hallenton und Torhymne eines Felds, Cockpit-Ton, Monitor-Folien). Er wird einem Gerät mit Ausgang zugeordnet. kuerzel:true nur, damit die Lint-Regel das alltägliche Wort in Code-Texten nicht als hartkodierten Begriff meldet.",
+      "i18nKey": "hallenton.inhalt",
+      "kuerzel": true,
+      "tsLint": false
+    },
+    "hallHorn": {
+      "de": "Hallenton",
+      "en": "hall audio",
+      "forbidden_de": [],
+      "reason": "Record Hallenton: der Ton in der Halle (Abpfiff, Halbzeit, Torhymne) über den Hallen-Lautsprecher, getrennt vom Ton im Cockpit der leitenden Person. Bewusst kein globales Verbot von „Sound“ (Plan H4, G10): nur die Hallenton-Texte vermeiden das Wort, geprüft durch einen Scan des Namensraums „hallenton“. kuerzel:true nur, damit die Lint-Regel das Wort in Code-Texten nicht meldet.",
+      "i18nKey": "hallenton.hallenton",
+      "kuerzel": true,
+      "tsLint": false
+    },
+    "hallSpeaker": {
+      "de": "Hallen-Lautsprecher",
+      "en": "hall speaker",
+      "forbidden_de": [],
+      "reason": "Record Hallenton: das Gerät, das für ein Feld den Hallenton über die Hallenanlage gibt (je Feld höchstens eines). In Pillen und Statuszeile steht kurz „Lautsprecher Feld 1 …“ und meint das Gerät; in Erklärungen zur Technik heißt der Ausgang „Ausgang“. kuerzel:true nur, damit die Lint-Regel das Wort in Code-Texten nicht meldet.",
+      "i18nKey": "hallenton.hallenLautsprecher",
+      "kuerzel": true,
+      "tsLint": false
     }
   }
 }

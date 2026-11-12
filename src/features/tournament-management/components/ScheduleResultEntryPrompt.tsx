@@ -1,6 +1,7 @@
 /**
  * ScheduleResultEntryPrompt (A-08f3e2): Rückfragen der Schnelleingabe im Spielplan.
  * - abgesetzt (@FU-093): „Spiel war abgesetzt – trotzdem Ergebnis eintragen?“ Ja/Nein.
+ * - noch nicht angepfiffen (@SL-195): „Spiel 7 ist erst um 10:36 geplant. Ergebnis trotzdem eintragen?“ Ja/Nein.
  * - beendet (Grundpflicht @EK-004, @EK-037): Grund aus der Grundliste (`CorrectionReason`), ohne Vorauswahl;
  *   „Sonstiges“ nur mit Freitext. Abbruch speichert nichts. Fixrunde 1 (I-3): Bausteine `Select`/`Input`
  *   (Schrift ≥ 16 px, sichtbare Beschriftung), Fläche `DialogSurface`.
@@ -101,6 +102,19 @@ export function ScheduleResultEntryPrompt({ prompt, answerPrompt }: ScheduleResu
   }
   if (prompt.kind === 'shootout') {
     return <ScheduleShootoutPrompt key={`${prompt.matchNumber}-${prompt.score}`} prompt={prompt} answerPrompt={answerPrompt} />;
+  }
+  if (prompt.kind === 'future') {
+    return (
+      <ConfirmDialog
+        variant="warning"
+        title={t('schedule.resultEntry.futureTitle', { number: prompt.matchNumber })}
+        message={t('schedule.resultEntry.futureQuestion', { number: prompt.matchNumber, time: prompt.time })}
+        confirmText={t('schedule.resultEntry.yes')}
+        cancelText={t('schedule.resultEntry.no')}
+        onConfirm={() => answerPrompt('yes')}
+        onCancel={() => answerPrompt(null)}
+      />
+    );
   }
   return (
     <ConfirmDialog

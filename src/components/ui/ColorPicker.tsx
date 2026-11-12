@@ -25,6 +25,8 @@ interface ColorPickerProps {
   style?: CSSProperties;
   /** Name der Farbe (z. B. „Blau“): steht im Auslöser vor dem Hex-Wert, der Hex-Wert wandert nach rechts */
   valueLabel?: string;
+  /** Vorgelesener Name eines Farbfelds (z. B. „Blau“); ohne Angabe (oder `undefined`) „Farbe #0033CC“ */
+  presetLabel?: (color: string) => string | undefined;
   /** Test ID for E2E testing */
   'data-testid'?: string;
 }
@@ -36,12 +38,14 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
   presets = JERSEY_COLOR_PRESETS,
   disabled = false,
   valueLabel,
+  presetLabel,
   showCustomPicker = true,
   style = {},
   'data-testid': testId,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close on click outside
   useEffect(() => {
@@ -54,6 +58,13 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen]);
+
+  // Beim Öffnen ins sichtbare Fenster holen: nichts bleibt unter dem Fensterrand oder der unteren Navigation (Handy)
+  useEffect(() => {
+    if (isOpen) {
+      dropdownRef.current?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
     }
   }, [isOpen]);
 
@@ -132,12 +143,13 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     left: 0,
     marginTop: cssVars.spacing.xs,
     padding: cssVars.spacing.md,
-    background: cssVars.colors.surface,
+    background: cssVars.colors.surfaceElevated, // deckend: darunter liegende Karten scheinen nicht durch
     border: `1px solid ${cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.md,
     boxShadow: `0 4px 12px ${cssVars.colors.shadowMedium}`,
     zIndex: cssVars.zIndex.floating,
     minWidth: 200,
+    scrollMarginBottom: `calc(${cssVars.layoutHeights.bottomNav} + ${cssVars.spacing.md})`,
   };
 
   const presetsGridStyles: CSSProperties = {
@@ -201,7 +213,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
       </button>
 
       {isOpen && (
-        <div style={dropdownStyles} role="dialog" aria-label="Farbauswahl">
+        <div ref={dropdownRef} style={dropdownStyles} role="dialog" aria-label="Farbauswahl">
           {/* Preset colors */}
           <div style={presetsGridStyles} role="listbox" aria-label="Voreingestellte Farben">
             {presets.map((color) => (
@@ -210,7 +222,8 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                 type="button"
                 onClick={() => handlePresetClick(color)}
                 style={presetSwatchStyles(color, color.toUpperCase() === value.toUpperCase())}
-                aria-label={`Farbe ${color}`}
+                aria-label={presetLabel?.(color) ?? `Farbe ${color}`}
+                title={presetLabel?.(color)}
                 aria-selected={color.toUpperCase() === value.toUpperCase()}
                 role="option"
                 onMouseEnter={(e) => {

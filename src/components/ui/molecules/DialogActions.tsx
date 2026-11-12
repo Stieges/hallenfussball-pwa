@@ -31,6 +31,8 @@ export interface DialogActionsProps {
   primaryVariant?: 'primary' | 'danger';
   /** Nebentasten in der Reihenfolge von oben nach unten bzw. links nach rechts. */
   secondary?: DialogAction[];
+  /** Engere Tasten (Innenabstand `md` statt `xl`): zwei Beschriftungen wie „Abbrechen“ und „Ergebnis speichern“ passen auch am Handy nebeneinander, beide Tasten in Haupttastenhöhe */
+  compact?: boolean;
   'data-testid'?: string;
 }
 
@@ -44,15 +46,17 @@ const row: CSSProperties = {
 const buttonBase: CSSProperties = { flex: '1 1 auto', whiteSpace: 'nowrap', maxWidth: '100%' };
 const primaryStyle: CSSProperties = { ...buttonBase, minHeight: cssVars.touchTargets.primary };
 const secondaryStyle: CSSProperties = { ...buttonBase, minHeight: cssVars.touchTargets.minimum };
+// compact: engerer Innenabstand, beide Tasten gleich hoch (Haupttastenhöhe) wie im Mockup Runde 4
+const compactStyle: CSSProperties = { padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`, minHeight: cssVars.touchTargets.primary };
 
-export const DialogActions = ({ primary, primaryVariant = 'primary', secondary = [], 'data-testid': testId = 'dialog-actions' }: DialogActionsProps) => (
+export const DialogActions = ({ primary, primaryVariant = 'primary', secondary = [], compact = false, 'data-testid': testId = 'dialog-actions' }: DialogActionsProps) => (
   <div style={row} data-testid={testId} data-dialog-actions>
     {secondary.map((a, i) => (
-      <Button key={a['data-testid'] ?? i} ref={a.buttonRef} variant="secondary" size="lg" style={secondaryStyle} onClick={a.onClick} disabled={a.disabled} data-testid={a['data-testid']}>
+      <Button key={a['data-testid'] ?? i} ref={a.buttonRef} variant="secondary" size="lg" style={compact ? { ...secondaryStyle, ...compactStyle } : secondaryStyle} onClick={a.onClick} disabled={a.disabled} data-testid={a['data-testid']}>
         {a.label}
       </Button>
     ))}
-    <Button ref={primary.buttonRef} variant={primaryVariant} size="lg" style={primaryStyle} onClick={primary.onClick} disabled={primary.disabled} data-testid={primary['data-testid']} data-primary>
+    <Button ref={primary.buttonRef} variant={primaryVariant} size="lg" style={compact ? { ...primaryStyle, ...compactStyle } : primaryStyle} onClick={primary.onClick} disabled={primary.disabled} data-testid={primary['data-testid']} data-primary>
       {primary.label}
     </Button>
   </div>

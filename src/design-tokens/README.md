@@ -116,7 +116,7 @@ Die Tafel (Spielstand, Uhr, Meldezeile) hat eigene Tokens, nie `surface`. Hell u
 
 **Regel:** Live-Rot (`scoreboardLive`, #DC2626) ist nur Fläche. Schrift darauf ist `scoreboardOnLive` (weiß, 4,83 : 1). Live-Rot als Schrift auf der Tafel ist verboten (hell nur 3,55 : 1).
 
-Größen (`cssVars.sizing`, fest in px wie die Score-Regel): `scoreboardClockCompact` 32 px (Handy), `scoreboardClockRegular` 64 px (Tablet), `scoreboardClockWide` 56 px (ab 1024), `scoreboardScoreCompact` 40 px, `scoreboardScoreRegular` 64 px, `noticeLineHeightCompact` 24 px, `noticeLineHeightRegular` 32 px (reine Anzeige; nur das Kreuz hat 44 px). Prüfung: `src/design-tokens/__tests__/scoreboard-tokens.test.ts`.
+Größen (`cssVars.sizing`, fest in px wie die Score-Regel): `scoreboardClockCompact` 32 px (Handy), `scoreboardClockRegular` 64 px (Tablet), `scoreboardClockWide` 56 px (ab 1024), `scoreboardScoreCompact` 40 px, `scoreboardScoreRegular` 64 px, `noticeLineHeightCompact` 24 px, `noticeLineHeightRegular` 32 px (reine Anzeige; nur das Kreuz hat 44 px), `scoreField` 64 px (Tor-Feld im Blatt „Endergebnis“), `dragOverlayMinWidth` 280 px (Ziehen-Vorschau eines Spiels, Handy). Prüfung: `src/design-tokens/__tests__/scoreboard-tokens.test.ts`.
 Cockpit-Ziffern und Kästen (Plan Cockpit v2, @SL-178): `cockpitZifferHandy` 92 px, `cockpitZifferKnapp` 76 px, `cockpitZifferNormal` 80 px, `cockpitZifferGross` 88 px (Schriftgrößen; Ziffernhöhe ≈ 0,727 em, Handy ≥ 65 px, Laptop ≥ 55 px in jeder Stufe), `cockpitKastenHandy`/`Knapp`/`Normal`/`Gross` 96/76/90/108 px (Kastenhöhe). Stufen der Fensterhöhe: `cockpitHeightSteps` (`knapp` < 720, `gross` ≥ 800) und `cockpitMinHoehe` 620 in `breakpoints.ts`; CSS-Module nutzen `[data-stufe]`, keine Zahlen in Media-Queries. Prüfung: `__tests__/cockpitZiffern-tokens.test.ts` (inkl. Höhenbudget bei 620 px, Tor ≥ 56 px) und `visual:metrics` Regel `cockpit.ziffern`.
 Cockpit Laptop, Maße je Stufe der Fensterhöhe (Plan Cockpit v2 B2, @SL-187): `cockpitTorKnapp`/`Normal`/`Gross` 60/72/84 px (Mindesthöhe der Tor-Taste, nie unter 56 px), `cockpitFussKnapp`/`Normal`/`Gross` 52/64/76 px (Foul-Reihe), `cockpitLeisteKnapp`/`Normal`/`Gross` 52/56/60 px (Fußleiste), `cockpitKopfKnapp`/`Normal`/`Gross` 40/44/48 px (Team-Leiste). Die Stufe „gross“ wächst ab 800 px linear mit der Fensterhöhe weiter (`--sizing-cockpit-{kasten,ziffer,fuss,kopf,leiste}-gross-fluid`, bei 1080 px 164/128/112/60/80 px wie im Mockup); Ereignisspalte: `--sizing-cockpit-ereignisspalte` 25rem in „knapp“, `--sizing-cockpit-ereignisspalte-gross` (`max(27.5rem, 31.25vw)`) sonst. Zeilenhöhe der Uhr in „knapp“: `--line-height-cockpit-uhr-knapp` 0,85. Die Hülle (`LiveCockpitShell.module.css`) setzt daraus `--cockpit-tor`, `--cockpit-fuss`, `--cockpit-kopf`, `--cockpit-kopf-schrift`, `--cockpit-strafe-ziffer`, `--cockpit-ereignisspalte` je `data-stufe`; Prüfung: `__tests__/cockpitStufen-tokens.test.ts`.
 
@@ -209,7 +209,11 @@ breakpoints.desktop  // '1024px'
 
 mediaQueries.mobile  // '@media (max-width: 480px)'
 mediaQueries.desktop // '@media (min-width: 769px)'
+mediaQueries.tabletBand // '@media (min-width: 768px) and (max-width: 1024px)'  (G3-N N4: Tablet-Band der Spielplan-Tabelle)
+mediaQueries.print      // '@media print'                                      (G3-N N4: Spielplan druckt immer die Tabelle)
 ```
+
+**G3-N N4 (Blatt „Endergebnis“):** `cssVars.sizing.scoreField` 64 px (Tor-Feld im Blatt, Mockup Runde 4; `ScoreDraftInput large`), `cssVars.sizing.dragOverlayMinWidth` 280 px (Mindestbreite der Ziehen-Vorschau eines Spiels am Handy, wie vor dem Umbau der Tokens), `cssVars.borderWidth.strong` 3 px (Rahmen der Ziehen-Vorschau). Neue Werte brauchen Daniels Freigabe; diese drei stehen zur Durchsicht.
 
 ## Design Principles
 

@@ -171,6 +171,13 @@
   "organisations": {
     "bfv": "Bavarian Football Association"
   },
+  "hallenton": {
+    "geraet": "device",
+    "ausgang": "output",
+    "inhalt": "content",
+    "hallenton": "hall audio",
+    "hallenLautsprecher": "hall speaker"
+  },
   "equipment": {
     "bib": "bib"
   }

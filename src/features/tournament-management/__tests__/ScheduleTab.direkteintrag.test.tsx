@@ -136,10 +136,11 @@ describe('A-08f3e2 Pflichttest echter Weg: Spielplan → Server-Eintrag (@FU-080
     const card = (): HTMLElement => view.container.querySelector('[data-match-card]')!;
     act(() => { fireEvent.click(within(card()).getAllByText(HOME?.name ?? '')[0]); });
     act(() => { fireEvent.click(screen.getByTestId('match-action-enterResult')); }); // @SL-193: Tipp → Auswahl → „Ergebnis eintragen“
-    const expand = await within(card()).findByTestId('quick-score-expand');
-    for (let i = 0; i < home; i++) { fireEvent.click(within(expand).getByLabelText(`${HOME?.name} Tor hinzufügen`)); }
-    for (let i = 0; i < away; i++) { fireEvent.click(within(expand).getByLabelText(`${AWAY?.name} Tor hinzufügen`)); }
-    await act(async () => { fireEvent.click(within(expand).getByTestId('quick-score-save-btn')); await settle(); });
+    // @SL-195: „Ergebnis eintragen“ öffnet das Blatt „Endergebnis“; die Felder sind leer, gespeichert wird erst mit „Ergebnis speichern“
+    const sheet = await screen.findByTestId('result-sheet');
+    fireEvent.change(within(sheet).getByTestId('result-sheet-score-home'), { target: { value: String(home) } });
+    fireEvent.change(within(sheet).getByTestId('result-sheet-score-away'), { target: { value: String(away) } });
+    await act(async () => { fireEvent.click(within(sheet).getByTestId('result-sheet-save')); await settle(); });
     return { view, card };
   }
 
@@ -190,5 +191,30 @@ describe('A-08f3e2 Pflichttest echter Weg: Spielplan → Server-Eintrag (@FU-080
     expect(h.api).not.toHaveBeenCalled();
     expect(card().textContent).not.toMatch(/3\s*:\s*1/);
     expect(view.getByTestId('home-points').textContent).toBe('0');
+  });
+
+  // @SL-195 „Aber liegt der geplante Anstoß noch in der Zukunft“ (nach Serverzeit der Engine): Rückfrage vor dem Speichern
+  describe('@SL-195 noch nicht angepfiffen (Anstoß in der Zukunft)', () => {
+    const zukunft = async () => {
+      const spaeter = new Date('2026-10-30T10:36:00'); // die Serverzeit der Prüfstand-Engine steht im September 2026
+      stores.raw.set('tournaments', [{ ...tournament, date: '2026-10-30', startDate: '2026-10-30', matches: tournament.matches.map((m) => ({ ...m, scheduledTime: spaeter })) }]);
+    };
+
+    it('@SL-195 Spiel 1 ist erst um 10:36 geplant: Rückfrage „Spiel 1 ist erst um 10:36 geplant. Ergebnis trotzdem eintragen?“, „Nein“ speichert nichts', async () => {
+      const { view, card } = await enterInFirstCard(3, 1, zukunft);
+      expect(await view.findByText(/ist erst um 10:36 geplant\. Ergebnis trotzdem eintragen\?/)).toBeTruthy();
+      await act(async () => { fireEvent.click(view.getByText('Nein')); await settle(); });
+      expect(h.api).not.toHaveBeenCalled();
+      expect(card().textContent).not.toMatch(/3\s*:\s*1/);
+      expect(view.getByTestId('home-points').textContent).toBe('0');
+    });
+
+    it('@SL-195 Gegenbeispiel: mit „Ja“ wird gespeichert (RESULT_ENTRY); ein Spiel in der Vergangenheit fragt nicht (Test „Olli trägt 3:1 ein“)', async () => {
+      const { view } = await enterInFirstCard(3, 1, zukunft);
+      await view.findByText(/ist erst um 10:36 geplant/);
+      await act(async () => { fireEvent.click(view.getByText('Ja')); await settle(); });
+      expect(h.api).toHaveBeenCalledTimes(1);
+      expect(h.api.mock.calls[0][1].map((event) => event.type)).toEqual(['RESULT_ENTRY']);
+    });
   });
 });

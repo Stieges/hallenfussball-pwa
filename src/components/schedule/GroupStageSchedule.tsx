@@ -23,7 +23,9 @@ import {
   type MatchCardStatus,
   type RefereeOption,
 } from './MatchCard';
-import { QuickScoreExpand, LiveInfoExpand, StartMatchExpand, SummaryExpand } from './MatchExpand';
+import { LiveInfoExpand, StartMatchExpand, SummaryExpand } from './MatchExpand';
+import { ResultEntrySheet } from './ResultEntrySheet';
+import type { ScoreCommitResult } from '../ui/molecules';
 import { useMatchConflictsFromTournament, type ConflictSource } from '../../features/schedule-editor/hooks/useMatchConflicts';
 import type { LiveMatch } from '../live-cockpit/types';
 import { NO_LIVE_MATCHES } from './noLiveMatches';
@@ -49,7 +51,10 @@ interface GroupStageScheduleProps {
   numberOfFields?: number;
   onRefereeChange?: (matchId: string, refereeNumber: number | null) => void;
   onFieldChange?: (matchId: string, fieldNumber: number) => void;
-  onScoreChange?: (matchId: string, scoreA: number, scoreB: number) => void;
+  /** Speichert den Endstand; `false` (bzw. abgelehnte Zusage) = nicht gespeichert, das Blatt bleibt offen (@SL-195) */
+  onScoreChange?: (matchId: string, scoreA: number, scoreB: number) => ScoreCommitResult;
+  /** Wer ein Spiel zuletzt geändert hat, für den Hinweis „inzwischen geändert“ im Blatt (@FU-104) */
+  changeAuthorOf?: (matchId: string) => Promise<string | null>;
   editable?: boolean;
   /** Is the schedule currently being edited (edit mode active) */
   editingSchedule?: boolean;
@@ -92,6 +97,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   onRefereeChange,
   onFieldChange,
   onScoreChange,
+  changeAuthorOf,
   editable: _editable = false,
   editingSchedule = false,
   pendingChanges,
@@ -114,9 +120,10 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   const refereeChoiceList = useRefereeChoices(refereeConfig, tournament?.teams);
 
   // Spielplan 2.0: Expand state for mobile cards
-  type ExpandType = 'quick' | 'live' | 'start' | 'summary' | null;
+  type ExpandType = 'live' | 'start' | 'summary' | null;
   const [expandedMatchId, setExpandedMatchId] = useState<string | null>(null);
   const [expandType, setExpandType] = useState<ExpandType>(null);
+  const [resultSheetId, setResultSheetId] = useState<string | null>(null);
 
   // Close expand when pressing Escape
   useEffect(() => {
@@ -197,15 +204,15 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   // Spielseiten: Namen immer aus der Ansicht (Slots, aktuelle Teams; @TM-015), nie aus gespeichertem Anzeigetext
   const sides = useMemo(() => buildSideContext(tournament, matches), [tournament, matches]);
 
-  // Eine Tippfläche je Spiel (Karte und Tore): die Aktionsauswahl (@SL-193); „Ergebnis eintragen“ öffnet die Schnelleingabe der Karte
-  const openQuickEntry = useCallback((matchId: string) => { setExpandedMatchId(matchId); setExpandType('quick'); }, []);
+  // Eine Tippfläche je Spiel (Karte): die Aktionsauswahl (@SL-193); „Ergebnis eintragen“ und der Tipp aufs Ergebnisfeld öffnen das Blatt (@SL-195)
+  const openQuickEntry = useCallback((matchId: string) => { setExpandedMatchId(null); setExpandType(null); setResultSheetId(matchId); }, []);
   const menu = useMatchActionMenu({
     rights: actionRights, liveMatches, matches, sides, numberOfFields, refereeChoices: refereeChoiceList,
     onEnterResult: onScoreChange ? openQuickEntry : undefined, onNavigateToCockpit, onCorrect, onRefereeChange, onFieldChange, forfeit,
   });
 
   /*
-   * Handle card body click - opens QuickScore expand for non-live matches
+   * Handle card body click - öffnet das Blatt „Endergebnis“ (ohne Aktionsauswahl)
    */
   const handleCardClick = (matchId: string) => {
     const match = matches.find(m => m.id === matchId);
@@ -240,23 +247,16 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
       return;
     }
 
-    // Toggle expand for non-live matches (Admin: QuickScore)
-    if (expandedMatchId === matchId && expandType === 'quick') {
-      setExpandedMatchId(null);
-      setExpandType(null);
-    } else {
-      setExpandedMatchId(matchId);
-      setExpandType('quick');
-    }
+    // Ohne Aktionsauswahl (Ansicht ohne Rechte-Angabe): der Tipp auf die Karte öffnet das Blatt „Endergebnis“
+    if (onScoreChange) { openQuickEntry(matchId); }
   };
 
-  /**
-   * Handle circle click - status-specific action
-   */
+  /** Handle circle click - status-specific action */
   const handleCircleClick = (matchId: string) => {
     const match = matches.find(m => m.id === matchId);
     if (!match) { return; }
-    if (menu.enabled) { menu.open(matchId); return; }
+    // @SL-195: der Tipp aufs Ergebnisfeld eines Spiels ohne Ergebnis öffnet sofort das Blatt (ohne Auswahl)
+    if (menu.enabled) { menu.openFromScore(matchId); return; }
 
     const status = getMatchStatus(match);
 
@@ -268,7 +268,8 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
     switch (status) {
       case 'scheduled':
-        // Not started: Show start confirmation
+        // Ohne Aktionsauswahl: Ergebnisfeld eines Spiels ohne Ergebnis öffnet das Blatt (@SL-195), sonst die Anpfiff-Bestätigung
+        if (onScoreChange) { openQuickEntry(matchId); break; }
         setExpandedMatchId(matchId);
         setExpandType('start');
         break;
@@ -288,19 +289,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     }
   };
 
-  /**
-   * Handle score save from expand
-   */
-  const handleExpandSave = useCallback((matchId: string, homeScore: number, awayScore: number) => {
-    // Beendete Spiele öffnen hier nie die Schnelleingabe: ihre Korrektur beginnt in der Aktionsauswahl (@EK-063)
-    onScoreChange?.(matchId, homeScore, awayScore);
-    setExpandedMatchId(null);
-    setExpandType(null);
-  }, [onScoreChange]);
-
-  /**
-   * Handle expand cancel/close
-   */
+  /** Handle expand cancel/close */
   const handleExpandClose = useCallback(() => {
     setExpandedMatchId(null);
     setExpandType(null);
@@ -333,18 +322,6 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     const forfeitAction = menu.enabled ? undefined : <MatchForfeitAction matchId={match.id} viewStatus={matchViewOf(sides, match.id)?.status} forfeit={forfeit} />;
 
     switch (expandType) {
-      case 'quick':
-        return (
-          <QuickScoreExpand
-            homeTeam={homeTeam}
-            awayTeam={awayTeam}
-            homeScore={match.scoreA ?? 0}
-            awayScore={match.scoreB ?? 0}
-            onSave={(home, away) => handleExpandSave(match.id, home, away)}
-            onCancel={handleExpandClose}
-            extraAction={forfeitAction}
-          />
-        );
       case 'live': {
         const liveMatch = liveMatches.get(match.id);
         const sourceEvents = match.events ?? liveMatch?.events;
@@ -366,7 +343,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             badge={matchViewOf(sides, match.id)?.badge}
             events={events}
             onNavigateToCockpit={_editable ? () => handleNavigateToCockpit(match.id) : undefined}
-            onEndAndEnter={_editable && canEndRunning && onScoreChange ? () => setExpandType('quick') : undefined}
+            onEndAndEnter={_editable && canEndRunning && onScoreChange ? () => openQuickEntry(match.id) : undefined}
             onClose={handleExpandClose}
           />
         );
@@ -414,7 +391,27 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
       default:
         return null;
     }
-  }, [expandedMatchId, expandType, handleExpandClose, handleExpandSave, handleNavigateToCockpit, sides, liveMatches, clockOf, _editable, canEndRunning, onScoreChange, forfeit, menu.enabled]);
+  }, [expandedMatchId, expandType, handleExpandClose, openQuickEntry, handleNavigateToCockpit, sides, liveMatches, clockOf, _editable, canEndRunning, onScoreChange, forfeit, menu.enabled]);
+
+  const sheetMatch = resultSheetId === null ? undefined : matches.find((m) => m.id === resultSheetId);
+  const sheetView = sheetMatch === undefined ? undefined : matchViewOf(sides, sheetMatch.id);
+  const sheetRunning = sheetView?.isLive === true;
+  // Felder starten leer; erst ein beendetes Spiel hat einen Stand, an dem „inzwischen geändert“ erkannt wird (@FU-104)
+  const sheetEnded = sheetView !== undefined && (sheetView.status === 'finished' || sheetView.status === 'awarded');
+  const resultSheet = sheetMatch !== undefined && onScoreChange !== undefined && (
+    <ResultEntrySheet
+      match={sheetMatch}
+      sides={sides}
+      saved={sheetEnded ? { a: sheetView.score?.a, b: sheetView.score?.b } : { a: undefined, b: undefined }}
+      running={sheetRunning}
+      cockpit={sheetRunning && sheetView?.score !== undefined ? { a: sheetView.score.a, b: sheetView.score.b } : null}
+      time={sheetView?.kickoff?.time ?? sheetMatch.time}
+      onCommit={onScoreChange}
+      changeAuthorOf={changeAuthorOf}
+      onToCockpit={onNavigateToCockpit ? (id) => { setResultSheetId(null); onNavigateToCockpit(id); } : undefined}
+      onClose={() => { setResultSheetId(null); }}
+    />
+  );
 
   if (matches.length === 0) {
     return (
@@ -571,9 +568,9 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             {activeMatch && (
               <div style={{
                 backgroundColor: cssVars.colors.surface,
-                boxShadow: `0 8px 24px ${cssVars.colors.surfaceDark}`,
+                boxShadow: cssVars.shadows.lg,
                 borderRadius: cssVars.borderRadius.md,
-                border: `3px solid ${cssVars.colors.primary}`,
+                border: `${cssVars.borderWidth.strong} solid ${cssVars.colors.primary}`,
                 padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
                 display: 'flex',
                 alignItems: 'center',
@@ -595,7 +592,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                   <span style={{
                     backgroundColor: cssVars.colors.primary,
                     color: cssVars.colors.background,
-                    padding: `2px ${cssVars.spacing.sm}`,
+                    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
                     borderRadius: cssVars.borderRadius.sm,
                     fontSize: cssVars.fontSizes.xs,
                     fontWeight: cssVars.fontWeights.semibold,
@@ -682,14 +679,14 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             {activeMatch && (
               <div style={{
                 backgroundColor: cssVars.colors.surface,
-                boxShadow: `0 8px 24px ${cssVars.colors.surfaceDark}`,
+                boxShadow: cssVars.shadows.lg,
                 borderRadius: cssVars.borderRadius.md,
-                border: `3px solid ${cssVars.colors.primary}`,
+                border: `${cssVars.borderWidth.strong} solid ${cssVars.colors.primary}`,
                 padding: cssVars.spacing.md,
                 display: 'flex',
                 alignItems: 'center',
                 gap: cssVars.spacing.sm,
-                minWidth: '280px',
+                minWidth: cssVars.sizing.dragOverlayMinWidth,
                 maxWidth: '100%',
                 cursor: 'grabbing',
                 height: '100%', // Match height
@@ -755,6 +752,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
       )}
 
       {menu.element}
+      {resultSheet}
 
       <style>{`
         /* Hide mobile view by default */
@@ -773,18 +771,18 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
         }
 
         /* Tablet: Keep table but adjust sizing */
-        @media (min-width: 768px) and (max-width: 1024px) {
+        ${mediaQueries.tabletBand} {
           .group-stage-schedule table {
-            font-size: 12px;
+            font-size: ${cssVars.fontSizes.sm};
           }
           .group-stage-schedule th,
           .group-stage-schedule td {
-            padding: 8px 6px;
+            padding: ${cssVars.spacing.sm} ${cssVars.spacing.xs};
           }
         }
 
         /* Print: Always use table layout */
-        @media print {
+        ${mediaQueries.print} {
           .group-stage-schedule {
             break-inside: avoid;
           }

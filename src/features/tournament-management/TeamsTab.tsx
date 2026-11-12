@@ -13,7 +13,8 @@
 
 import { useState, CSSProperties, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card, Input, Button, TeamAvatar, ColorPicker, LogoUploadDialog } from '../../components/ui';
+import { Card, Input, Button, TeamAvatar, LogoUploadDialog } from '../../components/ui';
+import { TeamColorField } from './components/TeamColorField';
 import { Tournament, Team, TeamLogo } from '../../types/tournament';
 import { cssVars, dialogWidths } from '../../design-tokens'
 import {
@@ -303,7 +304,6 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     border: `1px solid ${cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.lg,
     marginBottom: cssVars.spacing.md,
-    overflow: 'hidden',
     transition: 'border-color 0.2s ease',
   };
 
@@ -343,7 +343,8 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     transition: 'transform 0.2s ease',
   };
 
-  const expandedSectionStyle: CSSProperties = { borderTop: `1px solid ${cssVars.colors.border}`, padding: cssVars.spacing.lg, background: cssVars.colors.surfaceVariant };
+  // Die Karte schneidet nicht ab (der Farbwähler ragt über sie hinaus): der graue Bereich trägt die unteren Rundungen selbst
+  const expandedSectionStyle: CSSProperties = { borderTop: `1px solid ${cssVars.colors.border}`, padding: cssVars.spacing.lg, background: cssVars.colors.surfaceVariant, borderRadius: `0 0 ${cssVars.borderRadius.lg} ${cssVars.borderRadius.lg}` };
 
   const expandedRowStyle: CSSProperties = {
     display: 'flex',
@@ -551,10 +552,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                           {/* Color Section */}
                           <div style={expandedRowStyle}>
                             <span style={expandedLabelStyle}>{t('teams.jerseyColorLabel')}</span>
-                            <ColorPicker
-                              value={primaryColor}
-                              onChange={(color) => handleColorChange(team.id, color)}
-                            />
+                            <TeamColorField value={primaryColor} onCommit={(color) => handleColorChange(team.id, color)} />
                           </div></>}
 
                           {/* Action Buttons */}

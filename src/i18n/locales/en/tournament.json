@@ -132,6 +132,8 @@
       "endPending": "Pending entries must be sent first – please try again in a moment",
       "endTitle": "End match and enter result",
       "endQuestionRunning": "Match {{number}} is still running – the clock shows {{rest}} remaining. End it now at {{score}}?",
+      "endConfirmRunning": "End match",
+      "endCancelRunning": "Cancel",
       "endQuestionExpired": "Playing time is up – end it now at {{score}}?",
       "endControlledBy": "Field {{field}} is currently controlled by {{name}}",
       "endControlledByOther": "Field {{field}} is currently controlled by another device",
@@ -146,6 +148,8 @@
       "staleNoName": "Match {{number}} was changed in the meantime (now {{score}})",
       "skippedTitle": "Match {{number}} called off",
       "skippedQuestion": "This match was called off – enter a result anyway?",
+      "futureTitle": "Match {{number}} has not started yet",
+      "futureQuestion": "Match {{number}} is only scheduled for {{time}}. Enter the result anyway?",
       "yes": "Yes",
       "no": "No",
       "reasonTitle": "Change result of match {{number}}",
@@ -312,6 +316,20 @@
       "change": "Change logo",
       "upload": "Upload logo",
       "remove": "Remove logo"
+    },
+    "jerseyColorNames": {
+      "white": "White",
+      "black": "Black",
+      "red": "Red",
+      "blue": "Blue",
+      "green": "Green",
+      "yellow": "Yellow",
+      "orange": "Orange",
+      "purple": "Purple",
+      "pink": "Pink",
+      "teal": "Teal",
+      "gray": "Gray",
+      "brown": "Brown"
     },
     "jerseyColorLabel": "Jersey color:",
     "rename": "Rename",
@@ -776,6 +794,20 @@
     "ariaLabel": "Match is currently running",
     "live": "Live"
   },
+  "resultSheet": {
+    "title": "Final result, match {{number}}",
+    "cockpitScore": "Score in the cockpit {{score}}",
+    "endsMatch": "Saving ends the match.",
+    "cockpitNote": "You enter goals during the match in the cockpit",
+    "toCockpit": "Go to cockpit",
+    "close": "Close",
+    "team": "Team",
+    "goals": "Goals",
+    "minus": "Decrease goals for {{team}}",
+    "plus": "Increase goals for {{team}}",
+    "cancel": "Cancel",
+    "save": "Save result"
+  },
   "scoreCell": {
     "goalsOf": "Goals {{team}}",
     "homeFallback": "Home",
@@ -784,7 +816,8 @@
     "changedElsewhere": "Result was changed in the meantime by {{name}} (now {{score}})",
     "changedElsewhereNoName": "Result was changed in the meantime on another device (now {{score}})",
     "save": "Save result",
-    "keepDraft": "Keep my entry"
+    "keepDraft": "Keep my entry",
+    "takeOver": "Use {{score}}"
   },
   "sortable": {
     "referee": "Referee",
@@ -1943,6 +1976,9 @@
     "pairing": "{{home}} vs {{away}}",
     "open": "Actions for match {{number}}",
     "close": "Close",
+    "summary": {
+      "planned": "Scheduled"
+    },
     "actions": {
       "enterResult": "Enter result",
       "kickOff": "Start in cockpit",

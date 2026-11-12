@@ -11,6 +11,9 @@
  * - abgesetzt: die Turnierleitung kann trotzdem ein Ergebnis eintragen (@FU-093); vor G2 Spur A öffnete der Tipp auf die Karte
  *   die Schnelleingabe auch bei abgesetzten Spielen (GroupStageSchedule.handleCardClick), die Rückfrage „trotzdem eintragen?“ blieb
  * Beide bleiben, damit keine bestehende Funktion verloren geht.
+ *
+ * Die Aktionen sind eine Menge ohne feste Reihenfolge (@SL-193); welche davon im Blatt gefüllt als Haupttaste zuletzt steht,
+ * sagt `primaryActionOf` (@SL-239).
  */
 import type { ViewMatchStatus } from '../../../core/view';
 
@@ -105,3 +108,25 @@ export function matchActionsFor({ status, rights, wired }: MatchActionInput): Ma
 
 /** Aktionen, die nur mit bekannten Teams gehen: sonst sichtbar, aber gesperrt mit Satz (nie stumm weg). */
 export const NEEDS_BOTH_TEAMS: ReadonlySet<MatchActionId> = new Set<MatchActionId>(['enterResult', 'forfeit']);
+
+/**
+ * Die gefüllte Haupttaste des Blatts (@SL-239): geplant Turnierleitung „Ergebnis eintragen“, geplant Helfer „Zum Cockpit“,
+ * läuft „Zum Cockpit“, beendet Turnierleitung „Ergebnis korrigieren“ (@EK-063), beendet Helfer „Protokoll ansehen“; abgesetzt
+ * „Ergebnis eintragen“. Gewertet: keine (die einzige Aktion nimmt die Wertung zurück und ist keine Hauptsache).
+ * Ist die Taste nicht unter den Aktionen (kein Recht, nicht angeschlossen), gibt es keine Haupttaste.
+ */
+export function primaryActionOf(status: ViewMatchStatus | undefined, actions: readonly MatchActionId[]): MatchActionId | undefined {
+  const wanted: readonly MatchActionId[] = (() => {
+    switch (actionPhaseOf(status)) {
+      case 'planned': return ['enterResult', 'toCockpit'];
+      case 'running': return ['toCockpit'];
+      case 'finished': return ['correct', 'protocol'];
+      case 'cancelled': return ['enterResult'];
+      case 'awarded': return [];
+    }
+  })();
+  return wanted.find((id) => actions.includes(id));
+}
+
+/** Aktionen mit roter Randfarbe im Blatt (@SL-239): was ein Spiel als nicht gespielt wertet. */
+export const DANGER_ACTIONS: ReadonlySet<MatchActionId> = new Set<MatchActionId>(['forfeit']);

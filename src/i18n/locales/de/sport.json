@@ -171,6 +171,13 @@
   "organisations": {
     "bfv": "Bayerischer Fußball-Verband"
   },
+  "hallenton": {
+    "geraet": "Gerät",
+    "ausgang": "Ausgang",
+    "inhalt": "Inhalt",
+    "hallenton": "Hallenton",
+    "hallenLautsprecher": "Hallen-Lautsprecher"
+  },
   "equipment": {
     "bib": "Leibchen"
   }
