@@ -768,6 +768,9 @@
       "fehlgeschlagen": "Bibs not accepted"
     },
     "eigenesTrikotVon": "{{farbe}} – looks like the own jersey of {{team}}",
-    "gleichHellVon": "{{farbe}} – same brightness as the own jersey of {{team}}"
+    "gleichHellVon": "{{farbe}} – same brightness as the own jersey of {{team}}",
+    "teamFrage": "Who wears the bibs?",
+    "ueberschrift": "Bibs for this match · Match {{nummer}}",
+    "ueberschriftOhneNummer": "Bibs for this match"
   }
 }

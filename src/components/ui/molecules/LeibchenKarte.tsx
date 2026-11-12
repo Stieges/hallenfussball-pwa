@@ -8,7 +8,7 @@
  * - `lesen`: ein Gerät ohne Steuerung sieht Karte bzw. Zeile ohne Tasten und das Angebot, das Feld zu übernehmen (@SL-202, @SL-213).
  * Die Wahl ändert nur den Vorschlag; erst „Bestätigen“ stellt die Anzeige um. Rein darstellend, der Aufrufer hält die Daten.
  */
-import { useState, type CSSProperties, type ReactElement } from 'react';
+import { useRef, useState, type CSSProperties, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars, iconSizeValues } from '../../../design-tokens';
 import type { KitSide } from '../../../core/models/kit';
@@ -36,6 +36,8 @@ export interface LeibchenKarteProps {
   onKeine: () => void;
   /** Die Wahl von Team und Farbe ist auf- oder zugeklappt (am Handy weichen dann Tafel und Einträge). */
   onWahlOffen?: ((offen: boolean) => void) | undefined;
+  /** Nummer des Spiels, für das die Karte gilt (im Endstand das NÄCHSTE Spiel, @SL-215); fehlt sie, steht die Überschrift ohne Nummer. */
+  spielNummer?: number | undefined;
   testIdPrefix?: string;
 }
 
@@ -43,6 +45,24 @@ const flaeche: CSSProperties = {
   display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm, padding: cssVars.spacing.sm, background: cssVars.colors.surface,
   borderTop: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`, minWidth: 0,
 };
+/** Die Karte als Handlungsfläche (Mockup Runde 3): getönt mit Rahmen; die Zeile danach ist unauffällig. */
+const karteFlaeche: CSSProperties = {
+  ...flaeche, background: cssVars.colors.warningSubtle, border: `${cssVars.borderWidth.medium} solid ${cssVars.colors.warningBorder}`, borderRadius: cssVars.borderRadius.md,
+  margin: `${cssVars.spacing.xs} ${cssVars.spacing.xs} 0`,
+};
+const ueberschriftStil: CSSProperties = {
+  margin: 0, fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.textSecondary, textTransform: 'uppercase', letterSpacing: '0.04em',
+};
+const wTeil = (farbe: string): CSSProperties => ({ position: 'absolute', top: 0, bottom: 0, left: '30%', right: '30%', background: farbe });
+const wRahmen = (trikot: string): CSSProperties => ({
+  position: 'relative', overflow: 'hidden', flex: 'none', width: cssVars.spacing.xl, height: cssVars.spacing.lg, borderRadius: cssVars.borderRadius.sm,
+  background: trikot, border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}`,
+});
+/** Kleines Westen-Bild: Trikotfarbe außen, Leibchenfarbe in der Mitte (dekorativ, der Satz daneben nennt Team und Farbe). */
+function MiniWeste({ trikot, farbe }: { trikot: string | undefined; farbe: string }): ReactElement {
+  return <span style={wRahmen(trikot ?? cssVars.colors.surfaceDarkMedium)} aria-hidden="true" data-testid="leibchen-weste"><i style={wTeil(farbe === '' ? cssVars.colors.background : farbe)} /></span>;
+}
+
 const taste: CSSProperties = {
   flex: '1 1 0', minWidth: 0, minHeight: cssVars.touchTargets.primary, height: cssVars.touchTargets.primary, background: 'transparent', color: cssVars.colors.textPrimary,
   border: `${cssVars.borderWidth.medium} solid ${cssVars.colors.borderControl}`, borderRadius: cssVars.borderRadius.md, fontFamily: 'inherit',
@@ -63,6 +83,7 @@ export function LeibchenKarte(p: LeibchenKarteProps): ReactElement | null {
   const prefix = p.testIdPrefix ?? 'leibchen';
   const [offen, setOffen] = useState(false);
   const [aendern, setAendern] = useState(false);
+  const zuletzt = useRef(0); // Zeitpunkt des letzten Tipps auf „Bestätigen“/„Keine Leibchen“: ein Doppeltipp öffnet die Zeile nicht wieder (@SL-221)
   const [entwurf, setEntwurf] = useState<{ seite: KitSide; farbe: string } | null>(null);
   const setzeOffen = (wert: boolean): void => { setOffen(wert); p.onWahlOffen?.(wert); };
   const name = (farbe: string): string => t(`anpfiff.farbe.${leibchenFarbName(farbe) ?? 'turnier'}`);
@@ -85,7 +106,7 @@ export function LeibchenKarte(p: LeibchenKarteProps): ReactElement | null {
         {p.lesen ? (
           p.onUebernehmen !== undefined && <button type="button" style={klein} onClick={p.onUebernehmen} data-testid={`${prefix}-uebernehmen`}>{t('leibchenKarte.uebernehmen')}</button>
         ) : (
-          <button type="button" style={klein} onClick={() => { setAendern(true); }} data-testid={`${prefix}-aendern`}>{t('leibchenKarte.aendern')}</button>
+          <button type="button" style={klein} onClick={() => { if (Date.now() - zuletzt.current >= 1000) { setAendern(true); } }} data-testid={`${prefix}-aendern`}>{t('leibchenKarte.aendern')}</button>
         )}
       </div>
     );
@@ -113,7 +134,8 @@ export function LeibchenKarte(p: LeibchenKarteProps): ReactElement | null {
   const schliesse = (): void => { setAendern(false); setEntwurf(null); setzeOffen(false); };
 
   return (
-    <div style={flaeche} role="group" aria-label={t('leibchenKarte.gruppeAria')} data-testid={`${prefix}-karte`}>
+    <div style={karteFlaeche} role="group" aria-label={t('leibchenKarte.gruppeAria')} data-testid={`${prefix}-karte`}>
+      <p style={ueberschriftStil} data-testid={`${prefix}-ueberschrift`}>{p.spielNummer === undefined ? t('leibchenKarte.ueberschriftOhneNummer') : t('leibchenKarte.ueberschrift', { nummer: p.spielNummer })}</p>
       {keinPassendes ? (
         <p style={{ margin: 0, fontWeight: cssVars.fontWeights.semibold }} data-testid={`${prefix}-kein-passendes`}>
           <Icons.AlertTriangle size={iconSizeValues.sm} /> {t('leibchenKarte.keinPassendes')}
@@ -121,7 +143,7 @@ export function LeibchenKarte(p: LeibchenKarteProps): ReactElement | null {
       ) : aktuell !== null && (
         <button type="button" style={vorschlagKnopf} aria-expanded={offen} aria-label={`${satz(aktuell.seite, aktuell.farbe)}. ${t('leibchenKarte.aendernVorschlag')}`}
           disabled={p.lesen} onClick={() => { if (offen) { setEntwurf(null); } setzeOffen(!offen); }} data-testid={`${prefix}-vorschlag`}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: cssVars.spacing.xs, minWidth: 0 }}><MatchIcons.Shirt />{satz(aktuell.seite, aktuell.farbe)}</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: cssVars.spacing.sm, minWidth: 0 }}><MiniWeste trikot={p.trikot[aktuell.seite]} farbe={aktuell.farbe} />{satz(aktuell.seite, aktuell.farbe)}</span>
           {!p.lesen && <span style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary }}>{t('leibchenKarte.aendernVorschlag')} {offen ? '▴' : '▾'}</span>}
         </button>
       )}
@@ -140,7 +162,7 @@ export function LeibchenKarte(p: LeibchenKarteProps): ReactElement | null {
         <div style={{ display: 'flex', gap: cssVars.spacing.sm }}>
           {!keinPassendes && (
             <button type="button" style={taste} data-testid={`${prefix}-bestaetigen`} disabled={aktuell === null || aktuell.farbe === ''}
-              onClick={() => { if (aktuell !== null && aktuell.farbe !== '') { p.onBestaetigen(aktuell.seite, aktuell.farbe); schliesse(); } }}>
+              onClick={() => { if (aktuell !== null && aktuell.farbe !== '') { zuletzt.current = Date.now(); p.onBestaetigen(aktuell.seite, aktuell.farbe); schliesse(); } }}>
               {t('leibchenKarte.bestaetigen')}
             </button>
           )}
@@ -149,7 +171,7 @@ export function LeibchenKarte(p: LeibchenKarteProps): ReactElement | null {
               {t('leibchenKarte.andere')}
             </button>
           )}
-          <button type="button" style={taste} data-testid={`${prefix}-keine`} onClick={() => { p.onKeine(); schliesse(); }}>{t('leibchenKarte.keine')}</button>
+          <button type="button" style={taste} data-testid={`${prefix}-keine`} onClick={() => { zuletzt.current = Date.now(); p.onKeine(); schliesse(); }}>{t('leibchenKarte.keine')}</button>
         </div>
       )}
     </div>

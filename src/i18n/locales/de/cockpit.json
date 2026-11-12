@@ -768,6 +768,9 @@
       "fehlgeschlagen": "Leibchen nicht übernommen"
     },
     "eigenesTrikotVon": "{{farbe}} – sieht aus wie das eigene Trikot von {{team}}",
-    "gleichHellVon": "{{farbe}} – gleich hell wie das eigene Trikot von {{team}}"
+    "gleichHellVon": "{{farbe}} – gleich hell wie das eigene Trikot von {{team}}",
+    "teamFrage": "Wer zieht die Leibchen an?",
+    "ueberschrift": "Leibchen für dieses Spiel · Spiel {{nummer}}",
+    "ueberschriftOhneNummer": "Leibchen für dieses Spiel"
   }
 }

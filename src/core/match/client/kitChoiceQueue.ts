@@ -50,7 +50,7 @@ export interface KitRowState {
 }
 
 type KitChoiceNoticeBody =
-  | { matchId: string; kind: 'rejected'; code: MatchKitRejectionCode; reason?: string }
+  | { matchId: string; kind: 'rejected'; code: MatchKitRejectionCode; reason?: string; hadControl?: boolean }
   | { matchId: string; kind: 'failed' }
   | { matchId: string; kind: 'changedElsewhere' }
   /** Das Spiel wurde angepfiffen, bevor die Wahl den Server erreichte (@SL-229 Zeile 1). */
@@ -231,10 +231,14 @@ export class KitChoiceQueue {
     }
     if (result.kind === 'saved') {
       this.list = this.list.map((e) => (e.seq === entry.seq ? { ...e, status: 'sent' as const } : e));
+      if (result.phase === 'live' && (entry.phase ?? 'before') === 'before') {
+        // @SL-229 Zeile 1: der Server hat die alte Wahl als Nachtrag ins laufende Spiel genommen (ein anderes Gerät hatte angepfiffen) – nicht stumm „gesendet“
+        this.notify({ matchId: entry.matchId, kind: 'tooLate' });
+      }
     } else {
       this.remove(entry);
       this.notify(result.kind === 'rejected'
-        ? { matchId: entry.matchId, kind: 'rejected', code: result.code, ...(result.reason === undefined ? {} : { reason: result.reason }) }
+        ? { matchId: entry.matchId, kind: 'rejected', code: result.code, ...(result.reason === undefined ? {} : { reason: result.reason }), hadControl: entry.controlEpoch !== undefined && entry.controlEpoch !== null }
         : { matchId: entry.matchId, kind: 'failed' });
     }
     this.changed();

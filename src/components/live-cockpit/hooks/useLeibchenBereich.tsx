@@ -3,11 +3,12 @@
  * Nachtragen im laufenden Spiel unter „Mehr“ (@SL-150), der Hinweis auf gleiche Trikotfarben in der Tafel und die Meldungen der Warteschlange in der
  * Meldezeile (@SL-228, @SL-229).
  */
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { KitConflict } from '../../../core/models/kit';
 import { kitHinweis, trikotFarben } from '../../../core/models/kitChoice';
 import type { KitChoiceNotice } from '../../../core/match/client/kitChoiceQueue';
+import { leibchenMeldungKey } from '../model/leibchenMeldung';
 import { LeibchenKarte } from '../../ui/molecules/LeibchenKarte';
 import { LeibchenNachtragen } from '../areas/LeibchenNachtragen';
 import type { MehrPunkt } from '../model/mehrPunkte';
@@ -35,14 +36,13 @@ export interface LeibchenBereich {
 
 export function useLeibchenBereich({ turnier, matchId, zustand, melde, kannSteuern, onUebernehmen }: LeibchenBereichArgs): LeibchenBereich {
   const { t } = useTranslation('cockpit');
-  const [wahlOffen, setWahlOffen] = useState(false);
+  // Die Wahl gilt nur für die Karte, die sie geöffnet hat: verschwindet die Karte (Anpfiff, Spielwechsel), ist sie zu (@SL-237 Zeile 2, @SL-221)
+  const [wahlFuer, setWahlFuer] = useState<string | null>(null);
   const [nachtragOffen, setNachtragOffen] = useState(false);
-  const meldungText = useCallback((n: KitChoiceNotice): string => t(
-    n.kind === 'rejected'
-      ? (n.code === 'NOT_CONTROLLER' && n.reason === 'OTHER_DEVICE' ? 'leibchenKarte.meldung.nurSteuerndes' : n.code === 'TEAMS_CHANGED' ? 'leibchenKarte.meldung.zurueckgenommen' : 'leibchenKarte.meldung.nichtUebernommen')
-      : n.kind === 'changedElsewhere' ? 'leibchenKarte.meldung.anderesGeraet' : n.kind === 'tooLate' ? 'leibchenKarte.meldung.zuSpaet' : 'leibchenKarte.meldung.fehlgeschlagen',
-  ), [t]);
+  const meldungText = useCallback((n: KitChoiceNotice): string => t(`leibchenKarte.meldung.${leibchenMeldungKey(n)}`), [t]);
   const daten = useLeibchenKarte({ tournament: turnier?.tournament, matchId, zustand, melde, meldungText, epoche: turnier?.epoche });
+  const kartenId = daten === null ? null : `${daten.matchId}:${zustand}`;
+  useEffect(() => { if (wahlFuer !== null && wahlFuer !== kartenId) { setWahlFuer(null); } }, [wahlFuer, kartenId]);
   const nachtrag = useLeibchenNachtrag(turnier?.tournament, matchId, turnier?.epoche);
   const farbKonflikt = useMemo(() => {
     const spiel = turnier?.tournament.matches.find((m) => m.id === matchId);
@@ -50,13 +50,13 @@ export function useLeibchenBereich({ turnier, matchId, zustand, melde, kannSteue
   }, [turnier, matchId, zustand]);
   const karte = daten === null ? null : (
     <LeibchenKarte
-      key={daten.matchId} teams={daten.teams} trikot={daten.trikot} hallenFarben={daten.hallenFarben} gewaehlt={daten.gewaehlt}
+      key={kartenId ?? daten.matchId} spielNummer={daten.spielNummer} teams={daten.teams} trikot={daten.trikot} hallenFarben={daten.hallenFarben} gewaehlt={daten.gewaehlt}
       vorschlag={daten.vorschlag} nurFestlegen={daten.nurFestlegen} senden={daten.senden} lesen={!kannSteuern}
-      onUebernehmen={onUebernehmen} onBestaetigen={daten.onBestaetigen} onKeine={daten.onKeine} onWahlOffen={setWahlOffen}
+      onUebernehmen={onUebernehmen} onBestaetigen={daten.onBestaetigen} onKeine={daten.onKeine} onWahlOffen={(offen) => { setWahlFuer(offen ? kartenId : null); }}
     />
   );
   return {
-    wahlOffen, farbKonflikt, karte,
+    wahlOffen: wahlFuer !== null && wahlFuer === kartenId, farbKonflikt, karte,
     mehrAktion: nachtrag ? { leibchenNachtragen: () => { setNachtragOffen(true); } } : {},
     nachtragBlatt: nachtrag && nachtragOffen ? <LeibchenNachtragen isOpen daten={nachtrag} onClose={() => { setNachtragOffen(false); }} /> : null,
   };

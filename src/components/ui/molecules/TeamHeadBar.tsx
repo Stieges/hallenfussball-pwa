@@ -41,15 +41,27 @@ export function TeamHeadBar(props: TeamHeadBarProps): ReactElement {
   return props.kompakt ? <TeamHeadBarKompakt {...props} /> : <TeamHeadBarNormal {...props} />;
 }
 
-/** Weste am Handy: schmale Streifen fester Breite statt eines Anteils der Fläche (der Name behält die Breite, K11). */
+/**
+ * Weste am Handy: schmale Streifen fester Breite statt eines Anteils der Fläche (der Name behält die Breite, K11). Die Fläche des Kopfes ist EINE Farbe
+ * (die der Leibchen); die Streifen sind eigene dekorative Elemente neben dem Text (`Streifen`), kein Farbverlauf unter der Schrift – so misst der
+ * Kontrast (@SL-225) die Schrift gegen die Leibchenfarbe, und `fillTextColor` (dieselbe Regel wie die Ziffer im Kasten) wählt Schwarz oder Weiß.
+ */
 function schmaleWeste(fill: BoxFill): CSSProperties {
   if (fill.kind === 'striped') { return fillSurface(fill); }
   if (fill.kind !== 'vest') { return { backgroundColor: fill.color }; }
-  const breite = cssVars.spacing.sm;
-  return {
-    backgroundColor: fill.center,
-    backgroundImage: `linear-gradient(90deg, ${fill.stripes} ${breite}, ${fill.center} ${breite}, ${fill.center} calc(100% - ${breite}), ${fill.stripes} calc(100% - ${breite}))`,
-  };
+  return { backgroundColor: fill.center, position: 'relative' };
+}
+
+/** Die zwei Streifen der Weste (Trikotfarbe, bei unbekannter Trikotfarbe das graue Muster) links und rechts, hinter dem Rand des Textes. */
+function Streifen({ fill }: { fill: BoxFill }): ReactElement | null {
+  if (fill.kind !== 'vest') { return null; }
+  const flaeche: CSSProperties = { position: 'absolute', top: 0, bottom: 0, width: cssVars.spacing.sm, backgroundColor: fill.stripes, pointerEvents: 'none' };
+  return (
+    <>
+      <i aria-hidden="true" data-teil="streifen" style={{ ...flaeche, left: 0, borderRadius: `${cssVars.borderRadius.md} 0 0 ${cssVars.borderRadius.md}` }} />
+      <i aria-hidden="true" data-teil="streifen" style={{ ...flaeche, right: 0, borderRadius: `0 ${cssVars.borderRadius.md} ${cssVars.borderRadius.md} 0` }} />
+    </>
+  );
 }
 
 /** Ab dieser Wortlänge (z. B. „Oberweiler-Niederstetten“) wird die Schrift am Handy noch kleiner, damit das Wort in eine Zeile passt (kleiner statt getrennt). */
@@ -90,6 +102,7 @@ function TeamHeadBarKompakt({ name, label, fill, bib = null, fuellend = false, t
   };
   return (
     <div style={kopf} data-testid={testId} data-fill={fill.kind} data-kompakt="true" data-color={fillBaseColor(fill)}>
+      <Streifen fill={fill} />
       <span style={seite}>{label}</span>
       <p data-teamname="" data-testid={nameTestId} style={nameStil}>
         {bib && (

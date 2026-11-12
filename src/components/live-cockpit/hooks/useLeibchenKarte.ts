@@ -21,6 +21,8 @@ import type { CockpitZustand } from '../model/cockpitPhase';
 
 export interface LeibchenKarteDaten {
   matchId: string;
+  /** Nummer des Spiels der Karte (im Endstand das nächste Spiel). */
+  spielNummer: number | undefined;
   teams: { a: string; b: string };
   trikot: TrikotFarben;
   hallenFarben: string[];
@@ -86,9 +88,11 @@ export function useLeibchenKarte({ tournament, matchId, zustand, melde, meldungT
     const eintrag = entries.find((e) => e.matchId === ziel.id);
     const hallenFarben = hallenFarbenOf(tournament);
     return {
-      matchId: ziel.id, teams: { a, b }, trikot, hallenFarben, gewaehlt,
+      matchId: ziel.id, spielNummer: ziel.matchNumber, teams: { a, b }, trikot, hallenFarben, gewaehlt,
       vorschlag: kitProposal(trikot, hallenFarben, bibRuleOf(tournament)),
-      nurFestlegen: !noetig, senden: eintrag?.status ?? null,
+      nurFestlegen: !noetig,
+      // Der Eintrag verschwindet, sobald die Zeile des Servers die Wahl zeigt: dann steht dort weiter „gesendet“ (@SL-230)
+      senden: eintrag?.status ?? (gewaehlt === null ? null : 'sent'),
       onBestaetigen: (s, f) => { choose({ matchId: ziel.id, decision: 'bib', bibSide: s, bibColor: f, controlEpoch: epoche }, tournament); },
       onKeine: () => { choose({ matchId: ziel.id, decision: 'none', controlEpoch: epoche }, tournament); },
     };

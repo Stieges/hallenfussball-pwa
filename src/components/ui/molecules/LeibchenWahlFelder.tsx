@@ -29,6 +29,16 @@ export interface LeibchenWahlFelderProps {
 }
 
 const reihe: CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: cssVars.spacing.xs };
+const teamZeile = (gewaehlt: boolean): CSSProperties => ({
+  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: cssVars.spacing.sm, width: '100%', minHeight: cssVars.touchTargets.minimum,
+  padding: `0 ${cssVars.spacing.md}`, textAlign: 'left', fontFamily: 'inherit', fontSize: cssVars.fontSizes.md, fontWeight: cssVars.fontWeights.bold,
+  color: cssVars.colors.textPrimary, background: cssVars.colors.background, cursor: 'pointer', borderRadius: cssVars.borderRadius.md,
+  border: `${gewaehlt ? cssVars.borderWidth.medium : cssVars.borderWidth.thin} solid ${gewaehlt ? cssVars.colors.textPrimary : cssVars.colors.borderControl}`,
+});
+const linkTaste: CSSProperties = {
+  alignSelf: 'flex-start', minHeight: cssVars.touchTargets.minimum, padding: `0 ${cssVars.spacing.xs}`, background: 'transparent', border: 'none',
+  color: cssVars.colors.primary, fontFamily: 'inherit', fontSize: cssVars.fontSizes.md, textDecoration: 'underline', cursor: 'pointer',
+};
 const beschriftung: CSSProperties = { fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, margin: 0 };
 const punkt = (farbe: string): CSSProperties => ({
   width: cssVars.spacing.md, height: cssVars.spacing.md, borderRadius: cssVars.borderRadius.full, background: farbe,
@@ -82,19 +92,19 @@ export function LeibchenWahlFelder(p: LeibchenWahlFelderProps): ReactElement {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm }} data-testid={`${p.testIdPrefix}-wahl`}>
-      <p style={beschriftung}>{t('leibchenKarte.team')}</p>
-      <div style={reihe} role="group" aria-label={t('leibchenKarte.team')}>
+      <p style={beschriftung}>{t('leibchenKarte.teamFrage')}</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.xs }} role="group" aria-label={t('leibchenKarte.teamFrage')}>
         {(['a', 'b'] as const).map((s) => (
-          <ChipButton key={s} selected={p.seite === s} size="minimum" onClick={() => { p.onSeite(s); }} data-testid={`${p.testIdPrefix}-team-${s === 'a' ? 'heim' : 'gast'}`}>
-            {s === 'a' ? p.teams.a : p.teams.b}
-          </ChipButton>
+          <button key={s} type="button" aria-pressed={p.seite === s} style={teamZeile(p.seite === s)} onClick={() => { p.onSeite(s); }} data-testid={`${p.testIdPrefix}-team-${s === 'a' ? 'heim' : 'gast'}`}>
+            <span>{s === 'a' ? p.teams.a : p.teams.b}</span>{p.seite === s && <Icons.Check size={iconSizeValues.md} />}
+          </button>
         ))}
       </div>
       <p style={beschriftung}>{t('leibchenKarte.farbe')}</p>
       <div style={reihe} role="group" aria-label={t('leibchenKarte.farbe')}>
         {halle.map((f) => farbTaste(f, true))}
-        <ChipButton selected={andere} size="minimum" onClick={() => { setAndere(!andere); }} data-testid={`${p.testIdPrefix}-andere`}>{t('leibchenKarte.andere')}</ChipButton>
       </div>
+      <button type="button" style={linkTaste} aria-expanded={andere} onClick={() => { setAndere(!andere); }} data-testid={`${p.testIdPrefix}-andere`}>{t('leibchenKarte.andere')}</button>
       {andere && <div style={reihe} role="group" aria-label={t('leibchenKarte.andere')}>{weitere.map((f) => farbTaste(f, false))}</div>}
       {satz !== null && <p style={{ ...beschriftung, color: cssVars.colors.textPrimary }} role="status" data-testid={`${p.testIdPrefix}-satz`}>{satz}</p>}
     </div>
