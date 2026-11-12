@@ -232,6 +232,15 @@ export class KitChoiceQueue {
     return [...this.seenDecision];
   }
 
+  /** Alles verwerfen (Abmelden, Tests): Einträge, Meldungen und das Gemerkte. */
+  reset(): void {
+    this.list = [];
+    this.noticeList = [];
+    this.seenDecision.clear();
+    this.localStarts = new Set();
+    this.changed();
+  }
+
   dismissNotice(id: string): void {
     const rest = this.noticeList.filter((notice) => notice.id !== id);
     if (rest.length !== this.noticeList.length) {

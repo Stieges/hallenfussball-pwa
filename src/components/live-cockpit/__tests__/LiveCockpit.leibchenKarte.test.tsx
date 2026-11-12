@@ -37,19 +37,21 @@ const SEEON = '00000000-0000-4000-8000-0000000000a4';
 
 const team = (id: string, name: string, primary: string): Team => ({ id, name, colors: { primary } });
 const spiel = (id: string, a: string, b: string, extra: Partial<Match> = {}): Match => ({
-  id, round: 1, field: 1, slotA: teamSlot(a), slotB: teamSlot(b), matchStatus: 'scheduled', scheduledTime: new Date(2026, 10, 28, 10, Number(id.slice(-1)) * 10), ...extra,
+  id, round: 1, field: 1, matchNumber: Number(id.slice(-1)), slotA: teamSlot(a), slotB: teamSlot(b), matchStatus: 'scheduled', scheduledTime: new Date(2026, 10, 28, 10, Number(id.slice(-1)) * 10), ...extra,
 });
 const turnier = (teams: Team[], matches: Match[]): Tournament => ({ id: 'tour-1', teams, matches } as unknown as Tournament);
 const live2 = (extra = {}) => makeLiveMatch({ id: 'spiel-2', number: 2, status: 'NOT_STARTED', elapsedSeconds: 0, homeTeam: { id: WAGING, name: 'TSV Waging 1' }, awayTeam: { id: PETTING, name: 'TSV Petting' }, ...extra });
 const live1 = () => makeLiveMatch({ id: 'spiel-1', number: 1, status: 'FINISHED', homeScore: 2, awayScore: 1, homeTeam: { id: ASCHAU, name: 'SV Aschau' }, awayTeam: { id: SEEON, name: 'FC Seeon' } });
 const gleicheFarbe = [team(WAGING, 'TSV Waging 1', BLAU), team(PETTING, 'TSV Petting', BLAU), team(ASCHAU, 'SV Aschau', ROT), team(SEEON, 'FC Seeon', GELB)];
 
+/** Lässt die Uhr (`Date.now`) um `ms` weiterlaufen: der Schutz gegen den Doppeltipp zählt eine Sekunde. */
+const vergehe = (ms: number): void => { const jetzt = Date.now() + ms; vi.spyOn(Date, 'now').mockReturnValue(jetzt); };
+
 beforeEach(() => {
+  vi.restoreAllMocks();
   // die Warteschlange gehört der Sitzung: jeder Test beginnt ohne Wahl
   localStorage.clear();
-  const queue = kitChoiceQueueFor('guest');
-  queue.discardStarted(new Set(['spiel-1', 'spiel-2']));
-  queue.discardStarted(new Set());
+  kitChoiceQueueFor('guest').reset();
 });
 
 /** Wie die App: die Turnierkopie mit der lokalen Wahl darüber (`useTournamentManager`). */
@@ -137,6 +139,7 @@ describe('@SL-208 @SL-211 nach dem Tipp bleibt eine Zeile, die Tipps bis zum Anp
   it('@SL-208 „Ändern“ öffnet die Karte wieder an ihrem Platz (derselbe Block über der Daumenleiste)', async () => {
     const k = zeige(turnier(gleicheFarbe, [spiel('spiel-2', WAGING, PETTING)]), live2());
     await k.tippe(screen.getByTestId('leibchen-bestaetigen'));
+    vergehe(1100); // ein zweiter Tipp unter einer Sekunde öffnet die Zeile nicht wieder (@SL-221)
     await k.tippe(screen.getByTestId('leibchen-aendern'));
     expect(screen.getByTestId('leibchen-karte').parentElement).toContainElement(screen.getByTestId('match-start-button'));
   });
@@ -150,6 +153,7 @@ describe('@SL-215 die Leibchen lassen sich schon im Endstand klären', () => {
     const karte = screen.getByTestId('leibchen-karte');
     expect(screen.getByTestId('leibchen-vorschlag')).toHaveTextContent('TSV Waging 1 zieht Gelb');
     expect(karte.parentElement).toContainElement(screen.getByTestId('match-next-button'));
+    expect(screen.getByTestId('leibchen-ueberschrift')).toHaveTextContent('Leibchen für dieses Spiel · Spiel 2'); // im Endstand gilt die Karte dem NÄCHSTEN Spiel
   });
 
   it('@SL-215 „Bestätigen“ im Endstand: die Karte schrumpft zur Zeile, „Weiter“ bleibt', async () => {
@@ -226,5 +230,80 @@ describe('@SL-197 vor dem Anpfiff die Spielzeit aus den Regeln (neben der Karte)
     render(<LiveCockpit {...makeProps(makeLiveMatch({ id: 'spiel-12', number: 12, status: 'NOT_STARTED', elapsedSeconds: 0 }), { spielzeit: { abschnitte: 2, abschnittSekunden: 240 } })} />);
     expect(screen.getByTestId('scoreboard-clock-vorsatz')).toHaveTextContent('2 ×');
     expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('4:00');
+  });
+});
+
+describe('@SL-237 @SL-221 die offene Wahl wird verlassen (am Handy)', () => {
+  const handy = (): void => { window.innerWidth = 360; window.dispatchEvent(new Event('resize')); };
+  const breit = (): void => { window.innerWidth = 1024; window.dispatchEvent(new Event('resize')); };
+  const basis = (status: Match['matchStatus'] = 'scheduled') => turnier(gleicheFarbe, [spiel('spiel-1', ASCHAU, SEEON, { matchStatus: 'finished' }), spiel('spiel-2', WAGING, PETTING, { matchStatus: status })]);
+
+  it('@SL-237 Zeile 2: Tom pfeift bei offener Wahl an – Karte und offene Wahl sind weg, die Tafel und die Tasten sind im laufenden Spiel wieder da (nichts bleibt versteckt)', async () => {
+    handy();
+    const props = makeProps(live2());
+    const k = zeige(basis(), live2());
+    await k.tippe(screen.getByTestId('leibchen-vorschlag'));
+    expect(screen.getByTestId('live-cockpit')).toHaveAttribute('data-leibchen-offen', 'true');
+    await k.tippe(screen.getByTestId('match-start-button')); // „Keine Leibchen“ gilt (@SL-210), der Anpfiff fragt nicht nach
+    expect(k.props.onStart).toHaveBeenCalledWith('spiel-2');
+    expect(kitChoiceQueueFor('guest').entries()).toHaveLength(0);
+    // das Spiel läuft jetzt
+    k.rerender(<Rahmen basis={basis('running')} props={{ ...props, currentMatch: live2({ status: 'RUNNING', elapsedSeconds: 1 }) }} />);
+    expect(screen.queryByTestId('leibchen-karte')).toBeNull();
+    expect(screen.getByTestId('live-cockpit')).not.toHaveAttribute('data-leibchen-offen');
+    breit();
+  });
+
+  it('@SL-237 Zeile 3: die Wahl blieb im Endstand offen und die 30 Sekunden laufen ab – das nächste Spiel zeigt die Karte mit dem alten Vorschlag, Orange gilt nicht, die Wahl ist zu', async () => {
+    handy();
+    const props = makeProps(live1(), { upcomingMatches: [live2()] });
+    const k = zeige(basis(), live1(), { upcomingMatches: [live2()] });
+    await k.tippe(screen.getByTestId('leibchen-vorschlag'));
+    await k.tippe(screen.getByTestId('leibchen-andere'));
+    await k.tippe(screen.getByTestId('leibchen-farbe-orange'));
+    k.rerender(<Rahmen basis={basis()} props={{ ...props, currentMatch: live2(), upcomingMatches: [] }} />);
+    expect(screen.getByTestId('leibchen-vorschlag')).toHaveTextContent('TSV Waging 1 zieht Gelb');
+    expect(screen.queryByTestId('leibchen-wahl')).toBeNull();
+    expect(screen.getByTestId('live-cockpit')).not.toHaveAttribute('data-leibchen-offen');
+    await k.tippe(screen.getByTestId('leibchen-bestaetigen'));
+    expect(kitChoiceQueueFor('guest').entries()[0]).toMatchObject({ bibColor: GELB });
+    breit();
+  });
+
+  it('@SL-237 Zeile 5: nach dem Neuladen (neue Ansicht) steht die Karte mit dem alten Vorschlag, eine offene Wahl wird nicht gespeichert', async () => {
+    const k = zeige(basis(), live2());
+    await k.tippe(screen.getByTestId('leibchen-vorschlag'));
+    await k.tippe(screen.getByTestId('leibchen-andere'));
+    await k.tippe(screen.getByTestId('leibchen-farbe-orange'));
+    k.unmount();
+    zeige(basis(), live2());
+    expect(screen.getByTestId('leibchen-vorschlag')).toHaveTextContent('TSV Waging 1 zieht Gelb');
+    expect(screen.queryByTestId('leibchen-wahl')).toBeNull();
+  });
+});
+
+describe('@SL-202 @SL-230 @SL-212 Epoche, Status aus der Zeile, zurückgenommene Wahl', () => {
+  const basis = (extra: Partial<Match> = {}) => turnier(gleicheFarbe, [spiel('spiel-2', WAGING, PETTING, extra)]);
+
+  it('@SL-202 „Bestätigen“ geht mit der Epoche der Feldsteuerung zum Server (p_control_epoch), „Keine Leibchen“ ebenso', async () => {
+    const k = zeige(basis(), live2());
+    await k.tippe(screen.getByTestId('leibchen-bestaetigen'));
+    expect(kitChoiceQueueFor('guest').entries()[0]).toMatchObject({ decision: 'bib', controlEpoch: 3, phase: 'before' });
+  });
+
+  it('@SL-230 die Zeile zeigt „gesendet“, solange die Zeile des Servers die Wahl trägt – auch nachdem der Eintrag der Warteschlange abgeschlossen ist', () => {
+    zeige(basis({ kitDecision: 'bib', kit: { a: GELB, bibSide: 'a' } }), live2());
+    expect(screen.getByTestId('leibchen-zeile')).toHaveTextContent('TSV Waging 1 zieht Gelb');
+    expect(screen.getByTestId('leibchen-status')).toHaveTextContent('gesendet');
+    expect(screen.getByTestId('leibchen-status')).not.toHaveTextContent('wird');
+  });
+
+  it('@SL-212 setzt der Server die Wahl nach einem Teamwechsel zurück, sagt das Cockpit „Leibchen zurückgenommen, bitte neu bestätigen“ und die Karte steht wieder da', async () => {
+    const props = makeProps(live2());
+    const k = zeige(basis({ kitDecision: 'bib', kit: { a: GELB, bibSide: 'a' } }), live2());
+    expect(screen.getByTestId('leibchen-zeile')).toBeInTheDocument();
+    k.rerender(<Rahmen basis={basis()} props={props} />);
+    expect(screen.getByTestId('leibchen-karte')).toBeInTheDocument();
+    expect(await screen.findByText('Leibchen zurückgenommen, bitte neu bestätigen')).toBeInTheDocument();
   });
 });

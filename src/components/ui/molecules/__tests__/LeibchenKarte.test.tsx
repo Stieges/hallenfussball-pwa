@@ -295,3 +295,40 @@ describe('@SL-237 die offene Wahl wird verlassen', () => {
     expect(onWahlOffen).toHaveBeenLastCalledWith(false);
   });
 });
+
+describe('@SL-221 Doppeltipp: die Zeile liegt an derselben Stelle wie die Taste', () => {
+  it('@SL-221 nach „Bestätigen“ schrumpft die Karte zur Zeile; ein zweiter Tipp unter 1 s auf „Ändern“ öffnet sie nicht wieder, nach 1 s geht es', async () => {
+    const k = aufbau();
+    await k.tippe(byId('bestaetigen'));
+    k.rerender(<LeibchenKarte {...k.props} gewaehlt={{ art: 'bestaetigt', seite: 'a', farbe: GELB }} />);
+    await k.tippe(byId('aendern')); // der Daumen tippt noch einmal an dieselbe Stelle
+    expect(screen.queryByTestId('leibchen-karte')).toBeNull();
+    expect(byId('zeile')).toBeInTheDocument();
+    const jetzt = Date.now() + 1100;
+    vi.spyOn(Date, 'now').mockReturnValue(jetzt);
+    await k.tippe(byId('aendern'));
+    expect(byId('karte')).toBeInTheDocument();
+    vi.restoreAllMocks();
+  });
+
+  it('@SL-221 dasselbe nach „Keine Leibchen“', async () => {
+    const k = aufbau();
+    await k.tippe(byId('keine'));
+    k.rerender(<LeibchenKarte {...k.props} gewaehlt={{ art: 'keine' }} />);
+    await k.tippe(byId('aendern'));
+    expect(screen.queryByTestId('leibchen-karte')).toBeNull();
+  });
+
+  it('@SL-206 die Überschrift „Leibchen für dieses Spiel · Spiel 3“ steht immer auf der Karte (im Endstand gilt sie dem nächsten Spiel)', () => {
+    aufbau({ spielNummer: 3 });
+    expect(byId('ueberschrift')).toHaveTextContent('Leibchen für dieses Spiel · Spiel 3');
+  });
+
+  it('@SL-206 Gegenbeispiel: ohne Nummer steht die Überschrift ohne Nummer, die Zeile trägt keine Überschrift', () => {
+    const { unmount } = aufbau();
+    expect(byId('ueberschrift')).toHaveTextContent(/^Leibchen für dieses Spiel$/);
+    unmount();
+    aufbau({ gewaehlt: { art: 'keine' } });
+    expect(screen.queryByTestId('leibchen-ueberschrift')).toBeNull();
+  });
+});
