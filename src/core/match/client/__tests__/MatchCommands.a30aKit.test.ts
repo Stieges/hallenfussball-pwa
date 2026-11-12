@@ -12,8 +12,9 @@ import { ClockSync } from '../ClockSync';
 import { MatchEngine } from '../MatchEngine';
 import { MatchCommands } from '../MatchCommands';
 import { applyEngineOverlay, engineOverlayFields } from '../applyEngineOverlay';
-import { kitFromEvents } from '../matchKitFromEvents';
-import { DEFAULT_BIB_COLOR, defaultKit, kitWithBib, wornColors } from '../../../models/kit';
+import { kitFromEvents, kitStartsOf, projectKitState } from '../matchKitFromEvents';
+import { DEFAULT_BIB_COLOR, kitWithBib, wornColors } from '../../../models/kit';
+import { kitBeimAnpfiff } from '../../../models/kitAnpfiff';
 import { teamSlot } from '../../../models/matchSlot';
 import type { Match, Team } from '../../../../types/tournament';
 import { B07_CTX, B07_RULES, KICKOFF_AT, kickoff, makeHarness } from './commandHarness';
@@ -63,13 +64,13 @@ describe('A-30a startMatch(…, kit): Anpfiff trägt die getragenen Farben', () 
   it('@SL-138 ohne Farbkonflikt: Anpfiff ohne weiteren Schritt, kit geht ohne Leibchen mit', async () => {
     const teams = [team(SV_SUED, 'SV Süd', ROT), team(TSV_OST, 'TSV Ost', WEISS)];
     const h = makeHarness([], KICKOFF_AT);
-    await h.commands.start(ID, B07_CTX, 'leitung', B07_RULES, defaultKit(spiel(ID, SV_SUED, TSV_OST), teams, {}));
+    await h.commands.start(ID, B07_CTX, 'leitung', B07_RULES, kitBeimAnpfiff(spiel(ID, SV_SUED, TSV_OST), teams, undefined));
     expect(h.stored[0].payload).toEqual({ rules: B07_RULES, kit: { a: ROT, b: WEISS } });
   });
 
   it('@W3-028 auch ohne eingetragene Farben geht kit beim Anpfiff mit (leeres Objekt hält „keine Farbe“ fest)', async () => {
     const h = makeHarness([], KICKOFF_AT);
-    await h.commands.start(ID, B07_CTX, 'leitung', B07_RULES, defaultKit(spiel(ID, SV_SUED, TSV_OST), [], {}));
+    await h.commands.start(ID, B07_CTX, 'leitung', B07_RULES, kitBeimAnpfiff(spiel(ID, SV_SUED, TSV_OST), [], undefined));
     expect(h.stored[0].payload).toEqual({ rules: B07_RULES, kit: {} });
   });
 
@@ -172,11 +173,11 @@ describe('A-30a Offline-Reihenfolge: die Farbe kommt mit genau diesem Ereignis a
     }
     // Lokale Ansicht vor und nach dem Senden gleich: Farbe aus dem eigenen MATCH_START.
     const view = engine.view(ID);
-    expect(view && engineOverlayFields(view, B07_CTX).kit).toEqual(kit);
+    expect(view && projectKitState({}, engineOverlayFields(view, B07_CTX).kitStarts).kit).toEqual(kit);
   });
 });
 
 function overlayOf(log: Parameters<typeof kitFromEvents>[0]) {
   return { scoreA: 0, scoreB: 0, overtimeScoreA: undefined, overtimeScoreB: undefined, penaltyScoreA: undefined,
-    penaltyScoreB: undefined, decidedBy: undefined, forfeitAbsent: undefined, kit: kitFromEvents(log) };
+    penaltyScoreB: undefined, decidedBy: undefined, forfeitAbsent: undefined, kitStarts: kitStartsOf(log) };
 }

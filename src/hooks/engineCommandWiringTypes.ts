@@ -23,7 +23,7 @@ export interface GoalHandlerOptions {
 }
 
 export interface EngineCommandHandlers {
-  /** `leibchen`: Wahl der Anpfiff-Ansicht (@SL-137, @SL-149); ohne Angabe die Vorbelegung (`defaultKit`). */
+  /** `leibchen`: Wahl der Anpfiff-Ansicht (@SL-137, @SL-149); ohne Angabe gilt, was Tom auf der Karte getippt hat, und sonst keine Leibchen (@SL-210). */
   handleStart: (matchId: string, leibchen?: LeibchenWahl) => Promise<boolean>;
   handlePause: (matchId: string) => Promise<string | null>;
   handleResume: (matchId: string) => Promise<string | null>;

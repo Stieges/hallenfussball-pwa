@@ -5,7 +5,7 @@
 import type { Match } from '../../types/tournament';
 import { DEFAULT_CLOCK_MODE } from '../match/clockDisplay';
 import { serverRules } from '../match/client/serverRules';
-import { normalizeKitColor, wornColors, type KitSide } from '../models/kit';
+import { normalizeKitColor, shownBibSide, wornColors } from '../models/kit';
 import { slotTeamId } from '../models/matchSlot';
 import { resolveBoxColors } from '../models/scoreBoxColors';
 import { parseSpectatorDisplay, type SpectatorDisplaySettings } from '../models/spectatorDisplay';
@@ -108,7 +108,7 @@ function clockRulesOf(match: Match, input: TournamentViewInput): SpectatorClockR
  * beides fehlt, die Standardfarbe der Seite (D-3). D.1 setzt `match.kit?.shirt ??` davor (bis dahin Lücke @ZM-163).
  */
 export function matchBoxes(match: Match, teams: TournamentViewInput['teams'], settings: SpectatorDisplaySettings): MatchView['boxes'] {
-  const bibSide: KitSide | undefined = match.kit?.bibSide;
+  const bibSide = shownBibSide(match);
   const bibTeamId = bibSide === undefined ? undefined : slotTeamId(bibSide === 'a' ? match.slotA : match.slotB);
   const shirt = bibTeamId === undefined ? undefined : normalizeKitColor(teams.find((t) => t.id === bibTeamId)?.colors?.primary);
   const open = { a: slotTeamId(match.slotA) === undefined, b: slotTeamId(match.slotB) === undefined };

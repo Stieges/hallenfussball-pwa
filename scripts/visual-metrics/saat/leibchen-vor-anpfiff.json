@@ -1,0 +1,1755 @@
+{
+  "formatVersion": 1,
+  "name": "leibchen-vor-anpfiff",
+  "beschreibung": "Leibchen vor dem Anpfiff (Leibchen 2b): Spiel 2 SV Aschau 2:1 FC Seeon beendet, Spiel 3 TSV Waging 1 gegen TSV Petting beginnt gleich; ein Turnier je Fall 7a bis 7e der Bildfreigabe und ein Fall mit langem Namen.",
+  "datenbanken": [
+    {
+      "name": "hallenfussball",
+      "version": 1,
+      "store": "cache",
+      "eintraege": {
+        "tournaments": [
+          {
+            "sport": "football",
+            "sportId": "football-indoor",
+            "tournamentType": "classic",
+            "mode": "classic",
+            "numberOfFields": 1,
+            "numberOfTeams": 4,
+            "groupSystem": "roundRobin",
+            "numberOfGroups": 1,
+            "groupPhaseGameDuration": 10,
+            "groupPhaseBreakDuration": 2,
+            "finalRoundGameDuration": 10,
+            "finalRoundBreakDuration": 2,
+            "breakBetweenPhases": 5,
+            "gamePeriods": 1,
+            "halftimeBreak": 1,
+            "placementLogic": [
+              {
+                "id": "points",
+                "enabled": true
+              },
+              {
+                "id": "directComparison",
+                "enabled": true
+              },
+              {
+                "id": "goalDifference",
+                "enabled": true
+              },
+              {
+                "id": "goalsFor",
+                "enabled": true
+              }
+            ],
+            "placementsToPlayOut": [
+              1
+            ],
+            "finals": {
+              "final": false,
+              "thirdPlace": false,
+              "fifthSixth": false,
+              "seventhEighth": false
+            },
+            "finalsConfig": {
+              "preset": "none",
+              "tiebreaker": "overtime-then-shootout",
+              "tiebreakerDuration": 5
+            },
+            "refereeConfig": {
+              "mode": "none"
+            },
+            "isKidsTournament": false,
+            "hideScoresForPublic": false,
+            "hideRankingsForPublic": false,
+            "resultMode": "goals",
+            "pointSystem": {
+              "win": 3,
+              "draw": 1,
+              "loss": 0
+            },
+            "isPublic": true,
+            "title": "Leibchen vor dem Anpfiff",
+            "ageClass": "U11",
+            "date": "@heute",
+            "timeSlot": "09:00 - 16:00",
+            "location": {
+              "name": "Sporthalle Waging"
+            },
+            "teams": [
+              {
+                "id": "0000000b-0000-4000-8000-000000000001",
+                "name": "SV Aschau",
+                "colors": {
+                  "primary": "#C62828"
+                }
+              },
+              {
+                "id": "0000000b-0000-4000-8000-000000000002",
+                "name": "FC Seeon",
+                "colors": {
+                  "primary": "#2E7D32"
+                }
+              },
+              {
+                "id": "0000000b-0000-4000-8000-000000000003",
+                "name": "TSV Waging 1",
+                "colors": {
+                  "primary": "#1565C0"
+                }
+              },
+              {
+                "id": "0000000b-0000-4000-8000-000000000004",
+                "name": "TSV Petting",
+                "colors": {
+                  "primary": "#1565C0"
+                }
+              }
+            ],
+            "matches": [
+              {
+                "id": "0000000b-0000-4000-9000-000000000001",
+                "round": 1,
+                "field": 1,
+                "slot": 0,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000004"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:00:00.000Z",
+                "matchNumber": 1,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000002",
+                "round": 2,
+                "field": 1,
+                "slot": 1,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000002"
+                },
+                "scoreA": 2,
+                "scoreB": 1,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:12:00.000Z",
+                "matchNumber": 2,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000003",
+                "round": 3,
+                "field": 1,
+                "slot": 3,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000003"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000004"
+                },
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "@jetzt+240s",
+                "matchNumber": 3,
+                "matchStatus": "scheduled"
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000004",
+                "round": 4,
+                "field": 1,
+                "slot": 4,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000003"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:36:00.000Z",
+                "matchNumber": 4,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000005",
+                "round": 5,
+                "field": 1,
+                "slot": 6,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000002"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:48:00.000Z",
+                "matchNumber": 5,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000006",
+                "round": 6,
+                "field": 1,
+                "slot": 7,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000003"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000004"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T09:00:00.000Z",
+                "matchNumber": 6,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              }
+            ],
+            "status": "published",
+            "createdAt": "2026-12-06T08:00:00.000Z",
+            "updatedAt": "2026-12-06T08:00:00.000Z",
+            "lastVisitedStep": 6,
+            "id": "leibchen-7a",
+            "startDate": "@heute",
+            "startTime": "09:00",
+            "bibColor": "#FFCC00",
+            "shareCode": "LBX2A7",
+            "shareCodeCreatedAt": "2026-12-06T08:00:00.000Z",
+            "monitors": [
+              {
+                "id": "mon-live",
+                "name": "Folie Live",
+                "defaultSlideDuration": 15,
+                "transition": "none",
+                "transitionDuration": 0,
+                "theme": "dark",
+                "performanceMode": "auto",
+                "slides": [
+                  {
+                    "id": "s-live",
+                    "type": "live",
+                    "config": {
+                      "fieldId": "field-1"
+                    },
+                    "order": 0,
+                    "duration": null
+                  }
+                ],
+                "createdAt": "2026-12-06T08:00:00.000Z",
+                "updatedAt": "2026-12-06T08:00:00.000Z"
+              }
+            ],
+            "publishedAt": "2026-12-06T08:00:00.000Z"
+          },
+          {
+            "sport": "football",
+            "sportId": "football-indoor",
+            "tournamentType": "classic",
+            "mode": "classic",
+            "numberOfFields": 1,
+            "numberOfTeams": 4,
+            "groupSystem": "roundRobin",
+            "numberOfGroups": 1,
+            "groupPhaseGameDuration": 10,
+            "groupPhaseBreakDuration": 2,
+            "finalRoundGameDuration": 10,
+            "finalRoundBreakDuration": 2,
+            "breakBetweenPhases": 5,
+            "gamePeriods": 1,
+            "halftimeBreak": 1,
+            "placementLogic": [
+              {
+                "id": "points",
+                "enabled": true
+              },
+              {
+                "id": "directComparison",
+                "enabled": true
+              },
+              {
+                "id": "goalDifference",
+                "enabled": true
+              },
+              {
+                "id": "goalsFor",
+                "enabled": true
+              }
+            ],
+            "placementsToPlayOut": [
+              1
+            ],
+            "finals": {
+              "final": false,
+              "thirdPlace": false,
+              "fifthSixth": false,
+              "seventhEighth": false
+            },
+            "finalsConfig": {
+              "preset": "none",
+              "tiebreaker": "overtime-then-shootout",
+              "tiebreakerDuration": 5
+            },
+            "refereeConfig": {
+              "mode": "none"
+            },
+            "isKidsTournament": false,
+            "hideScoresForPublic": false,
+            "hideRankingsForPublic": false,
+            "resultMode": "goals",
+            "pointSystem": {
+              "win": 3,
+              "draw": 1,
+              "loss": 0
+            },
+            "isPublic": true,
+            "title": "Leibchen vor dem Anpfiff",
+            "ageClass": "U11",
+            "date": "@heute",
+            "timeSlot": "09:00 - 16:00",
+            "location": {
+              "name": "Sporthalle Waging"
+            },
+            "teams": [
+              {
+                "id": "0000000b-0000-4000-8000-000000000001",
+                "name": "SV Aschau",
+                "colors": {
+                  "primary": "#C62828"
+                }
+              },
+              {
+                "id": "0000000b-0000-4000-8000-000000000002",
+                "name": "FC Seeon",
+                "colors": {
+                  "primary": "#2E7D32"
+                }
+              },
+              {
+                "id": "0000000b-0000-4000-8000-000000000003",
+                "name": "TSV Waging 1",
+                "colors": {
+                  "primary": "#1565C0"
+                }
+              },
+              {
+                "id": "0000000b-0000-4000-8000-000000000004",
+                "name": "TSV Petting",
+                "colors": {
+                  "primary": "#1565C0"
+                }
+              }
+            ],
+            "matches": [
+              {
+                "id": "0000000b-0000-4000-9000-000000000001",
+                "round": 1,
+                "field": 1,
+                "slot": 0,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000004"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:00:00.000Z",
+                "matchNumber": 1,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000002",
+                "round": 2,
+                "field": 1,
+                "slot": 1,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000002"
+                },
+                "scoreA": 2,
+                "scoreB": 1,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:12:00.000Z",
+                "matchNumber": 2,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000003",
+                "round": 3,
+                "field": 1,
+                "slot": 3,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000003"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000004"
+                },
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "@jetzt+240s",
+                "matchNumber": 3,
+                "matchStatus": "scheduled",
+                "kitDecision": "bib",
+                "kit": {
+                  "a": "#FFCC00",
+                  "bibSide": "a"
+                }
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000004",
+                "round": 4,
+                "field": 1,
+                "slot": 4,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000003"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:36:00.000Z",
+                "matchNumber": 4,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000005",
+                "round": 5,
+                "field": 1,
+                "slot": 6,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000002"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:48:00.000Z",
+                "matchNumber": 5,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000006",
+                "round": 6,
+                "field": 1,
+                "slot": 7,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000003"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000004"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T09:00:00.000Z",
+                "matchNumber": 6,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              }
+            ],
+            "status": "published",
+            "createdAt": "2026-12-06T08:00:00.000Z",
+            "updatedAt": "2026-12-06T08:00:00.000Z",
+            "lastVisitedStep": 6,
+            "id": "leibchen-7b",
+            "startDate": "@heute",
+            "startTime": "09:00",
+            "bibColor": "#FFCC00",
+            "shareCode": "LBX2B7",
+            "shareCodeCreatedAt": "2026-12-06T08:00:00.000Z",
+            "monitors": [
+              {
+                "id": "mon-live",
+                "name": "Folie Live",
+                "defaultSlideDuration": 15,
+                "transition": "none",
+                "transitionDuration": 0,
+                "theme": "dark",
+                "performanceMode": "auto",
+                "slides": [
+                  {
+                    "id": "s-live",
+                    "type": "live",
+                    "config": {
+                      "fieldId": "field-1"
+                    },
+                    "order": 0,
+                    "duration": null
+                  }
+                ],
+                "createdAt": "2026-12-06T08:00:00.000Z",
+                "updatedAt": "2026-12-06T08:00:00.000Z"
+              }
+            ],
+            "publishedAt": "2026-12-06T08:00:00.000Z"
+          },
+          {
+            "sport": "football",
+            "sportId": "football-indoor",
+            "tournamentType": "classic",
+            "mode": "classic",
+            "numberOfFields": 1,
+            "numberOfTeams": 4,
+            "groupSystem": "roundRobin",
+            "numberOfGroups": 1,
+            "groupPhaseGameDuration": 10,
+            "groupPhaseBreakDuration": 2,
+            "finalRoundGameDuration": 10,
+            "finalRoundBreakDuration": 2,
+            "breakBetweenPhases": 5,
+            "gamePeriods": 1,
+            "halftimeBreak": 1,
+            "placementLogic": [
+              {
+                "id": "points",
+                "enabled": true
+              },
+              {
+                "id": "directComparison",
+                "enabled": true
+              },
+              {
+                "id": "goalDifference",
+                "enabled": true
+              },
+              {
+                "id": "goalsFor",
+                "enabled": true
+              }
+            ],
+            "placementsToPlayOut": [
+              1
+            ],
+            "finals": {
+              "final": false,
+              "thirdPlace": false,
+              "fifthSixth": false,
+              "seventhEighth": false
+            },
+            "finalsConfig": {
+              "preset": "none",
+              "tiebreaker": "overtime-then-shootout",
+              "tiebreakerDuration": 5
+            },
+            "refereeConfig": {
+              "mode": "none"
+            },
+            "isKidsTournament": false,
+            "hideScoresForPublic": false,
+            "hideRankingsForPublic": false,
+            "resultMode": "goals",
+            "pointSystem": {
+              "win": 3,
+              "draw": 1,
+              "loss": 0
+            },
+            "isPublic": true,
+            "title": "Leibchen vor dem Anpfiff",
+            "ageClass": "U11",
+            "date": "@heute",
+            "timeSlot": "09:00 - 16:00",
+            "location": {
+              "name": "Sporthalle Waging"
+            },
+            "teams": [
+              {
+                "id": "0000000b-0000-4000-8000-000000000001",
+                "name": "SV Aschau",
+                "colors": {
+                  "primary": "#C62828"
+                }
+              },
+              {
+                "id": "0000000b-0000-4000-8000-000000000002",
+                "name": "FC Seeon",
+                "colors": {
+                  "primary": "#2E7D32"
+                }
+              },
+              {
+                "id": "0000000b-0000-4000-8000-000000000003",
+                "name": "TSV Waging 1"
+              },
+              {
+                "id": "0000000b-0000-4000-8000-000000000004",
+                "name": "TSV Petting",
+                "colors": {
+                  "primary": "#1565C0"
+                }
+              }
+            ],
+            "matches": [
+              {
+                "id": "0000000b-0000-4000-9000-000000000001",
+                "round": 1,
+                "field": 1,
+                "slot": 0,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000004"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:00:00.000Z",
+                "matchNumber": 1,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000002",
+                "round": 2,
+                "field": 1,
+                "slot": 1,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000002"
+                },
+                "scoreA": 2,
+                "scoreB": 1,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:12:00.000Z",
+                "matchNumber": 2,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000003",
+                "round": 3,
+                "field": 1,
+                "slot": 3,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000003"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000004"
+                },
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "@jetzt+240s",
+                "matchNumber": 3,
+                "matchStatus": "scheduled"
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000004",
+                "round": 4,
+                "field": 1,
+                "slot": 4,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000003"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:36:00.000Z",
+                "matchNumber": 4,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000005",
+                "round": 5,
+                "field": 1,
+                "slot": 6,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000002"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:48:00.000Z",
+                "matchNumber": 5,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000006",
+                "round": 6,
+                "field": 1,
+                "slot": 7,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000003"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000004"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T09:00:00.000Z",
+                "matchNumber": 6,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              }
+            ],
+            "status": "published",
+            "createdAt": "2026-12-06T08:00:00.000Z",
+            "updatedAt": "2026-12-06T08:00:00.000Z",
+            "lastVisitedStep": 6,
+            "id": "leibchen-7c",
+            "startDate": "@heute",
+            "startTime": "09:00",
+            "bibColor": "#FFCC00",
+            "shareCode": "LBX2C7",
+            "shareCodeCreatedAt": "2026-12-06T08:00:00.000Z",
+            "monitors": [
+              {
+                "id": "mon-live",
+                "name": "Folie Live",
+                "defaultSlideDuration": 15,
+                "transition": "none",
+                "transitionDuration": 0,
+                "theme": "dark",
+                "performanceMode": "auto",
+                "slides": [
+                  {
+                    "id": "s-live",
+                    "type": "live",
+                    "config": {
+                      "fieldId": "field-1"
+                    },
+                    "order": 0,
+                    "duration": null
+                  }
+                ],
+                "createdAt": "2026-12-06T08:00:00.000Z",
+                "updatedAt": "2026-12-06T08:00:00.000Z"
+              }
+            ],
+            "publishedAt": "2026-12-06T08:00:00.000Z"
+          },
+          {
+            "sport": "football",
+            "sportId": "football-indoor",
+            "tournamentType": "classic",
+            "mode": "classic",
+            "numberOfFields": 1,
+            "numberOfTeams": 4,
+            "groupSystem": "roundRobin",
+            "numberOfGroups": 1,
+            "groupPhaseGameDuration": 10,
+            "groupPhaseBreakDuration": 2,
+            "finalRoundGameDuration": 10,
+            "finalRoundBreakDuration": 2,
+            "breakBetweenPhases": 5,
+            "gamePeriods": 1,
+            "halftimeBreak": 1,
+            "placementLogic": [
+              {
+                "id": "points",
+                "enabled": true
+              },
+              {
+                "id": "directComparison",
+                "enabled": true
+              },
+              {
+                "id": "goalDifference",
+                "enabled": true
+              },
+              {
+                "id": "goalsFor",
+                "enabled": true
+              }
+            ],
+            "placementsToPlayOut": [
+              1
+            ],
+            "finals": {
+              "final": false,
+              "thirdPlace": false,
+              "fifthSixth": false,
+              "seventhEighth": false
+            },
+            "finalsConfig": {
+              "preset": "none",
+              "tiebreaker": "overtime-then-shootout",
+              "tiebreakerDuration": 5
+            },
+            "refereeConfig": {
+              "mode": "none"
+            },
+            "isKidsTournament": false,
+            "hideScoresForPublic": false,
+            "hideRankingsForPublic": false,
+            "resultMode": "goals",
+            "pointSystem": {
+              "win": 3,
+              "draw": 1,
+              "loss": 0
+            },
+            "isPublic": true,
+            "title": "Leibchen vor dem Anpfiff",
+            "ageClass": "U11",
+            "date": "@heute",
+            "timeSlot": "09:00 - 16:00",
+            "location": {
+              "name": "Sporthalle Waging"
+            },
+            "teams": [
+              {
+                "id": "0000000b-0000-4000-8000-000000000001",
+                "name": "SV Aschau",
+                "colors": {
+                  "primary": "#C62828"
+                }
+              },
+              {
+                "id": "0000000b-0000-4000-8000-000000000002",
+                "name": "FC Seeon",
+                "colors": {
+                  "primary": "#2E7D32"
+                }
+              },
+              {
+                "id": "0000000b-0000-4000-8000-000000000003",
+                "name": "TSV Waging 1"
+              },
+              {
+                "id": "0000000b-0000-4000-8000-000000000004",
+                "name": "TSV Petting",
+                "colors": {
+                  "primary": "#1565C0"
+                }
+              }
+            ],
+            "matches": [
+              {
+                "id": "0000000b-0000-4000-9000-000000000001",
+                "round": 1,
+                "field": 1,
+                "slot": 0,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000004"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:00:00.000Z",
+                "matchNumber": 1,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000002",
+                "round": 2,
+                "field": 1,
+                "slot": 1,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000002"
+                },
+                "scoreA": 2,
+                "scoreB": 1,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:12:00.000Z",
+                "matchNumber": 2,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000003",
+                "round": 3,
+                "field": 1,
+                "slot": 3,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000003"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000004"
+                },
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "@jetzt+240s",
+                "matchNumber": 3,
+                "matchStatus": "scheduled",
+                "kitDecision": "bib",
+                "kit": {
+                  "a": "#FFCC00",
+                  "bibSide": "a"
+                }
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000004",
+                "round": 4,
+                "field": 1,
+                "slot": 4,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000003"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:36:00.000Z",
+                "matchNumber": 4,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000005",
+                "round": 5,
+                "field": 1,
+                "slot": 6,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000002"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:48:00.000Z",
+                "matchNumber": 5,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000006",
+                "round": 6,
+                "field": 1,
+                "slot": 7,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000003"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000004"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T09:00:00.000Z",
+                "matchNumber": 6,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              }
+            ],
+            "status": "published",
+            "createdAt": "2026-12-06T08:00:00.000Z",
+            "updatedAt": "2026-12-06T08:00:00.000Z",
+            "lastVisitedStep": 6,
+            "id": "leibchen-7d",
+            "startDate": "@heute",
+            "startTime": "09:00",
+            "bibColor": "#FFCC00",
+            "shareCode": "LBX2D7",
+            "shareCodeCreatedAt": "2026-12-06T08:00:00.000Z",
+            "monitors": [
+              {
+                "id": "mon-live",
+                "name": "Folie Live",
+                "defaultSlideDuration": 15,
+                "transition": "none",
+                "transitionDuration": 0,
+                "theme": "dark",
+                "performanceMode": "auto",
+                "slides": [
+                  {
+                    "id": "s-live",
+                    "type": "live",
+                    "config": {
+                      "fieldId": "field-1"
+                    },
+                    "order": 0,
+                    "duration": null
+                  }
+                ],
+                "createdAt": "2026-12-06T08:00:00.000Z",
+                "updatedAt": "2026-12-06T08:00:00.000Z"
+              }
+            ],
+            "publishedAt": "2026-12-06T08:00:00.000Z"
+          },
+          {
+            "sport": "football",
+            "sportId": "football-indoor",
+            "tournamentType": "classic",
+            "mode": "classic",
+            "numberOfFields": 1,
+            "numberOfTeams": 4,
+            "groupSystem": "roundRobin",
+            "numberOfGroups": 1,
+            "groupPhaseGameDuration": 10,
+            "groupPhaseBreakDuration": 2,
+            "finalRoundGameDuration": 10,
+            "finalRoundBreakDuration": 2,
+            "breakBetweenPhases": 5,
+            "gamePeriods": 1,
+            "halftimeBreak": 1,
+            "placementLogic": [
+              {
+                "id": "points",
+                "enabled": true
+              },
+              {
+                "id": "directComparison",
+                "enabled": true
+              },
+              {
+                "id": "goalDifference",
+                "enabled": true
+              },
+              {
+                "id": "goalsFor",
+                "enabled": true
+              }
+            ],
+            "placementsToPlayOut": [
+              1
+            ],
+            "finals": {
+              "final": false,
+              "thirdPlace": false,
+              "fifthSixth": false,
+              "seventhEighth": false
+            },
+            "finalsConfig": {
+              "preset": "none",
+              "tiebreaker": "overtime-then-shootout",
+              "tiebreakerDuration": 5
+            },
+            "refereeConfig": {
+              "mode": "none"
+            },
+            "isKidsTournament": false,
+            "hideScoresForPublic": false,
+            "hideRankingsForPublic": false,
+            "resultMode": "goals",
+            "pointSystem": {
+              "win": 3,
+              "draw": 1,
+              "loss": 0
+            },
+            "isPublic": true,
+            "title": "Leibchen vor dem Anpfiff",
+            "ageClass": "U11",
+            "date": "@heute",
+            "timeSlot": "09:00 - 16:00",
+            "location": {
+              "name": "Sporthalle Waging"
+            },
+            "teams": [
+              {
+                "id": "0000000b-0000-4000-8000-000000000001",
+                "name": "SV Aschau",
+                "colors": {
+                  "primary": "#C62828"
+                }
+              },
+              {
+                "id": "0000000b-0000-4000-8000-000000000002",
+                "name": "FC Seeon",
+                "colors": {
+                  "primary": "#2E7D32"
+                }
+              },
+              {
+                "id": "0000000b-0000-4000-8000-000000000003",
+                "name": "TSV Waging 1"
+              },
+              {
+                "id": "0000000b-0000-4000-8000-000000000004",
+                "name": "TSV Petting"
+              }
+            ],
+            "matches": [
+              {
+                "id": "0000000b-0000-4000-9000-000000000001",
+                "round": 1,
+                "field": 1,
+                "slot": 0,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000004"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:00:00.000Z",
+                "matchNumber": 1,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000002",
+                "round": 2,
+                "field": 1,
+                "slot": 1,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000002"
+                },
+                "scoreA": 2,
+                "scoreB": 1,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:12:00.000Z",
+                "matchNumber": 2,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000003",
+                "round": 3,
+                "field": 1,
+                "slot": 3,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000003"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000004"
+                },
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "@jetzt+240s",
+                "matchNumber": 3,
+                "matchStatus": "scheduled"
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000004",
+                "round": 4,
+                "field": 1,
+                "slot": 4,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000003"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:36:00.000Z",
+                "matchNumber": 4,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000005",
+                "round": 5,
+                "field": 1,
+                "slot": 6,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000002"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:48:00.000Z",
+                "matchNumber": 5,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000006",
+                "round": 6,
+                "field": 1,
+                "slot": 7,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000003"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000004"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T09:00:00.000Z",
+                "matchNumber": 6,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              }
+            ],
+            "status": "published",
+            "createdAt": "2026-12-06T08:00:00.000Z",
+            "updatedAt": "2026-12-06T08:00:00.000Z",
+            "lastVisitedStep": 6,
+            "id": "leibchen-7e",
+            "startDate": "@heute",
+            "startTime": "09:00",
+            "bibColor": "#FFCC00",
+            "shareCode": "LBX2E7",
+            "shareCodeCreatedAt": "2026-12-06T08:00:00.000Z",
+            "monitors": [
+              {
+                "id": "mon-live",
+                "name": "Folie Live",
+                "defaultSlideDuration": 15,
+                "transition": "none",
+                "transitionDuration": 0,
+                "theme": "dark",
+                "performanceMode": "auto",
+                "slides": [
+                  {
+                    "id": "s-live",
+                    "type": "live",
+                    "config": {
+                      "fieldId": "field-1"
+                    },
+                    "order": 0,
+                    "duration": null
+                  }
+                ],
+                "createdAt": "2026-12-06T08:00:00.000Z",
+                "updatedAt": "2026-12-06T08:00:00.000Z"
+              }
+            ],
+            "publishedAt": "2026-12-06T08:00:00.000Z"
+          },
+          {
+            "sport": "football",
+            "sportId": "football-indoor",
+            "tournamentType": "classic",
+            "mode": "classic",
+            "numberOfFields": 1,
+            "numberOfTeams": 4,
+            "groupSystem": "roundRobin",
+            "numberOfGroups": 1,
+            "groupPhaseGameDuration": 10,
+            "groupPhaseBreakDuration": 2,
+            "finalRoundGameDuration": 10,
+            "finalRoundBreakDuration": 2,
+            "breakBetweenPhases": 5,
+            "gamePeriods": 1,
+            "halftimeBreak": 1,
+            "placementLogic": [
+              {
+                "id": "points",
+                "enabled": true
+              },
+              {
+                "id": "directComparison",
+                "enabled": true
+              },
+              {
+                "id": "goalDifference",
+                "enabled": true
+              },
+              {
+                "id": "goalsFor",
+                "enabled": true
+              }
+            ],
+            "placementsToPlayOut": [
+              1
+            ],
+            "finals": {
+              "final": false,
+              "thirdPlace": false,
+              "fifthSixth": false,
+              "seventhEighth": false
+            },
+            "finalsConfig": {
+              "preset": "none",
+              "tiebreaker": "overtime-then-shootout",
+              "tiebreakerDuration": 5
+            },
+            "refereeConfig": {
+              "mode": "none"
+            },
+            "isKidsTournament": false,
+            "hideScoresForPublic": false,
+            "hideRankingsForPublic": false,
+            "resultMode": "goals",
+            "pointSystem": {
+              "win": 3,
+              "draw": 1,
+              "loss": 0
+            },
+            "isPublic": true,
+            "title": "Leibchen vor dem Anpfiff",
+            "ageClass": "U11",
+            "date": "@heute",
+            "timeSlot": "09:00 - 16:00",
+            "location": {
+              "name": "Sporthalle Waging"
+            },
+            "teams": [
+              {
+                "id": "0000000b-0000-4000-8000-000000000001",
+                "name": "SV Aschau",
+                "colors": {
+                  "primary": "#C62828"
+                }
+              },
+              {
+                "id": "0000000b-0000-4000-8000-000000000002",
+                "name": "FC Seeon",
+                "colors": {
+                  "primary": "#2E7D32"
+                }
+              },
+              {
+                "id": "0000000b-0000-4000-8000-000000000003",
+                "name": "Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921",
+                "colors": {
+                  "primary": "#1565C0"
+                }
+              },
+              {
+                "id": "0000000b-0000-4000-8000-000000000004",
+                "name": "TSV Petting",
+                "colors": {
+                  "primary": "#1565C0"
+                }
+              }
+            ],
+            "matches": [
+              {
+                "id": "0000000b-0000-4000-9000-000000000001",
+                "round": 1,
+                "field": 1,
+                "slot": 0,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000004"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:00:00.000Z",
+                "matchNumber": 1,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000002",
+                "round": 2,
+                "field": 1,
+                "slot": 1,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000002"
+                },
+                "scoreA": 2,
+                "scoreB": 1,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:12:00.000Z",
+                "matchNumber": 2,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000003",
+                "round": 3,
+                "field": 1,
+                "slot": 3,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000003"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000004"
+                },
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "@jetzt+240s",
+                "matchNumber": 3,
+                "matchStatus": "scheduled",
+                "kitDecision": "bib",
+                "kit": {
+                  "a": "#FFCC00",
+                  "bibSide": "a"
+                }
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000004",
+                "round": 4,
+                "field": 1,
+                "slot": 4,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000003"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:36:00.000Z",
+                "matchNumber": 4,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000005",
+                "round": 5,
+                "field": 1,
+                "slot": 6,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000002"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:48:00.000Z",
+                "matchNumber": 5,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000006",
+                "round": 6,
+                "field": 1,
+                "slot": 7,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000003"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000004"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T09:00:00.000Z",
+                "matchNumber": 6,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              }
+            ],
+            "status": "published",
+            "createdAt": "2026-12-06T08:00:00.000Z",
+            "updatedAt": "2026-12-06T08:00:00.000Z",
+            "lastVisitedStep": 6,
+            "id": "leibchen-lang",
+            "startDate": "@heute",
+            "startTime": "09:00",
+            "bibColor": "#FFCC00",
+            "shareCode": "LBX2L7",
+            "shareCodeCreatedAt": "2026-12-06T08:00:00.000Z",
+            "monitors": [
+              {
+                "id": "mon-live",
+                "name": "Folie Live",
+                "defaultSlideDuration": 15,
+                "transition": "none",
+                "transitionDuration": 0,
+                "theme": "dark",
+                "performanceMode": "auto",
+                "slides": [
+                  {
+                    "id": "s-live",
+                    "type": "live",
+                    "config": {
+                      "fieldId": "field-1"
+                    },
+                    "order": 0,
+                    "duration": null
+                  }
+                ],
+                "createdAt": "2026-12-06T08:00:00.000Z",
+                "updatedAt": "2026-12-06T08:00:00.000Z"
+              }
+            ],
+            "publishedAt": "2026-12-06T08:00:00.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "hallenfussball-matches",
+      "version": 2,
+      "store": "matches",
+      "eintraege": {}
+    }
+  ],
+  "localStorage": {
+    "app:consent": {
+      "errorTracking": false,
+      "sessionReplay": false,
+      "timestamp": 1794643200000,
+      "version": 1
+    }
+  },
+  "kennzahlen": {
+    "faelle": [
+      {
+        "turnierId": "leibchen-7a",
+        "shareCode": "LBX2A7",
+        "titel": "7a Blau gegen Blau, Leibchen nicht geklärt"
+      },
+      {
+        "turnierId": "leibchen-7b",
+        "shareCode": "LBX2B7",
+        "titel": "7b Waging 1 zieht Gelb, bestätigt"
+      },
+      {
+        "turnierId": "leibchen-7c",
+        "shareCode": "LBX2C7",
+        "titel": "7c Waging 1 ohne Trikotfarbe"
+      },
+      {
+        "turnierId": "leibchen-7d",
+        "shareCode": "LBX2D7",
+        "titel": "7d Weste über dem gestreiften Kasten"
+      },
+      {
+        "turnierId": "leibchen-7e",
+        "shareCode": "LBX2E7",
+        "titel": "7e beide Teams ohne Trikotfarbe"
+      },
+      {
+        "turnierId": "leibchen-lang",
+        "shareCode": "LBX2L7",
+        "titel": "Waging 1 mit langem Namen, bestätigt"
+      }
+    ],
+    "naechstesSpiel": "Spiel 3",
+    "beendetesSpiel": "Spiel 2"
+  }
+}
