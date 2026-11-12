@@ -788,6 +788,138 @@
       "app": "/#/tournament/hallencup-messlauf/admin/visibility",
       "erwarte": "[data-testid=\"spectator-display-preview\"]",
       "profil": "app"
+    },
+    {
+      "id": "monitor-naechstes-7a",
+      "titel": "Hallenmonitor, Live-Folie „Nächstes Spiel“ vor dem Anpfiff, Blau gegen Blau, Leibchen nicht geklärt (@ZM-200, @ZM-195)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/display/leibchen-7a/mon-live",
+      "erwarte": "[data-testid=\"monitor-slide\"]",
+      "profil": "monitor",
+      "saat": "leibchen-vor-anpfiff"
+    },
+    {
+      "id": "zuschauer-naechstes-7a",
+      "titel": "Zuschauer-Seite, Kopf „Als Nächstes“ vor dem Anpfiff, Blau gegen Blau, Leibchen nicht geklärt (@ZM-200, @ZM-195)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/live/LBA26",
+      "erwarte": "[data-testid=\"public-current\"]",
+      "profil": "app",
+      "saat": "leibchen-vor-anpfiff"
+    },
+    {
+      "id": "monitor-naechstes-7b",
+      "titel": "Hallenmonitor, Live-Folie „Nächstes Spiel“ vor dem Anpfiff, Waging 1 zieht Gelb, bestätigt: Weste Gelb über Blau (@ZM-200, @ZM-201, @SL-201)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/display/leibchen-7b/mon-live",
+      "erwarte": "[data-testid=\"monitor-slide\"]",
+      "profil": "monitor",
+      "saat": "leibchen-vor-anpfiff"
+    },
+    {
+      "id": "zuschauer-naechstes-7b",
+      "titel": "Zuschauer-Seite, Kopf „Als Nächstes“ vor dem Anpfiff, Waging 1 zieht Gelb, bestätigt: Weste Gelb über Blau (@ZM-200, @ZM-201, @SL-201)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/live/LBB26",
+      "erwarte": "[data-testid=\"public-current\"]",
+      "profil": "app",
+      "saat": "leibchen-vor-anpfiff"
+    },
+    {
+      "id": "monitor-naechstes-7c",
+      "titel": "Hallenmonitor, Live-Folie „Nächstes Spiel“ vor dem Anpfiff, Waging 1 ohne Trikotfarbe: gestreift (@ZM-203)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/display/leibchen-7c/mon-live",
+      "erwarte": "[data-testid=\"monitor-slide\"]",
+      "profil": "monitor",
+      "saat": "leibchen-vor-anpfiff"
+    },
+    {
+      "id": "zuschauer-naechstes-7c",
+      "titel": "Zuschauer-Seite, Kopf „Als Nächstes“ vor dem Anpfiff, Waging 1 ohne Trikotfarbe: gestreift (@ZM-203)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/live/LBC26",
+      "erwarte": "[data-testid=\"public-current\"]",
+      "profil": "app",
+      "saat": "leibchen-vor-anpfiff"
+    },
+    {
+      "id": "monitor-naechstes-7d",
+      "titel": "Hallenmonitor, Live-Folie „Nächstes Spiel“ vor dem Anpfiff, Weste über dem gestreiften Kasten (@ZM-204)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/display/leibchen-7d/mon-live",
+      "erwarte": "[data-testid=\"monitor-slide\"]",
+      "profil": "monitor",
+      "saat": "leibchen-vor-anpfiff"
+    },
+    {
+      "id": "zuschauer-naechstes-7d",
+      "titel": "Zuschauer-Seite, Kopf „Als Nächstes“ vor dem Anpfiff, Weste über dem gestreiften Kasten (@ZM-204)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/live/LBD26",
+      "erwarte": "[data-testid=\"public-current\"]",
+      "profil": "app",
+      "saat": "leibchen-vor-anpfiff"
+    },
+    {
+      "id": "monitor-naechstes-7e",
+      "titel": "Hallenmonitor, Live-Folie „Nächstes Spiel“ vor dem Anpfiff, beide Teams ohne Trikotfarbe: Standardfarben (@ZM-203)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/display/leibchen-7e/mon-live",
+      "erwarte": "[data-testid=\"monitor-slide\"]",
+      "profil": "monitor",
+      "saat": "leibchen-vor-anpfiff"
+    },
+    {
+      "id": "zuschauer-naechstes-7e",
+      "titel": "Zuschauer-Seite, Kopf „Als Nächstes“ vor dem Anpfiff, beide Teams ohne Trikotfarbe: Standardfarben (@ZM-203)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/live/LBE26",
+      "erwarte": "[data-testid=\"public-current\"]",
+      "profil": "app",
+      "saat": "leibchen-vor-anpfiff"
+    },
+    {
+      "id": "monitor-naechstes-lang",
+      "titel": "Hallenmonitor, Live-Folie „Nächstes Spiel“ vor dem Anpfiff, langer Name „Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921“, bestätigt (@ZM-201)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/display/leibchen-lang/mon-live",
+      "erwarte": "[data-testid=\"monitor-slide\"]",
+      "profil": "monitor",
+      "saat": "leibchen-vor-anpfiff"
+    },
+    {
+      "id": "zuschauer-naechstes-lang",
+      "titel": "Zuschauer-Seite, Kopf „Als Nächstes“ vor dem Anpfiff, langer Name „Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921“, bestätigt (@ZM-201)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/live/LBL26",
+      "erwarte": "[data-testid=\"public-current\"]",
+      "profil": "app",
+      "saat": "leibchen-vor-anpfiff"
     }
   ]
 }

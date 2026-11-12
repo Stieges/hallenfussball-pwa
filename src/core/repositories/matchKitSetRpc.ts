@@ -32,7 +32,7 @@ export type MatchKitRejectionCode = (typeof REJECTION_CODES)[number];
 
 const ResponseSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('saved'), phase: z.enum(['before', 'live']), decision: z.enum(['bib', 'none']), kit: z.unknown().optional() }),
-  z.object({ status: z.literal('rejected'), code: z.enum(REJECTION_CODES), detail: z.object({ reason: z.string().optional() }).passthrough().nullish() }),
+  z.object({ status: z.literal('rejected'), code: z.enum(REJECTION_CODES), detail: z.looseObject({ reason: z.string().optional() }).nullish() }),
 ]);
 
 export type MatchKitSetResult =
@@ -45,16 +45,10 @@ export type MatchKitSetResult =
   | { kind: 'error'; message: string };
 
 function kitArgument(args: MatchKitSetArgs): Record<string, string> {
-  const kit: Record<string, string> = {};
-  if (args.decision === 'bib') {
-    kit.bibSide = args.bibSide ?? '';
-    kit.bibColor = normalizeKitColor(args.bibColor) ?? args.bibColor ?? '';
-  }
-  if (args.teams !== undefined) {
-    kit.teamA = args.teams.a;
-    kit.teamB = args.teams.b;
-  }
-  return kit;
+  return {
+    ...(args.decision === 'bib' ? { bibSide: args.bibSide ?? '', bibColor: normalizeKitColor(args.bibColor) ?? args.bibColor ?? '' } : {}),
+    ...(args.teams === undefined ? {} : { teamA: args.teams.a, teamB: args.teams.b }),
+  };
 }
 
 /** Schreibt die Wahl; wirft nie. */
@@ -103,5 +97,5 @@ function classifyError(error: unknown): MatchKitSetResult {
   if (code === '22023') {
     return { kind: 'invalid' };
   }
-  return { kind: 'error', message: error instanceof Error ? error.message : typeof error === 'object' && error !== null && 'message' in error ? String((error as { message: unknown }).message) : String(error) };
+  return { kind: 'error', message: error instanceof Error ? error.message : typeof error === 'object' && error !== null && 'message' in error ? String(error.message) : String(error) };
 }

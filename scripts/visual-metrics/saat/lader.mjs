@@ -26,9 +26,14 @@ export function leseSaat(name) {
 function ladeImBrowser(saat) {
   if (window.top !== window) return
   const jetzt = Date.now()
-  // Zeit-Marken: "@jetzt-320s" -> ISO-Text, "@jetzt-ms-320000" -> Epoch-ms (Zahl, fuer Engine-Ereignisse).
+  // Zeit-Marken: "@heute" -> heutiges Datum (JJJJ-MM-TT), "@jetzt-320s" -> ISO-Text, "@jetzt-ms-320000" -> Epoch-ms (Zahl, fuer Engine-Ereignisse).
   const loese = (wert) => {
     if (typeof wert === 'string') {
+      // "@heute" -> Datum des Browsers (Ortszeit) als JJJJ-MM-TT: ein Turnier, das heute stattfindet (Vorlaufzeit der Live-Folie, @ZM-138)
+      if (wert === '@heute') {
+        const tag = new Date(jetzt)
+        return `${String(tag.getFullYear())}-${String(tag.getMonth() + 1).padStart(2, '0')}-${String(tag.getDate()).padStart(2, '0')}`
+      }
       const iso = /^@jetzt([+-]\d+)s$/.exec(wert)
       if (iso) return new Date(jetzt + Number(iso[1]) * 1000).toISOString()
       const ms = /^@jetzt-ms([+-]\d+)$/.exec(wert)

@@ -39,7 +39,13 @@ export function useKitChoiceOverlay(tournament: Tournament | null): Tournament |
   // Server-Zeilen und lokale Anpfiffe gegen die Einträge halten
   useEffect(() => {
     if (!tournament) { return; }
-    queue.reconcile(new Map(tournament.matches.map((match) => [match.id, kitRowStateOf(match)])));
+    if (entries.length === 0) { return; }
+    const rows = new Map<string, KitRowState>();
+    for (const entry of entries) {
+      const match = tournament.matches.find((m) => m.id === entry.matchId);
+      if (match) { rows.set(match.id, kitRowStateOf(match)); }
+    }
+    queue.reconcile(rows);
     if (!context) { return; }
     const started = new Set<string>();
     for (const entry of buildValidMatches(tournament)) {

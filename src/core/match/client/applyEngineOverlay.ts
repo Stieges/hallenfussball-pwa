@@ -144,8 +144,9 @@ export function applyEngineOverlay<TTournament extends OverlayableTournament<TMa
       return match;
     }
     changed = true;
-    const { clearLiveState, kitStarts, ...projection } = fields;
-    void kitStarts; // wirkt über `projectedKit`, nicht als Feld
+    const { clearLiveState, ...withStarts } = fields;
+    const projection: Omit<typeof withStarts, 'kitStarts'> & { kitStarts?: unknown } = withStarts;
+    delete projection.kitStarts; // wirkt über `projectedKit`, nicht als Feld
     const { kit, kitDecision } = projectedKit(match, fields);
     const next = { ...match, ...projection, ...(kit === undefined ? {} : { kit }), ...(kitDecision === undefined ? {} : { kitDecision }) };
     return clearLiveState ? { ...next, liveState: undefined } : next;

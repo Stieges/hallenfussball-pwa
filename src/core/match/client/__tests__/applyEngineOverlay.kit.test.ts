@@ -106,8 +106,22 @@ describe('@SL-150 @SL-226 ein Nachtrag im laufenden Spiel bleibt im Cockpit sich
 });
 
 describe('@SL-214 Anpfiff rückgängig zeigt den Stand davor', () => {
-  it('@SL-214 Karte bestätigt, Anpfiff, Rückgängig: ohne Anpfiff im Log bleibt die Zeile bestätigt', () => {
-    const ergebnis = ueberlagere(bestaetigt, [hfEvent('PAUSE', T0, 1, null, { payload: {} })]);
+  const rueckgaengig = (start: EngineEvent): EngineEvent => hfEvent('RETRACT', T0 + 5_000, 1, null, { targetId: start.id });
+
+  it('@SL-214 zuvor „TSV Waging 1 zieht Gelb“ bestätigt: nach Anpfiff und Rückgängig bleiben Wahl und Weste stehen (die Zeile „… · Ändern“), das Spiel ist wieder nicht angepfiffen', () => {
+    const start = anpfiff({ a: BLAU, b: BLAU });
+    const ergebnis = ueberlagere(bestaetigt, [start, rueckgaengig(start)]);
+    expect(ergebnis.matchStatus).toBe('scheduled');
     expect(ergebnis.kitDecision).toBe('bib');
+    expect(ergebnis.kit).toEqual({ a: GELB, b: BLAU, bibSide: 'a' });
+  });
+
+  it('@SL-214 zuvor nichts getippt: nach Rückgängig ist die Wahl wieder offen (die Karte steht wieder da), keine Leibchen', () => {
+    const offen: OverlayableMatch = { id: 'spiel-2', matchStatus: 'scheduled' };
+    const start = anpfiff({ a: BLAU, b: BLAU });
+    const ergebnis = ueberlagere(offen, [start, rueckgaengig(start)]);
+    expect(ergebnis.matchStatus).toBe('scheduled');
+    expect(ergebnis.kitDecision).toBeUndefined();
+    expect(ergebnis.kit?.bibSide).toBeUndefined();
   });
 });
