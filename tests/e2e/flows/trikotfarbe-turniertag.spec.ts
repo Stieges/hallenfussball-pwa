@@ -304,7 +304,7 @@ for (const a of PICKER_GERAETE) {
 }
 
 // Zweite Stelle desselben Fehlers: Verwaltung → Sichtbarkeit → „Anzeige für Zuschauer“ (C-SICHTBARKEIT-FARBWAEHLER-ABGESCHNITTEN, behoben)
-for (const a of PICKER_GERAETE.filter((g) => !g.dunkel && g.name !== 'handy360')) {
+for (const a of PICKER_GERAETE.filter((g) => !g.dunkel)) {
   for (const seite of ['home', 'away'] as const) {
     test(`@W3-028 @ZM-152 Sichtbarkeit, Standardfarbe ${seite === 'home' ? 'Heim' : 'Gast'}: alle Farbfelder und der freie Farbwähler liegen ganz im Fenster, nichts in sich gerollt (${a.name})`, async ({ page, seedIndexedDB }) => {
       await oeffne(page, seedIndexedDB, a);
