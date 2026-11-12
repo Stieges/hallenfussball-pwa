@@ -22,14 +22,8 @@ import { serverRulesFor } from './engineServerRules';
 import { buildValidMatches } from './useEngineMatches';
 import { mapCardTypeToEngine, type EngineCommandHandlers, type GoalHandlerOptions } from './engineCommandWiringTypes';
 import { rejectionMessageKey } from './engineCommandWiringHelpers';
-import { defaultKit, type MatchKit } from '../core/models/kit';
-import { kitAusWahl, trikotFarben, type LeibchenWahl } from '../core/models/kitChoice';
-import type { Match } from '../types/tournament';
-
-/** Das `kit` des Anpfiffs: die Wahl der Anpfiff-Ansicht (@SL-137, @SL-149), ohne Wahl die Vorbelegung (`defaultKit`). */
-function kitBeimAnpfiff(match: Match, tournament: Tournament, leibchen: LeibchenWahl | undefined): MatchKit {
-  return leibchen ? kitAusWahl(trikotFarben(match, tournament.teams), leibchen) : defaultKit(match, tournament.teams, tournament);
-}
+import { kitBeimAnpfiff } from '../core/models/kitAnpfiff';
+import type { LeibchenWahl } from '../core/models/kitChoice';
 
 export type { EngineCommandHandlers } from './engineCommandWiringTypes';
 
@@ -114,8 +108,8 @@ export function useEngineCommandWiring(
       }
       try {
         const match = tournament.matches.find((m) => m.id === matchId);
-        // A-30a (F1): kit geht bei jedem Anpfiff mit – die Wahl der Anpfiff-Ansicht (@SL-137, @SL-149), ohne sie die Vorbelegung
-        await commands.start(matchId, ctx, actor, serverRulesFor(tournament, match), match && kitBeimAnpfiff(match, tournament, leibchen));
+        // A-30a (F1): kit geht bei jedem Anpfiff mit; ohne Tipp keine Leibchen, keine Vorbelegung (@SL-210, @SL-149)
+        await commands.start(matchId, ctx, actor, serverRulesFor(tournament, match), match && kitBeimAnpfiff(match, tournament.teams, leibchen));
         return true;
       } catch (error) {
         handleEngineError(error);
