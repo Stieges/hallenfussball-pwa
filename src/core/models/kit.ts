@@ -185,7 +185,12 @@ function isKickedOff(match: Pick<Match, 'matchStatus'>): boolean {
   return !NOT_KICKED_OFF.has(match.matchStatus);
 }
 
-/** @W3-028/@ZM-140: getragene Farbe je Seite; `undefined` = keine Farbe (Anzeige: Vorgabe). */
+/**
+ * @W3-028/@ZM-140/@ZM-200: getragene Farbe je Seite; `undefined` = keine Farbe (Anzeige: Vorgabe).
+ * - Angepfiffene Spiele nehmen NUR die beim Anpfiff festgehaltene Farbe (`Match.kit`).
+ * - Noch nicht angepfiffene Spiele nehmen die aktuelle Teamfarbe – außer Tom hat Leibchen bestätigt (`kit.bibSide`, Leibchenfarbe an dieser Seite,
+ *   Leibchen Schritt 2): dann trägt die Leibchen-Seite die Leibchenfarbe, die andere Seite bleibt in der Teamfarbe (@ZM-195, @ZM-200, @SL-201).
+ */
 export function wornColors(
   match: KitMatch & Pick<Match, 'matchStatus' | 'kit'>,
   teams: readonly KitTeam[],
@@ -193,5 +198,20 @@ export function wornColors(
   if (isKickedOff(match)) {
     return { a: match.kit?.a, b: match.kit?.b };
   }
-  return { a: teamColor(match, 'a', teams), b: teamColor(match, 'b', teams) };
+  const trikot = { a: teamColor(match, 'a', teams), b: teamColor(match, 'b', teams) };
+  const side = shownBibSide(match);
+  const bib = side === undefined ? undefined : normalizeKitColor(match.kit?.[side]);
+  return side !== undefined && bib !== undefined ? { ...trikot, [side]: bib } : trikot;
+}
+
+/**
+ * Seite, die in der Anzeige das Leibchen trägt: nach dem Anpfiff die festgehaltene (`kit.bibSide`); davor nur die bestätigte Seite, und nur
+ * solange dort ein Team steht (ein Platzhalter trägt keine Weste; der Server nimmt die Wahl bei einem Teamwechsel zurück, @SL-212).
+ */
+export function shownBibSide(match: KitMatch & Pick<Match, 'matchStatus' | 'kit'>): KitSide | undefined {
+  const side = match.kit?.bibSide;
+  if (side === undefined || isKickedOff(match)) {
+    return side;
+  }
+  return slotTeamId(side === 'a' ? match.slotA : match.slotB) === undefined ? undefined : side;
 }
