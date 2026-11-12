@@ -13,6 +13,8 @@
  * sichtbar, `changed` nennt den neuen Stand (und den Urheber, sobald `resolveAuthor` ihn liefert), und weder Verlassen
  * noch Enter im zweiten Feld oder die Taste senden, bis Olli mit `keepDraft` bewusst bei seiner Eingabe bleibt; Escape zeigt
  * den neuen Stand.
+ * Blatt „Endergebnis“ (@SL-238): `bump` (+ bei leerem Feld ergibt 1, − bei leer oder 0 ohne Wirkung) und `fill` (beide Felder setzen, z. B.
+ * „2:1 einsetzen“) ändern nur den Entwurf, nie den gespeicherten Stand.
  */
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { ScoreFieldProps } from '../atoms/ScoreDraftInput';
@@ -58,7 +60,13 @@ export interface ScoreDraft {
   canSave: boolean;
   /** „Ergebnis speichern“: sendet den Entwurf (einmal) */
   save: () => void;
+  /** „+“ / „−“ (`delta` 1 bzw. −1) am Feld: leeres Feld + → 1, − bei leer oder 0 ohne Wirkung; nur der Entwurf ändert sich (@SL-238) */
+  bump: (side: ScoreSide, delta: 1 | -1) => void;
+  /** Beide Felder setzen (z. B. „2:1 einsetzen“, @SL-238); ein offener Hinweis „inzwischen geändert“ geht (Olli hat bewusst gewählt) */
+  fill: (goalsA: number, goalsB: number) => void;
 }
+
+const MAX_GOALS = 99;
 
 const WHOLE_NUMBER = /^\d+$/;
 const NONE_INVALID: Record<ScoreSide, boolean> = { a: false, b: false };
@@ -226,5 +234,28 @@ export function useScoreDraft({ resetKey, savedA, savedB, onCommit, resolveAutho
 
   const keepDraft = useCallback(() => { setChanged(null); }, []);
 
-  return { invalid: invalidSides.a || invalidSides.b, hintId, fieldProps, changed, keepDraft, canSave, save };
+  const bump = useCallback((side: ScoreSide, delta: 1 | -1) => {
+    const text = side === 'a' ? draftRef.current.a : draftRef.current.b;
+    if (text !== '' && !WHOLE_NUMBER.test(text)) {
+      return;
+    }
+    const current = text === '' ? null : parseInt(text, 10);
+    if (delta < 0 && (current === null || current === 0)) {
+      return;
+    }
+    const next = Math.min(MAX_GOALS, current === null ? 1 : current + delta);
+    sentRef.current = null;
+    setInvalidSides(NONE_INVALID);
+    (side === 'a' ? setA : setB)(String(next));
+  }, []);
+
+  const fill = useCallback((goalsA: number, goalsB: number) => {
+    sentRef.current = null;
+    setInvalidSides(NONE_INVALID);
+    setChanged(null);
+    setA(String(goalsA));
+    setB(String(goalsB));
+  }, []);
+
+  return { invalid: invalidSides.a || invalidSides.b, hintId, fieldProps, changed, keepDraft, canSave, save, bump, fill };
 }

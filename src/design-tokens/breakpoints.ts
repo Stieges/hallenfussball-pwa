@@ -88,6 +88,12 @@ export const mediaQueries = {
   /** Ultra wide screens */
   ultrawide: `@media (min-width: ${breakpoints.ultrawide})`,
 
+  /** Tablet-Band: ab Tablet-Breite bis Desktop-Breite (beide Grenzen eingeschlossen) */
+  tabletBand: `@media (min-width: ${breakpoints.tablet}) and (max-width: ${breakpoints.desktop})`,
+
+  /** Druck (Spielplan: immer die Tabelle) */
+  print: '@media print',
+
   /** Reduced motion preference */
   reducedMotion: '@media (prefers-reduced-motion: reduce)',
 

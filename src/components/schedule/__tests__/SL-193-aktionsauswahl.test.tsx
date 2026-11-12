@@ -138,8 +138,8 @@ describe('@SL-193 Auswahl beim Tipp auf ein Spiel – Gruppenphase und Finalrund
     }
   }
 
-  it('@SL-193 eine Tippfläche: Karte und Torzahl der Gruppenphase öffnen dieselbe Auswahl', () => {
-    const ziel = zeige('Gruppenphase', 'geplant', LEITUNG);
+  it('@SL-193 eine Tippfläche: Karte und Torzahl eines laufenden Spiels der Gruppenphase öffnen dieselbe Auswahl (ohne Ergebnis öffnet die Torzahl das Blatt, @SL-195)', () => {
+    const ziel = zeige('Gruppenphase', 'läuft', LEITUNG);
     act(() => { fireEvent.click(screen.getAllByTestId(`match-goals-${ziel.id}-home`)[0]); });
     expect(screen.getAllByTestId('match-action-menu')).toHaveLength(1);
   });
@@ -321,11 +321,11 @@ describe('@SL-193 die Aktionen führen die vorhandenen Wege aus', () => {
     });
   }
 
-  it('@SL-193 Gruppenphase geplant: „Ergebnis eintragen“ öffnet die Schnelleingabe der Karte; gespeichert wird erst dort', () => {
+  it('@SL-193 Gruppenphase geplant: „Ergebnis eintragen“ öffnet das Blatt „Endergebnis“ (@SL-195); gespeichert wird erst dort', () => {
     const ziel = zeige('Gruppenphase', 'geplant', LEITUNG);
     tippe('Gruppenphase', ziel.id);
     act(() => { fireEvent.click(aktion('enterResult')); });
-    expect(screen.getAllByTestId('quick-score-expand').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('result-sheet')).toBeInTheDocument();
     expect(spies.score).not.toHaveBeenCalled();
   });
 
@@ -333,7 +333,7 @@ describe('@SL-193 die Aktionen führen die vorhandenen Wege aus', () => {
     const ziel = zeige('Gruppenphase', 'läuft', LEITUNG);
     tippe('Gruppenphase', ziel.id);
     act(() => { fireEvent.click(aktion('endAndEnter')); });
-    expect(screen.getAllByTestId('quick-score-expand').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('result-sheet')).toBeInTheDocument();
   });
 
   it('@SL-193 Finalrunde geplant: „Ergebnis eintragen“ setzt den Fokus auf das Eingabefeld der Heim-Tore dieses Spiels', () => {

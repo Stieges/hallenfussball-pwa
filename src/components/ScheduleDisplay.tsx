@@ -248,6 +248,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           onRefereeChange={onRefereeChange}
           onFieldChange={onFieldChange}
           onScoreChange={onScoreChange}
+          changeAuthorOf={changeAuthorOf}
           actionRights={actionRights}
           onCorrect={onCorrect}
           clockOf={clockOf}

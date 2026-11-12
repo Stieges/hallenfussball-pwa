@@ -39,6 +39,8 @@ import { endMatchFromSchedule, type EndPrompt } from './scheduleEndMatch';
 export type ResultEntryPrompt =
   | { kind: 'reason'; matchNumber: number; before: string; after: string }
   | { kind: 'unskip'; matchNumber: number }
+  /** @SL-195: der geplante Anstoß liegt (nach Serverzeit) noch in der Zukunft */
+  | { kind: 'future'; matchNumber: number; time: string }
   | { kind: 'shootout'; matchNumber: number; score: string; homeName: string; awayName: string }
   | EndPrompt;
 
@@ -261,6 +263,12 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
       } else if (route === 'enter' || route === 'unskip') {
         // @FU-093: abgesetzt → erst die Rückfrage; @FU-094/@FU-097: K.-o.-Unentschieden → danach die Strafstoß-Abfrage.
         if (route === 'unskip' && (await ask({ kind: 'unskip', matchNumber: entry.meta.number })) === null) {
+          return false;
+        }
+        // @SL-195: liegt der geplante Anstoß nach Serverzeit noch in der Zukunft, fragt die App vor dem Speichern; „Nein“ speichert nichts (ohne geplante Zeit keine Frage)
+        const kickoff = new Date(entry.meta.scheduledKickoff);
+        if (route === 'enter' && match?.scheduledTime !== undefined && kickoff.getTime() > engine.serverNow()
+          && (await ask({ kind: 'future', matchNumber: entry.meta.number, time: `${String(kickoff.getHours()).padStart(2, '0')}:${String(kickoff.getMinutes()).padStart(2, '0')}` })) === null) {
           return false;
         }
         let shootout: Record<string, number> | undefined;

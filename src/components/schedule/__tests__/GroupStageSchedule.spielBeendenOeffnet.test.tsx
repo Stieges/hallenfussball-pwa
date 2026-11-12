@@ -45,7 +45,7 @@ describe('@FU-112 Spiel beenden und Ergebnis eintragen öffnet die Eingabe', () 
     knopf.addEventListener('click', () => { knopf.remove(); });
     await user.click(knopf);
 
-    expect((await screen.findAllByTestId('quick-score-expand')).length).toBeGreaterThan(0);
+    expect(await screen.findByTestId('result-sheet')).toBeInTheDocument(); // @SL-195: das Blatt „Endergebnis“ ersetzt die Schnelleingabe der Karte
   });
 
   it('@FU-112 Gegenbeispiel: ein Klick außerhalb jeder Karte (später als 100 ms) klappt die Karte wieder zu', async () => {
