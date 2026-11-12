@@ -8,17 +8,17 @@
  * SQL-Zwilling ab (Engine-Regel, Ruling K4: unbekannte Payload-Schlüssel werden angenommen).
  */
 import { ERROR_CODES, type MatchRules } from '../types';
-import { parseKitInput, type MatchKit } from '../../models/kit';
+import { parseKitInput, type StartKit } from '../../models/kit';
 import type { CommandSpec } from './matchCommandTypes';
 
-export type { MatchKit } from '../../models/kit';
+export type { MatchKit, StartKit } from '../../models/kit';
 
 export type MatchStartCommand =
   | { ok: true; spec: CommandSpec }
   | { ok: false; code: typeof ERROR_CODES.INVALID_PAYLOAD; detail: { reason: 'INVALID_KIT' } };
 
 /** Ohne `kit` bleibt die Payload wie bisher `{ rules }`; mit `kit` normalisiert (`#RRGGBB`) dazu. */
-export function matchStartCommand(rules: MatchRules, kit?: MatchKit): MatchStartCommand {
+export function matchStartCommand(rules: MatchRules, kit?: StartKit): MatchStartCommand {
   if (kit === undefined) {
     return { ok: true, spec: { type: 'MATCH_START', teamId: null, payload: { rules } } };
   }

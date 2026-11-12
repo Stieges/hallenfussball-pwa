@@ -184,9 +184,9 @@ describe('@ZM-195 Folie „Nächstes Spiel“: Kästen „0 : 0“ in Größe un
     expect(gast()).toHaveAttribute('data-color', GRUEN);
   });
 
-  // Die Weste vor dem Anpfiff (@SL-201, @ZM-195 „festgelegtes Leibchen“) kommt mit Schritt 2: `wornColors` nimmt vor dem Anpfiff die Trikotfarben, nicht die
-  // beim Festlegen gewählte Leibchenfarbe. Bis dahin bleibt dieser Test rot (Befund), die Folie zeigt die Trikot- bzw. Ausweichfarbe.
-  it.fails('C-LEIBCHEN-VOR-ANPFIFF-SCHRITT2 @ZM-195 @ZM-161 ein festgelegtes Leibchen (Server kennt es) erscheint vor dem Anpfiff als Weste mit Zeichen (Schritt 2)', () => {
+  // Die Weste vor dem Anpfiff (@SL-201, @ZM-195 „festgelegtes Leibchen“): seit Leibchen 2b nimmt `wornColors` vor dem Anpfiff die bestätigte Leibchenfarbe
+  // der Leibchen-Seite (Befund C-LEIBCHEN-VOR-ANPFIFF-SCHRITT2 gelöst; vorher `it.fails`).
+  it('C-LEIBCHEN-VOR-ANPFIFF-SCHRITT2 @ZM-195 @ZM-161 ein festgelegtes Leibchen (Server kennt es) erscheint vor dem Anpfiff als Weste mit Zeichen (Schritt 2)', () => {
     zeige({ ...geplant, ...kit({ a: ROT, b: GELB, bibSide: 'b' }) }, FARBEN);
     expect(gast()).toHaveAttribute('data-fill', 'vest');
     expect(gast()).toHaveAttribute('data-color', GELB);

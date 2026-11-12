@@ -5,8 +5,7 @@
  *   `KIT_SIMILAR_DELTA_E` (Daniel 2026-10-16, Prüfpunkt „Leibchen-Grenze“ in der Generalprobe).
  * - `kitSameBrightness`: Hinweis „gleich hell“ (Helligkeitsabstand unter `KIT_SIMILAR_LUMINANCE_RATIO`, @SL-173) – löst keine Karte aus
  *   (Daniel 2026-11-10), steht nur in der Zeile „Nächstes“ und in der Farbliste der Karte.
- * - `defaultKit`: Vorbelegung beim Anpfiff – bei Konflikt (Farbabstand) trägt die Heimseite Leibchen in der Leibchenfarbe
- *   des Turniers (@W3-029, sonst Gelb). Liefert immer ein Objekt; `kit` geht bei jedem Anpfiff mit (F1).
+ * - Keine Vorbelegung beim Anpfiff (@SL-210): `kitBeimAnpfiff` (kitAnpfiff.ts) trägt nur, was Tom getippt hat; `kit` geht bei jedem Anpfiff mit (F1).
  * - `wornColors`: getragene Farbe eines Spiels. Angepfiffene Spiele nehmen NUR die beim Anpfiff
  *   festgehaltene Farbe (`Match.kit`, Server-Spalten), geplante die aktuelle Teamfarbe (@W3-028).
  *   `undefined` = keine Farbe → die Anzeige nimmt ihre Vorgabe (@ZM-140 „Blau“).
@@ -27,6 +26,16 @@ export interface MatchKit {
   a?: string;
   b?: string;
   bibSide?: KitSide;
+}
+
+/**
+ * Kit des Anpfiffs (`MATCH_START.payload.kit`): wie `MatchKit`, aber `bibSide: null` heißt ausdrücklich „Keine Leibchen“ (@SL-149);
+ * ein fehlender Schlüssel `bibSide` heißt „nichts getippt“ (@SL-210), der Server lässt die Wahl dann, wie sie ist.
+ */
+export interface StartKit {
+  a?: string;
+  b?: string;
+  bibSide?: KitSide | null;
 }
 
 export type KitConflict = 'same' | 'similar' | 'none';
@@ -76,7 +85,7 @@ const KitInputSchema = z
   .object({
     a: z.string().regex(INPUT_HEX).optional(),
     b: z.string().regex(INPUT_HEX).optional(),
-    bibSide: z.enum(['a', 'b']).optional(),
+    bibSide: z.enum(['a', 'b']).nullable().optional(),
   })
   .strict();
 
@@ -89,8 +98,10 @@ export function normalizeKitColor(value: unknown): string | undefined {
   return upper.length === 4 ? `#${upper[1]}${upper[1]}${upper[2]}${upper[2]}${upper[3]}${upper[3]}` : upper;
 }
 
-/** Kit ohne `undefined`-Schlüssel (stabile JSON-Form im Ausgang und in der lokalen Kopie). */
-export function compactKit(kit: MatchKit): MatchKit {
+/** Kit ohne `undefined`-Schlüssel (stabile JSON-Form im Ausgang und in der lokalen Kopie); `bibSide: null` bleibt stehen (@SL-149). */
+export function compactKit(kit: MatchKit): MatchKit;
+export function compactKit(kit: StartKit): StartKit;
+export function compactKit(kit: StartKit): StartKit {
   return {
     ...(kit.a !== undefined && { a: kit.a }),
     ...(kit.b !== undefined && { b: kit.b }),
@@ -99,7 +110,7 @@ export function compactKit(kit: MatchKit): MatchKit {
 }
 
 /** Eingabe des Befehls prüfen und normalisieren; ungültig → `null`. */
-export function parseKitInput(kit: unknown): MatchKit | null {
+export function parseKitInput(kit: unknown): StartKit | null {
   const parsed = KitInputSchema.safeParse(kit);
   if (!parsed.success) {
     return null;
@@ -163,16 +174,6 @@ export function kitWithBib(
   return compactKit({ a, b, bibSide });
 }
 
-/** Vorbelegung beim Anpfiff: bei Konflikt die Heimseite mit Leibchen (@SL-137), sonst die Teamfarben (@SL-138). */
-export function defaultKit(match: KitMatch, teams: readonly KitTeam[], tournament: KitTournament): MatchKit {
-  const a = teamColor(match, 'a', teams);
-  const b = teamColor(match, 'b', teams);
-  if (kitConflict(a, b) === 'none') {
-    return compactKit({ a, b });
-  }
-  return kitWithBib(match, teams, tournament, 'a');
-}
-
 /**
  * Zustände VOR dem Anpfiff (Negativliste aus dem Status-Modell `MatchStatus`): fehlt, geplant, abgesetzt.
  * Jeder andere Zustand ist angepfiffen – auch der Cloud-Status `paused` (Halbzeit, Pause, Entscheidung,
@@ -184,7 +185,12 @@ function isKickedOff(match: Pick<Match, 'matchStatus'>): boolean {
   return !NOT_KICKED_OFF.has(match.matchStatus);
 }
 
-/** @W3-028/@ZM-140: getragene Farbe je Seite; `undefined` = keine Farbe (Anzeige: Vorgabe). */
+/**
+ * @W3-028/@ZM-140/@ZM-200: getragene Farbe je Seite; `undefined` = keine Farbe (Anzeige: Vorgabe).
+ * - Angepfiffene Spiele nehmen NUR die beim Anpfiff festgehaltene Farbe (`Match.kit`).
+ * - Noch nicht angepfiffene Spiele nehmen die aktuelle Teamfarbe – außer Tom hat Leibchen bestätigt (`kit.bibSide`, Leibchenfarbe an dieser Seite,
+ *   Leibchen Schritt 2): dann trägt die Leibchen-Seite die Leibchenfarbe, die andere Seite bleibt in der Teamfarbe (@ZM-195, @ZM-200, @SL-201).
+ */
 export function wornColors(
   match: KitMatch & Pick<Match, 'matchStatus' | 'kit'>,
   teams: readonly KitTeam[],
@@ -192,5 +198,20 @@ export function wornColors(
   if (isKickedOff(match)) {
     return { a: match.kit?.a, b: match.kit?.b };
   }
-  return { a: teamColor(match, 'a', teams), b: teamColor(match, 'b', teams) };
+  const trikot = { a: teamColor(match, 'a', teams), b: teamColor(match, 'b', teams) };
+  const side = shownBibSide(match);
+  const bib = side === undefined ? undefined : normalizeKitColor(match.kit?.[side]);
+  return side !== undefined && bib !== undefined ? { ...trikot, [side]: bib } : trikot;
+}
+
+/**
+ * Seite, die in der Anzeige das Leibchen trägt: nach dem Anpfiff die festgehaltene (`kit.bibSide`); davor nur die bestätigte Seite, und nur
+ * solange dort ein Team steht (ein Platzhalter trägt keine Weste; der Server nimmt die Wahl bei einem Teamwechsel zurück, @SL-212).
+ */
+export function shownBibSide(match: KitMatch & Pick<Match, 'matchStatus' | 'kit'>): KitSide | undefined {
+  const side = match.kit?.bibSide;
+  if (side === undefined || isKickedOff(match)) {
+    return side;
+  }
+  return slotTeamId(side === 'a' ? match.slotA : match.slotB) === undefined ? undefined : side;
 }

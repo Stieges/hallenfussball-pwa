@@ -106,8 +106,9 @@ export async function withLocalEngineState(
     if (candidate === undefined || match.matchStatus === 'finished' || match.matchStatus === 'skipped') {
       continue;
     }
-    // Ohne Farbe im Anpfiff-Ereignis bleibt die getragene Farbe der Turnierkopie (nie löschen, @ZM-154/@ZM-159).
-    overlays.set(match.id, { ...candidate.fields, kit: candidate.fields.kit ?? match.kit });
+    // Ohne Anpfiff mit Farbe im Ereignis bleibt die getragene Farbe der Turnierkopie (nie löschen, @ZM-154/@ZM-159): die Projektion der
+    // Anpfiffe (`projectKitState`) lässt den Stand der Zeile dann stehen.
+    overlays.set(match.id, candidate.fields);
   }
   return applyEngineOverlay(tournament, overlays);
 }

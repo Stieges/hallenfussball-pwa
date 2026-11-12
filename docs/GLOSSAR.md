@@ -104,3 +104,19 @@ Turnieren; eine spätere Turnierserie fasst mehrere Veranstaltungen zusammen. De
 der Verein, der ein einzelnes Turnier ausrichtet (Feld `organizer`). In Datenbank und Code heißt die Veranstaltung
 `gathering` (Tabelle `gatherings`, Feld `tournaments.gathering_id`, i18n-Namensraum `gathering`), weil „event“ im Bestand
 das Ereignis im Spiel bezeichnet (`match_events`, Recht `correctEvents`). Glossar-Eintrag: `gathering`.
+
+## Leibchen
+
+**Bevorzugt:** Leibchen (Englisch „bib“, Mehrzahl „bibs“)
+**Gleichbedeutend, erlaubt:** Markierungshemd
+
+Das farbige Überziehhemd, das die Spieler einer Seite über dem Trikot tragen, wenn zwei Mannschaften in gleicher oder sehr
+ähnlicher Farbe spielen, heißt in der App „Leibchen“. „Markierungshemd“ meint dasselbe und ist im Verein ebenso gebräuchlich; es ist
+ein Synonym und kein verbotenes Wort (Daniel 2026-11-09, „Leibchen + Synonym“), die App schreibt in Karte, Zeile, Tasten und
+Meldungen aber „Leibchen“ – wie die Verbandsregeln, die die Recherche zu den Hallenregeln herangezogen hat. Leibchen sind in der App
+immer freiwillig. „Weste“ ist nur der interne Name der Darstellung im Ergebniskasten (Mitte in Leibchenfarbe, Streifen links und
+rechts in Trikotfarbe, dazu das Leibchen-Zeichen) und steht in keinem sichtbaren Text; ein Text „in Leibchen“ unter dem Teamnamen
+entfällt. Nicht verwechseln mit dem Trikot (dem Spielhemd, dessen Farbe je Team im Assistenten steht) und mit dem „Ausweichtrikot“
+(einer zweiten Trikotfarbe je Team, MVP+). Glossar-Eintrag: noch nicht in `src/i18n/glossary.json` angelegt (de „Leibchen“, en „bib“,
+Synonym „Markierungshemd“); die Anlage mit Schlüssel in `sport.json` ist eine eigene Aufgabe, bei Widerspruch gilt dann
+`glossary.json`.
