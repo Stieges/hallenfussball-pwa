@@ -63,9 +63,18 @@ test.describe('Leibchen: Wahl, Server und Anzeige (zwei Kontexte, lokaler Stack)
     const olli = await newRoleContext(browser, 'owner');
     const halle = await browser.newContext();
     try {
+      // Anstoß in vier Minuten (Uhrzeit der Spalte `scheduled_start`, Zeitzone des Laufs): die Live-Folie des Hallenmonitors zeigt das nächste Spiel schon vor dem Anpfiff (@ZM-138)
+      const termin = await serviceRest('PATCH', `matches?id=eq.${ids.matchId}`, { scheduled_start: new Date(Date.now() + 240_000).toISOString().slice(11, 19) });
+      expect(termin.status, termin.text).toBeLessThan(300);
+      const vorher = await monitor(halle, 'LEIBCHENA');
+      await expect(vorher.getByTestId('live-box-home-bib'), 'vor der Wahl keine Weste').toHaveCount(0);
       await openCockpit(olli.page, ids.tournamentId, ids.matchId);
       await olli.page.getByTestId('leibchen-bestaetigen').click({ timeout: 20_000 });
+      const bestaetigtUm = Date.now();
       await expect(olli.page.getByTestId('leibchen-zeile')).toBeVisible();
+      // @SL-151 @ZM-200: der Hallenmonitor zeigt die bestätigte Weste VOR dem Anpfiff nach höchstens 3 Sekunden (Sofort-Kanal, ohne Neuladen)
+      await expect(vorher.getByTestId('live-box-home-bib')).toBeVisible({ timeout: 3_000 + 1_500 });
+      expect(Date.now() - bestaetigtUm, 'höchstens 3 s (+1,5 s Messrand des Testlaufs)').toBeLessThanOrEqual(4_500);
       await expect.poll(async () => (await zeile(ids.matchId)).kit_decision, { timeout: 20_000, message: 'der Server hat die Wahl gespeichert' }).toBe('bib');
       expect((await zeile(ids.matchId)).bib_side, 'Vorschlag: das Heim-Team zieht das Leibchen').toBe('a');
       await expect(olli.page.getByTestId('leibchen-status')).toHaveAttribute('data-status', 'sent', { timeout: 20_000 });
@@ -169,6 +178,10 @@ test.describe('Leibchen: Wahl, Server und Anzeige (zwei Kontexte, lokaler Stack)
       const feld = await monitor(halle, 'LEIBCHENLIVE');
       await expect(feld.getByTestId('live-box-away-bib')).toBeVisible({ timeout: 25_000 });
       await expect(feld.getByTestId('live-box-home-bib')).toHaveCount(0);
+      // @SL-150 @ZM-201: auch die Zuschauer-Seite zeigt den Nachtrag im laufenden Spiel (nach höchstens 10 s, @SL-226)
+      const tafel = await zuschauer(halle, 'LEIBCHENLIVE');
+      await expect(tafel.getByTestId('public-current').getByTestId(/^match-box-.*-away-bib$/)).toBeVisible({ timeout: 15_000 });
+      await expect(tafel.getByTestId('public-current').getByTestId(/^match-box-.*-home-bib$/)).toHaveCount(0);
     } finally {
       await olli.context.close();
       await halle.close();
