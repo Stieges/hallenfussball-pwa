@@ -93,8 +93,8 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   // Turnierleitung (@SL-159): nur sie bekommt „Korrigieren“, der Helfer den Hinweis „Korrektur über die Turnierleitung“ (@SL-045)
   const istLeitung = useCan('leadMatches', tournament.id);
   const closed = useTournamentClosed(tournament.id); // R3-3: Cockpit nennt den Abschluss statt des Helfer-Satzes
-  const { feld, setFeld, fieldMatches, currentMatchData, waehleSpiel, ladeNaechstes, endstandPause, gehaltenId } = useFieldMatchSelection({
-    numberOfFields: tournament.numberOfFields, schedule, liveMatches, initialMatchId, onInitialMatchConsumed,
+  const { feld, setFeld, fieldMatches, currentMatchData, folgende, waehleSpiel, ladeNaechstes, endstandPause, gehaltenId } = useFieldMatchSelection({
+    numberOfFields: tournament.numberOfFields, schedule, liveMatches, initialMatchId, onInitialMatchConsumed, tournamentMatches: tournament.matches,
   });
   // „Korrigieren“ nach dem Abpfiff (@SL-159): nur die Turnierleitung bekommt den Weg, derselbe wie die Korrektur im Spielplan;
   // solange er offen ist, pausiert der Countdown des Endstands (@SL-163, @SL-164)
@@ -157,11 +157,8 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     [lastFinishedMatchData, toSummary]
   );
 
-  // Folgende Spiele: die noch offenen des Felds in der Spielfolge (ein beendetes Spiel ist nie „Nächstes“); das erste ist dasselbe wie bei „Weiter“ und bei der Karte
-  const upcomingMatches = useMemo(
-    () => fieldMatches.filter((m) => m.id !== currentMatchData?.id && (m.scoreA === undefined || m.scoreB === undefined)).map(toSummary),
-    [fieldMatches, currentMatchData, toSummary],
-  );
+  // Folgende Spiele: die noch offenen des Felds in der einen Spielfolge (`useFieldMatchSelection.folgende`); das erste ist dasselbe wie bei „Weiter“ und bei der Karte
+  const upcomingMatches = useMemo(() => folgende.map(toSummary), [folgende, toSummary]);
 
   const handleFinishAndReset = useCallback((matchId: string): Promise<string | null> => handleFinish(matchId).then((eventId) => {
     setTimeout(() => { waehleSpiel(null); }, 0);

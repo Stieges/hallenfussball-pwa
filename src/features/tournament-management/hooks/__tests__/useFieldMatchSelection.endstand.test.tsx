@@ -15,9 +15,12 @@ import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { useFieldMatchSelection } from '../useFieldMatchSelection';
 import { nextMatchOnField } from '../../../../core/models/nextMatch';
-import { teamSlot } from '../../../../core/models/matchSlot';
+import { pendingSlot, teamSlot } from '../../../../core/models/matchSlot';
 import { MatchEngineContext, type MatchEngineContextValue } from '../../../match-engine/matchEngineContextInstance';
 import type { GeneratedSchedule } from '../../../../core/generators';
+import type { Match } from '../../../../types/tournament';
+import { leibchenZiel } from '../../../../components/live-cockpit/hooks/useLeibchenKarte';
+import type { Tournament } from '../../../../types/tournament';
 import type { LiveMatch } from '../../../../components/live-cockpit/types';
 
 const T0 = Date.UTC(2026, 9, 21, 15, 0, 0);
@@ -52,13 +55,13 @@ function engineMit(finishedAt: Record<string, number | null>, direkt: readonly s
   return { engine } as unknown as MatchEngineContextValue;
 }
 
-interface Props { engine: MatchEngineContextValue | null; schedule: GeneratedSchedule; live: ReadonlyMap<string, LiveMatch>; initialMatchId?: string }
+interface Props { engine: MatchEngineContextValue | null; schedule: GeneratedSchedule; live: ReadonlyMap<string, LiveMatch>; initialMatchId?: string; tournamentMatches?: readonly Match[]; numberOfFields?: number }
 function render(p: Props) {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <MemoryRouter><MatchEngineContext.Provider value={p.engine}>{children}</MatchEngineContext.Provider></MemoryRouter>
   );
   return renderHook((q: Props) => useFieldMatchSelection({
-    numberOfFields: 1, schedule: q.schedule, liveMatches: q.live, initialMatchId: q.initialMatchId,
+    numberOfFields: q.numberOfFields ?? 1, schedule: q.schedule, liveMatches: q.live, initialMatchId: q.initialMatchId, tournamentMatches: q.tournamentMatches,
   }), { wrapper, initialProps: p });
 }
 const aktuell = (r: { result: { current: { currentMatchData: { id: string } | undefined } } }): string | undefined => r.result.current.currentMatchData?.id;
@@ -226,5 +229,55 @@ describe('Das nächste Spiel: „Weiter“, Tafel und Karte rechnen nach einer R
     const r = render({ engine: engineMit({ m11: T0 - 5_000 }), schedule: { allMatches: [spiel('m11', 11, { scoreA: 2, scoreB: 1 }), spiel('m13', 13, { scoreA: 1, scoreB: 0 }), spiel('m14', 14)] } as unknown as GeneratedSchedule, live: karte(['m11', 'FINISHED']), initialMatchId: 'm11' });
     act(() => { r.result.current.ladeNaechstes(); });
     expect(aktuell(r)).toBe('m14');
+  });
+});
+
+describe('Das nächste Spiel: ausgefallene, offene Paarung, zwei Felder (@SL-117, @SL-215)', () => {
+  const A = '00000000-0000-4000-8000-0000000000a1';
+  const B = '00000000-0000-4000-8000-0000000000a2';
+  const feldSpiel = (id: string, nr: number, extra: Record<string, unknown> = {}) => spiel(id, nr, { slotA: teamSlot(A), slotB: teamSlot(B), ...extra });
+  const tm = (id: string, nr: number, matchStatus: Match['matchStatus'], extra: Record<string, unknown> = {}): Match => ({ id, matchNumber: nr, field: 1, round: 1, slot: nr, matchStatus, slotA: teamSlot(A), slotB: teamSlot(B), ...extra }) as unknown as Match;
+  const turnier = (matches: Match[]): Tournament => ({ id: 't', teams: [{ id: A, name: 'A' }, { id: B, name: 'B' }], matches }) as unknown as Tournament;
+
+  it('@SL-117 Gegenbeispiel 1: Spiel 3 ist abgesetzt, das Feld spielt Spiel 4 – „Weiter“ springt nicht zu Spiel 3 zurück, sondern zu Spiel 5; die Tafel nennt Spiel 5; die Karte gilt Spiel 5', () => {
+    const schedule: GeneratedSchedule = { allMatches: [feldSpiel('m1', 1, { scoreA: 1, scoreB: 0 }), feldSpiel('m3', 3), feldSpiel('m4', 4, { scoreA: 2, scoreB: 2 }), feldSpiel('m5', 5)] } as unknown as GeneratedSchedule;
+    const matches = [tm('m1', 1, 'finished'), tm('m3', 3, 'skipped'), tm('m4', 4, 'running'), tm('m5', 5, 'scheduled')];
+    const r = render({ engine: engineMit({ m4: T0 - 5_000 }), schedule, live: karte(['m4', 'FINISHED']), initialMatchId: 'm4', tournamentMatches: matches });
+    expect(aktuell(r)).toBe('m4');
+    expect(r.result.current.folgende.map((m) => m.id)).toEqual(['m5']); // Tafel
+    expect(leibchenZiel(turnier(matches), 'm4', 'abgepfiffen')?.id).toBe('m5'); // Karte
+    act(() => { r.result.current.ladeNaechstes(); });
+    expect(aktuell(r)).toBe('m5'); // „Weiter“
+  });
+
+  it('@SL-215 Gegenbeispiel 2: das nächste Spiel hat noch eine offene Paarung – Tafel und „Weiter“ nennen Spiel 12, die Karte gilt demselben Spiel (und steht dort nicht, weil die Teams fehlen), nie Spiel 13', () => {
+    const offen = { slotA: pendingSlot({ kind: 'groupRank', group: 'A', rank: 1 }) };
+    const schedule: GeneratedSchedule = { allMatches: [feldSpiel('m11', 11, { scoreA: 1, scoreB: 0 }), feldSpiel('m12', 12, offen), feldSpiel('m13', 13)] } as unknown as GeneratedSchedule;
+    const matches = [tm('m11', 11, 'finished'), tm('m12', 12, 'scheduled', offen), tm('m13', 13, 'scheduled')];
+    const r = render({ engine: engineMit({ m11: T0 - 5_000 }), schedule, live: karte(['m11', 'FINISHED']), initialMatchId: 'm11', tournamentMatches: matches });
+    expect(r.result.current.folgende.map((m) => m.id)).toEqual(['m12', 'm13']);
+    expect(leibchenZiel(turnier(matches), 'm11', 'abgepfiffen')?.id).toBe('m12');
+    act(() => { r.result.current.ladeNaechstes(); });
+    expect(aktuell(r)).toBe('m12');
+  });
+
+  it('@SL-215 zwei Felder: das nächste Spiel eines Felds ist nie ein Spiel des anderen; ist das Feld durch, geht „Weiter“ zum frühesten offenen Spiel des anderen Felds (nicht zu einem ausgefallenen)', () => {
+    const schedule: GeneratedSchedule = { allMatches: [
+      feldSpiel('f1a', 1, { scoreA: 1, scoreB: 0 }), feldSpiel('f2a', 2, { field: 2, slot: 1 }), feldSpiel('f2b', 3, { field: 2, slot: 2 }),
+    ] } as unknown as GeneratedSchedule;
+    const matches = [tm('f1a', 1, 'finished'), tm('f2a', 2, 'skipped', { field: 2 }), tm('f2b', 3, 'scheduled', { field: 2 })];
+    const r = render({ engine: engineMit({ f1a: T0 - 5_000 }), schedule, live: karte(['f1a', 'FINISHED']), numberOfFields: 2, tournamentMatches: matches });
+    act(() => { r.result.current.waehleSpiel('f1a'); }); // (ohne `initialMatchId`: dessen Wirkung läuft bei jeder Änderung der Adresse erneut)
+    expect(r.result.current.folgende).toEqual([]); // Feld 1 hat kein weiteres Spiel
+    expect(leibchenZiel(turnier(matches), 'f1a', 'abgepfiffen')).toBeNull();
+    act(() => { r.result.current.ladeNaechstes(); });
+    expect(aktuell(r)).toBe('f2b');
+  });
+
+  it('Gegenbeispiel: ein Ergebnis zählt als beendet, auch wenn der Status des Turniers noch „angesetzt“ sagt', () => {
+    const schedule: GeneratedSchedule = { allMatches: [feldSpiel('m1', 1, { scoreA: 1, scoreB: 0 }), feldSpiel('m2', 2, { scoreA: 3, scoreB: 3 }), feldSpiel('m3', 3)] } as unknown as GeneratedSchedule;
+    const matches = [tm('m1', 1, 'finished'), tm('m2', 2, 'scheduled'), tm('m3', 3, 'scheduled')];
+    const r = render({ engine: engineMit({ m1: T0 - 5_000 }), schedule, live: karte(['m1', 'FINISHED']), initialMatchId: 'm1', tournamentMatches: matches });
+    expect(r.result.current.folgende.map((m) => m.id)).toEqual(['m3']);
   });
 });

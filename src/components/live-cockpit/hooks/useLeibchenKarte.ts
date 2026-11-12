@@ -13,7 +13,7 @@ import { bibRuleOf, hallenFarbenOf, type KitSide } from '../../../core/models/ki
 import { karteNoetig, kitProposal, type KitProposal } from '../../../core/models/kitProposal';
 import { trikotFarben, type TrikotFarben } from '../../../core/models/kitChoice';
 import { slotTeamId } from '../../../core/models/matchSlot';
-import { nextMatchOnField } from '../../../core/models/nextMatch';
+import { nextOpenMatchOnField } from '../../../core/models/nextMatch';
 import type { LeibchenAuswahl } from '../../ui/molecules/LeibchenKarte';
 import type { KitChoiceNotice } from '../../../core/match/client/kitChoiceQueue';
 import type { Match, Tournament } from '../../../types/tournament';
@@ -54,8 +54,8 @@ export function leibchenZiel(tournament: Tournament | undefined, matchId: string
   if (tournament === undefined || matchId === undefined) { return null; }
   const aktuell = tournament.matches.find((m) => m.id === matchId);
   if (aktuell === undefined) { return null; }
-  const ziel = zustand === 'vorAnpfiff' ? aktuell : zustand === 'abgepfiffen' ? nextMatchOnField(tournament.matches, aktuell.field) : undefined;
-  if (ziel === undefined || ziel.id === aktuell.id && zustand === 'abgepfiffen') { return null; }
+  const ziel = zustand === 'vorAnpfiff' ? aktuell : zustand === 'abgepfiffen' ? nextOpenMatchOnField(tournament.matches, aktuell.field, aktuell.id) : undefined;
+  if (ziel === undefined) { return null; }
   return ziel.matchStatus === 'skipped' ? null : ziel;
 }
 
