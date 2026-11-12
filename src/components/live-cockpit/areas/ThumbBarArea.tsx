@@ -66,7 +66,7 @@ export function ThumbBarArea(p: ThumbBarAreaProps): ReactElement | null {
 
   if (!kannSteuern) {
     return (
-      <div style={klebtUnten}>
+      <div style={klebtUnten} data-leibchen-leiste="">
         {p.karte}
         <NurLesenLeiste
           fieldName={p.fieldName} steuerung={p.steuerung} abgeschlossen={p.abgeschlossen} mitEreignissen={modell.aktionen.includes('ereignisse')}
@@ -125,7 +125,7 @@ export function ThumbBarArea(p: ThumbBarAreaProps): ReactElement | null {
     : controls.undoHint && phase.zustand !== 'abgepfiffen' ? { text: controls.undoHint, testId: 'match-undo-hint' } : undefined;
 
   return (
-    <div style={klebtUnten}>
+    <div style={klebtUnten} data-leibchen-leiste="">
       {p.karte}
       <ThumbBar ariaLabel={t('leiste.aria')} slots={slots} layout={layout} hinweis={hinweis} tastenChips={feinerZeiger} />
       <TiebreakChoiceSheet

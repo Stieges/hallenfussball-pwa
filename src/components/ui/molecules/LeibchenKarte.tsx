@@ -134,7 +134,7 @@ export function LeibchenKarte(p: LeibchenKarteProps): ReactElement | null {
   const schliesse = (): void => { setAendern(false); setEntwurf(null); setzeOffen(false); };
 
   return (
-    <div style={karteFlaeche} role="group" aria-label={t('leibchenKarte.gruppeAria')} data-testid={`${prefix}-karte`}>
+    <div style={karteFlaeche} data-leibchen-flaeche="" role="group" aria-label={t('leibchenKarte.gruppeAria')} data-testid={`${prefix}-karte`}>
       <p style={ueberschriftStil} data-testid={`${prefix}-ueberschrift`}>{p.spielNummer === undefined ? t('leibchenKarte.ueberschriftOhneNummer') : t('leibchenKarte.ueberschrift', { nummer: p.spielNummer })}</p>
       {keinPassendes ? (
         <p style={{ margin: 0, fontWeight: cssVars.fontWeights.semibold }} data-testid={`${prefix}-kein-passendes`}>
