@@ -988,6 +988,17 @@
       "erwarte": "[data-testid=\"leibchen-zeile\"]",
       "profil": "app",
       "saat": "leibchen-vor-anpfiff"
+    },
+    {
+      "id": "karte-endstand",
+      "titel": "Cockpit: Endstand von Spiel 2 mit der Karte für Spiel 3 über „Weiter“ (@SL-215)",
+      "gruppen": [
+        "leibchen-karte"
+      ],
+      "app": "/#/tournament/leibchen-endstand/live?matchId=0000000b-0000-4000-9000-000000000002",
+      "erwarte": "[data-testid=\"leibchen-karte\"]",
+      "profil": "app",
+      "saat": "leibchen-vor-anpfiff"
     }
   ]
 }

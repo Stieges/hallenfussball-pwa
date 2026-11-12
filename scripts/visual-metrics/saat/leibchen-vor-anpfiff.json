@@ -18,9 +18,9 @@
             "numberOfTeams": 4,
             "groupSystem": "roundRobin",
             "numberOfGroups": 1,
-            "groupPhaseGameDuration": 10,
+            "groupPhaseGameDuration": 9,
             "groupPhaseBreakDuration": 2,
-            "finalRoundGameDuration": 10,
+            "finalRoundGameDuration": 9,
             "finalRoundBreakDuration": 2,
             "breakBetweenPhases": 5,
             "gamePeriods": 1,
@@ -131,7 +131,7 @@
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000002",
@@ -151,12 +151,12 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:12:00.000Z",
+                "scheduledTime": "2026-12-06T08:11:00.000Z",
                 "matchNumber": 2,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000003",
@@ -196,12 +196,12 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:36:00.000Z",
+                "scheduledTime": "2026-12-06T08:33:00.000Z",
                 "matchNumber": 4,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000005",
@@ -221,12 +221,12 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:48:00.000Z",
+                "scheduledTime": "2026-12-06T08:44:00.000Z",
                 "matchNumber": 5,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000006",
@@ -246,12 +246,12 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T09:00:00.000Z",
+                "scheduledTime": "2026-12-06T08:55:00.000Z",
                 "matchNumber": 6,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               }
             ],
             "status": "published",
@@ -304,9 +304,9 @@
             "numberOfTeams": 4,
             "groupSystem": "roundRobin",
             "numberOfGroups": 1,
-            "groupPhaseGameDuration": 10,
+            "groupPhaseGameDuration": 9,
             "groupPhaseBreakDuration": 2,
-            "finalRoundGameDuration": 10,
+            "finalRoundGameDuration": 9,
             "finalRoundBreakDuration": 2,
             "breakBetweenPhases": 5,
             "gamePeriods": 1,
@@ -417,7 +417,7 @@
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000002",
@@ -437,12 +437,12 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:12:00.000Z",
+                "scheduledTime": "2026-12-06T08:11:00.000Z",
                 "matchNumber": 2,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000003",
@@ -487,12 +487,12 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:36:00.000Z",
+                "scheduledTime": "2026-12-06T08:33:00.000Z",
                 "matchNumber": 4,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000005",
@@ -512,12 +512,12 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:48:00.000Z",
+                "scheduledTime": "2026-12-06T08:44:00.000Z",
                 "matchNumber": 5,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000006",
@@ -537,12 +537,12 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T09:00:00.000Z",
+                "scheduledTime": "2026-12-06T08:55:00.000Z",
                 "matchNumber": 6,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               }
             ],
             "status": "published",
@@ -595,9 +595,9 @@
             "numberOfTeams": 4,
             "groupSystem": "roundRobin",
             "numberOfGroups": 1,
-            "groupPhaseGameDuration": 10,
+            "groupPhaseGameDuration": 9,
             "groupPhaseBreakDuration": 2,
-            "finalRoundGameDuration": 10,
+            "finalRoundGameDuration": 9,
             "finalRoundBreakDuration": 2,
             "breakBetweenPhases": 5,
             "gamePeriods": 1,
@@ -705,7 +705,7 @@
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000002",
@@ -725,12 +725,12 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:12:00.000Z",
+                "scheduledTime": "2026-12-06T08:11:00.000Z",
                 "matchNumber": 2,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000003",
@@ -770,12 +770,12 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:36:00.000Z",
+                "scheduledTime": "2026-12-06T08:33:00.000Z",
                 "matchNumber": 4,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000005",
@@ -795,12 +795,12 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:48:00.000Z",
+                "scheduledTime": "2026-12-06T08:44:00.000Z",
                 "matchNumber": 5,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000006",
@@ -820,12 +820,12 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T09:00:00.000Z",
+                "scheduledTime": "2026-12-06T08:55:00.000Z",
                 "matchNumber": 6,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               }
             ],
             "status": "published",
@@ -878,9 +878,9 @@
             "numberOfTeams": 4,
             "groupSystem": "roundRobin",
             "numberOfGroups": 1,
-            "groupPhaseGameDuration": 10,
+            "groupPhaseGameDuration": 9,
             "groupPhaseBreakDuration": 2,
-            "finalRoundGameDuration": 10,
+            "finalRoundGameDuration": 9,
             "finalRoundBreakDuration": 2,
             "breakBetweenPhases": 5,
             "gamePeriods": 1,
@@ -988,7 +988,7 @@
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000002",
@@ -1008,12 +1008,12 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:12:00.000Z",
+                "scheduledTime": "2026-12-06T08:11:00.000Z",
                 "matchNumber": 2,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000003",
@@ -1058,12 +1058,12 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:36:00.000Z",
+                "scheduledTime": "2026-12-06T08:33:00.000Z",
                 "matchNumber": 4,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000005",
@@ -1083,12 +1083,12 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:48:00.000Z",
+                "scheduledTime": "2026-12-06T08:44:00.000Z",
                 "matchNumber": 5,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000006",
@@ -1108,12 +1108,12 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T09:00:00.000Z",
+                "scheduledTime": "2026-12-06T08:55:00.000Z",
                 "matchNumber": 6,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               }
             ],
             "status": "published",
@@ -1166,9 +1166,9 @@
             "numberOfTeams": 4,
             "groupSystem": "roundRobin",
             "numberOfGroups": 1,
-            "groupPhaseGameDuration": 10,
+            "groupPhaseGameDuration": 9,
             "groupPhaseBreakDuration": 2,
-            "finalRoundGameDuration": 10,
+            "finalRoundGameDuration": 9,
             "finalRoundBreakDuration": 2,
             "breakBetweenPhases": 5,
             "gamePeriods": 1,
@@ -1273,7 +1273,7 @@
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000002",
@@ -1293,12 +1293,12 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:12:00.000Z",
+                "scheduledTime": "2026-12-06T08:11:00.000Z",
                 "matchNumber": 2,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000003",
@@ -1338,12 +1338,12 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:36:00.000Z",
+                "scheduledTime": "2026-12-06T08:33:00.000Z",
                 "matchNumber": 4,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000005",
@@ -1363,12 +1363,12 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:48:00.000Z",
+                "scheduledTime": "2026-12-06T08:44:00.000Z",
                 "matchNumber": 5,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000006",
@@ -1388,12 +1388,12 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T09:00:00.000Z",
+                "scheduledTime": "2026-12-06T08:55:00.000Z",
                 "matchNumber": 6,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               }
             ],
             "status": "published",
@@ -1446,9 +1446,295 @@
             "numberOfTeams": 4,
             "groupSystem": "roundRobin",
             "numberOfGroups": 1,
-            "groupPhaseGameDuration": 10,
+            "groupPhaseGameDuration": 9,
             "groupPhaseBreakDuration": 2,
-            "finalRoundGameDuration": 10,
+            "finalRoundGameDuration": 9,
+            "finalRoundBreakDuration": 2,
+            "breakBetweenPhases": 5,
+            "gamePeriods": 1,
+            "halftimeBreak": 1,
+            "placementLogic": [
+              {
+                "id": "points",
+                "enabled": true
+              },
+              {
+                "id": "directComparison",
+                "enabled": true
+              },
+              {
+                "id": "goalDifference",
+                "enabled": true
+              },
+              {
+                "id": "goalsFor",
+                "enabled": true
+              }
+            ],
+            "placementsToPlayOut": [
+              1
+            ],
+            "finals": {
+              "final": false,
+              "thirdPlace": false,
+              "fifthSixth": false,
+              "seventhEighth": false
+            },
+            "finalsConfig": {
+              "preset": "none",
+              "tiebreaker": "overtime-then-shootout",
+              "tiebreakerDuration": 5
+            },
+            "refereeConfig": {
+              "mode": "none"
+            },
+            "isKidsTournament": false,
+            "hideScoresForPublic": false,
+            "hideRankingsForPublic": false,
+            "resultMode": "goals",
+            "pointSystem": {
+              "win": 3,
+              "draw": 1,
+              "loss": 0
+            },
+            "isPublic": true,
+            "title": "Leibchen vor dem Anpfiff",
+            "ageClass": "U11",
+            "date": "@heute",
+            "timeSlot": "09:00 - 16:00",
+            "location": {
+              "name": "Sporthalle Waging"
+            },
+            "teams": [
+              {
+                "id": "0000000b-0000-4000-8000-000000000001",
+                "name": "SV Aschau",
+                "colors": {
+                  "primary": "#C62828"
+                }
+              },
+              {
+                "id": "0000000b-0000-4000-8000-000000000002",
+                "name": "FC Seeon",
+                "colors": {
+                  "primary": "#2E7D32"
+                }
+              },
+              {
+                "id": "0000000b-0000-4000-8000-000000000003",
+                "name": "TSV Waging 1",
+                "colors": {
+                  "primary": "#1565C0"
+                }
+              },
+              {
+                "id": "0000000b-0000-4000-8000-000000000004",
+                "name": "TSV Petting",
+                "colors": {
+                  "primary": "#1565C0"
+                }
+              }
+            ],
+            "matches": [
+              {
+                "id": "0000000b-0000-4000-9000-000000000001",
+                "round": 1,
+                "field": 1,
+                "slot": 0,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000004"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:00:00.000Z",
+                "matchNumber": 1,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 540
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000002",
+                "round": 2,
+                "field": 1,
+                "slot": 1,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000002"
+                },
+                "scoreA": 2,
+                "scoreB": 1,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:11:00.000Z",
+                "matchNumber": 2,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "@jetzt-2s",
+                "timerElapsedSeconds": 540
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000003",
+                "round": 3,
+                "field": 1,
+                "slot": 3,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000003"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000004"
+                },
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "@jetzt+240s",
+                "matchNumber": 3,
+                "matchStatus": "scheduled"
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000004",
+                "round": 4,
+                "field": 1,
+                "slot": 4,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000003"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:33:00.000Z",
+                "matchNumber": 4,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 540
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000005",
+                "round": 5,
+                "field": 1,
+                "slot": 6,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000001"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000002"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:44:00.000Z",
+                "matchNumber": 5,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 540
+              },
+              {
+                "id": "0000000b-0000-4000-9000-000000000006",
+                "round": 6,
+                "field": 1,
+                "slot": 7,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000003"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "0000000b-0000-4000-8000-000000000004"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:55:00.000Z",
+                "matchNumber": 6,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 540
+              }
+            ],
+            "status": "published",
+            "createdAt": "2026-12-06T08:00:00.000Z",
+            "updatedAt": "2026-12-06T08:00:00.000Z",
+            "lastVisitedStep": 6,
+            "id": "leibchen-endstand",
+            "startDate": "@heute",
+            "startTime": "09:00",
+            "bibColor": "#FFCC00",
+            "shareCode": "LBX2S7",
+            "shareCodeCreatedAt": "2026-12-06T08:00:00.000Z",
+            "monitors": [
+              {
+                "id": "mon-live",
+                "name": "Folie Live",
+                "defaultSlideDuration": 15,
+                "transition": "none",
+                "transitionDuration": 0,
+                "theme": "dark",
+                "performanceMode": "auto",
+                "slides": [
+                  {
+                    "id": "s-live",
+                    "type": "live",
+                    "config": {
+                      "fieldId": "field-1"
+                    },
+                    "order": 0,
+                    "duration": null
+                  }
+                ],
+                "createdAt": "2026-12-06T08:00:00.000Z",
+                "updatedAt": "2026-12-06T08:00:00.000Z"
+              }
+            ],
+            "publishedAt": "2026-12-06T08:00:00.000Z",
+            "bibColors": [
+              "#FFCC00",
+              "#FF6600"
+            ],
+            "bibRule": "home"
+          },
+          {
+            "sport": "football",
+            "sportId": "football-indoor",
+            "tournamentType": "classic",
+            "mode": "classic",
+            "numberOfFields": 1,
+            "numberOfTeams": 4,
+            "groupSystem": "roundRobin",
+            "numberOfGroups": 1,
+            "groupPhaseGameDuration": 9,
+            "groupPhaseBreakDuration": 2,
+            "finalRoundGameDuration": 9,
             "finalRoundBreakDuration": 2,
             "breakBetweenPhases": 5,
             "gamePeriods": 1,
@@ -1559,7 +1845,7 @@
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000002",
@@ -1579,12 +1865,12 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:12:00.000Z",
+                "scheduledTime": "2026-12-06T08:11:00.000Z",
                 "matchNumber": 2,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000003",
@@ -1629,12 +1915,12 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:36:00.000Z",
+                "scheduledTime": "2026-12-06T08:33:00.000Z",
                 "matchNumber": 4,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000005",
@@ -1654,12 +1940,12 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T08:48:00.000Z",
+                "scheduledTime": "2026-12-06T08:44:00.000Z",
                 "matchNumber": 5,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               },
               {
                 "id": "0000000b-0000-4000-9000-000000000006",
@@ -1679,12 +1965,12 @@
                 "group": "all",
                 "isFinal": false,
                 "phase": "groupStage",
-                "scheduledTime": "2026-12-06T09:00:00.000Z",
+                "scheduledTime": "2026-12-06T08:55:00.000Z",
                 "matchNumber": 6,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-12-06T08:00:00.000Z",
-                "timerElapsedSeconds": 600
+                "timerElapsedSeconds": 540
               }
             ],
             "status": "published",
@@ -1735,7 +2021,97 @@
       "name": "hallenfussball-matches",
       "version": 2,
       "store": "matches",
-      "eintraege": {}
+      "eintraege": {
+        "guest|0000000b-0000-4000-9000-000000000002": {
+          "formatVersion": 2,
+          "accountId": "guest",
+          "matchId": "0000000b-0000-4000-9000-000000000002",
+          "tournamentId": "leibchen-endstand",
+          "ctx": {
+            "matchId": "0000000b-0000-4000-9000-000000000002",
+            "teamAId": "0000000b-0000-4000-8000-000000000001",
+            "teamBId": "0000000b-0000-4000-8000-000000000002"
+          },
+          "confirmed": [
+            {
+              "id": "00000002-0000-4000-8000-000000000101",
+              "type": "MATCH_START",
+              "actor": "helper",
+              "actorUser": "helper",
+              "at": "@jetzt-ms-542000",
+              "section": 1,
+              "clockMs": null,
+              "payload": {
+                "rules": {
+                  "sections": 1,
+                  "sectionSeconds": 540,
+                  "breakSeconds": 60,
+                  "knockout": false,
+                  "tiebreak": "overtime-then-shootout",
+                  "overtimeSeconds": 300,
+                  "shootersPerTeam": 3,
+                  "suddenDeathAfter": 6,
+                  "penaltySeconds": 120
+                }
+              },
+              "seq": 1
+            },
+            {
+              "id": "00000002-0000-4000-8000-000000000102",
+              "type": "GOAL",
+              "actor": "helper",
+              "actorUser": "helper",
+              "at": "@jetzt-ms-427000",
+              "section": 1,
+              "clockMs": 115000,
+              "payload": {},
+              "teamId": "0000000b-0000-4000-8000-000000000001",
+              "seq": 2
+            },
+            {
+              "id": "00000002-0000-4000-8000-000000000103",
+              "type": "GOAL",
+              "actor": "helper",
+              "actorUser": "helper",
+              "at": "@jetzt-ms-292000",
+              "section": 1,
+              "clockMs": 250000,
+              "payload": {},
+              "teamId": "0000000b-0000-4000-8000-000000000002",
+              "seq": 3
+            },
+            {
+              "id": "00000002-0000-4000-8000-000000000104",
+              "type": "GOAL",
+              "actor": "helper",
+              "actorUser": "helper",
+              "at": "@jetzt-ms-157000",
+              "section": 1,
+              "clockMs": 385000,
+              "payload": {},
+              "teamId": "0000000b-0000-4000-8000-000000000001",
+              "seq": 4
+            },
+            {
+              "id": "00000002-0000-4000-8000-000000000105",
+              "type": "MATCH_END",
+              "actor": "helper",
+              "actorUser": "helper",
+              "at": "@jetzt-ms-2000",
+              "section": 1,
+              "clockMs": 540000,
+              "payload": {},
+              "seq": 5
+            }
+          ],
+          "watermarkSeq": 5,
+          "acked": [],
+          "pending": [],
+          "rejected": [],
+          "review": [],
+          "updatedAt": "@jetzt-ms-2000"
+        }
+      }
     }
   ],
   "localStorage": {
@@ -1772,6 +2148,11 @@
         "turnierId": "leibchen-7e",
         "shareCode": "LBX2E7",
         "titel": "7e beide Teams ohne Trikotfarbe"
+      },
+      {
+        "turnierId": "leibchen-endstand",
+        "shareCode": "LBX2S7",
+        "titel": "Endstand von Spiel 2 mit der Karte für Spiel 3"
       },
       {
         "turnierId": "leibchen-lang",

@@ -121,12 +121,12 @@ test.describe('Cockpit am kleinen Handy: alle Tasten ohne Scrollen', () => {
   });
 
   test('@SL-151 Leibchen dem Gegner zu ähnlich: die Karte warnt mit vollem Satz, vollständig über der Leiste (50 Zeichen)', async ({ page, seedIndexedDB }, testInfo) => {
-    // Weiß (Heim) gegen Gelb (Gast, 50 Zeichen): die Hallenfarbe Gelb wäre dem Gast zu ähnlich – kein passendes Leibchen, „Andere Farbe …“ zeigt die Warnung
+    // Weiß (Heim) gegen Gelb (Gast, 50 Zeichen): die Karte schlägt dem Gast Gelb vor; wählt Tom stattdessen Gelb für das Heim, wäre es dem Gast zu ähnlich (Warnsatz)
     await seedIndexedDB({ tournaments: [cup({ namen: ['FC Teisendorf', NAME_50, 'TSV Ost', 'FC West'], farben: ['#FFFFFF', '#FFEB3B', '#2E8B57', '#C0392B'], minuten: 9, perioden: 1 })] });
     await page.goto(`/#/tournament/${ID}/live`);
     await expect(page.getByTestId('match-start-button')).toBeVisible({ timeout: 15000 });
-    await expect(page.getByTestId('leibchen-kein-passendes')).toBeVisible();
-    await page.getByTestId('leibchen-andere-farbe').click();
+    await page.getByTestId('leibchen-vorschlag').click();
+    await page.getByTestId('leibchen-team-heim').click();
     await expect(page.getByTestId('leibchen-farbe-gelb')).toContainText('Wie Gegner');
     await page.getByTestId('leibchen-farbe-gelb').click();
     const satz = page.getByTestId('leibchen-satz');

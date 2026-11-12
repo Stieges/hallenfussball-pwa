@@ -62,7 +62,7 @@ export interface ScoreboardAreaProps {
   naechstes?: ReactNode;
   naechstesNamen?: readonly string[];
   /** Vor dem Anpfiff: gleiche (`same`) oder zu ähnliche (`similar`) Trikotfarben (@SL-196), Leibchen dem Gegner zu ähnlich (`gegner`, @SL-151, Vorrang). */
-  farbKonflikt?: 'same' | 'similar' | 'none' | 'gegner';
+  farbKonflikt?: 'same' | 'similar' | 'none';
   /** Spielzeit aus den Regeln vor dem Anpfiff (@SL-197). */
   spielzeit?: { abschnitte: number; abschnittSekunden: number } | null;
 }
@@ -106,7 +106,7 @@ export function ScoreboardArea(props: ScoreboardAreaProps): ReactElement {
     () => toScoreboardModel({
       match, phase, view, links: order.links, rechts: order.rechts, uhrArt: settings.clockMode,
       schlussphaseMinuten: settings.finalPhaseMinutes, kasten, eintraegeWarten, helferAnfragen, jetztMs, fieldName, tournamentName,
-      vor: { anstoss: anstossText(kickoff, i18n.language), mindestpause, sperrHinweise, leer, uebernahmeVon, spielzeit, farbHinweis: farbKonflikt === 'none' ? null : t(farbKonflikt === 'gegner' ? 'anpfiff.gegnerAehnlichKurz' : farbKonflikt === 'same' ? 'anpfiff.hinweisGleich' : 'anpfiff.hinweisAehnlich') }, eingetragenVon,
+      vor: { anstoss: anstossText(kickoff, i18n.language), mindestpause, sperrHinweise, leer, uebernahmeVon, spielzeit, farbHinweis: farbKonflikt === 'none' ? null : t(farbKonflikt === 'same' ? 'anpfiff.hinweisGleich' : 'anpfiff.hinweisAehnlich') }, eingetragenVon,
     }, alsUebersetzer(t)),
     [match, phase, view, kasten, order.links, order.rechts, settings.clockMode, settings.finalPhaseMinutes, eintraegeWarten, helferAnfragen, jetztMs, fieldName, tournamentName, kickoff, mindestpause, sperrHinweise, leer, uebernahmeVon, eingetragenVon, farbKonflikt, spielzeit, t, i18n.language],
   );

@@ -291,7 +291,9 @@ for (const g of COCKPITS) {
         // Der flache Kopf behält die Streifen: die Form des Trainingsleibchens trägt dort nicht (Bilder `kopf-versuch-*`, Bericht)
         const kopf = page.getByTestId('team-head-home');
         await expect(kopf).toHaveAttribute('data-fill', 'vest');
-        await expect(kopf.locator('[data-teil]')).toHaveCount(0);
+        // …am Handy als zwei schmale Streifen am Rand neben dem Text (@SL-225), am Laptop als ganze Fläche; nie mit Hals- und Schulterteilen des Kastens
+        await expect(kopf.locator('[data-teil="streifen"]')).toHaveCount(g.name === 'handy' ? 2 : 0);
+        await expect(kopf.locator('[data-teil]:not([data-teil="streifen"])')).toHaveCount(0);
       });
     }
   });

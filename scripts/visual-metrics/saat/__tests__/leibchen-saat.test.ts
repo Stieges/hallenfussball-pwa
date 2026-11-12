@@ -21,7 +21,7 @@ beforeAll(async () => {
   // Der Spielplan rechnet Anpfiffzeiten in Ortszeit: feste Zeitzone, damit die Datei auf jedem Rechner gleich ist (wie saat.test.ts).
   zeitzoneAlt = process.env.TZ
   process.env.TZ = 'Europe/Berlin'
-  frisch = JSON.parse(JSON.stringify(await Promise.all(FAELLE.map(erzeugeFall)))) as unknown[]
+  frisch = JSON.parse(JSON.stringify((await Promise.all(FAELLE.map(erzeugeFall))).map((f) => f.turnier))) as unknown[]
 })
 afterAll(() => {
   if (zeitzoneAlt === undefined) { delete process.env.TZ } else { process.env.TZ = zeitzoneAlt }
@@ -30,6 +30,17 @@ afterAll(() => {
 describe('Saat Leibchen vor dem Anpfiff', () => {
   it('die eingefrorene Datei entspricht einer frischen Erzeugung (sonst neu erzeugen)', () => {
     expect(turniere()).toEqual(frisch)
+  })
+
+  it('der Fall „Endstand“ hat für Spiel 2 eine Engine-Kopie mit Ergebnis 2:1 (das Cockpit zeigt den Endstand mit der Karte für Spiel 3), die übrigen Fälle keine', async () => {
+    const faelle = await Promise.all(FAELLE.map(erzeugeFall))
+    const mit = faelle.filter((f) => f.kopien.length > 0).map((f) => f.turnier.id)
+    expect(mit).toEqual(['leibchen-endstand'])
+    const kopie = faelle.find((f) => f.turnier.id === 'leibchen-endstand')?.kopien[0]
+    expect(kopie?.matchId).toBe('0000000b-0000-4000-9000-000000000002')
+    expect(kopie?.confirmed.filter((e) => e.type === 'GOAL')).toHaveLength(3)
+    const datei = JSON.parse(readFileSync(DATEI, 'utf8')) as { datenbanken: { store: string; eintraege: Record<string, unknown> }[] }
+    expect(Object.keys(datei.datenbanken.find((d) => d.store === 'matches')?.eintraege ?? {})).toHaveLength(1)
   })
 
   it('Gegenbeispiel: ein geänderter Wert in der Datei macht den Vergleich rot', () => {
@@ -41,7 +52,7 @@ describe('Saat Leibchen vor dem Anpfiff', () => {
   it.each(FAELLE.map((f) => [f.id, f] as const))('%s besteht das Turnier-Schema der App (mit aufgelösten Marken)', (_id, fall) => {
     const t = turniere().find((x) => x.id === fall.id)
     expect(t).toBeDefined()
-    const geladen = JSON.parse(JSON.stringify(t).replace(/"@heute"/g, '"2026-12-06"').replace(/"@jetzt\+240s"/g, '"2026-12-06T08:04:00.000Z"')) as unknown
+    const geladen = JSON.parse(JSON.stringify(t).replace(/"@heute"/g, '"2026-12-06"').replace(/"@jetzt[+-]\d+s"/g, '"2026-12-06T08:04:00.000Z"')) as unknown
     const r = TournamentSchema.safeParse(geladen)
     expect(r.success, r.success ? '' : JSON.stringify(r.error.issues.slice(0, 3))).toBe(true)
   })

@@ -609,8 +609,7 @@
     "nurZusehen_other": "Du kannst nur noch zusehen – {{count}} Einträge an die Turnierleitung übergeben",
     "tasteLeertaste": "Leertaste",
     "tasteRueckgaengigStrg": "Strg+Z",
-    "tasteRueckgaengigCmd": "Cmd+Z",
-    "ohneLeibchen": "Ohne Leibchen anpfeifen"
+    "tasteRueckgaengigCmd": "Cmd+Z"
   },
   "abpfiff": {
     "label": "Abpfiff",
@@ -705,10 +704,6 @@
   "anpfiff": {
     "hinweisGleich": "Gleiche Trikotfarbe",
     "hinweisAehnlich": "Sehr ähnliche Trikotfarben",
-    "festlegen": "Leibchen festlegen",
-    "leibchenFuer": "Leibchen für {{team}}",
-    "farbeLabel": "Leibchen: {{farbe}}",
-    "ohneAnpfeifen": "Ohne Leibchen anpfeifen",
     "farbe": {
       "gelb": "Gelb",
       "orange": "Orange",
@@ -725,13 +720,10 @@
       "braun": "Braun",
       "turnier": "Farbe des Turniers"
     },
-    "leibchen": "Leibchen",
-    "farbeZuAehnlich": "{{farbe}} – zu ähnlich wie das Trikot von {{gegner}}",
-    "gegnerAehnlichKurz": "Leibchen zu ähnlich wie der Gegner"
+    "farbeZuAehnlich": "{{farbe}} – zu ähnlich wie das Trikot von {{gegner}}"
   },
   "leibchenKarte": {
     "zieht": "{{team}} zieht {{farbe}}",
-    "zeile": "{{team}} zieht {{farbe}}",
     "aendernVorschlag": "Leibchen ändern",
     "bestaetigen": "Bestätigen",
     "keine": "Keine Leibchen",
@@ -748,7 +740,6 @@
     "wirdGesendet": "wird gesendet",
     "team": "Team",
     "farbe": "Farbe",
-    "gewaehlt": "gewählt",
     "uebernehmen": "Feld übernehmen",
     "nurLesen": "Nur das steuernde Gerät kann Leibchen bestätigen.",
     "nachtragen": "Leibchen nachtragen",

@@ -144,7 +144,7 @@ export function LeibchenKarte(p: LeibchenKarteProps): ReactElement | null {
         <button type="button" style={vorschlagKnopf} aria-expanded={offen} aria-label={`${satz(aktuell.seite, aktuell.farbe)}. ${t('leibchenKarte.aendernVorschlag')}`}
           disabled={p.lesen} onClick={() => { if (offen) { setEntwurf(null); } setzeOffen(!offen); }} data-testid={`${prefix}-vorschlag`}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: cssVars.spacing.sm, minWidth: 0 }}><MiniWeste trikot={p.trikot[aktuell.seite]} farbe={aktuell.farbe} />{satz(aktuell.seite, aktuell.farbe)}</span>
-          {!p.lesen && <span style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary }}>{t('leibchenKarte.aendernVorschlag')} {offen ? '▴' : '▾'}</span>}
+          {!p.lesen && <span style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, whiteSpace: 'nowrap', flexShrink: 0 }}>{t('leibchenKarte.aendernVorschlag')} {offen ? '▴' : '▾'}</span>}
         </button>
       )}
       {(offen || (keinPassendes && offen)) && !p.lesen && (
