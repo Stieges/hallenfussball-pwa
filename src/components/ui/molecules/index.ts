@@ -73,3 +73,6 @@ export { ActionSheet } from './ActionSheet';
 export type { ActionSheetProps, ActionSheetItem } from './ActionSheet';
 export { ZeitstrafeHinweis } from './ZeitstrafeHinweis';
 export type { ZeitstrafeHinweisProps } from './ZeitstrafeHinweis';
+
+export { ScoreEntrySheet } from './ScoreEntrySheet';
+export type { ScoreEntrySheetProps, ScoreEntryRow } from './ScoreEntrySheet';

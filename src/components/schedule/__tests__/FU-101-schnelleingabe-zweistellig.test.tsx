@@ -9,7 +9,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import type { ComponentProps } from 'react';
-import { act, fireEvent, render, waitFor } from '@testing-library/react';
+import { act, render, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MatchScoreCell } from '../MatchScoreCell';
 import { cssVars } from '../../../design-tokens';
@@ -28,7 +28,7 @@ const renderCell = (props: Partial<ComponentProps<typeof MatchScoreCell>> = {}) 
     />,
   );
   // Linkes Feld = FC Nord (Team A), rechtes Feld = SV Süd (Team B), wie im Spielplan
-  const [fieldFcNord, fieldSvSued] = utils.getAllByRole('spinbutton') as HTMLInputElement[];
+  const [fieldFcNord, fieldSvSued] = utils.getAllByRole('textbox') as HTMLInputElement[];
   const saveButton = utils.getByTestId('match-score-save-spiel-9') as HTMLButtonElement;
   return { ...utils, onScoreChange, fieldFcNord, fieldSvSued, saveButton };
 };
@@ -89,12 +89,12 @@ describe('@FU-101 Ein zweistelliges Ergebnis lässt sich im Spielplan eintragen'
     expect(onScoreChange).not.toHaveBeenCalled();
   });
 
-  it('@FU-101 Enter im zweiten Feld mit ungültiger Eingabe speichert nichts', async () => {
+  it('@FU-101 Enter im zweiten Feld, in dem nur ein Minuszeichen getippt wurde (das Feld bleibt leer), speichert nichts', async () => {
     const user = userEvent.setup();
-    const { onScoreChange, fieldFcNord, fieldSvSued } = renderCell({ scoreA: 1, scoreB: 1 });
+    const { onScoreChange, fieldFcNord, fieldSvSued } = renderCell({ scoreA: 1, scoreB: undefined });
     await user.click(fieldSvSued);
-    fireEvent.change(fieldSvSued, { target: { value: '-3' } });
-    await user.keyboard('{Enter}');
+    await user.keyboard('-{Enter}');
+    expect(fieldSvSued.value).toBe('');
     expect(onScoreChange).not.toHaveBeenCalled();
     expect(fieldFcNord.value).toBe('1');
   });
@@ -239,33 +239,50 @@ describe('@FU-101 Ein zweistelliges Ergebnis lässt sich im Spielplan eintragen'
     });
   });
 
-  describe('nur ganze Zahlen ab 0 (kein Senden, kurzer Hinweis)', () => {
-    it.each([['-3'], ['2.5'], ['1e1']])('@FU-101 Eingabe „%s“ wird nicht gesendet, das Feld zeigt einen Hinweis', async (text) => {
+  describe('nur Ziffern, höchstens zwei Stellen (Textfeld mit Ziffernblock, keine Pfeile)', () => {
+    it.each([['-3', '3'], ['2.5', '25'], ['1e1', '11'], ['abc', ''], ['123', '12']])('@FU-101 Eingabe „%s“ lässt nur „%s“ im Feld stehen, es gibt keinen Hinweis', async (text, bleibt) => {
       const user = userEvent.setup();
-      const { onScoreChange, fieldFcNord, saveButton, queryByRole } = renderCell();
+      const { onScoreChange, fieldFcNord, queryByRole } = renderCell();
 
       await user.click(fieldFcNord);
-      fireEvent.change(fieldFcNord, { target: { value: text } });
+      await user.type(fieldFcNord, text);
       await user.tab();
-      await user.click(saveButton);
 
+      expect(fieldFcNord.value).toBe(bleibt);
+      expect(fieldFcNord.type).toBe('text');
+      expect(fieldFcNord.getAttribute('aria-invalid')).toBeNull();
+      expect(queryByRole('alert')).toBeNull();
       expect(onScoreChange).not.toHaveBeenCalled();
-      expect(queryByRole('alert')?.textContent).toBeTruthy();
-      expect(fieldFcNord.getAttribute('aria-invalid')).toBe('true');
     });
 
-    it('@FU-101 Hinweis verschwindet, sobald wieder eine ganze Zahl getippt wird, und 3:2 geht mit der Taste durch', async () => {
-      const user = userEvent.setup();
-      const { onScoreChange, fieldFcNord, saveButton, queryByRole } = renderCell();
-      await user.click(fieldFcNord);
-      fireEvent.change(fieldFcNord, { target: { value: '-3' } });
-      await user.tab();
-      expect(queryByRole('alert')).not.toBeNull();
+    it.each([['007', '7'], ['00', '0'], ['07', '7'], ['a12', ''], ['1e2', ''], ['2,5', ''], ['-3', ''], ['100', ''], ['42', '42']])(
+      '@FU-101 Einfügen von „%s“: Ziffern ohne führende Nullen bis 99 gelten, alles andere lässt den alten Wert stehen (nichts wird umgedeutet), Ergebnis „%s“',
+      async (text, bleibt) => {
+        const user = userEvent.setup();
+        const { onScoreChange, fieldFcNord } = renderCell();
+        await user.click(fieldFcNord);
+        await user.paste(text);
+        expect(fieldFcNord.value).toBe(bleibt);
+        expect(onScoreChange).not.toHaveBeenCalled();
+      },
+    );
 
+    it('@FU-101 Einfügen von Text mit Nicht-Ziffern behält einen schon getippten Wert („7“ bleibt bei „2,5“)', async () => {
+      const user = userEvent.setup();
+      const { fieldFcNord } = renderCell();
       await user.click(fieldFcNord);
-      await user.clear(fieldFcNord);
+      await user.keyboard('7');
+      await user.paste('2,5');
+      expect(fieldFcNord.value).toBe('7');
+    });
+
+    it('@FU-101 Buchstaben allein lassen das Feld leer; danach geht 3:2 mit der Taste durch', async () => {
+      const user = userEvent.setup();
+      const { onScoreChange, fieldFcNord, saveButton } = renderCell();
+      await user.click(fieldFcNord);
+      await user.keyboard('abc');
+      expect(fieldFcNord.value).toBe('');
       await user.keyboard('3');
-      expect(queryByRole('alert')).toBeNull();
       await user.click(saveButton);
       expect(onScoreChange).toHaveBeenCalledWith(3, 2);
     });
@@ -409,20 +426,19 @@ describe('@FU-101 Ein zweistelliges Ergebnis lässt sich im Spielplan eintragen'
     });
   });
 
-  describe('Hinweis und Beschriftung', () => {
-    it('nur das betroffene Feld ist ungültig und verweist per aria-describedby auf den Hinweis', async () => {
+  describe('Beschriftung', () => {
+    it('beide Felder tragen ihre Beschriftung „Tore <Team>“; Eingabe von Unsinn macht kein Feld ungültig (sie bleibt gar nicht stehen)', async () => {
       const user = userEvent.setup();
-      const { fieldFcNord, fieldSvSued, getByRole } = renderCell({ scoreA: undefined, scoreB: 2 });
+      const { fieldFcNord, fieldSvSued } = renderCell({ scoreA: undefined, scoreB: 2 });
 
       await user.click(fieldFcNord);
-      fireEvent.change(fieldFcNord, { target: { value: '-3' } });
+      await user.keyboard('-x');
       await user.tab();
 
-      const hint = getByRole('alert');
-      expect(fieldFcNord.getAttribute('aria-invalid')).toBe('true');
-      expect(fieldFcNord.getAttribute('aria-describedby')).toBe(hint.id);
+      expect(fieldFcNord.getAttribute('aria-label')).toMatch(/goalsOf/); // Beschriftung „Tore <Team>“ (Schlüssel, die Datei prüft ohne echte Texte)
+      expect(fieldFcNord.value).toBe('');
+      expect(fieldFcNord.getAttribute('aria-invalid')).toBeNull();
       expect(fieldSvSued.getAttribute('aria-invalid')).toBeNull();
-      expect(fieldSvSued.getAttribute('aria-describedby')).toBeNull();
     });
   });
 });

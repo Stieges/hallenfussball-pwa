@@ -51,6 +51,11 @@ export interface MatchActionMenu {
   enabled: boolean;
   /** Öffnet die Auswahl des Spiels; ohne Aktion (kein Recht) geschieht nichts */
   open: (matchId: string) => void;
+  /**
+   * Tipp aufs Ergebnisfeld (@SL-195): hat das Spiel noch kein Ergebnis (geplant, beide Teams bekannt) und darf der Nutzer eintragen, öffnet sofort
+   * die Eingabe des Endergebnisses; sonst (läuft, beendet, gewertet, abgesetzt, Helfer, Paarung offen) die Auswahl wie `open`.
+   */
+  openFromScore: (matchId: string) => void;
   /** Auswahl und ihre Folge-Fenster; in die Ansicht einhängen */
   element: ReactNode;
 }
@@ -91,6 +96,14 @@ export function useMatchActionMenu(args: UseMatchActionMenuArgs): MatchActionMen
     if (rights && (phase === 'awarded' || phase === 'cancelled')) { toast?.showInfo(t(`actionMenu.noAction.${phase}`)); }
   }, [actionsOf, sides, rights, toast, t]);
   const close = useCallback(() => { setOpenId(null); }, []);
+
+  const openFromScore = useCallback((id: string) => {
+    const match = matchOf(id);
+    const direct = match !== undefined && actionPhaseOf(matchViewOf(sides, id)?.status) === 'planned' && actionsOf(id).includes('enterResult')
+      && !sideDisplay(match, 'A', sides).pending && !sideDisplay(match, 'B', sides).pending;
+    if (direct) { onEnterResult?.(id); return; }
+    open(id);
+  }, [matchOf, sides, actionsOf, onEnterResult, open]);
 
   const run = useCallback((action: MatchActionId, id: string) => {
     setOpenId(null);
@@ -181,5 +194,5 @@ export function useMatchActionMenu(args: UseMatchActionMenuArgs): MatchActionMen
     );
   }, [openId, follow, matchOf, close, t, sides, sheetItems, refereeChoices, numberOfFields, onRefereeChange, onFieldChange, liveMatches]);
 
-  return { enabled: rights !== undefined, open, element };
+  return { enabled: rights !== undefined, open, openFromScore, element };
 }

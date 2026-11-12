@@ -21,6 +21,8 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Tournament } from '../../../types/tournament';
 import { ERROR_CODES, effectiveScoreFor } from '../../../core/match';
+import { kickoffLocal } from '../../../core/view';
+import { tournamentWallClock } from '../../../core/services/scheduleShiftClock';
 import { MatchCommands, MatchCommandRejectedError } from '../../../core/match/client';
 import { useMatchEngineContextOptional } from '../../match-engine/useMatchEngineContext';
 import { useActorRole } from '../../../hooks/useActorRole';
@@ -39,6 +41,8 @@ import { endMatchFromSchedule, type EndPrompt } from './scheduleEndMatch';
 export type ResultEntryPrompt =
   | { kind: 'reason'; matchNumber: number; before: string; after: string }
   | { kind: 'unskip'; matchNumber: number }
+  /** @SL-195: der geplante Anstoß liegt (nach Serverzeit) noch in der Zukunft */
+  | { kind: 'future'; matchNumber: number; time: string }
   | { kind: 'shootout'; matchNumber: number; score: string; homeName: string; awayName: string }
   | EndPrompt;
 
@@ -261,6 +265,15 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
       } else if (route === 'enter' || route === 'unskip') {
         // @FU-093: abgesetzt → erst die Rückfrage; @FU-094/@FU-097: K.-o.-Unentschieden → danach die Strafstoß-Abfrage.
         if (route === 'unskip' && (await ask({ kind: 'unskip', matchNumber: entry.meta.number })) === null) {
+          return false;
+        }
+        // @SL-195: liegt der geplante Anstoß nach Serverzeit noch in der Zukunft, fragt die App vor dem Speichern; „Nein“ speichert nichts (ohne geplante Zeit keine Frage; nur die Gruppenphase, die Finalrunde trägt bis G3-Rest R2 unverändert inline ein)
+        // Anstoß = Wanduhr des Turniers (`kickoffInstant`, wie der übrige Spielplan), „jetzt“ = Serverzeit als Wanduhr der Turnier-Zeitzone
+        // (`tournamentWallClock`); beides unabhängig von der Zeitzone des Geräts. Angezeigt wird die Uhrzeit wie im Spielplan (`kickoffLocal`).
+        const kickoff = new Date(entry.meta.scheduledKickoff);
+        const kickoffTime = kickoffLocal(tournament.startDate ?? tournament.date, match?.scheduledTime)?.time;
+        if (route === 'enter' && entry.phase === 'groupStage' && kickoffTime !== undefined && kickoff.getTime() > tournamentWallClock(new Date(engine.serverNow())).getTime()
+          && (await ask({ kind: 'future', matchNumber: entry.meta.number, time: kickoffTime })) === null) {
           return false;
         }
         let shootout: Record<string, number> | undefined;

@@ -144,19 +144,16 @@ export const MatchCard: React.FC<MatchCardProps> = ({
   // ---------------------------------------------------------------------------
 
   const cardStyle: CSSProperties = {
-    backgroundColor: isLive
-      ? `linear-gradient(135deg, ${cssVars.colors.primaryMedium}, ${cssVars.colors.surface})`
-      : cssVars.colors.surface,
     background: isLive
       ? `linear-gradient(135deg, ${cssVars.colors.primaryMedium}, ${cssVars.colors.surface})`
       : cssVars.colors.surface,
-    border: `1px solid ${isLive ? cssVars.colors.borderActive : cssVars.colors.border}`,
+    border: `${cssVars.borderWidth.thin} solid ${isLive ? cssVars.colors.borderActive : cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.lg,
     overflow: 'hidden',
     cursor: disabled ? 'default' : 'pointer',
     transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
     boxShadow: isHovered && !disabled
-      ? `0 4px 12px ${cssVars.colors.shadowMedium}`
+      ? cssVars.shadows.md
       : 'none',
   };
 
@@ -170,7 +167,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
   const clockStyle: CSSProperties = { padding: `0 ${cssVars.spacing.sm} ${cssVars.spacing.sm}` };
 
   const expandStyle: CSSProperties = {
-    borderTop: `1px solid ${cssVars.colors.border}`,
+    borderTop: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
     backgroundColor: cssVars.colors.surfaceVariant,
     padding: cssVars.spacing.md,
   };

@@ -34,11 +34,11 @@ test.describe('UR: Urheber am Eintrag im Protokoll', () => {
       const card = page.locator('[data-match-card]').filter({ hasText: ids.homeTeamName }).first();
       await card.getByText(ids.homeTeamName).first().click();
       await page.getByTestId('match-action-enterResult').click(); // @SL-193: Tipp aufs Spiel, dann „Ergebnis eintragen“
-      const expand = card.getByTestId('quick-score-expand');
-      await expect(expand).toBeVisible();
-      for (let i = 0; i < 3; i++) { await expand.getByLabel(`${ids.homeTeamName} Tor hinzufügen`).click(); }
-      await expand.getByLabel(`${ids.awayTeamName} Tor hinzufügen`).click();
-      await expand.getByTestId('quick-score-save-btn').click();
+      const sheet = page.getByTestId('result-sheet'); // @SL-195: das Blatt „Endergebnis“, Felder leer, Speichern erst mit der Taste
+      await expect(sheet).toBeVisible();
+      await sheet.getByTestId('result-sheet-score-home').fill('3');
+      await sheet.getByTestId('result-sheet-score-away').fill('1');
+      await sheet.getByTestId('result-sheet-save').click();
       // Dann ist das Spiel beendet mit 3:1
       await expect.poll(() => fetchMatchRow(ids.matchId).then((row) => [row.score_a, row.score_b, row.match_status]), { timeout: 10000 })
         .toEqual([3, 1, 'finished']);

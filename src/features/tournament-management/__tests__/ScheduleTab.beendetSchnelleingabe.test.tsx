@@ -90,7 +90,6 @@ const tournament: Tournament = { ...base, matches: generateFullSchedule(base).al
 const FIRST = tournament.matches[0];
 const teamOf = (slot: Tournament['matches'][number]['slotA']) => teams.find((t) => slot.kind === 'team' && t.id === slot.teamId);
 const HOME = teamOf(FIRST.slotA);
-const AWAY = teamOf(FIRST.slotB);
 
 let repo: OfflineRepository;
 
@@ -151,10 +150,11 @@ describe('C-GRUPPE-BEENDET-SCHNELLEINGABE-STILL: beendetes Gruppenspiel im Spiel
   /** „Ergebnis eintragen“ der ersten Karte: tippt Tore (je Team) und drückt „Speichern“. */
   async function quickEntry(card: () => HTMLElement, home: number, away: number) {
     await chooseAction(card, 'enterResult');
-    const expand = await within(card()).findByTestId('quick-score-expand');
-    for (let i = 0; i < home; i++) { fireEvent.click(within(expand).getByLabelText(`${HOME?.name} Tor hinzufügen`)); }
-    for (let i = 0; i < away; i++) { fireEvent.click(within(expand).getByLabelText(`${AWAY?.name} Tor hinzufügen`)); }
-    await act(async () => { fireEvent.click(within(expand).getByTestId('quick-score-save-btn')); await settle(); });
+    // @SL-195: „Ergebnis eintragen“ öffnet das Blatt „Endergebnis“; die Felder sind leer, gespeichert wird erst mit „Ergebnis speichern“
+    const sheet = await screen.findByTestId('result-sheet');
+    fireEvent.change(within(sheet).getByTestId('result-sheet-score-home'), { target: { value: String(home) } });
+    fireEvent.change(within(sheet).getByTestId('result-sheet-score-away'), { target: { value: String(away) } });
+    await act(async () => { fireEvent.click(within(sheet).getByTestId('result-sheet-save')); await settle(); });
   }
 
   /** „Ergebnis korrigieren“: Dialog mit bisher und neu, „Weiter“ führt in die Grund-Auswahl (@EK-063). */
@@ -282,7 +282,7 @@ describe('C-GRUPPE-BEENDET-SCHNELLEINGABE-STILL: beendetes Gruppenspiel im Spiel
 
     expect(await screen.findByTestId('match-action-menu')).toBeTruthy();
     expect(screen.queryByTestId('match-summary-edit-score')).toBeNull();
-    expect(screen.queryByTestId('quick-score-expand')).toBeNull();
+    expect(screen.queryByTestId('result-sheet')).toBeNull();
   });
 
   it('Gegenbeispiel @FU-080: ein geplantes Spiel speichert wie bisher (RESULT_ENTRY, keine Grund-Auswahl)', async () => {

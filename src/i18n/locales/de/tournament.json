@@ -132,6 +132,8 @@
       "endPending": "Erst ausstehende Einträge senden – bitte gleich noch einmal",
       "endTitle": "Spiel beenden und Ergebnis eintragen",
       "endQuestionRunning": "Spiel {{number}} läuft noch – Uhr zeigt {{rest}} Restzeit. Jetzt mit {{score}} beenden?",
+      "endConfirmRunning": "Beenden",
+      "endCancelRunning": "Abbrechen",
       "endQuestionExpired": "Spielzeit abgelaufen – jetzt mit {{score}} beenden?",
       "endControlledBy": "Feld {{field}} wird gerade von {{name}} gesteuert",
       "endControlledByOther": "Feld {{field}} wird gerade von einem anderen Gerät gesteuert",
@@ -146,6 +148,8 @@
       "staleNoName": "Spiel {{number}} wurde inzwischen geändert (jetzt {{score}})",
       "skippedTitle": "Spiel {{number}} abgesetzt",
       "skippedQuestion": "Spiel war abgesetzt – trotzdem Ergebnis eintragen?",
+      "futureTitle": "Spiel {{number}} noch nicht angepfiffen",
+      "futureQuestion": "Spiel {{number}} ist erst um {{time}} geplant. Ergebnis trotzdem eintragen?",
       "yes": "Ja",
       "no": "Nein",
       "reasonTitle": "Ergebnis von Spiel {{number}} ändern",
@@ -776,6 +780,20 @@
     "ariaLabel": "Spiel läuft gerade",
     "live": "Live"
   },
+  "resultSheet": {
+    "title": "Endergebnis Spiel {{number}}",
+    "cockpitScore": "Stand im Cockpit {{score}}",
+    "endsMatch": "Speichern beendet das Spiel.",
+    "cockpitNote": "Tore während des Spiels trägst du im Cockpit ein",
+    "toCockpit": "Zum Cockpit",
+    "close": "Schließen",
+    "team": "Team",
+    "goals": "Tore",
+    "minus": "Ein Tor weniger für {{team}}",
+    "plus": "Ein Tor mehr für {{team}}",
+    "cancel": "Abbrechen",
+    "save": "Ergebnis speichern"
+  },
   "scoreCell": {
     "goalsOf": "Tore {{team}}",
     "homeFallback": "Heim",
@@ -784,7 +802,8 @@
     "changedElsewhere": "Ergebnis wurde inzwischen von {{name}} geändert (jetzt {{score}})",
     "changedElsewhereNoName": "Ergebnis wurde inzwischen von einem anderen Gerät geändert (jetzt {{score}})",
     "save": "Ergebnis speichern",
-    "keepDraft": "Meine Eingabe behalten"
+    "keepDraft": "Meine Eingabe behalten",
+    "takeOver": "{{score}} einsetzen"
   },
   "sortable": {
     "referee": "Schiedsrichter",

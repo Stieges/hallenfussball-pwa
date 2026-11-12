@@ -13,7 +13,7 @@
  *  1. Helfer Tom pfeift im Live-Cup Spiel 9 auf Feld 2 im Cockpit an (Toms Gerät steuert Feld 2).
  *  2. Olli (Eigentümer) trägt im Spielplan 3:1 für Spiel 9 ein → Rückfrage „Spiel beenden und Ergebnis eintragen“ mit
  *     „Feld 2 wird gerade von Tom gesteuert“ und „Spiel 9 läuft noch – Uhr zeigt … Restzeit. Jetzt mit 3:1 beenden?“.
- *  3. „Nein“ → Spiel 9 läuft weiter (DB: match_status running). „Ja“ → DB: finished, 3:1, timer_start_time NULL.
+ *  3. „Abbrechen“ → Spiel 9 läuft weiter (DB: match_status running). „Beenden“ → DB: finished, 3:1, timer_start_time NULL.
  *  4. Toms Cockpit zeigt „Ende – eingetragen im Spielplan von Olli“; die Zuschauerseite zeigt „Ende“ mit 3:1.
  *  5. Gegenbeispiel @FU-113: Tom trägt im Spielplan für das nächste laufende Spiel ein → „Spiel läuft – Ergebnis erst nach
  *     dem Abpfiff“, keine Rückfrage.

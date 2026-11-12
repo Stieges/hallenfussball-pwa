@@ -2,7 +2,7 @@
  * Prüfstand für das Aktionsblatt am Spiel im Spielplan (@SL-239, G3-N N3). Die ECHTE Spielplan-Ansicht (ScheduleDisplay) mit echtem
  * Spielplan-Generator, Design-Tokens, i18n und Hell/Dunkel über den echten ThemeProvider; die Wege hinter den Tasten sind Attrappen.
  * Query: `zustand=geplant|laeuft|beendet` (Spiel 1), `rechte=leitung|helfer` (Helfer: im echten Ablauf nur mit Server erreichbar),
- * `lang=1` (50-Zeichen-Teamnamen), `sprache=en`. Nur Testumgebung, nicht Teil des Builds.
+ * `lang=1` (50-Zeichen-Teamnamen), `mockup=1` (Namen des Mockups Runde 4), `sprache=en`. Nur Testumgebung, nicht Teil des Builds.
  */
 import ReactDOM from 'react-dom/client';
 import i18n from '../../../src/i18n';
@@ -24,9 +24,13 @@ if (query.get('sprache') === 'en') { void i18n.changeLanguage('en'); }
 const zustand = query.get('zustand') ?? 'geplant';
 const helfer = query.get('rechte') === 'helfer';
 const lang = query.get('lang') === '1';
+// `mockup=1`: die Namen des Mockups Runde 4 (Spiel 1: langer Name gegen „TSV Petting“), für den Bildvergleich mit gleichen Daten
+const mockup = query.get('mockup') === '1';
 const noop = (): void => undefined;
 
-const NAMEN = lang
+const NAMEN = mockup
+  ? ['TSV Petting', 'DJK Kammer', 'TSV Waging rot', 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921 e. V.']
+  : lang
   ? ['Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921 e. V.', 'Turn- und Sportverein Petting-Oberhausen 1888', 'DJK Kammer', 'TSV Waging rot']
   : ['DJK Kammer', 'TSV Petting', 'TSV Waging rot', 'DJK Otting'];
 const teams: Team[] = NAMEN.map((name, i) => ({ id: `00000000-0000-4000-8000-00000000000${i + 1}`, name }));
