@@ -105,7 +105,8 @@ describe('@SL-229 weist der Server ab, nimmt das Gerät seine Weste zurück und 
     queue.submit(bestaetigen());
     await queue.flush();
     expect(queue.entries()).toHaveLength(0);
-    expect(queue.notices()).toEqual([{ id: expect.any(String), matchId: SPIEL, kind: 'rejected', code, ...(reason === undefined ? {} : { reason }) }]);
+    expect(queue.notices()).toHaveLength(1);
+    expect(queue.notices()[0]).toMatchObject({ matchId: SPIEL, kind: 'rejected', code, ...(reason === undefined ? {} : { reason }) });
   });
 
   it('@SL-227 Paul (Helfer, anderes Gerät hält Feld 1): NOT_CONTROLLER OTHER_DEVICE → Meldung für „Nur das steuernde Gerät kann Leibchen bestätigen.“', async () => {
@@ -311,5 +312,66 @@ describe('@SL-229 Zeile 1 eine alte Wahl vor dem Anpfiff wird nicht zum Nachtrag
     queue.discardStarted(new Set());
     queue.reconcile(zeile(false));
     expect(queue.entries()).toHaveLength(1);
+  });
+});
+
+describe('@SL-229 Zeile 1 Rest: die Antwort „live“ auf eine Wahl vor dem Anpfiff', () => {
+  it('@SL-229 kommt für einen Eintrag vor dem Anpfiff die Antwort phase live, meldet das Gerät „zu spät“ und zeigt nicht stumm „gesendet“', async () => {
+    const { queue } = aufbau([{ kind: 'saved', phase: 'live', decision: 'bib' }]);
+    queue.submit(bestaetigen({ phase: 'before' }));
+    await queue.flush();
+    expect(queue.notices()[0]).toMatchObject({ kind: 'tooLate', matchId: SPIEL });
+  });
+
+  it('@SL-150 Gegenbeispiel: ein Nachtrag der Leitung (phase live) und die Antwort live sind in Ordnung, keine Meldung', async () => {
+    const { queue } = aufbau([{ kind: 'saved', phase: 'live', decision: 'bib' }]);
+    queue.submit(bestaetigen({ phase: 'live' }));
+    await queue.flush();
+    expect(queue.notices()).toHaveLength(0);
+  });
+});
+
+describe('@SL-229 Zeile 4 und @SL-227: wer hielt das Feld?', () => {
+  it('@SL-229 das Gerät hielt das Feld (Epoche gesendet): OTHER_DEVICE heißt „übernommen“ (hadControl)', async () => {
+    const { queue } = aufbau([{ kind: 'rejected', code: 'NOT_CONTROLLER', reason: 'OTHER_DEVICE' }]);
+    queue.submit(bestaetigen({ controlEpoch: 2 }));
+    await queue.flush();
+    expect(queue.notices()[0]).toMatchObject({ kind: 'rejected', hadControl: true });
+  });
+
+  it('@SL-227 Gegenbeispiel: ohne Epoche (nie gehalten): hadControl false', async () => {
+    const { queue } = aufbau([{ kind: 'rejected', code: 'NOT_CONTROLLER', reason: 'OTHER_DEVICE' }]);
+    queue.submit(bestaetigen({ controlEpoch: null }));
+    await queue.flush();
+    expect(queue.notices()[0]).toMatchObject({ kind: 'rejected', hadControl: false });
+  });
+});
+
+describe('@SL-212 @SL-235 der Server nimmt die Wahl nach einem Teamwechsel zurück', () => {
+  const zeile = (decision: 'bib' | undefined, kickedOff = false) => new Map([[SPIEL, { decision, kickedOff, teams: { a: WAGING, b: PETTING } }]]);
+
+  it('@SL-212 war die Wahl da und ist sie weg (kein eigener Eintrag, nicht angepfiffen): Meldung „zurückgenommen“', () => {
+    const { queue } = aufbau();
+    queue.observeRows(zeile('bib'));
+    queue.observeRows(zeile(undefined));
+    expect(queue.notices()[0]).toMatchObject({ kind: 'withdrawn', matchId: SPIEL });
+  });
+
+  it('@SL-212 Gegenbeispiel: nie eine Wahl gesehen, keine Meldung', () => {
+    const { queue } = aufbau();
+    queue.observeRows(zeile(undefined));
+    expect(queue.notices()).toHaveLength(0);
+  });
+
+  it('@SL-212 Gegenbeispiel: angepfiffen oder eigener Eintrag wartet: keine Meldung', async () => {
+    const a = aufbau();
+    a.queue.observeRows(zeile('bib'));
+    a.queue.observeRows(zeile(undefined, true));
+    expect(a.queue.notices()).toHaveLength(0);
+    const b = aufbau([{ kind: 'offline' }]);
+    b.queue.observeRows(zeile('bib'));
+    b.queue.submit(bestaetigen());
+    b.queue.observeRows(zeile(undefined));
+    expect(b.queue.notices()).toHaveLength(0);
   });
 });

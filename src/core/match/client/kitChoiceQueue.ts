@@ -54,7 +54,9 @@ type KitChoiceNoticeBody =
   | { matchId: string; kind: 'failed' }
   | { matchId: string; kind: 'changedElsewhere' }
   /** Das Spiel wurde angepfiffen, bevor die Wahl den Server erreichte (@SL-229 Zeile 1). */
-  | { matchId: string; kind: 'tooLate' };
+  | { matchId: string; kind: 'tooLate' }
+  /** Der Server hat die Wahl zurückgenommen, weil ein anderes Team auf eine Seite kam (@SL-212, @SL-235). */
+  | { matchId: string; kind: 'withdrawn' };
 
 /** Meldung, die stehen bleibt, bis sie weggetippt oder die Wahl neu getroffen wird (@SL-228, @SL-229). */
 export type KitChoiceNotice = KitChoiceNoticeBody & { id: string };
@@ -97,6 +99,7 @@ export class KitChoiceQueue {
   private seq = 0;
   private noticeSeq = 0;
   private flushing = false;
+  private readonly seenDecision = new Set<string>();
   private localStarts: ReadonlySet<string> = new Set();
   private readonly listeners = new Set<() => void>();
 
@@ -205,6 +208,28 @@ export class KitChoiceQueue {
       this.list = rest;
       this.changed();
     }
+  }
+
+  /**
+   * Die Zeilen (Server) aller Spiele mit Wahl: war eine Wahl da und ist nun weg, ohne dass dieses Gerät sie aufgegeben hat und ohne Anpfiff, hat der Server sie
+   * zurückgenommen (anderes Team auf einer Seite, @SL-212): die Meldung „Leibchen zurückgenommen, bitte neu bestätigen“ steht da, statt dass die Karte still wiederkommt.
+   */
+  observeRows(rows: ReadonlyMap<string, KitRowState>): void {
+    let neu = false;
+    for (const [matchId, row] of rows) {
+      if (row.decision !== undefined) {
+        this.seenDecision.add(matchId);
+      } else if (this.seenDecision.delete(matchId) && row.kickedOff !== true && !this.list.some((e) => e.matchId === matchId)) {
+        this.notify({ matchId, kind: 'withdrawn' });
+        neu = true;
+      }
+    }
+    if (neu) { this.changed(); }
+  }
+
+  /** Spiele, deren Wahl zuletzt bekannt war (für `observeRows`). */
+  decidedMatchIds(): readonly string[] {
+    return [...this.seenDecision];
   }
 
   dismissNotice(id: string): void {

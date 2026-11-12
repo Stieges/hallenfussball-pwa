@@ -15,6 +15,7 @@ export function leibchenMeldungKey(n: KitChoiceNotice): LeibchenMeldungKey {
       return n.code === 'TEAMS_CHANGED' ? 'zurueckgenommen' : 'nichtUebernommen';
     case 'changedElsewhere': return 'anderesGeraet';
     case 'tooLate': return 'zuSpaet';
+    case 'withdrawn': return 'zurueckgenommen';
     case 'failed': return 'fehlgeschlagen';
   }
 }
