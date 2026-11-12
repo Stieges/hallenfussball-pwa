@@ -4,11 +4,12 @@
  * Vorher löste die Helligkeit die Karte aus; Beispiel Rot/Grün und Rot/Blau erwarteten `bibSide: 'a'` – seit der geänderten @SL-173 nicht mehr.
  */
 import { describe, expect, it } from 'vitest';
-import { defaultKit, kitConflict, kitSameBrightness, KIT_SIMILAR_LUMINANCE_RATIO } from '../kit';
+import { kitConflict, kitSameBrightness, KIT_SIMILAR_LUMINANCE_RATIO } from '../kit';
 import { kitHinweis, leibchenWieEigenesTrikot } from '../kitChoice';
 import { resolveBoxColors } from '../scoreBoxColors';
 import { DEFAULT_SPECTATOR_DISPLAY, standardColorsTooSimilar } from '../spectatorDisplay';
 import { hexDeltaE2000 } from '../kitColorDistance';
+import { kitBeimAnpfiff } from '../kitAnpfiff';
 import { teamSlot } from '../matchSlot';
 import { getContrastRatio } from '../../../design-tokens/display';
 import type { Match, Team } from '../../../types/tournament';
@@ -46,7 +47,7 @@ describe('@SL-173 Helligkeitsabstand der Trikotfarben', () => {
       { id: DJK_BERG, name: 'DJK Berg', colors: { primary: berg } },
     ];
     const match: Match = { id: 'spiel-15', round: 1, field: 1, slotA: teamSlot(FC_NORD), slotB: teamSlot(DJK_BERG) };
-    expect(defaultKit(match, teams, {}).bibSide).toBeUndefined();
+    expect(kitBeimAnpfiff(match, teams, undefined).bibSide).toBeUndefined();
   });
 
   // Gegenbeispiel: Die Helligkeitsregel gilt nicht für die Ergebniskästen der Zuschauer (@ZM-153, @ZM-159).
