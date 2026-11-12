@@ -146,14 +146,14 @@ describe('@SL-215 die Leibchen lassen sich schon im Endstand klären', () => {
   const basis = () => turnier(gleicheFarbe, [spiel('spiel-1', ASCHAU, SEEON, { matchStatus: 'finished' }), spiel('spiel-2', WAGING, PETTING)]);
 
   it('@SL-215 Spiel 1 abgepfiffen, Spiel 2 beide Blau: unter den Einträgen, direkt über „Weiter“ die Karte „TSV Waging 1 zieht Gelb“', () => {
-    zeige(basis(), live1(), { upcomingMatches: [live2() as never] });
+    zeige(basis(), live1(), { upcomingMatches: [live2()] });
     const karte = screen.getByTestId('leibchen-karte');
     expect(screen.getByTestId('leibchen-vorschlag')).toHaveTextContent('TSV Waging 1 zieht Gelb');
     expect(karte.parentElement).toContainElement(screen.getByTestId('match-next-button'));
   });
 
   it('@SL-215 „Bestätigen“ im Endstand: die Karte schrumpft zur Zeile, „Weiter“ bleibt', async () => {
-    const k = zeige(basis(), live1(), { upcomingMatches: [live2() as never] });
+    const k = zeige(basis(), live1(), { upcomingMatches: [live2()] });
     await k.tippe(screen.getByTestId('leibchen-bestaetigen'));
     expect(screen.getByTestId('leibchen-zeile')).toHaveTextContent('TSV Waging 1 zieht Gelb');
     expect(screen.getByTestId('match-next-button')).toBeInTheDocument();
@@ -161,14 +161,14 @@ describe('@SL-215 die Leibchen lassen sich schon im Endstand klären', () => {
 
   it('@SL-215 Spiel 1 abgepfiffen, Spiel 2 Rot gegen Weiß: im Endstand keine Karte und kein Leibchen-Teil', () => {
     const t = turnier([team(ASCHAU, 'SV Aschau', ROT), team(SEEON, 'FC Seeon', GELB), team(WAGING, 'TSV Waging 1', ROT), team(PETTING, 'TSV Petting', WEISS)], [spiel('spiel-1', ASCHAU, SEEON, { matchStatus: 'finished' }), spiel('spiel-2', WAGING, PETTING)]);
-    zeige(t, live1(), { upcomingMatches: [live2() as never] });
+    zeige(t, live1(), { upcomingMatches: [live2()] });
     expect(screen.queryByTestId('leibchen-karte')).toBeNull();
     expect(screen.queryByTestId('leibchen-festlegen')).toBeNull();
   });
 
   it('@SL-215 ein Team von Spiel 2 steht noch nicht fest: im Endstand keine Karte', () => {
     const t = turnier(gleicheFarbe, [spiel('spiel-1', ASCHAU, SEEON, { matchStatus: 'finished' }), { ...spiel('spiel-2', WAGING, PETTING), slotB: { kind: 'pending', source: { kind: 'groupRank', group: 'B', rank: 1 } } }]);
-    zeige(t, live1(), { upcomingMatches: [live2() as never] });
+    zeige(t, live1(), { upcomingMatches: [live2()] });
     expect(screen.queryByTestId('leibchen-karte')).toBeNull();
   });
 });

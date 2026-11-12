@@ -452,8 +452,10 @@
       "de": "Leibchen",
       "en": "bib",
       "forbidden_de": [],
-      "reason": "Daniel 2026-11-09: „Leibchen“ ist der Begriff der App; „Markierungshemd“ ist ein gleichbedeutendes, erlaubtes Wort (Synonym, kein verbotenes). „Weste“ ist nur der interne Name der Darstellung im Ergebniskasten und steht in keinem sichtbaren Text. Englisch „bib“.",
-      "i18nKey": "equipment.bib"
+      "reason": "Daniel 2026-11-09: „Leibchen“ ist der Begriff der App; „Markierungshemd“ ist ein gleichbedeutendes, erlaubtes Wort (Synonym, kein verbotenes). „Weste“ ist nur der interne Name der Darstellung im Ergebniskasten und steht in keinem sichtbaren Text. Englisch „bib“. kuerzel:true und tsLint:false nur, damit die Lint-Regel das alltägliche Wort in Code-Kennungen und Kommentaren (data-testid, Dateinamen) nicht als hartkodierten Begriff meldet; geprüft werden die Sprachdateien.",
+      "i18nKey": "equipment.bib",
+      "kuerzel": true,
+      "tsLint": false
     }
   }
 }

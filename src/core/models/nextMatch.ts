@@ -14,7 +14,7 @@ const nullsLast = (value: number | undefined): number => value ?? Number.POSITIV
 function compare(a: NextCandidate, b: NextCandidate): number {
   return (
     nullsLast(a.scheduledTime?.getTime()) - nullsLast(b.scheduledTime?.getTime())
-    || a.round - b.round
+    || nullsLast(a.round) - nullsLast(b.round)
     || nullsLast(a.slot) - nullsLast(b.slot)
     || nullsLast(a.matchNumber) - nullsLast(b.matchNumber)
     || a.id.localeCompare(b.id)
