@@ -21,7 +21,8 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Tournament } from '../../../types/tournament';
 import { ERROR_CODES, effectiveScoreFor } from '../../../core/match';
-import { TOURNAMENT_TIME_ZONE, toTournamentLocal } from '../../../core/view';
+import { kickoffLocal } from '../../../core/view';
+import { tournamentWallClock } from '../../../core/services/scheduleShiftClock';
 import { MatchCommands, MatchCommandRejectedError } from '../../../core/match/client';
 import { useMatchEngineContextOptional } from '../../match-engine/useMatchEngineContext';
 import { useActorRole } from '../../../hooks/useActorRole';
@@ -267,9 +268,12 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
           return false;
         }
         // @SL-195: liegt der geplante Anstoß nach Serverzeit noch in der Zukunft, fragt die App vor dem Speichern; „Nein“ speichert nichts (ohne geplante Zeit keine Frage; nur die Gruppenphase, die Finalrunde trägt bis G3-Rest R2 unverändert inline ein)
+        // Anstoß = Wanduhr des Turniers (`kickoffInstant`, wie der übrige Spielplan), „jetzt“ = Serverzeit als Wanduhr der Turnier-Zeitzone
+        // (`tournamentWallClock`); beides unabhängig von der Zeitzone des Geräts. Angezeigt wird die Uhrzeit wie im Spielplan (`kickoffLocal`).
         const kickoff = new Date(entry.meta.scheduledKickoff);
-        if (route === 'enter' && entry.phase === 'groupStage' && match?.scheduledTime !== undefined && kickoff.getTime() > engine.serverNow()
-          && (await ask({ kind: 'future', matchNumber: entry.meta.number, time: toTournamentLocal(kickoff, TOURNAMENT_TIME_ZONE).time })) === null) {
+        const kickoffTime = kickoffLocal(tournament.startDate ?? tournament.date, match?.scheduledTime)?.time;
+        if (route === 'enter' && entry.phase === 'groupStage' && kickoffTime !== undefined && kickoff.getTime() > tournamentWallClock(new Date(engine.serverNow())).getTime()
+          && (await ask({ kind: 'future', matchNumber: entry.meta.number, time: kickoffTime })) === null) {
           return false;
         }
         let shootout: Record<string, number> | undefined;

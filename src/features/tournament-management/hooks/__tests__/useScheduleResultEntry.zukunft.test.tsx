@@ -1,6 +1,6 @@
 /**
- * @SL-195 Zukunfts-Rückfrage im Hook: liegt der geplante Anstoß (Turnierdatum + Uhrzeit) nach Serverzeit noch in der Zukunft, fragt die App
- * „Spiel N ist erst um HH:MM geplant. Ergebnis trotzdem eintragen?“ – die Uhrzeit in Turnierzeit (`TOURNAMENT_TIME_ZONE`), nie in UTC.
+ * @SL-195 Zukunfts-Rückfrage im Hook: liegt der geplante Anstoß (Turnierdatum + Uhrzeit als Wanduhr des Turniers) nach Serverzeit (Wanduhr der Turnier-Zeitzone) noch in der Zukunft, fragt die App
+ * „Spiel N ist erst um HH:MM geplant. Ergebnis trotzdem eintragen?“ – die Uhrzeit wie im Spielplan, in jeder Zeitzone des Geräts.
  * Gegenbeispiele: Anstoß in der Vergangenheit, ohne geplante Zeit, Finalrunde (trägt bis G3-Rest R2 unverändert inline ein).
  */
 import 'fake-indexeddb/auto';
@@ -39,12 +39,12 @@ function render(h: ScheduleEngine, date: string, withTime = true) {
   return { hook, enter, answer };
 }
 
-describe('@SL-195 Zukunfts-Rückfrage (useScheduleResultEntry)', () => {
+describe.each(['UTC', 'Europe/Berlin', 'America/New_York', 'Pacific/Auckland'])('@SL-195 Zukunfts-Rückfrage (useScheduleResultEntry), Gerät in %s', (geraeteZone) => {
   let h: ScheduleEngine;
   const zone = process.env.TZ;
 
   beforeEach(async () => {
-    process.env.TZ = 'Europe/Berlin'; // Wanduhr des Geräts = Turnierzeit
+    process.env.TZ = geraeteZone; // der Anstoß gilt als Wanduhr des Turniers, in jeder Geräte-Zeitzone
     vi.stubGlobal('indexedDB', new IDBFactory());
     h = await makeScheduleEngine();
   });
@@ -54,7 +54,7 @@ describe('@SL-195 Zukunfts-Rückfrage (useScheduleResultEntry)', () => {
     if (zone === undefined) { delete process.env.TZ; } else { process.env.TZ = zone; }
   });
 
-  it('Anstoß in der Zukunft (Gruppenspiel 14:00 Turnierzeit): Rückfrage „future“ nennt 14:00, nicht die UTC-Stunde; „Nein“ speichert nichts', async () => {
+  it('Anstoß in der Zukunft (Gruppenspiel 14:00 Turnierzeit): Rückfrage „future“ nennt 14:00, wie im Spielplan, nie die Gerätestunde; „Nein“ speichert nichts', async () => {
     const { hook, enter, answer } = render(h, SPAETER);
     const done = enter(SPIEL_7);
     await act(async () => { await settle(); });
