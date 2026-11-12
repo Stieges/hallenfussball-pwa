@@ -127,6 +127,7 @@ test.describe('Cockpit am kleinen Handy: alle Tasten ohne Scrollen', () => {
     await expect(page.getByTestId('match-start-button')).toBeVisible({ timeout: 15000 });
     await page.getByTestId('leibchen-vorschlag').click();
     await page.getByTestId('leibchen-team-heim').click();
+    await page.getByTestId('leibchen-andere').click(); // ohne eingetragene Hallenfarben steht die Grundauswahl hinter „Andere Farbe …“
     await expect(page.getByTestId('leibchen-farbe-gelb')).toContainText('Wie Gegner');
     await page.getByTestId('leibchen-farbe-gelb').click();
     const satz = page.getByTestId('leibchen-satz');
