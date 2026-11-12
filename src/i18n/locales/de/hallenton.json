@@ -14,7 +14,8 @@
     "pruefen": "Prüfen",
     "pruefenLesetext": "Lautsprecher Feld {{feld}}: Ausgang eventuell geändert, bitte prüfen",
     "hupeStattEigenerTon": "Hupe 1 statt eigener Ton",
-    "titel": "Status"
+    "anderesFenster": "Lautsprecher läuft schon in einem anderen Fenster",
+    "handyOhneNetz": "Feld {{feld}}: Handy ohne Netz"
   },
   "feld": {
     "titel": "Feld {{feld}}",
