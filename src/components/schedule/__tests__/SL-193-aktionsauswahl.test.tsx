@@ -124,8 +124,10 @@ describe('@SL-193 Auswahl beim Tipp auf ein Spiel – Gruppenphase und Finalrund
       it(`@SL-193 ${runde} ${zustand}: die Turnierleitung sieht ${WORTLAUT[`${zustand}/leitung`].join(', ')}`, () => {
         const ziel = zeige(runde, zustand, LEITUNG);
         tippe(runde, ziel.id);
-        // Eintrag ohne den Satz eines gesperrten Eintrags: erste Textzeile des Buttons
-        expect(eintraege().map((text) => WORTLAUT[`${zustand}/leitung`].find((w) => text.startsWith(w)))).toEqual(WORTLAUT[`${zustand}/leitung`]);
+        // Eintrag ohne den Satz eines gesperrten Eintrags: erste Textzeile des Buttons; die Aktionen sind eine Menge ohne feste
+        // Reihenfolge (@SL-193 in der Fassung vom 10.11.; die gefüllte Haupttaste steht zuletzt, das prüft @SL-239 in SL-239-aktionsblatt.test.tsx)
+        const gezeigt = eintraege().map((text) => WORTLAUT[`${zustand}/leitung`].find((w) => text.startsWith(w)));
+        expect([...gezeigt].sort()).toEqual([...WORTLAUT[`${zustand}/leitung`]].sort());
       });
 
       it(`@SL-193 ${runde} ${zustand}: der Helfer sieht dort nur ${WORTLAUT[`${zustand}/helfer`].join(', ')}`, () => {

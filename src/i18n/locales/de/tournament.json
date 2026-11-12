@@ -1943,6 +1943,9 @@
     "pairing": "{{home}} gegen {{away}}",
     "open": "Aktionen für Spiel {{number}}",
     "close": "Schließen",
+    "summary": {
+      "planned": "Geplant"
+    },
     "actions": {
       "enterResult": "Ergebnis eintragen",
       "kickOff": "Im Cockpit anpfeifen",

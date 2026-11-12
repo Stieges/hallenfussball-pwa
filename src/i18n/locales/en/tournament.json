@@ -1943,6 +1943,9 @@
     "pairing": "{{home}} vs {{away}}",
     "open": "Actions for match {{number}}",
     "close": "Close",
+    "summary": {
+      "planned": "Scheduled"
+    },
     "actions": {
       "enterResult": "Enter result",
       "kickOff": "Start in cockpit",
