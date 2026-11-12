@@ -110,4 +110,5 @@
 .container[data-leibchen-offen='true'] .content {
   /* nicht `display: none`: der Platz bleibt (die Fläche schrumpft nur, soweit die Karte wächst), die Leiste springt nicht (K-4) */
   visibility: hidden;
+  overflow: hidden; /* kein verstecktes Rollfeld (axe scrollable-region-focusable) */
 }
