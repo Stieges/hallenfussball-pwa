@@ -160,7 +160,8 @@ describe('@HT-040 @HT-050 Cockpit-Hinweise zum Hallen-Lautsprecher (Datenseite)'
     expect(cockpitHinweisAus(lage('background'))).toEqual({ art: 'aus', grund: 'background', zuletztServerMs: null });
     expect(cockpitHinweisAus(lage('slept'))).toEqual({ art: 'aus', grund: 'slept', zuletztServerMs: null });
     expect(cockpitHinweisAus(lage('volume_zero'))).toEqual({ art: 'aus', grund: 'volume_zero', zuletztServerMs: null });
-    expect(lage('custom_sound_failed')).toEqual({ art: 'nichtBereit', grund: 'custom_sound_failed', pruefen: false });
+    // Record 07.11. (@HT-028): „eigener Ton nicht geladen“ ist bereit mit ruhigem Hinweis – die Halle hört „Hupe 1“; vorher „nicht bereit“
+    expect(lage('custom_sound_failed')).toEqual({ art: 'bereit', pruefen: false, eigenerTonFehlt: true });
     expect(cockpitHinweisAus(lage('custom_sound_failed'))).toEqual({ art: 'bereit' });
     expect(cockpitHinweisAus(lautsprecherLage({ state: 'ready', ageMs: 20_000, outputHint: false }, T0)))
       .toEqual({ art: 'aus', grund: 'meldetSichNicht', zuletztServerMs: T0 - 20_000 });

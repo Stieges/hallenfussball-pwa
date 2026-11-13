@@ -3,7 +3,7 @@
  * `TournamentManagementScreen` ausgelagert). Im Live-Bereich mit laufendem oder bereitem Spiel tritt die App zurück
  * (`useCockpitFrame().vollbild`, @SL-140): dann rendert der Bildschirm weder den Kopf noch die Navigation.
  */
-import { useState, type CSSProperties, type ReactElement } from 'react';
+import { useState, type CSSProperties, type ReactElement, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { borderWidths, cssVars, fontSizesMd3 } from '../design-tokens';
@@ -16,6 +16,7 @@ import { AuthSection } from '../components/layout/AuthSection';
 import { OwnTournamentsMoreItem } from '../features/helpers/components/OwnTournamentsMoreItem';
 import { EngineOutboxHeaderStatus } from '../features/tournament-management/components/EngineOutboxHeaderStatus';
 import { joinMeta } from '../core/view';
+import { HallStatusZeile } from '../features/hallenton/ui/HallStatusZeile';
 import { KlaerungslisteEinstieg } from '../features/klaerungsliste/KlaerungslisteEinstieg';
 
 export interface ManagementHeaderProps {
@@ -29,6 +30,8 @@ export interface ManagementHeaderProps {
   onNavigateToRegister: () => void;
   onNavigateToProfile: () => void;
   onNavigateToSettings?: () => void;
+  /** H4-5: Statuszeile des Hallentons unter dem Kopf, über den Reitern (@HT-045); ohne Angabe die echte (`HallStatusZeile`), der Prüfstand setzt eine eigene. */
+  statuszeile?: ReactNode;
 }
 
 const headerStyle: CSSProperties = {
@@ -152,6 +155,7 @@ export function ManagementHeader(p: ManagementHeaderProps): ReactElement {
         />
         </div>
       </header>
+      {p.statuszeile === undefined ? <HallStatusZeile tournamentId={tournament.id} /> : p.statuszeile}
 
       {!isMobile && (
         <nav style={tabBarStyle}>

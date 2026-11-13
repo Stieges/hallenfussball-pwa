@@ -257,6 +257,28 @@
       "saat": "nikolaus-vor-anpfiff"
     },
     {
+      "id": "verwaltung-spielplan-pause",
+      "titel": "Turnierverwaltung: Spielplan, Uhr von Spiel 5 angehalten (Karte wie bei laufendem Spiel, @ZP-109)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/nikolaus-pause/schedule",
+      "erwarte": "[data-testid=\"schedule-current\"]",
+      "profil": "app",
+      "saat": "nikolaus-pause"
+    },
+    {
+      "id": "verwaltung-spielplan-alle-beendet",
+      "titel": "Turnierverwaltung: Spielplan, alle Spiele beendet (keine Karte, @ZP-109)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/nikolaus-alle-beendet/schedule",
+      "erwarte": "[data-testid=\"schedule-view-table\"]",
+      "profil": "app",
+      "saat": "nikolaus-alle-beendet"
+    },
+    {
       "id": "verwaltung-tabellen",
       "titel": "Turnierverwaltung: Tabellen",
       "gruppen": [

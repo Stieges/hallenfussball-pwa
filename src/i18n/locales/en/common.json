@@ -245,5 +245,8 @@
     "phone": "Phone",
     "tablet": "Tablet",
     "computer": "Computer"
+  },
+  "statusZeile": {
+    "titel": "Status"
   }
 }

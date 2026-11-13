@@ -34,14 +34,20 @@ export const ScheduleActionButtons = ({
   const [showPDFDialog, setShowPDFDialog] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
 
-  // Die Höhe der Leiste steht als CSS-Variable bereit; die Spielplan-Karte reserviert damit den Platz unten (ScheduleTab)
+  // Die Höhe der schwebenden Leiste steht als CSS-Variable bereit (0, solange sie im Fluss steht); die Fußzeile und die Sprungtaste reservieren damit den Platz unten
   useEffect(() => {
     const leiste = barRef.current;
     if (variant !== 'organizer' || !leiste || typeof ResizeObserver === 'undefined') { return; }
     const wurzel = document.documentElement;
-    const beobachter = new ResizeObserver(() => wurzel.style.setProperty('--schedule-action-bar-h', `${leiste.offsetHeight}px`));
+    // Die Höhe zählt nur, solange die Leiste schwebt (0 im Fluss). Kommt oder geht die Karte „Läuft / Nächstes Spiel“ (`body:has(...)`, @ZP-109),
+    // wechselt die Leiste zwischen schwebender Spalte und Reihe im Fluss, ändert dabei ihre Größe und löst den ResizeObserver aus; `resize`
+    // fängt das Drehen des Geräts und Fensterwechsel ab (Lage kann sich ändern, ohne dass die Leiste ihre Größe ändert).
+    const aktualisiere = (): void => wurzel.style.setProperty('--schedule-action-bar-h', getComputedStyle(leiste).position === 'fixed' ? `${leiste.offsetHeight}px` : '0px');
+    const beobachter = new ResizeObserver(aktualisiere);
     beobachter.observe(leiste);
+    window.addEventListener('resize', aktualisiere);
     return () => {
+      window.removeEventListener('resize', aktualisiere);
       beobachter.disconnect();
       wurzel.style.removeProperty('--schedule-action-bar-h');
     };
@@ -129,8 +135,15 @@ export const ScheduleActionButtons = ({
               z-index: 100 !important;
             }
 
+            /* Steht oben im Spielplan die Karte „Läuft / Nächstes Spiel“ (@ZP-109), schwebt die Leiste nie über ihr: sie bleibt im Fluss unter der Karte
+               (wie ab Tablet-Breite), bei jeder Fensterhöhe ohne Messen. Ohne Karte (Bearbeiten-Modus, alle beendet) schwebt sie wie bisher. */
+            body:has([data-no-float-cover]) .schedule-action-buttons {
+              position: static !important;
+              flex-direction: row !important;
+            }
+
             .schedule-action-buttons button {
-              min-width: 120px;
+              min-width: calc(${cssVars.touchTargets.primary} * 2);
               box-shadow: ${cssVars.shadows.lg};
             }
           }

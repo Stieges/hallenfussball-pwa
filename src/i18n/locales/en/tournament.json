@@ -802,6 +802,7 @@
     "live": "Running · {{name}} · Field {{field}}",
     "next": "Next match · {{name}} · Field {{field}}",
     "match": "Match {{number}}",
+    "field": "Field {{field}}",
     "clockUnit": "",
     "kickOff": "Kick off match in the cockpit",
     "kickOffHint": "Opens the cockpit. You start the clock there.",

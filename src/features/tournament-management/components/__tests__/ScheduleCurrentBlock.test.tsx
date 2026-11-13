@@ -23,14 +23,14 @@ const LEITUNG = { lead: true, play: true, schedule: true } as const;
 const HELFER = { lead: false, play: true, schedule: false } as const;
 const OHNE_RECHT = { lead: false, play: false, schedule: false } as const;
 
-function zeige(tournament: Tournament, rights: { lead: boolean; play: boolean; schedule: boolean } = LEITUNG, handler: ((id: string) => void) | null = vi.fn()) {
+function zeige(tournament: Tournament, rights: { lead: boolean; play: boolean; schedule: boolean } = LEITUNG, handler: ((id: string) => void) | null = vi.fn(), gespielt?: number) {
   const onNavigateToCockpit = handler ?? undefined;
   const schedule = generateFullSchedule(tournament);
   const view = buildTournamentView(tournament, { audience: 'organizer', medium: 'app', locale: 'de' });
   const utils = render(
     <ScheduleCurrentBlock
       view={view} schedule={schedule} tournament={tournament} currentMatches={tournament.matches}
-      elapsedSeconds={() => undefined} locale="de" rights={rights} onNavigateToCockpit={onNavigateToCockpit}
+      elapsedSeconds={() => gespielt} locale="de" rights={rights} onNavigateToCockpit={onNavigateToCockpit}
     />,
   );
   return { ...utils, view, onNavigateToCockpit };
@@ -67,11 +67,56 @@ describe('@ZP-109 Karte oben im Spielplan der Turnierleitung', () => {
     expect(screen.getByText('Öffnet das Cockpit. Die Uhr startest du dort.')).toBeTruthy();
     expect(screen.queryByTestId(`schedule-current-clock-${id}-area`)).toBeNull();
     expect(screen.queryByTestId(`schedule-current-after-${id}`)).toBeNull();
-    // Mockup Runde 4: beim nächsten Spiel stehen leere Kästen, kein „0“ (anders als beim Zuschauer, @ZM-195)
+    // Daniel 12.11. (@ZP-109): ohne Stand keine Ergebniskästen und keine Torfläche, nur Kreis und Teamname (wie im Aktionsblatt, @SL-239)
     for (const seite of ['home', 'away']) {
-      const kasten = screen.getByTestId(`match-box-kopf-${id}-${seite}`);
-      expect(kasten.textContent).not.toMatch(/\d/);
+      expect(screen.queryByTestId(`match-box-kopf-${id}-${seite}`)).toBeNull();
+      expect(screen.queryByTestId(`match-goals-kopf-${id}-${seite}`)).toBeNull();
+      expect(screen.getByTestId(`match-name-kopf-${id}-${seite}`)).toBeTruthy();
     }
+    expect(screen.getByTestId(`schedule-current-card-${id}`).querySelectorAll('[data-score-circle]')).toHaveLength(0);
+  });
+
+  it('@ZP-109 Gegenbeispiel: mit Stand (Spiel läuft) stehen beide Ergebniskästen mit der Ziffer', async () => {
+    const { tournament } = await fPAUSE();
+    const { view } = zeige(tournament);
+    for (const mv of view.current.live) {
+      for (const seite of ['home', 'away']) {
+        expect(screen.getByTestId(`match-box-kopf-${mv.id}-${seite}`).textContent).toMatch(/\d/);
+      }
+    }
+  });
+
+  it('@ZP-109 Restzeit in der Karte: läuft das Spiel, steht „Restzeit“ mit herunterzählender Zeit (mehr gespielt = weniger Rest)', async () => {
+    const { tournament } = await fPAUSE();
+    const sek = (gespielt: number): number => {
+      const { view, unmount } = zeige(tournament, LEITUNG, vi.fn(), gespielt);
+      const lauft = view.current.live.find((m) => m.status === 'running');
+      expect(lauft).toBeDefined();
+      expect(screen.getByTestId(`schedule-current-clock-${lauft?.id ?? ''}-area`)).toHaveTextContent(/Restzeit/);
+      const [m, s] = (screen.getByTestId(`schedule-current-clock-${lauft?.id ?? ''}`).textContent ?? '0:0').split(':').map(Number);
+      unmount();
+      return m * 60 + s;
+    };
+    expect(sek(0)).toBeGreaterThan(sek(100));
+  });
+
+  it('@ZP-109 Pause in der Karte: das Wort „Pause“ steht im Kopf (nicht nur die graue Uhr); ein laufendes Spiel trägt kein Zusatzwort', async () => {
+    const { tournament } = await fPAUSE();
+    const { view } = zeige(tournament);
+    const pause = view.current.live.find((m) => m.status === 'paused');
+    const lauft = view.current.live.find((m) => m.status === 'running');
+    expect(pause).toBeDefined();
+    expect(screen.getByTestId(`schedule-current-badge-${pause?.id ?? ''}`)).toHaveTextContent(/Pause/);
+    expect(screen.getByTestId(`schedule-current-clock-${pause?.id ?? ''}`)).toHaveAttribute('data-stopped', 'true');
+    expect(screen.queryByTestId(`schedule-current-badge-${lauft?.id ?? ''}`)).toBeNull();
+  });
+
+  it('@ZP-109 Restzeit in der Karte: ist die Spielzeit abgelaufen und noch nicht abgepfiffen, steht „Zeit abgelaufen“ bei 0:00, nie eine negative Zeit', async () => {
+    const { tournament } = await fPAUSE();
+    const { view } = zeige(tournament, LEITUNG, vi.fn(), 600); // 10 Minuten Spielzeit sind gespielt
+    const lauft = view.current.live.find((m) => m.status === 'running');
+    expect(screen.getByTestId(`schedule-current-card-${lauft?.id ?? ''}`)).toHaveTextContent(/Zeit abgelaufen/);
+    expect(screen.getByTestId(`schedule-current-clock-${lauft?.id ?? ''}`)).toHaveTextContent(/^0:00$/);
   });
 
   it('@ZP-109 Lage „Spiel 7 ist in der Halbzeit“: die Karte wie bei einem laufenden Spiel, Spiel 7 gilt nie als nächstes (@ZM-041)', async () => {
@@ -115,6 +160,17 @@ describe('@ZP-109 Karte oben im Spielplan der Turnierleitung', () => {
     zeige(tournament, OHNE_RECHT);
     expect(screen.queryByTestId(`schedule-current-cockpit-${id}`)).toBeNull();
     expect(screen.getByTestId(`schedule-current-card-${id}`)).toBeTruthy(); // die Karte bleibt, nur ohne Taste
+  });
+
+  it('@ZP-109 jede Karte ist Sprungziel: fokussierbar per Programm (tabindex -1) mit Name „Läuft · Spiel n, Feld m“ für Bildschirmleser; der Block meldet sich als „nicht überdecken“', async () => {
+    const { tournament } = await fPAUSE();
+    const { view } = zeige(tournament);
+    for (const mv of view.current.live) {
+      const karte = screen.getByTestId(`schedule-current-card-${mv.id}`);
+      expect(karte).toHaveAttribute('tabindex', '-1');
+      expect(karte).toHaveAttribute('aria-label', `Spiel ${String(mv.matchNumber)}, Feld ${String(mv.field)}`);
+    }
+    expect(screen.getByTestId('schedule-current')).toHaveAttribute('data-no-float-cover');
   });
 
   it('@ZP-109 Gegenbeispiel: ohne Handler fürs Cockpit steht keine Taste (kein stummer Knopf)', async () => {

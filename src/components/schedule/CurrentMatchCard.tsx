@@ -4,8 +4,8 @@
  * danach Platz für die Restzeit (`belowScore`), Tasten (`actions`) und eine Fußzeile (`footer`, z. B. „Danach“).
  *
  * Was die Zielgruppen unterscheidet, kommt von außen: Kopfinhalt (`head`, `headRight`), Rahmen (`frame`: Zuschauer `active`, Turnierleitung
- * beim laufenden Spiel `live`), Kästen beim nächsten Spiel (`showPlannedZero`: Zuschauer 0 : 0 nach @ZM-195, Turnierleitung leere Kästen
- * nach Mockup Runde 4). Reine Anzeige, keine Daten- und keine Rechtelogik.
+ * beim laufenden Spiel `live`), Kästen beim nächsten Spiel (`showPlannedZero`: Zuschauer 0 : 0 nach @ZM-195, Turnierleitung ohne Stand keine Kästen
+ * (Daniel 12.11.). Reine Anzeige, keine Daten- und keine Rechtelogik.
  */
 import type { CSSProperties, ReactElement, ReactNode } from 'react';
 import { cssVars } from '../../design-tokens';
@@ -32,7 +32,7 @@ export interface CurrentMatchCardProps {
   headVariant: 'strip' | 'plain';
   /** `active`: Rahmen in der Hauptfarbe beim laufenden Spiel (Zuschauer); `live`: roter Live-Rahmen (Turnierleitung) */
   frame: 'active' | 'live';
-  /** Nächstes Spiel: Kästen mit 0 statt leer (Zuschauer, @ZM-195) */
+  /** Nächstes Spiel: Zuschauer: Kästen mit 0 (@ZM-195); Turnierleitung: ohne Stand keine Kästen (@ZP-109) */
   showPlannedZero: boolean;
   /** Unter dem Stand, z. B. die Restzeit der Zuschauer-Karte */
   belowScore?: ReactNode;
@@ -40,6 +40,8 @@ export interface CurrentMatchCardProps {
   footer?: ReactNode;
   /** Kennung der Karte; Kinder: `${testIdPrefix}-card-${id}` */
   testIdPrefix: string;
+  /** Ziel eines Sprungs: Karte mit Name, fokussierbar per Programm (`tabIndex` −1); nur die Turnierleitung braucht es (Sprungtaste, @ZP-109) */
+  focusTarget?: string;
   /** Wert für `data-current-kind` (`live` | `next` | `last`) */
   kind: 'live' | 'next' | 'last';
 }
@@ -82,11 +84,19 @@ const bodyStyle: CSSProperties = { display: 'flex', padding: cssVars.spacing.sm 
 const belowStyle: CSSProperties = { padding: `0 ${cssVars.spacing.sm} ${cssVars.spacing.sm}` };
 
 export function CurrentMatchCard({
-  match, scheduled, sides, clock, kasten, ende, head, headRight, headVariant, frame, showPlannedZero, belowScore, actions, footer, testIdPrefix, kind,
+  match, scheduled, sides, clock, kasten, ende, head, headRight, headVariant, frame, showPlannedZero, belowScore, actions, footer, testIdPrefix, kind, focusTarget,
 }: CurrentMatchCardProps): ReactElement {
   const status = cardStatusOf(match);
+  const result = resultFigures(match.score, status);
+  // Ohne Stand (nächstes Spiel der Turnierleitung) keine Ergebniskästen, nur Kreis und Teamname (@ZP-109, @SL-239); der Zuschauer zeigt 0 : 0 (@ZM-195)
+  const withoutStand = !showPlannedZero && result === null;
   return (
-    <article style={cardStyle(match.isLive, frame)} data-testid={`${testIdPrefix}-card-${match.id}`} data-current-kind={kind}>
+    <article
+      style={cardStyle(match.isLive, frame)}
+      data-testid={`${testIdPrefix}-card-${match.id}`}
+      data-current-kind={kind}
+      {...(focusTarget === undefined ? {} : { tabIndex: -1, 'aria-label': focusTarget })}
+    >
       <div style={headVariant === 'strip' ? headStrip : headPlain}>
         {head}
         {headRight}
@@ -96,14 +106,14 @@ export function CurrentMatchCard({
           matchId={`kopf-${match.id}`}
           homeTeam={sideDisplay(scheduled, 'A', sides)}
           awayTeam={sideDisplay(scheduled, 'B', sides)}
-          result={resultFigures(match.score, status)}
+          result={result}
           status={status}
           onScoreClick={noop}
           disabled
           zeitstrafen={clock?.zeitstrafen}
-          kasten={kasten}
+          kasten={withoutStand ? undefined : kasten}
           ende={ende}
-          emptyBoxes={!showPlannedZero}
+          noScore={!showPlannedZero}
         />
       </div>
       {belowScore !== undefined && <div style={belowStyle}>{belowScore}</div>}

@@ -11,7 +11,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { cssVars } from '../../design-tokens'
+import { cssVars, iconSizeValues } from '../../design-tokens'
 import { Icons } from './Icons';
 
 export type BottomNavTab = 'schedule' | 'tabellen' | 'management' | 'more';
@@ -46,11 +46,12 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
     display: 'flex',
     justifyContent: 'space-around',
     alignItems: 'center',
-    background: cssVars.colors.surface,
-    borderTop: `1px solid ${cssVars.colors.border}`,
+    // deckend: `surface` ist im dunklen Thema nur 5 % Weiß, Inhalt (Ergebniskästen, Texte) schien durch die Leiste (@OB-084, C-VERWALTUNG-NAV-DURCHSCHEINEND)
+    background: cssVars.colors.surfaceSolid,
+    borderTop: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
     paddingBottom: 'env(safe-area-inset-bottom, 0px)',
     zIndex: cssVars.zIndex.navigation,
-    height: '56px',
+    height: cssVars.layoutHeights.bottomNav,
   };
 
   const itemStyle = (isActive: boolean): CSSProperties => ({
@@ -64,20 +65,20 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
     cursor: 'pointer',
     background: isActive ? `linear-gradient(to bottom, ${cssVars.colors.surfaceHover}, transparent)` : 'transparent', // Subtle background indication
     border: 'none',
-    borderTop: isActive ? `2px solid ${cssVars.colors.primary}` : '2px solid transparent', // Top border indicator
+    borderTop: isActive ? `${cssVars.borderWidth.medium} solid ${cssVars.colors.primary}` : `${cssVars.borderWidth.medium} solid transparent`, // Top border indicator
     color: isActive ? cssVars.colors.primary : cssVars.colors.textSecondary,
     transition: 'all 0.2s ease',
-    gap: '2px',
+    gap: cssVars.spacing.xs,
     // Touch target minimum 44px
-    minWidth: '44px',
-    minHeight: '44px',
+    minWidth: cssVars.touchTargets.minimum,
+    minHeight: cssVars.touchTargets.minimum,
   });
 
   const labelStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.xs,
     fontWeight: cssVars.fontWeights.medium,
     lineHeight: 1,
-    marginTop: '2px',
+    marginTop: cssVars.spacing.xs,
   };
 
   return (
@@ -98,7 +99,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             aria-current={isActive ? 'page' : undefined}
           >
             <IconComponent
-              size={24}
+              size={iconSizeValues.md}
               color={isActive ? cssVars.colors.primary : cssVars.colors.textSecondary}
             />
             <span style={labelStyle}>{item.label}</span>

@@ -254,7 +254,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
               elapsedSeconds={elapsedSeconds}
               locale={locale}
               rights={{ lead: canEndRunning, play: canControlTimer, schedule: canSchedule }}
-              onNavigateToCockpit={onNavigateToCockpit ? handleNavigateToCockpit : undefined}
+              // Die Karte „Läuft“ führt ins Cockpit des Spiels, das sie selbst zeigt: dort fragt nichts nach (@SL-194 gilt beim Wechsel zu einem anderen Spiel)
+              onNavigateToCockpit={onNavigateToCockpit ? (id) => (liveMatchIds.has(id) ? onNavigateToCockpit(id) : handleNavigateToCockpit(id)) : undefined}
             />
           )}
           {/* Action Buttons Header */}
