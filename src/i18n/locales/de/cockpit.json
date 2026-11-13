@@ -108,7 +108,8 @@
       "wartetOffline": "Dein Gerät hat kein Netz – dein Stand kann veraltet sein. Die Besetzung steht am Server vielleicht schon fest.",
       "wartetAuf": "Wartet auf: {{grund}}",
       "abschnitteMal": "{{anzahl}} ×",
-      "anstossSpielFeld": "Anstoß {{zeit}} · {{spielFeld}}"
+      "anstossSpielFeld": "Anstoß {{zeit}} · {{spielFeld}}",
+      "zeileMitSpielzeit": "{{zeile}} · Spielzeit {{spielzeit}}"
     },
     "wachhaltenSymbol": "Bildschirm kann sich sperren, die Uhr läuft trotzdem",
     "tonAus": "Ton aus",

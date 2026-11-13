@@ -42,6 +42,7 @@ const spiel = (id: string, a: string, b: string, extra: Partial<Match> = {}): Ma
 const turnier = (teams: Team[], matches: Match[]): Tournament => ({ id: 'tour-1', teams, matches } as unknown as Tournament);
 const live2 = (extra = {}) => makeLiveMatch({ id: 'spiel-2', number: 2, status: 'NOT_STARTED', elapsedSeconds: 0, homeTeam: { id: WAGING, name: 'TSV Waging 1' }, awayTeam: { id: PETTING, name: 'TSV Petting' }, ...extra });
 const live1 = () => makeLiveMatch({ id: 'spiel-1', number: 1, status: 'FINISHED', homeScore: 2, awayScore: 1, homeTeam: { id: ASCHAU, name: 'SV Aschau' }, awayTeam: { id: SEEON, name: 'FC Seeon' } });
+const verschiedeneFarbe = [team(WAGING, 'TSV Waging 1', BLAU), team(PETTING, 'TSV Petting', ROT), team(ASCHAU, 'SV Aschau', ROT), team(SEEON, 'FC Seeon', GELB)];
 const gleicheFarbe = [team(WAGING, 'TSV Waging 1', BLAU), team(PETTING, 'TSV Petting', BLAU), team(ASCHAU, 'SV Aschau', ROT), team(SEEON, 'FC Seeon', GELB)];
 
 const amHandy = (): void => { window.innerWidth = 360; window.dispatchEvent(new Event('resize')); };
@@ -252,6 +253,30 @@ describe('@SL-197 vor dem Anpfiff die Spielzeit aus den Regeln (neben der Karte)
     render(<LiveCockpit {...makeProps(makeLiveMatch({ id: 'spiel-12', number: 12, status: 'NOT_STARTED', elapsedSeconds: 0 }), { spielzeit: { abschnitte: 2, abschnittSekunden: 240 } })} />);
     expect(screen.getByTestId('scoreboard-clock-vorsatz')).toHaveTextContent('2 ×');
     expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('4:00');
+  });
+});
+
+describe('@SL-241 am Handy steht die Spielzeit mit Karte klein in der Zeile (Daniel „V1b“)', () => {
+  const kleinText = /^Anstoß\u00A0\d{2}:\d{2} · Spiel\u00A0\d+ · Feld\u00A01 · Spielzeit\u00A09:00$/;
+  const spielzeit = { spielzeit: { abschnitte: 1, abschnittSekunden: 540 } };
+  it('@SL-241 Handy mit Karte: keine große Spielzeit, die Zeile nennt „Spielzeit 9:00“, die Karte steht', () => {
+    amHandy();
+    zeige(turnier(gleicheFarbe, [spiel('spiel-2', WAGING, PETTING)]), live2(), spielzeit);
+    expect(screen.getByTestId('leibchen-karte')).toBeInTheDocument();
+    expect(screen.queryByTestId('scoreboard-clock-rest')).toBeNull();
+    expect(screen.getByTestId('scoreboard-clock-sub').textContent).toMatch(kleinText);
+  });
+  it('@SL-241 Gegenbeispiel Handy ohne Karte (verschiedene Trikotfarben): groß wie in @SL-197', () => {
+    amHandy();
+    zeige(turnier(verschiedeneFarbe, [spiel('spiel-2', WAGING, PETTING)]), live2(), spielzeit);
+    expect(screen.queryByTestId('leibchen-karte')).toBeNull();
+    expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('9:00');
+  });
+  it('@SL-241 Gegenbeispiel Laptop mit Karte: groß, die Tafel bleibt unverändert', () => {
+    amLaptop();
+    zeige(turnier(gleicheFarbe, [spiel('spiel-2', WAGING, PETTING)]), live2(), spielzeit);
+    expect(screen.getByTestId('leibchen-karte')).toBeInTheDocument();
+    expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('9:00');
   });
 });
 

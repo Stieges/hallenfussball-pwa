@@ -49,6 +49,8 @@ export interface ScoreboardInput {
    * Ergebnis des Strafstoßschießens) steht stattdessen in der Quittungszeile. Ohne das Flag bleibt der Uhr-Bereich wie in @SL-169.
    */
   uhrInQuittung?: boolean;
+  /** Vor dem Anpfiff steht die Spielzeit klein in der Kopfzeile statt groß in der Mitte (@SL-241). */
+  spielzeitKlein?: boolean;
 }
 
 /** Sekunden als `m:ss` (Minuten ohne führende Null, nie negativ). */

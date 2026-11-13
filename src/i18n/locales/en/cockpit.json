@@ -108,7 +108,8 @@
       "wartetOffline": "Your device has no network – your data may be out of date. The line-up may already be set on the server.",
       "wartetAuf": "Waiting for: {{grund}}",
       "abschnitteMal": "{{anzahl}} ×",
-      "anstossSpielFeld": "Kick-off {{zeit}} · {{spielFeld}}"
+      "anstossSpielFeld": "Kick-off {{zeit}} · {{spielFeld}}",
+      "zeileMitSpielzeit": "{{zeile}} · Match time {{spielzeit}}"
     },
     "wachhaltenSymbol": "The screen may lock, the clock keeps running",
     "tonAus": "Sound off",

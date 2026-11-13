@@ -35,6 +35,8 @@ export interface ScoreboardUhr {
   ton?: 'gedaempft' | 'ok';
   /** Kleiner Vorsatz vor den Ziffern, vor dem Anpfiff bei mehreren Abschnitten „2 ד (@SL-197). */
   vorsatz?: string | null;
+  /** Nur die Zeile `unterzeile`, ohne Label und große Ziffern (Spielzeit klein vor dem Anpfiff am Handy mit Leibchen-Karte, @SL-241). */
+  nurZeile?: boolean;
 }
 export interface ScoreboardModel {
   /** Zustands-Abzeichen ohne Uhr (@OB-065, @OB-066): dasselbe Molekül wie die Spielkarte. */

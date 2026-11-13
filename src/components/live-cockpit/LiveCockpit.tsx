@@ -31,6 +31,7 @@ import { ScoreboardArea } from './areas/ScoreboardArea';
 import { LegacyPlayArea } from './areas/LegacyPlayArea';
 import { Rollbar } from './areas/Rollbar';
 import { uhrInQuittung as uhrInQuittungWenn } from './model/uhrInQuittung';
+import { spielzeitKlein as spielzeitKleinWenn } from './model/spielzeitKlein';
 import { CockpitOverlays } from './areas/CockpitOverlays';
 import { ThumbBarArea } from './areas/ThumbBarArea';
 import { LeerLeiste } from './areas/LeerLeiste';
@@ -59,10 +60,8 @@ import { alsUebersetzer } from './model/alsUebersetzer';
 import { kastenOderStandard } from './model/kastenOderStandard';
 import { hatSchonGelb as hatSchonGelbIn } from './model/secondYellow';
 import { useLeibchenBereich } from './hooks/useLeibchenBereich';
-
 const NO_SPERREN: readonly SperrHinweis[] = [];
 const NO_TEAMS = { home: { id: '', name: '' }, away: { id: '', name: '' } };
-
 export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   const { fieldName, tournamentName, tournamentId, cockpitSettings: cockpitSettingsProp, kannSteuern, istLeitung = false, currentMatch, upcomingMatches, leer = null } = props;
   const { t } = useTranslation('cockpit');
@@ -183,7 +182,8 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
       sperrHinweise={props.sperrHinweise}
       uebernahmeVon={props.uebernahmeVon}
       eingetragenVon={eingetragenVon}
-      naechstes={isMobile ? naechstesZeile : null} uhrInQuittung={uhrInQuittungWenn({ isMobile, hatLeibchenKarte: leibchen.karte !== null, phase })}
+      naechstes={isMobile ? naechstesZeile : null} uhrInQuittung={uhrInQuittungWenn({ isMobile, hatLeibchenKarte: leibchen.karteSteht, phase })}
+      spielzeitKlein={spielzeitKleinWenn({ isMobile, hatLeibchenKarte: leibchen.karteSteht, phase })}
       farbKonflikt={leibchen.farbKonflikt} spielzeit={props.spielzeit}
       naechstesNamen={naechstesSpiel ? [naechstesSpiel.homeTeam.name, naechstesSpiel.awayTeam.name] : undefined}
       // A4 (C-SYNC): rendert selbst nichts außerhalb des Cloud-Modus. I4 (W1, Nachtrag

@@ -74,13 +74,19 @@ async function box(el: Locator): Promise<Box> {
   return b;
 }
 
-async function oeffne(page: Page, fenster: { width: number; height: number }, hallenFarben?: readonly string[] | null, turnier = 'leibchen-7a', unbestaetigt = false): Promise<{ tippe: (el: Locator) => Promise<void>; zaehle: () => void; tipps: () => number }> {
+async function oeffne(page: Page, fenster: { width: number; height: number }, hallenFarben?: readonly string[] | null, turnier = 'leibchen-7a', unbestaetigt = false, ohneKarte = false): Promise<{ tippe: (el: Locator) => Promise<void>; zaehle: () => void; tipps: () => number }> {
   await page.setViewportSize({ width: fenster.width, height: fenster.height });
   const saat = leseSaat('leibchen-vor-anpfiff');
   if (hallenFarben !== undefined) {
     // andere Hallenfarben des Turniers (@SL-219: Gelb und Orange / Gelb und Grün / keine eingetragen)
     for (const t of saat.datenbanken[0].eintraege.tournaments as Array<Record<string, unknown>>) {
       if (hallenFarben === null) { delete t.bibColors; delete t.bibColor; } else { t.bibColors = [...hallenFarben]; t.bibColor = hallenFarben[0]; }
+    }
+  }
+  if (ohneKarte) {
+    // Gegenbeispiel: verschiedene Trikotfarben, also keine Karte
+    for (const t of saat.datenbanken[0].eintraege.tournaments as Array<{ teams: Array<{ name: string; colors?: { primary: string } }> }>) {
+      for (const team of t.teams) { if (team.name === 'TSV Petting') { team.colors = { primary: '#C62828' }; } }
     }
   }
   if (unbestaetigt) {
@@ -92,7 +98,7 @@ async function oeffne(page: Page, fenster: { width: number; height: number }, ha
   await installiereSaat(page.context(), saat);
   // Die App ersetzt beim Start einmal die Adresse; ein dadurch abgebrochenes `goto` ist kein Fehler, entscheidend ist die Karte im Bild
   await page.goto(`/#/tournament/${turnier}/live?matchId=${SPIEL_3}`, { waitUntil: 'commit' }).catch(() => undefined);
-  await expect(page.locator('[data-testid="leibchen-karte"],[data-testid="leibchen-zeile"]').first()).toBeVisible({ timeout: 25000 });
+  await expect(page.locator(ohneKarte ? '[data-testid="match-start-button"]' : '[data-testid="leibchen-karte"],[data-testid="leibchen-zeile"]').first()).toBeVisible({ timeout: 25000 });
   await page.evaluate(() => document.fonts.ready);
   let n = 0;
   return { tippe: async (el) => { n += 1; await el.click(); }, zaehle: () => { n += 1; }, tipps: () => n };
@@ -346,19 +352,78 @@ for (const f of FENSTER) {
     });
 
     for (const [fall, turnier, unbestaetigt] of [['normalen Namen', 'leibchen-7a', false], ['50-Zeichen-Namen', 'leibchen-lang', true]] as const) {
-      test(`C-LEIBCHEN-KARTE-KOPF-ABGESCHNITTEN-360 @OB-021 @SL-206 Karte offen, ${fall}: der Teamkopf steht vollständig über der Karte, nichts ist gekappt (${f.name})`, async ({ page }) => {
-        // BEFUNDE-HEUTIGER-CODE: bei 360 × 640 reicht der Platz nicht (Tafel mit großer Spielzeit + Köpfe + Karte); erwartet rot, bis Daniel die Lösung wählt (Fixrunde 6)
-        test.fail(f.width === 360, 'Befund C-LEIBCHEN-KARTE-KOPF-ABGESCHNITTEN-360');
+      test(`@SL-241 @OB-021 @SL-206 Karte offen, ${fall}: der Teamkopf steht vollständig über der Karte, nichts ist gekappt (${f.name})`, async ({ page }) => {
         await oeffne(page, f, undefined, turnier, unbestaetigt);
         await expect(page.getByTestId('leibchen-karte')).toBeVisible();
         await animationenFertig(page);
         const karte = await box(page.getByTestId('leibchen-karte'));
         const kopf = await page.getByTestId('team-head-home').evaluate((el) => el.getBoundingClientRect().bottom);
+        const kopfAway = await page.getByTestId('team-head-away').evaluate((el) => el.getBoundingClientRect().bottom);
         const name = await page.getByTestId('team-name-home').evaluate((el) => el.scrollHeight - el.clientHeight);
         expect(name).toBeLessThanOrEqual(0);
         expect(kopf, 'der Kopf endet über der Karte').toBeLessThanOrEqual(karte.y + 1);
+        expect(kopfAway, 'der Gast-Kopf endet über der Karte').toBeLessThanOrEqual(karte.y + 1);
         expect(await kopfRagtUeber(page), 'keine rollende oder abgeschnittene Fläche kappt den Kopf').toBeLessThanOrEqual(0);
         expect(karte.y + karte.height).toBeLessThanOrEqual(f.height);
+      });
+    }
+
+    test(`@SL-241 vor dem Anpfiff mit Karte: ${f.handy ? 'keine große Spielzeit, die Kopfzeile nennt „Spielzeit 9:00“' : 'Gegenbeispiel Tablet/Laptop: die Spielzeit bleibt groß wie in @SL-197'} (${f.name})`, async ({ page }) => {
+      await oeffne(page, f);
+      await animationenFertig(page);
+      if (f.handy) {
+        await expect(page.getByTestId('scoreboard-clock-rest')).toHaveCount(0);
+        await expect(page.getByTestId('scoreboard-clock-sub')).toHaveText(/^Anstoß\s\d{2}:\d{2}\s·\sSpiel\s3\s·\sFeld\s\d+\s·\sSpielzeit\s\d+:\d{2}$/);
+        // sauberer Umbruch: nur an „ · “, nie mitten in einer Angabe (jede Angabe steht in einer Zeile)
+        const umbrueche = await page.getByTestId('scoreboard-clock-sub').evaluate((el) => {
+          const bereich = document.createRange(); const text = el.firstChild as Text; const zeilen = new Set<number>();
+          const stellen = [...text.data.matchAll(/[^ ·]+(?:\u00A0[^ ·]+)*/g)];
+          for (const m of stellen) { bereich.setStart(text, m.index ?? 0); bereich.setEnd(text, (m.index ?? 0) + m[0].length); zeilen.add(bereich.getClientRects().length); }
+          return [...zeilen];
+        });
+        expect(umbrueche, 'jede Angabe („Spiel 3“, „Spielzeit 9:00“) steht in einer Zeile').toEqual([1]);
+      } else {
+        await expect(page.getByTestId('scoreboard-clock-rest')).toHaveText('9:00');
+        await expect(page.getByTestId('scoreboard-clock')).toContainText('Spielzeit');
+      }
+    });
+
+    if (f.handy) {
+      test(`@SL-241 nach „Bestätigen“ bleibt die Tafel, wie sie ist: Höhe, Köpfe und „Anpfeifen“ springen nicht, die Spielzeit bleibt klein (${f.name})`, async ({ page }) => {
+        await oeffne(page, f);
+        await animationenFertig(page);
+        const messe = async () => ({
+          tafel: (await box(page.getByTestId('scoreboard'))).height, kopf: (await box(page.getByTestId('team-head-home'))).y,
+          anpfiff: (await box(page.getByTestId('match-start-button'))).y,
+        });
+        const vorher = await messe();
+        await page.getByTestId('leibchen-bestaetigen').click();
+        await expect(page.getByTestId('leibchen-zeile')).toBeVisible();
+        await animationenFertig(page);
+        const nachher = await messe();
+        expect(Math.abs(nachher.tafel - vorher.tafel), 'Tafelhöhe').toBeLessThanOrEqual(1);
+        expect(Math.abs(nachher.anpfiff - vorher.anpfiff), '„Anpfeifen“').toBeLessThanOrEqual(1);
+        await expect(page.getByTestId('scoreboard-clock-rest')).toHaveCount(0);
+        await expect(page.getByTestId('scoreboard-clock-sub')).toContainText('Spielzeit');
+        expect(await kopfRagtUeber(page)).toBeLessThanOrEqual(0);
+        expect(nachher.kopf).toBeGreaterThanOrEqual(0);
+      });
+
+      test(`@SL-241 Gegenbeispiel ohne Karte (verschiedene Trikotfarben): die Spielzeit steht groß wie in @SL-197 (${f.name})`, async ({ page }) => {
+        await oeffne(page, f, undefined, 'leibchen-7a', false, true);
+        await animationenFertig(page);
+        await expect(page.getByTestId('leibchen-karte')).toHaveCount(0);
+        await expect(page.getByTestId('scoreboard-clock-rest')).toHaveText('9:00');
+      });
+
+      test(`@SL-241 nach dem Anpfiff läuft die große Uhr wie sonst, nichts ist verdeckt (${f.name})`, async ({ page }) => {
+        await oeffne(page, f);
+        await page.getByTestId('leibchen-bestaetigen').click();
+        await page.getByTestId('match-start-button').click();
+        await expect(page.getByTestId('match-pause-button')).toBeVisible();
+        await animationenFertig(page);
+        await expect(page.getByTestId('scoreboard-clock-rest')).toBeVisible();
+        expect(await kopfRagtUeber(page)).toBeLessThanOrEqual(0);
       });
     }
 
