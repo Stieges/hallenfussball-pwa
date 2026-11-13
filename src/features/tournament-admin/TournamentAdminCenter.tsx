@@ -99,7 +99,8 @@ export function TournamentAdminCenter({
   // A4 (C-SYNC): AdminHeader schaltet SyncStatusIndicator frei, das intern selbst nichts rendert
   // außerhalb des Cloud-Modus (isCloudSyncAvailable in useSyncStatus) -- kein Auth-Check hier nötig.
   const showSyncStatus = true;
-  const darfHallenton = useCan('manageScreens', tournamentId);
+  // @HT-046: der Menüpunkt bleibt nach dem Turnierende zum Lesen (wie das Gate); Ändern sperrt jede Taste selbst
+  const darfHallenton = useCan('manageScreens', tournamentId, { openAfterClose: true });
   const hiddenCategories = useMemo(() => (darfHallenton ? NICHTS_VERSTECKT : OHNE_HALLENTON), [darfHallenton]);
 
   // Category from URL is now passed as prop from App.tsx (single source of truth)

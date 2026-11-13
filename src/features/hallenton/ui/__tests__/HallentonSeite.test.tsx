@@ -160,6 +160,70 @@ describe('@HT-017 „Hier anhören“ und „Testton in der Halle“', () => {
   });
 });
 
+describe('@HT-017 nur die Quittung des eigenen Auftrags zählt, ein älterer Test am Server nie', () => {
+  const GESPIELT_1350 = new Date(2026, 10, 13, 13, 50, 0).getTime();
+  const altTest = { testId: 'alt', playedAt: GESPIELT_1350 };
+  it('Gegenbeispiel a: am Server steht ein Test von 13:50, der Lautsprecher ist jetzt nicht bereit → nach dem Klick der Grund, nirgends „gespielt 13:50“', () => {
+    setzeStatus(voll({ state: 'not_activated', ageMs: 2000, test: altTest }));
+    render(seite());
+    expect(screen.queryByTestId('testton-feld-1-ergebnis'), 'ohne Klick keine fremde Quittung').toBeNull();
+    fireEvent.click(screen.getByTestId('testton-halle-1'));
+    expect(screen.getByTestId('testton-feld-1-ergebnis')).toHaveTextContent('nicht bereit – Ton nicht aktiviert');
+    expect(document.body.textContent).not.toContain('gespielt 13:50');
+  });
+  it('Gegenbeispiel a2: meldet sich nicht, alter Test am Server → „nicht gespielt – meldet sich nicht (zuletzt 14:02)“, nicht „gespielt 13:50“', () => {
+    setzeStatus(voll({ state: 'ready', ageMs: 30_000, test: altTest }));
+    render(seite());
+    fireEvent.click(screen.getByTestId('testton-halle-1'));
+    expect(screen.getByTestId('testton-feld-1-ergebnis')).toHaveTextContent('nicht gespielt – meldet sich nicht (zuletzt 14:02)');
+    expect(document.body.textContent).not.toContain('gespielt 13:50');
+  });
+  it('Gegenbeispiel b: alter Test am Server, neuer Auftrag ohne Quittung, nach 15 s → „nicht gespielt – keine Antwort“, nie „gespielt 13:50“', async () => {
+    vi.useFakeTimers();
+    const testton = vi.fn(() => Promise.resolve({ ok: true, status: 'requested', testId: 'neu', requestedAt: 1, serverNow: SERVER_JETZT }));
+    setzeStatus(voll({ state: 'ready', ageMs: 3000, test: altTest }), 'aktuell', testton);
+    render(seite());
+    await act(async () => { fireEvent.click(screen.getByTestId('testton-halle-1')); await Promise.resolve(); });
+    expect(screen.getByTestId('testton-feld-1-ergebnis')).not.toHaveTextContent('gespielt 13:50');
+    await act(async () => { await vi.advanceTimersByTimeAsync(15_100); });
+    expect(screen.getByTestId('testton-feld-1-ergebnis')).toHaveTextContent('nicht gespielt – keine Antwort');
+    expect(document.body.textContent).not.toContain('gespielt 13:50');
+  });
+  it('die Quittung des eigenen Auftrags bleibt stehen, auch wenn die Antwort später wieder anders aussieht', async () => {
+    const testton = vi.fn(() => Promise.resolve({ ok: true, status: 'requested', testId: 'neu', requestedAt: 1, serverNow: SERVER_JETZT }));
+    setzeStatus(voll({ state: 'ready', ageMs: 3000 }), 'aktuell', testton);
+    const { rerender } = render(seite());
+    await act(async () => { fireEvent.click(screen.getByTestId('testton-halle-1')); await Promise.resolve(); });
+    setzeStatus(voll({ state: 'ready', ageMs: 3000, test: { testId: 'neu', playedAt: GESPIELT_1402 } }), 'aktuell', testton);
+    rerender(seite());
+    setzeStatus(voll({ state: 'ready', ageMs: 3000 }), 'aktuell', testton);
+    rerender(seite());
+    expect(screen.getByTestId('testton-feld-1-ergebnis')).toHaveTextContent('gespielt 14:02');
+  });
+  it('zwei Felder: der zweite Auftrag verlängert die Frist des ersten nicht', async () => {
+    vi.useFakeTimers();
+    const testton = vi.fn((feld: number) => Promise.resolve({ ok: true, status: 'requested', testId: `t${feld}`, requestedAt: 1, serverNow: SERVER_JETZT }));
+    const zwei = voll({ state: 'ready', ageMs: 3000 });
+    zwei.speakers.push({ ...zwei.speakers[0], field: 2 });
+    setzeStatus(zwei, 'aktuell', testton);
+    render(seite());
+    await act(async () => { fireEvent.click(screen.getByTestId('testton-halle-1')); await Promise.resolve(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
+    await act(async () => { fireEvent.click(screen.getByTestId('testton-halle-2')); await Promise.resolve(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(5_200); });
+    expect(screen.getByTestId('testton-feld-1-ergebnis')).toHaveTextContent('nicht gespielt – keine Antwort');
+    expect(screen.getByTestId('testton-feld-2-ergebnis')).toHaveTextContent('Testton wird angefordert');
+  });
+});
+
+describe('Stand „lädt“ ist kein „kein Netz“', () => {
+  it('erste Antwort steht aus → Taste aus, nie „Kein Testton: kein Netz“, kein Auftrag', () => {
+    setzeStatus(null, 'laedt');
+    render(seite());
+    expect(screen.queryByText('Kein Testton: kein Netz')).toBeNull();
+  });
+});
+
 describe('@HT-046 nach dem Turnierende lesbar, nichts änderbar', () => {
   beforeEach(() => { doppel.darf = false; doppel.abgeschlossen = true; });
   it('Status je Feld sichtbar, Hinweis „abgeschlossen“, aber kein Testton und kein „Hier anhören“', () => {

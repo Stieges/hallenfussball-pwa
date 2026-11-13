@@ -99,6 +99,34 @@ describe('@HT-022 direkte Adresse /admin/hallenton', () => {
 });
 
 describe('@HT-046 nach dem Turnierende', () => {
+  it('Turnierleitung und Co-Admin: der Menüpunkt „Hallenton“ steht auch nach dem Ende in Seitenleiste und Hub, Ändern bleibt Sache der Tasten', () => {
+    setTournamentClosed('hallencup-sued', true);
+    for (const r of ['owner', 'co-admin']) {
+      rolle.aktuell = r;
+      rolle.mobil = false;
+      const a = render(<MemoryRouter><ToastProvider><TournamentAdminCenter tournamentId="hallencup-sued" initialCategory="dashboard" onBackToTournament={vi.fn()} /></ToastProvider></MemoryRouter>);
+      expect(screen.getByRole('button', { name: /Hallenton/ })).toBeInTheDocument();
+      a.unmount();
+      rolle.mobil = true;
+      const b = render(<MemoryRouter><ToastProvider><TournamentAdminCenter tournamentId="hallencup-sued" onBackToTournament={vi.fn()} /></ToastProvider></MemoryRouter>);
+      expect(screen.getByRole('button', { name: /Hallenton/ })).toBeInTheDocument();
+      b.unmount();
+    }
+  });
+  it('Gegenbeispiel: Helfer, Helfer-Zugang, Bildschirm sehen den Menüpunkt auch nach dem Ende nicht (Seitenleiste und Hub)', () => {
+    setTournamentClosed('hallencup-sued', true);
+    for (const r of ['collaborator', 'helper', 'screen']) {
+      rolle.aktuell = r;
+      rolle.mobil = false;
+      const a = render(<MemoryRouter><ToastProvider><TournamentAdminCenter tournamentId="hallencup-sued" initialCategory="dashboard" onBackToTournament={vi.fn()} /></ToastProvider></MemoryRouter>);
+      expect(screen.queryByRole('button', { name: /Hallenton/ })).toBeNull();
+      a.unmount();
+      rolle.mobil = true;
+      const b = render(<MemoryRouter><ToastProvider><TournamentAdminCenter tournamentId="hallencup-sued" onBackToTournament={vi.fn()} /></ToastProvider></MemoryRouter>);
+      expect(screen.queryByRole('button', { name: /Hallenton/ })).toBeNull();
+      b.unmount();
+    }
+  });
   it('Turnierleitung: der Unterpunkt bleibt zum Lesen offen (kein Abschluss-Sperrhinweis)', async () => {
     setTournamentClosed('hallencup-sued', true);
     zeige('hallenton');

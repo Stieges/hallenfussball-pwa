@@ -8,6 +8,7 @@ import { useInRouterContext, useNavigate } from 'react-router-dom';
 import { cssVars, iconSizeValues } from '../../../../design-tokens';
 import { Button } from '../../../../components/ui/Button';
 import { Icons } from '../../../../components/ui/Icons';
+import { hallentonZiel } from '../../../hallenton/ui/hallStatusEintraege';
 import { useCan } from '../../../auth/hooks/useCan';
 
 const abschnittStil: CSSProperties = { display: 'flex', flexDirection: 'column', gap: cssVars.spacing.md };
@@ -41,7 +42,7 @@ function HallentonKarteMitRouter({ tournamentId }: { tournamentId: string }) {
         </h3>
         <p style={textStil}>{t('toeneKarte.text')}</p>
         <div>
-          <Button variant="secondary" onClick={() => { void navigate(`/tournament/${tournamentId}/admin/hallenton`); }} data-testid="toene-hallenton-oeffnen">
+          <Button variant="secondary" onClick={() => { void navigate(hallentonZiel(tournamentId)); }} data-testid="toene-hallenton-oeffnen">
             {t('toeneKarte.oeffnen')}
           </Button>
         </div>

@@ -14,12 +14,14 @@ import { Icons } from '../../../components/ui/Icons';
 import type { HallStatus } from '../useHallStatus';
 import type { HallFehlerGrund, HallStatusAntwort } from '../../../core/repositories/hallentonRpc';
 import type { FeldKarte } from './feldKarten';
+import { echterZeitgeber } from '../runtime/zeitgeber';
 import { formatUhrzeit } from './uhrzeit';
 
 /** So lange wartet die Anzeige auf die Quittung, bevor sie „keine Antwort“ sagt (der Lautsprecher meldet alle 5 s). */
 export const QUITTUNG_WARTEN_MS = 15_000;
 
-type Ergebnis = { art: 'laeuft'; testId: string } | { art: 'text'; text: string; warn: boolean };
+/** `laeuft`: der in DIESER Sitzung ausgelöste Auftrag (Kennung + Start, lokal gemessen); nur seine Quittung zählt (@HT-017). */
+type Ergebnis = { art: 'laeuft'; testId: string; seit: number } | { art: 'text'; text: string; warn: boolean };
 
 export interface TesttonAbschnittProps {
   karten: readonly FeldKarte[];
@@ -50,7 +52,8 @@ function nichtGespielt(karte: FeldKarte, t: TFunction<'hallenton'>): string | nu
   }
 }
 
-function gespielteZeit(antwort: HallStatusAntwort | null, feld: number, sprache: string, testId?: string): string | null {
+/** Uhrzeit der Quittung (Serverzeit) – nur für genau diesen Test; ein älterer Test des Lautsprechers am Server zählt nie. */
+function gespielteZeit(antwort: HallStatusAntwort | null, feld: number, sprache: string, testId: string): string | null {
   if (antwort?.sicht !== 'voll') {
     return null;
   }
@@ -59,7 +62,7 @@ function gespielteZeit(antwort: HallStatusAntwort | null, feld: number, sprache:
   if (!test || gespielt === null) {
     return null;
   }
-  return testId === undefined || test.testId === testId ? formatUhrzeit(gespielt, sprache) : null;
+  return test.testId === testId ? formatUhrzeit(gespielt, sprache) : null;
 }
 
 export function TesttonAbschnitt({ karten, status, hierAnhoeren, geraetName }: TesttonAbschnittProps): ReactElement {
@@ -67,19 +70,42 @@ export function TesttonAbschnitt({ karten, status, hierAnhoeren, geraetName }: T
   const [ergebnisse, setErgebnisse] = useState<Readonly<Record<number, Ergebnis>>>({});
   const setze = useCallback((feld: number, e: Ergebnis) => setErgebnisse((alt) => ({ ...alt, [feld]: e })), []);
 
-  const laufende = Object.entries(ergebnisse).filter(([, e]) => e.art === 'laeuft').map(([feld]) => Number(feld)).join(',');
+  // Die Quittung des eigenen Auftrags (gleiche Kennung) ersetzt „läuft“ für immer; ein älterer Test am Server zählt nie (@HT-017)
   useEffect(() => {
-    if (laufende === '') {
-      return undefined;
-    }
-    const timer = window.setTimeout(() => {
-      setErgebnisse((alt) => Object.fromEntries(Object.entries(alt).map(([f, e]) => [f, e.art === 'laeuft' ? { art: 'text', text: t('testton.keineAntwort'), warn: true } : e])));
-    }, QUITTUNG_WARTEN_MS);
-    return () => window.clearTimeout(timer);
-  }, [laufende, t]);
+    setErgebnisse((alt) => {
+      let geaendert = false;
+      const neu: Record<number, Ergebnis> = { ...alt };
+      for (const [feld, e] of Object.entries(alt)) {
+        const zeit = e.art === 'laeuft' ? gespielteZeit(status.antwort, Number(feld), i18n.language, e.testId) : null;
+        if (zeit !== null) {
+          neu[Number(feld)] = { art: 'text', text: t('testton.gespielt', { zeit }), warn: false };
+          geaendert = true;
+        }
+      }
+      return geaendert ? neu : alt;
+    });
+  }, [status.antwort, i18n.language, t]);
+
+  // Je Feld eine eigene Frist ab seinem Start: ein zweiter Auftrag verlängert die des ersten nicht
+  const fristen = Object.entries(ergebnisse).flatMap(([feld, e]) => (e.art === 'laeuft' ? [`${feld}:${e.testId}:${e.seit}`] : [])).join('|');
+  useEffect(() => {
+    const timers = fristen === '' ? [] : fristen.split('|').map((eintrag) => {
+      const [feld, testId, seit] = eintrag.split(':');
+      return window.setTimeout(() => {
+        setErgebnisse((alt) => {
+          const e = alt[Number(feld)];
+          return e?.art === 'laeuft' && e.testId === testId ? { ...alt, [Number(feld)]: { art: 'text', text: t('testton.keineAntwort'), warn: true } } : alt;
+        });
+      }, Math.max(0, Number(seit) + QUITTUNG_WARTEN_MS - echterZeitgeber.jetzt()));
+    });
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, [fristen, t]);
 
   const ausloesen = async (karte: FeldKarte): Promise<void> => {
     const grund = nichtGespielt(karte, t);
+    if (status.stand === 'laedt') {
+      return; // die erste Antwort steht noch aus: kein „kein Netz“, die Taste ist bis dahin aus
+    }
     if (status.stand !== 'aktuell') {
       setze(karte.feld, { art: 'text', text: t('testton.keinNetz'), warn: true });
     } else if (grund !== null) {
@@ -89,7 +115,7 @@ export function TesttonAbschnitt({ karten, status, hierAnhoeren, geraetName }: T
       if (!antwort.ok) {
         setze(karte.feld, { art: 'text', text: t(FEHLER_TEXT[antwort.grund]), warn: true });
       } else if (antwort.status === 'requested') {
-        setze(karte.feld, { art: 'laeuft', testId: antwort.testId });
+        setze(karte.feld, { art: 'laeuft', testId: antwort.testId, seit: echterZeitgeber.jetzt() });
       } else {
         setze(karte.feld, { art: 'text', text: antwort.status === 'too_soon' ? t('testton.zuFrueh') : t('testton.keinLautsprecher'), warn: true });
       }
@@ -110,9 +136,7 @@ export function TesttonAbschnitt({ karten, status, hierAnhoeren, geraetName }: T
         {karten.map((karte) => {
           const e = ergebnisse[karte.feld];
           const kein = karte.zustand.art === 'keinLautsprecher';
-          const quittung = gespielteZeit(status.antwort, karte.feld, i18n.language, e?.art === 'laeuft' ? e.testId : undefined);
           const zeile = kein ? null : status.stand === 'unbekannt' ? { text: t('testton.keinNetz'), warn: true }
-            : quittung !== null ? { text: t('testton.gespielt', { zeit: quittung }), warn: false }
             : e?.art === 'laeuft' ? { text: t('testton.laeuft'), warn: false }
             : e?.art === 'text' ? { text: e.text, warn: e.warn } : null;
           return (
@@ -122,7 +146,7 @@ export function TesttonAbschnitt({ karten, status, hierAnhoeren, geraetName }: T
                 <p style={textStil}>{kein || karte.geraet === undefined ? t('testton.keinLautsprecherKein') : t('testton.lautsprecher', { name: karte.geraet.name })}</p>
               </div>
               {kein ? null : (
-                <Button variant="secondary" icon={<Icons.Speaker size={iconSizeValues.sm} />} onClick={() => { void ausloesen(karte); }} data-testid={`testton-halle-${karte.feld}`}>{t('testton.halle')}</Button>
+                <Button variant="secondary" icon={<Icons.Speaker size={iconSizeValues.sm} />} disabled={status.stand === 'laedt'} onClick={() => { void ausloesen(karte); }} data-testid={`testton-halle-${karte.feld}`}>{t('testton.halle')}</Button>
               )}
               {zeile === null ? null : (
                 <p style={{ ...quittungStil, flexBasis: '100%' }} role="status" data-testid={`testton-feld-${karte.feld}-ergebnis`}>
