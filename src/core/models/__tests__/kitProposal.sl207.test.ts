@@ -3,6 +3,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { karteNoetig, kitProposal } from '../kitProposal';
+import { leibchenWieEigenesTrikot } from '../kitChoice';
 
 const BLAU = '#1565C0';
 const NAVY = '#0D1B4C';
@@ -69,33 +70,39 @@ describe('@SL-206 @SL-138 wann die Karte erscheint', () => {
   });
 });
 
-describe('@SL-151 Schalter „ähnlich zum eigenen Trikot ausschließen“ (Entscheidung Daniel offen; Vorgabe: ausschließen)', () => {
+describe('@SL-207 @SL-217 die Vorgabe schließt nur die GLEICHE eigene Trikotfarbe aus; Ähnliches warnt bei der Wahl (@SL-231)', () => {
   const GELB_HELL = '#FFEB3B';
+  const DUNKELORANGE = '#E65100';
   const AUS = { aehnlichesEigenesAusschliessen: true };
   const ERLAUBT = { aehnlichesEigenesAusschliessen: false };
 
-  it('Weiß gegen Gelb (#FFEB3B), Hallenfarbe nur Gelb (#FFCC00), Vorgabe: dem gelben Team wird KEIN Gelb vorgeschlagen, dem weißen auch nicht (dem Gegner zu ähnlich): „Kein passendes Leibchen vorhanden“', () => {
-    expect(kitProposal(FELDER(WEISS, GELB_HELL), [GELB], 'home')).toEqual({ kind: 'keinPassendes', seite: 'a' });
+  it('Probe aus dem Record, OHNE Parameter (die Vorgabe selbst): Hallenfarben Gelb und Orange, Heim zieht, Heim spielt Gelb, Gast einen Orangeton – „Gast zieht Orange“', () => {
+    expect(kitProposal(FELDER(GELB, DUNKELORANGE), [GELB, ORANGE], 'home')).toEqual({ kind: 'vorschlag', seite: 'b', farbe: ORANGE });
+  });
+
+  it('Weiß gegen Gelb (#FFEB3B), Hallenfarbe nur Gelb (#FFCC00), Vorgabe: Gelb ist dem Gast ähnlich (nicht gleich) – der Vorschlag nennt es für den Gast', () => {
+    expect(kitProposal(FELDER(WEISS, GELB_HELL), [GELB], 'home')).toEqual({ kind: 'vorschlag', seite: 'b', farbe: GELB });
+  });
+
+  it('Schalter an (ähnlich ausgeschlossen): dieselben Fälle ergeben „Kein passendes Leibchen vorhanden“', () => {
     expect(kitProposal(FELDER(WEISS, GELB_HELL), [GELB], 'home', AUS)).toEqual({ kind: 'keinPassendes', seite: 'a' });
+    expect(kitProposal(FELDER(GELB, DUNKELORANGE), [GELB, ORANGE], 'home', AUS)).toEqual({ kind: 'keinPassendes', seite: 'a' });
   });
 
-  it('Schalter aus (ähnlich erlaubt): derselbe Fall schlägt dem gelben Team (Gast) Gelb vor, die Karte warnt dann bei der Wahl (@SL-231)', () => {
-    expect(kitProposal(FELDER(WEISS, GELB_HELL), [GELB], 'home', ERLAUBT)).toEqual({ kind: 'vorschlag', seite: 'b', farbe: GELB });
-  });
-
-  it('mit Orange als zweiter Hallenfarbe zieht in der Vorgabe das gelbe Team Orange, nicht Gelb', () => {
-    expect(kitProposal(FELDER(WEISS, GELB_HELL), [GELB, ORANGE], 'away')).toEqual({ kind: 'vorschlag', seite: 'b', farbe: ORANGE });
+  it('@SL-231 greift bei der Wahl in diesem Fall: „Gast zieht Orange“ trägt „sieht aus wie das eigene Trikot“ (der Gast spielt einen Orangeton)', () => {
+    expect(leibchenWieEigenesTrikot(FELDER(GELB, DUNKELORANGE), 'b', ORANGE)).not.toBe('none');
+    expect(leibchenWieEigenesTrikot(FELDER(GELB, DUNKELORANGE), 'a', ORANGE)).toBe('none'); // Gegenbeispiel: für das gelbe Heim wäre Orange keine Ähnlichkeit zum eigenen Trikot
   });
 
   it('Gegenbeispiel (beide Schalterstellungen): dieselbe Farbe (Gelb auf Gelb) wird nie vorgeschlagen, Blau gegen Blau schlägt Gelb vor', () => {
-    for (const o of [AUS, ERLAUBT]) {
+    for (const o of [AUS, ERLAUBT, {}]) {
       expect(kitProposal(FELDER(GELB, GELB), [GELB], 'home', o)).toEqual({ kind: 'keinPassendes', seite: 'a' });
       expect(kitProposal(FELDER(BLAU, BLAU), [GELB], 'home', o)).toEqual({ kind: 'vorschlag', seite: 'a', farbe: GELB });
     }
   });
 
-  it('Folge der Vorgabe: der Vorschlag der ANDEREN Seite (@SL-217) kommt nur bei erlaubter Ähnlichkeit vor – in der Vorgabe nie (Seite = Regel)', () => {
+  it('@SL-217 Folge: der Vorschlag der ANDEREN Seite kommt in der Vorgabe vor, bei ausgeschlossener Ähnlichkeit nie', () => {
+    expect(kitProposal(FELDER('#000000', '#663300'), ['#DC0000'], 'home')).toEqual({ kind: 'vorschlag', seite: 'b', farbe: '#DC0000' });
     expect(kitProposal(FELDER('#000000', '#663300'), ['#DC0000'], 'home', AUS).kind).toBe('keinPassendes');
-    expect(kitProposal(FELDER('#000000', '#663300'), ['#DC0000'], 'home', ERLAUBT)).toEqual({ kind: 'vorschlag', seite: 'b', farbe: '#DC0000' });
   });
 });

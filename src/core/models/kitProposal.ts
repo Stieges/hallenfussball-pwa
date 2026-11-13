@@ -22,11 +22,12 @@ export function karteNoetig(farben: TrikotFarben): boolean {
 }
 
 /**
- * Schalter (Entscheidung Daniel offen, Stand 2026-11-13): schließt der Vorschlag auch eine dem EIGENEN Trikot nur ÄHNLICHE Hallenfarbe aus (@SL-151 „spielt selbst
- * in dieser Farbe“)? `true` (Vorgabe): ja, das ähnliche Gelb bleibt über die Wahl erreichbar und trägt dort die Warnung (@SL-231). `false`: nur die GLEICHE Farbe
- * (`same`) fällt weg. Achtung: mit `true` kann der Vorschlag der ANDEREN Seite (@SL-217) nie vorkommen, denn dafür muss die Farbe dem Trikot dieser Seite ähneln.
+ * Schalter: schließt der Vorschlag auch eine dem EIGENEN Trikot nur ÄHNLICHE Hallenfarbe aus? Vorgabe `false` – so verlangt es der Record: @SL-207 und @SL-217
+ * schließen für die ziehende Seite nur die GLEICHE eigene Trikotfarbe aus („spielt selbst in dieser Farbe“); eine ähnliche Farbe deckt @SL-231 (Warnung „sieht aus
+ * wie das eigene Trikot“ bei der Wahl, Bestätigen bleibt erlaubt). `true` schlösse auch Ähnliches aus; dann kann der Vorschlag der ANDEREN Seite (@SL-217) nie
+ * vorkommen, denn dafür muss die Farbe dem Trikot dieser Seite ähneln.
  */
-export const AEHNLICHES_EIGENES_TRIKOT_AUSSCHLIESSEN = true;
+export const AEHNLICHES_EIGENES_TRIKOT_AUSSCHLIESSEN = false;
 
 export interface KitProposalOptions {
   aehnlichesEigenesAusschliessen?: boolean;
