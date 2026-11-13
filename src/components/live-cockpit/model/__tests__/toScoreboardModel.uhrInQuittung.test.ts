@@ -50,7 +50,7 @@ describe('@SL-240 der Uhr-Bereich wandert in die Quittungszeile', () => {
     expect(m.abschnittText).toBe('tafel.nachEnde.verlaengerung'); // „nach Verlängerung“ bleibt im Kopf
   });
 
-  it('im Spielplan beendet und eingetragen: kein Uhr-Bereich wie bisher, keine Quittung, „Ende – eingetragen im Spielplan“ bleibt im Kopf', () => {
+  it('@SL-240 im Spielplan beendet und eingetragen: „Ende – eingetragen im Spielplan“ steht weiter im Kopf der Tafel, in der Quittungszeile steht dann nichts (kein Uhr-Bereich wie bisher)', () => {
     const m = toScoreboardModel(ende({ eingetragenImSpielplan: 'event-1', playedMs: 0, plannedMs: min(14) }, { uhrInQuittung: true }), t);
     expect(m.uhr).toBeNull();
     expect(m.quittungText).toBeNull();

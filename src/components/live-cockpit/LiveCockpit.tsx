@@ -30,6 +30,7 @@ import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../types/tournament';
 import { ScoreboardArea } from './areas/ScoreboardArea';
 import { LegacyPlayArea } from './areas/LegacyPlayArea';
 import { Rollbar } from './areas/Rollbar';
+import { uhrInQuittung as uhrInQuittungWenn } from './model/uhrInQuittung';
 import { CockpitOverlays } from './areas/CockpitOverlays';
 import { ThumbBarArea } from './areas/ThumbBarArea';
 import { LeerLeiste } from './areas/LeerLeiste';
@@ -84,7 +85,6 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   const { isMobile, isTablet, width } = useBreakpoint();
   const layout = width >= breakpointValues.desktop ? 'breit' : 'daumen';
   const stufe = useCockpitStufe();
-
   // Seiten tauschen: nur die Anzeige dieses Geräts (@SL-065)
   const sides = useSideOrder(currentMatch);
   const notices = useCockpitNotices(currentMatch?.id); // Meldezeile statt Toast (Spec § 7); endet mit dem Spielwechsel (@SL-192)
@@ -183,7 +183,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
       sperrHinweise={props.sperrHinweise}
       uebernahmeVon={props.uebernahmeVon}
       eingetragenVon={eingetragenVon}
-      naechstes={isMobile ? naechstesZeile : null} uhrInQuittung={isMobile && leibchen.karte !== null && phase.zustand === 'abgepfiffen'}
+      naechstes={isMobile ? naechstesZeile : null} uhrInQuittung={uhrInQuittungWenn({ isMobile, hatLeibchenKarte: leibchen.karte !== null, phase })}
       farbKonflikt={leibchen.farbKonflikt} spielzeit={props.spielzeit}
       naechstesNamen={naechstesSpiel ? [naechstesSpiel.homeTeam.name, naechstesSpiel.awayTeam.name] : undefined}
       // A4 (C-SYNC): rendert selbst nichts außerhalb des Cloud-Modus. I4 (W1, Nachtrag

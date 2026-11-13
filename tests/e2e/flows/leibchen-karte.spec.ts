@@ -54,6 +54,18 @@ async function oeffneEndstand(page: Page, fenster: { width: number; height: numb
   await animationenFertig(page);
 }
 
+/** Wie weit der Teamkopf unten über den Rand der Fläche ragt, die ihn zeigt (> 0: von einer rollenden oder abgeschnittenen Fläche gekappt). */
+async function kopfRagtUeber(page: Page): Promise<number> {
+  return page.getByTestId('team-head-home').evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    let schlimmster = Number.NEGATIVE_INFINITY;
+    for (let p = el.parentElement; p !== null; p = p.parentElement) {
+      if (getComputedStyle(p).overflowY !== 'visible') { schlimmster = Math.max(schlimmster, r.bottom - p.getBoundingClientRect().bottom); }
+    }
+    return schlimmster;
+  });
+}
+
 interface Box { x: number; y: number; width: number; height: number }
 
 async function box(el: Locator): Promise<Box> {
@@ -291,6 +303,25 @@ for (const f of FENSTER) {
       }
     });
 
+    if (f.handy) {
+      test(`@SL-240 @SL-208 Endstand am Handy: nach „Bestätigen“ (Zeile statt Karte) springt die Tafel nicht, die Uhr bleibt klein (${f.name})`, async ({ page }) => {
+        await oeffneEndstand(page, f);
+        const messen = async (): Promise<{ tafelOben: number; tafelHoehe: number; kopfOben: number; weiter: number }> => ({
+          tafelOben: (await box(page.getByTestId('scoreboard'))).y, tafelHoehe: (await box(page.getByTestId('scoreboard'))).height,
+          kopfOben: (await box(page.getByTestId('team-head-home'))).y, weiter: (await box(page.getByTestId('match-next-button'))).y,
+        });
+        const vorher = await messen();
+        await page.getByTestId('leibchen-bestaetigen').click();
+        await expect(page.getByTestId('leibchen-zeile')).toBeVisible();
+        await animationenFertig(page);
+        const nachher = await messen();
+        expect(Math.abs(nachher.tafelHoehe - vorher.tafelHoehe), 'Tafel gleich hoch').toBeLessThanOrEqual(1);
+        expect(Math.abs(nachher.kopfOben - vorher.kopfOben), 'Teamköpfe an derselben Stelle').toBeLessThanOrEqual(1);
+        expect(Math.abs(nachher.weiter - vorher.weiter), '„Weiter“ springt nicht').toBeLessThanOrEqual(1);
+        await expect(page.getByTestId('scoreboard-clock-rest')).toHaveCount(0);
+      });
+    }
+
     test(`@SL-240 Gegenbeispiel: Endstand ohne Karte (kein Leibchen nötig) behält den großen Uhr-Bereich „Gespielt 9:00“ wie in @SL-169 (${f.name})`, async ({ page }) => {
       await oeffneEndstand(page, f, true);
       await expect(page.getByTestId('leibchen-karte')).toHaveCount(0);
@@ -314,19 +345,22 @@ for (const f of FENSTER) {
       expect(kopf).toBeLessThanOrEqual(zeile.y + 1);
     });
 
-    test(`@OB-021 @SL-206 Teamname mit 50 Zeichen, Wahl noch offen: Name im Kopf vollständig über der Karte, Karte vollständig im Fenster (${f.name})`, async ({ page }) => {
-      // BEFUND (Fixrunde 5): bei 360 × 640 reicht der Platz nicht – der Kopf mit dem 50-Zeichen-Namen endet ca. 65 px unter der Oberkante der Karte (Tafel mit großer
-      // Spielzeit 302 px + Kopf + Karte 187 px). Wie beim Endstand (@SL-240) braucht es eine Entscheidung (große Spielzeit weg oder Karte kleiner); bis dahin am 360er Fenster übersprungen (kein Scheinerfolg).
-      test.skip(f.width === 360, 'Befund: Kopf bei 50 Zeichen und offener Karte am 360er Handy abgeschnitten (Frage an Daniel)');
-      await oeffne(page, f, undefined, 'leibchen-lang', true);
-      await expect(page.getByTestId('leibchen-karte')).toBeVisible();
-      const karte = await box(page.getByTestId('leibchen-karte'));
-      const n = await page.getByTestId('team-name-home').evaluate((el) => { const r = el.getBoundingClientRect(); return { unten: r.bottom, ueberlauf: el.scrollHeight - el.clientHeight }; });
-      const kopf = await page.getByTestId('team-head-home').evaluate((el) => el.getBoundingClientRect().bottom);
-      expect(n.ueberlauf).toBeLessThanOrEqual(0);
-      expect(kopf, 'der Kopf endet über der Karte').toBeLessThanOrEqual(karte.y + 1);
-      expect(karte.y + karte.height).toBeLessThanOrEqual(f.height);
-    });
+    for (const [fall, turnier, unbestaetigt] of [['normalen Namen', 'leibchen-7a', false], ['50-Zeichen-Namen', 'leibchen-lang', true]] as const) {
+      test(`C-LEIBCHEN-KARTE-KOPF-ABGESCHNITTEN-360 @OB-021 @SL-206 Karte offen, ${fall}: der Teamkopf steht vollständig über der Karte, nichts ist gekappt (${f.name})`, async ({ page }) => {
+        // BEFUNDE-HEUTIGER-CODE: bei 360 × 640 reicht der Platz nicht (Tafel mit großer Spielzeit + Köpfe + Karte); erwartet rot, bis Daniel die Lösung wählt (Fixrunde 6)
+        test.fail(f.width === 360, 'Befund C-LEIBCHEN-KARTE-KOPF-ABGESCHNITTEN-360');
+        await oeffne(page, f, undefined, turnier, unbestaetigt);
+        await expect(page.getByTestId('leibchen-karte')).toBeVisible();
+        await animationenFertig(page);
+        const karte = await box(page.getByTestId('leibchen-karte'));
+        const kopf = await page.getByTestId('team-head-home').evaluate((el) => el.getBoundingClientRect().bottom);
+        const name = await page.getByTestId('team-name-home').evaluate((el) => el.scrollHeight - el.clientHeight);
+        expect(name).toBeLessThanOrEqual(0);
+        expect(kopf, 'der Kopf endet über der Karte').toBeLessThanOrEqual(karte.y + 1);
+        expect(await kopfRagtUeber(page), 'keine rollende oder abgeschnittene Fläche kappt den Kopf').toBeLessThanOrEqual(0);
+        expect(karte.y + karte.height).toBeLessThanOrEqual(f.height);
+      });
+    }
 
     test(`@SL-224 „Ändern“ in der Zeile und jede Farbe der Wahl sind mindestens 44×44 groß (${f.name})`, async ({ page }) => {
       await oeffne(page, f);
