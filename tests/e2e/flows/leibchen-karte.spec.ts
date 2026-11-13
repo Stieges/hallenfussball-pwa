@@ -35,9 +35,16 @@ async function box(el: Locator): Promise<Box> {
   return b;
 }
 
-async function oeffne(page: Page, fenster: { width: number; height: number }): Promise<{ tippe: (el: Locator) => Promise<void>; tipps: () => number }> {
+async function oeffne(page: Page, fenster: { width: number; height: number }, hallenFarben?: readonly string[] | null): Promise<{ tippe: (el: Locator) => Promise<void>; tipps: () => number }> {
   await page.setViewportSize({ width: fenster.width, height: fenster.height });
-  await installiereSaat(page.context(), leseSaat('leibchen-vor-anpfiff'));
+  const saat = leseSaat('leibchen-vor-anpfiff');
+  if (hallenFarben !== undefined) {
+    // andere Hallenfarben des Turniers (@SL-219: Gelb und Orange / Gelb und Grün / keine eingetragen)
+    for (const t of saat.datenbanken[0].eintraege.tournaments as Array<Record<string, unknown>>) {
+      if (hallenFarben === null) { delete t.bibColors; delete t.bibColor; } else { t.bibColors = [...hallenFarben]; t.bibColor = hallenFarben[0]; }
+    }
+  }
+  await installiereSaat(page.context(), saat);
   // Die App ersetzt beim Start einmal die Adresse; ein dadurch abgebrochenes `goto` ist kein Fehler, entscheidend ist die Karte im Bild
   await page.goto(`/#/tournament/leibchen-7a/live?matchId=${SPIEL_3}`, { waitUntil: 'commit' }).catch(() => undefined);
   await expect(page.getByTestId('leibchen-karte')).toBeVisible({ timeout: 25000 });
@@ -140,36 +147,71 @@ for (const f of FENSTER) {
       await expect(page.getByTestId('goal-button-home')).toBeVisible(); // Tor-Taste nicht versteckt (die offene Wahl endet mit der Karte)
     });
 
-    test(`@SL-219 @OB-083 @SL-221 „Andere Farbe …“: alle Farbfelder und „Schließen“ stehen im Fenster, nichts überlappt, kein Rollen, Ziele mindestens 44 px (${f.name})`, async ({ page }) => {
+    const HALLEN = [
+      { name: 'Gelb und Orange', farben: ['#FFCC00', '#FF6600'] as const, erwartet: ['gelb', 'orange', 'neongruen', 'pink', 'rot', 'blau', 'weiss', 'schwarz'] },
+      { name: 'Gelb und Grün', farben: ['#FFCC00', '#009933'] as const, erwartet: ['gelb', 'gruen', 'orange', 'neongruen', 'pink', 'rot', 'blau', 'weiss', 'schwarz'] },
+      { name: 'keine eingetragen', farben: null, erwartet: ['gelb', 'orange', 'neongruen', 'pink', 'rot', 'blau', 'weiss', 'schwarz'] },
+    ] as const;
+    for (const h of HALLEN) {
+      test(`@SL-219 @OB-083 @SL-221 „Andere Farbe …“ bei Hallenfarben ${h.name}: Hallenfarben zuerst, alle Farbfelder und „X“ stehen im Fenster, nichts überlappt, nichts rollt, Ziele mindestens 44 px (${f.name})`, async ({ page }) => {
+        await oeffne(page, f, h.farben);
+        await page.getByTestId('leibchen-vorschlag').click();
+        await page.getByTestId('leibchen-andere').click();
+        const blatt = page.getByTestId('leibchen-andere-blatt');
+        await expect(blatt).toBeVisible();
+        await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
+        const felder = await page.locator('[data-testid="leibchen-andere-blatt"] [data-testid^="leibchen-farbe-"]').all();
+        const namen: string[] = [];
+        for (const el of felder) { namen.push(((await el.getAttribute('data-testid')) ?? '').replace('leibchen-farbe-', '')); }
+        expect(namen, 'Hallenfarben zuerst, darunter die Grundauswahl').toEqual([...h.erwartet]);
+        const boxen: Box[] = [];
+        for (const el of felder) { boxen.push(await box(el)); }
+        const schliessen = await box(page.getByTestId('leibchen-andere-schliessen'));
+        for (const b of [...boxen, schliessen]) {
+          expect(b.height).toBeGreaterThanOrEqual(44);
+          expect(b.width).toBeGreaterThanOrEqual(44);
+          expect(b.y).toBeGreaterThanOrEqual(0);
+          expect(b.y + b.height).toBeLessThanOrEqual(f.height);
+          expect(b.x + b.width).toBeLessThanOrEqual(f.width);
+        }
+        for (let i = 0; i < boxen.length; i++) {
+          for (let j = i + 1; j < boxen.length; j++) {
+            const a = boxen[i]; const c = boxen[j];
+            expect(a.x < c.x + c.width && c.x < a.x + a.width && a.y < c.y + c.height && c.y < a.y + a.height, `Felder ${String(i)} und ${String(j)} überlappen nicht`).toBe(false);
+          }
+        }
+        expect(await blatt.evaluate((el) => [el, ...el.querySelectorAll('*')].filter((e) => e.scrollHeight > e.clientHeight + 1 && ['auto', 'scroll'].includes(getComputedStyle(e).overflowY)).length), 'nichts rollt im Blatt').toBe(0);
+        if (h.farben !== null && h.farben[1] === '#FF6600') {
+          // eine Farbe antippen: das Blatt schließt, die Karte zeigt die Wahl (im Browser geprüft: die Wahl darf beim Schließen nicht verloren gehen)
+          await page.getByTestId('leibchen-farbe-pink').click();
+          await expect(blatt).toBeHidden();
+          await expect(page.getByTestId('leibchen-vorschlag')).toContainText('Pink');
+        }
+      });
+    }
+
+    test(`@SL-219 @SL-150 Nachtragen im laufenden Spiel: nichts rollt, „Speichern“ steht im Fenster, „Andere Farbe …“ öffnet dasselbe Blatt mit allen Feldern im Fenster (${f.name})`, async ({ page }) => {
       await oeffne(page, f);
-      await page.getByTestId('leibchen-vorschlag').click();
-      await page.getByTestId('leibchen-andere').click();
-      const blatt = page.getByTestId('leibchen-andere-blatt');
-      await expect(blatt).toBeVisible();
-      const felder = await page.locator('[data-testid="leibchen-andere-blatt"] [data-testid^="leibchen-farbe-"]').all();
-      expect(felder).toHaveLength(6); // 8 Grundfarben, 2 davon Hallenfarben (stehen in der Karte)
-      const boxen: Box[] = [];
-      for (const el of felder) { boxen.push(await box(el)); }
-      const schliessen = await box(page.getByTestId('leibchen-andere-schliessen'));
-      for (const b of [...boxen, schliessen]) {
+      await page.getByTestId('leibchen-bestaetigen').click();
+      await page.getByTestId('match-start-button').click();
+      await expect(page.getByTestId('match-pause-button')).toBeVisible();
+      await page.getByTestId('cockpit-more-button').click();
+      await page.getByTestId('mehr-leibchen-nachtragen').click();
+      const nachtragen = page.getByTestId('leibchen-nachtragen');
+      await expect(nachtragen).toBeVisible();
+      await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
+      expect(await nachtragen.evaluate((el) => [el, ...el.querySelectorAll('*')].filter((e) => e.scrollHeight > e.clientHeight + 1 && ['auto', 'scroll'].includes(getComputedStyle(e).overflowY)).length), 'nichts rollt im Nachtragen-Blatt').toBe(0);
+      const speichern = await box(page.getByTestId('nachtrag-speichern'));
+      expect(speichern.y + speichern.height).toBeLessThanOrEqual(f.height);
+      await page.getByTestId('nachtrag-andere').click();
+      const felder = await page.locator('[data-testid="nachtrag-andere-blatt"] [data-testid^="nachtrag-farbe-"]').all();
+      expect(felder).toHaveLength(8);
+      for (const el of felder) {
+        const b = await box(el);
         expect(b.height).toBeGreaterThanOrEqual(44);
-        expect(b.width).toBeGreaterThanOrEqual(44);
-        expect(b.y).toBeGreaterThanOrEqual(0);
         expect(b.y + b.height).toBeLessThanOrEqual(f.height);
         expect(b.x + b.width).toBeLessThanOrEqual(f.width);
       }
-      for (let i = 0; i < boxen.length; i++) {
-        expect(boxen[i].y + boxen[i].height, 'Felder über „Schließen“').toBeLessThanOrEqual(schliessen.y + 1);
-        for (let j = i + 1; j < boxen.length; j++) {
-          const a = boxen[i]; const c = boxen[j];
-          expect(a.x < c.x + c.width && c.x < a.x + a.width && a.y < c.y + c.height && c.y < a.y + a.height, `Felder ${String(i)} und ${String(j)} überlappen nicht`).toBe(false);
-        }
-      }
-      expect(await blatt.evaluate((el) => [el, ...el.querySelectorAll('*')].filter((e) => e.scrollHeight > e.clientHeight + 1 && ['auto', 'scroll'].includes(getComputedStyle(e).overflowY)).length), 'nichts rollt im Blatt').toBe(0);
-      // eine Farbe antippen: das Blatt schließt, die Karte zeigt die Wahl (im Browser geprüft: die Wahl darf beim Schließen nicht verloren gehen)
-      await page.getByTestId('leibchen-farbe-pink').click();
-      await expect(blatt).toBeHidden();
-      await expect(page.getByTestId('leibchen-vorschlag')).toContainText('Pink');
     });
 
     if (f.name.startsWith('desktop')) {

@@ -22,11 +22,10 @@ export function LeibchenNachtragen({ isOpen, onClose, daten }: LeibchenNachtrage
   const [seite, setSeite] = useState<KitSide>(daten.aktuell?.seite ?? 'a');
   const [farbe, setFarbe] = useState<string>(daten.aktuell?.farbe ?? '');
   return (
-    <DialogSurface isOpen={isOpen} onClose={onClose} placement="sheet" ariaLabel={t('leibchenKarte.nachtragenTitel')} testId="leibchen-nachtragen">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.md, padding: cssVars.spacing.lg }}>
-        <h2 style={{ fontSize: cssVars.fontSizes.lg, margin: 0 }}>{t('leibchenKarte.nachtragenTitel')}</h2>
-        <LeibchenWahlFelder teams={daten.teams} seite={seite} farbe={farbe} hallenFarben={daten.hallenFarben} trikot={daten.trikot}
-          onSeite={setSeite} onFarbe={setFarbe} testIdPrefix="nachtrag" />
+    <DialogSurface
+      isOpen={isOpen} onClose={onClose} placement="sheet" ariaLabel={t('leibchenKarte.nachtragenTitel')} testId="leibchen-nachtragen"
+      header={<h2 style={{ fontSize: cssVars.fontSizes.lg, margin: 0, padding: `${cssVars.spacing.md} ${cssVars.spacing.md} 0` }}>{t('leibchenKarte.nachtragenTitel')}</h2>}
+      footer={(
         <DialogActions
           primary={{ label: t('leibchenKarte.speichern'), onClick: () => { daten.onSpeichern(seite, farbe); onClose(); }, disabled: farbe === '', 'data-testid': 'nachtrag-speichern' }}
           secondary={[
@@ -34,6 +33,12 @@ export function LeibchenNachtragen({ isOpen, onClose, daten }: LeibchenNachtrage
             ...(daten.aktuell === null ? [] : [{ label: t('leibchenKarte.entfernen'), onClick: () => { daten.onEntfernen(); onClose(); }, 'data-testid': 'nachtrag-entfernen' }]),
           ]}
         />
+      )}
+    >
+      {/* Kopf und Tasten stehen fest, die Wahl dazwischen rollt nötigenfalls: „Speichern“ ist immer erreichbar */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm, padding: cssVars.spacing.md }}>
+        <LeibchenWahlFelder teams={daten.teams} seite={seite} farbe={farbe} hallenFarben={daten.hallenFarben} trikot={daten.trikot}
+          onSeite={setSeite} onFarbe={setFarbe} andereAlsBlatt testIdPrefix="nachtrag" />
       </div>
     </DialogSurface>
   );
