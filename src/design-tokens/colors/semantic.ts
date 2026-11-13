@@ -123,6 +123,8 @@ export const semanticColorsDark = {
   info: palette.blue[500],
   infoLight: 'rgba(0, 176, 255, 0.15)',
   infoBorder: 'rgba(0, 176, 255, 0.2)',
+  /** Rand/Symbol auf Info-Flächen (≥ 3 : 1 gegen infoLight, @OB-057) */
+  infoStrong: palette.blue[500],
 
   // ---------------------------------------------------------------------------
   // On-Colors (text on colored backgrounds)

@@ -197,6 +197,7 @@
   --color-info: #00B0FF;
   --color-info-light: rgba(0, 176, 255, 0.15);
   --color-info-border: rgba(0, 176, 255, 0.2);
+  --color-info-strong: #00B0FF;
 
   /* ===========================================
      Colors - Status (Tournament States)
@@ -794,6 +795,7 @@ html[data-font-size="x-large"] {
   --color-info: #0096E6;
   --color-info-light: rgba(0, 150, 230, 0.1);
   --color-info-border: rgba(0, 150, 230, 0.2);
+  --color-info-strong: #007ACC;
 
   /* ===========================================
      Colors - Status (Tournament States)

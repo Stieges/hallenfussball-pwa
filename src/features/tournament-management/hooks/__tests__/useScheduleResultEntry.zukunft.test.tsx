@@ -21,10 +21,10 @@ import { useScheduleResultEntry } from '../useScheduleResultEntry';
 const SPAETER = '2026-12-05';
 const FRUEHER = '2026-01-10';
 
-function render(h: ScheduleEngine, date: string, withTime = true) {
+function render(h: ScheduleEngine, date: string, withTime = true, uhr = '14:00') {
   const base = scheduleTournament({
-    [SPIEL_7]: { scheduledTime: withTime ? new Date(`${date}T14:00:00`) : undefined },
-    [HALBFINALE_1]: { scheduledTime: new Date(`${date}T14:00:00`) },
+    [SPIEL_7]: { scheduledTime: withTime ? new Date(`${date}T${uhr}:00`) : undefined },
+    [HALBFINALE_1]: { scheduledTime: new Date(`${date}T${uhr}:00`) },
   });
   const tournament = { ...base, date, startDate: date };
   const showWarning = vi.fn();
@@ -62,6 +62,29 @@ describe.each(['UTC', 'Europe/Berlin', 'America/New_York', 'Pacific/Auckland'])(
     await answer(null);
     await expect(done).resolves.toBe(false);
     expect(h.api).not.toHaveBeenCalled();
+  });
+
+  // Grenzfälle: „jetzt“ ist die Serverzeit als Wanduhr des Turniers (Europe/Berlin, Dezember = UTC+1), der Anstoß die Wanduhr des Turniers
+  // (Konvention des Spielplans, `scheduleShiftClock`): beides unabhängig von der Zeitzone des Geräts. Der Unterschied zwischen Berlin und
+  // jeder anderen Zone ist ≥ 1 h, die Fälle liegen 20–30 min auseinander und entlarven deshalb den Vergleich mit der rohen Serverzeit.
+  it.each([
+    ['14:00', '2026-12-05T12:30:00Z', true, 'Anstoß 14:00, jetzt 13:30 (Berlin): 30 min davor, Frage'],
+    ['14:00', '2026-12-05T13:30:00Z', false, 'Anstoß 14:00, jetzt 14:30 (Berlin): 30 min danach, keine Frage'],
+    ['23:50', '2026-12-05T23:10:00Z', false, 'Anstoß 23:50, jetzt 00:10 am Folgetag (Berlin), keine Frage'],
+    ['00:10', '2026-12-04T22:50:00Z', true, 'Anstoß 00:10, jetzt 23:50 am Vortag (Berlin), Frage'],
+  ])('Grenzfall: Anstoß %s, Serverzeit %s → Frage %s (%s)', async (uhr, jetzt, fragt) => {
+    vi.spyOn(h.engine, 'serverNow').mockReturnValue(new Date(jetzt).getTime());
+    const { hook, enter, answer } = render(h, SPAETER, true, uhr);
+    const done = enter(SPIEL_7);
+    await act(async () => { await settle(); });
+    if (fragt) {
+      expect(hook.result.current.prompt).toEqual({ kind: 'future', matchNumber: 7, time: uhr });
+      await answer(null);
+      await expect(done).resolves.toBe(false);
+    } else {
+      expect(hook.result.current.prompt?.kind).not.toBe('future');
+      await done;
+    }
   });
 
   it('Gegenbeispiel: Anstoß in der Vergangenheit fragt nicht', async () => {

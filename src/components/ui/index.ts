@@ -69,3 +69,9 @@ export { TieMarker, ShootoutScoreInput, OrderPicker, PlacesToPlayOutPicker } fro
 export type { TieMarkerProps, ShootoutScoreInputProps, OrderPickerProps, PlacesToPlayOutPickerProps } from './molecules';
 export { NumberChoiceRow, SegmentedChoice } from './molecules';
 export type { NumberChoiceRowProps, SegmentedChoiceProps, SegmentedOption } from './molecules';
+
+// H4-4 (Hallenton): gemeinsame Statuszeile (@HT-045)
+export { StatusPille } from './atoms';
+export type { StatusPilleProps, StatusPilleTon, StatusPilleRand, StatusPilleAktion } from './atoms';
+export { StatusZeile } from './molecules';
+export type { StatusEintrag, StatusRang, StatusZeileProps } from './molecules';

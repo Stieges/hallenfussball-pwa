@@ -117,6 +117,8 @@ export const semanticColorsLight = {
   info: palette.blue[600],
   infoLight: 'rgba(0, 150, 230, 0.1)',
   infoBorder: 'rgba(0, 150, 230, 0.2)',
+  /** Rand/Symbol auf Info-Flächen (≥ 3 : 1 gegen infoLight, @OB-057) */
+  infoStrong: palette.blue[700],
 
   // ---------------------------------------------------------------------------
   // On-Colors (text on colored backgrounds)
