@@ -5,7 +5,7 @@
  * Auftrag raus (ein spätes Nachholen in der Halle wäre schlimmer als die Auskunft). Die Rückfrage „Auf Feld 1 läuft Spiel 11 …“ kommt
  * mit H4-10. Der ganze Abschnitt steht nur, wo geändert werden darf (nach dem Turnierende nicht, @HT-046).
  */
-import { useCallback, useEffect, useState, type CSSProperties, type ReactElement } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { cssVars, iconSizeValues } from '../../../design-tokens';
@@ -86,18 +86,18 @@ export function TesttonAbschnitt({ karten, status, hierAnhoeren, geraetName }: T
     });
   }, [status.antwort, i18n.language, t]);
 
-  // Je Feld eine eigene Frist ab seinem Start: ein zweiter Auftrag verlängert die des ersten nicht
-  const fristen = Object.entries(ergebnisse).flatMap(([feld, e]) => (e.art === 'laeuft' ? [`${feld}:${e.testId}:${e.seit}`] : [])).join('|');
+  // Je Feld eine eigene Frist ab seinem Start: ein zweiter Auftrag verlängert die des ersten nicht (R2, H4-9: als Liste, nicht als Text)
+  const fristen = useMemo(
+    () => Object.entries(ergebnisse).flatMap(([feld, e]) => (e.art === 'laeuft' ? [{ feld: Number(feld), testId: e.testId, seit: e.seit }] : [])),
+    [ergebnisse],
+  );
   useEffect(() => {
-    const timers = fristen === '' ? [] : fristen.split('|').map((eintrag) => {
-      const [feld, testId, seit] = eintrag.split(':');
-      return window.setTimeout(() => {
-        setErgebnisse((alt) => {
-          const e = alt[Number(feld)];
-          return e?.art === 'laeuft' && e.testId === testId ? { ...alt, [Number(feld)]: { art: 'text', text: t('testton.keineAntwort'), warn: true } } : alt;
-        });
-      }, Math.max(0, Number(seit) + QUITTUNG_WARTEN_MS - echterZeitgeber.jetzt()));
-    });
+    const timers = fristen.map(({ feld, testId, seit }) => window.setTimeout(() => {
+      setErgebnisse((alt) => {
+        const e = alt[feld];
+        return e?.art === 'laeuft' && e.testId === testId ? { ...alt, [feld]: { art: 'text', text: t('testton.keineAntwort'), warn: true } } : alt;
+      });
+    }, Math.max(0, seit + QUITTUNG_WARTEN_MS - echterZeitgeber.jetzt())));
     return () => timers.forEach((timer) => window.clearTimeout(timer));
   }, [fristen, t]);
 

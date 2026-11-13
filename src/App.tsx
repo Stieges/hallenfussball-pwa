@@ -19,6 +19,7 @@ import { useRouteMatch } from './hooks/useRouteMatch';
 import { matchRoute } from './core/routing';
 import { AuthProvider } from './features/auth/context/AuthContext';
 import { useAuth } from './features/auth/hooks/useAuth';
+import { holeRueckkehr } from './features/auth/utils/loginRueckkehr';
 import { ThemeProvider } from './hooks/useTheme';
 import {
   GuestBanner,
@@ -497,7 +498,7 @@ function AppContent() {
         {/* Auth Screens */}
         {screen === 'login' && (
           <LoginScreen
-            onSuccess={() => void navigate('/')}
+            onSuccess={() => void navigate(holeRueckkehr() ?? '/')} // @HT-026: zurück in den Unterpunkt, von dem aus die Anmeldung kam
             onNavigateToRegister={() => void navigate('/register')}
             onBack={() => void navigate(-1)}
             onContinueAsGuest={() => void navigate('/')}

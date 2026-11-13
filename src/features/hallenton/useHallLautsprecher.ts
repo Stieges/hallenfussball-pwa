@@ -16,6 +16,9 @@
  * - H4-1: `abgeloest` = Spur eines Verlusts je Feld (@HT-015: `abgeloest` = „von einem anderen Gerät übernommen“, `abgemeldet`) in allen Tabs, bis
  *   `abgeloestVerstanden()` (H4-9) oder ein neues Einschalten; `lebenszeichenFehler` gilt geräteweit (@HT-012, @HT-041);
  *   `erneutVersuchen()` beendet ein „still“ nach `kein_recht` (N2, H4 baut die Taste).
+ * - H4-9: `wechseln(felder, name, abloesen?)` (@HT-056, `geraetZuordnung.ts`): aus einem anderen Turnier umziehen – erst die Zuordnung im
+ *   neuen, dann die Abmeldung im alten; `anderesTurnier` nennt das alte (Name holt die Oberfläche aus dem lokalen Turnier).
+ *   `feldAbmelden(feld)` nimmt ein einzelnes Feld heraus.
  */
 import { useCallback, useMemo, useReducer, useSyncExternalStore } from 'react';
 import { getDeviceId } from '../../core/device/deviceId';
@@ -25,6 +28,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { merkeAbmeldung, vergissAbmeldung, vergissAbmeldungWenn } from './ausstehendeAbmeldung';
 import { leseTonWahlSofort, leseTorWahlZumAnhoeren } from './browserLaufzeit';
+import { meldeFeldAb, wechsleTurnier } from './geraetZuordnung';
 import { ladeTurnierLokal } from './lokalesTurnier';
 import {
   abgeloestVerstanden, abonniereGeraet, erneutVersuchen, geraetSpieler, geraetStand, schlafenQuittiert, setzeEinschaltung, setzeLebenszeichenFehler,
@@ -45,6 +49,12 @@ export interface HallLautsprecher {
   einschalten(felder: readonly number[], name: string, abloesen?: boolean): Promise<HallErgebnis<HallAssignAntwort>>;
   tonAktivieren(): Promise<boolean>;
   ausschalten(): Promise<HallErgebnis<HallReleaseAntwort> | null>;
+  /** @HT-056: dieses Gerät ist Lautsprecher in einem anderen Turnier – hier eingeschaltet wechselt es (erst neu zuordnen, dann alt abmelden). */
+  wechseln(felder: readonly number[], name: string, abloesen?: boolean): Promise<HallErgebnis<HallAssignAntwort> | null>;
+  /** Ein einzelnes Feld abwählen, die übrigen bleiben (der letzte Chip ist `ausschalten`). */
+  feldAbmelden(feld: number): Promise<HallErgebnis<HallReleaseAntwort> | null>;
+  /** Das andere Turnier, in dem dieses Gerät Lautsprecher ist (`rolle === 'anderesTurnier'`); sonst `null`. */
+  anderesTurnier: { turnierId: string; felder: readonly number[] } | null;
   /** `ton = 'tor'`: die Torhymne Nummer `hymne` (0 = die erste) der Liste des Turniers. */
   hierAnhoeren(ton: ReglerArt, hymne?: number): Promise<AnhoerenErgebnis>;
   lautstaerke: Readonly<Record<ReglerArt, number>>;
@@ -83,6 +93,12 @@ export function useHallLautsprecher(tid: string): HallLautsprecher {
     }
     return ergebnis;
   }, [tid]);
+
+  const wechseln = useCallback(
+    (felder: readonly number[], name: string, abloesen = false) => wechsleTurnier({ tid, felder, name, abloesen }),
+    [tid],
+  );
+  const feldAbmelden = useCallback((feld: number) => meldeFeldAb(tid, feld), [tid]);
 
   const tonAktivieren = useCallback(async () => {
     const aktuell = geraetStand().laufzeit;
@@ -146,7 +162,8 @@ export function useHallLautsprecher(tid: string): HallLautsprecher {
     felder: rolle === 'diesesTurnier' && einschaltung ? einschaltung.felder : [],
     name: rolle === 'diesesTurnier' && einschaltung ? einschaltung.name : null,
     laufzeit: rolle === 'diesesTurnier' ? snapshot : null,
-    einschalten, tonAktivieren, ausschalten, hierAnhoeren,
+    einschalten, tonAktivieren, ausschalten, wechseln, feldAbmelden, hierAnhoeren,
+    anderesTurnier: rolle === 'anderesTurnier' && einschaltung ? { turnierId: einschaltung.turnierId, felder: einschaltung.felder } : null,
     lautstaerke, setzeLautstaerke,
     stumm: spieler.stumm(), setzeStumm,
     lebenszeichenFehler: rolle === 'diesesTurnier' ? lebenszeichenFehler : null,

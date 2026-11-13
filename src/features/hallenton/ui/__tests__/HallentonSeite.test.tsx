@@ -61,7 +61,7 @@ const anfordern = (): ReturnType<typeof vi.fn> => doppel.status.testtonAnfordern
 
 beforeEach(() => {
   doppel.darf = true; doppel.abgeschlossen = false;
-  doppel.lautsprecher = { rolle: 'keiner', felder: [], name: null, laufzeit: null, hierAnhoeren: vi.fn(() => Promise.resolve(true)) } as unknown as HallLautsprecher;
+  doppel.lautsprecher = { rolle: 'keiner', felder: [], name: null, laufzeit: null, abgeloest: null, anderesTurnier: null, hierAnhoeren: vi.fn(() => Promise.resolve(true)) } as unknown as HallLautsprecher;
   setzeStatus(voll({ state: 'ready', ageMs: 3000 }));
 });
 afterEach(() => vi.useRealTimers());
@@ -218,9 +218,20 @@ describe('@HT-017 nur die Quittung des eigenen Auftrags zählt, ein älterer Tes
 
 describe('Stand „lädt“ ist kein „kein Netz“', () => {
   it('erste Antwort steht aus → Taste aus, nie „Kein Testton: kein Netz“, kein Auftrag', () => {
-    setzeStatus(null, 'laedt');
+    // Dieses Gerät ist selbst Lautsprecher für Feld 1: die Karte steht, auch wenn der Server noch nicht geantwortet hat
+    doppel.lautsprecher = {
+      ...doppel.lautsprecher, rolle: 'diesesTurnier', felder: [1], name: 'Laptop Turnierleitung',
+      laufzeit: { rolle: 'toent', zustandJeFeld: { 'field-1': 'ready' } },
+    } as unknown as HallLautsprecher;
+    const testton = vi.fn();
+    setzeStatus(null, 'laedt', testton);
     render(seite());
+    const taste = screen.getByTestId('testton-halle-1');
+    expect(taste).toBeDisabled();
+    fireEvent.click(taste);
+    expect(testton).not.toHaveBeenCalled();
     expect(screen.queryByText('Kein Testton: kein Netz')).toBeNull();
+    expect(screen.queryByTestId('testton-feld-1-ergebnis')).toBeNull();
   });
 });
 
