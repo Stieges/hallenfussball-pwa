@@ -122,6 +122,10 @@ Cockpit Laptop, Maße je Stufe der Fensterhöhe (Plan Cockpit v2 B2, @SL-187): `
 
 **Spielanzeige 2.3 (Daniel 19.10. „Tokens passen“):** `palette.kit` = Standardfarben und Voreinstellungen der Farbauswahl (`blue` #1565C0 Heim, `red` #C62828 Gast, `navy` #0D1B4C, `black` #000000; Gelb ist `palette.yellow[400]`, Weiß `palette.neutral[0]`, keine Duplikate). Nur `core/models` und Tests importieren sie direkt (`design-tokens/colors/palette`), Oberflächen nehmen Farben über die Ansicht. `cssVars.sizing.qrPlaceholder` 150 px (quadratischer QR-Platzhalter), `scorePreviewWidth` / `scorePreviewHeight` (2 × / 1,5 × `touchTargets.primary` = 112 × 84, Vorschau-Kästen), `cssVars.opacity.disabled` 0,5 (gesperrte Fläche). Prüfung: `src/design-tokens/__tests__/spielanzeige-tokens.test.ts`.
 
+#### Tabellen: negative Tordifferenz (@ZM-205)
+
+`colors.rankingNegativeText` (hell `#B91C1C` = `palette.red[700]`, dunkel `#FF7A7A` = `palette.red[350]`): Schrift der negativen Tordifferenz in den Gruppentabellen (Zuschauer, Leitung, Handy und breit). Mindestens 4,5 : 1 auf der normalen Zeilenfläche und auf `rankingHighlightBg` (hell 5,88 : 1, dunkel 5,59 : 1). `colors.error` ist dafür zu schwach auf der Wertungsfläche (4,39 : 1 hell, 3,7 : 1 dunkel). Der Monitor hat eigene Farben (`monitorThemes`) und nutzt das Token nicht. Prüfung: `src/design-tokens/__tests__/rankingNegativeText.contrast.test.ts`.
+
 ### Spacing (8pt Grid)
 
 ```typescript

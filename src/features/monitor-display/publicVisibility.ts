@@ -33,3 +33,11 @@ export function zuschauerUrl(turnier: Pick<SichtbarkeitsTurnier, 'isPublic' | 's
     ? generateLiveUrl(shareCode)
     : null;
 }
+
+/**
+ * Adresse zum Abtippen unter dem QR-Code (@ZM-208): ohne „https://“ und ohne „#/“ (`host/live/CODE`). Der Start leitet diese Adresse auf die
+ * Hash-Route um (`core/routing/shortLiveRedirect`); der QR-Code selbst trägt weiter die Hash-Adresse, bestehende Links bleiben gültig.
+ */
+export function qrTypedAddress(url: string): string {
+  return url.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').replace('/#/', '/');
+}

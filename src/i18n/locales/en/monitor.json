@@ -65,7 +65,8 @@
     },
     "qr": {
       "headline": "Results on your phone",
-      "idleHint": "Follow the match live on the screen in the hall."
+      "idleHint": "Follow the match live on the screen in the hall.",
+      "alt": "QR code for the tournament spectator page"
     },
     "page": "Page {{page}} / {{pages}}",
     "allStandings": {

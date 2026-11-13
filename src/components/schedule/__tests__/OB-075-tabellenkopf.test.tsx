@@ -49,11 +49,11 @@ describe('@OB-075 Tabellenkopf der Gruppentabelle: Kurzformen mit ausgeschrieben
     expect(kopf.map((k) => k.titel)).toEqual(['Position', null, 'Played', 'Won', 'Drawn', 'Lost', null, 'Goal difference', 'Points']);
   });
 
-  it('Handy-Tabelle: #, Pkt., Diff. mit Hinweis; Gegenbeispiel: nie „Pl.“, „Pos“ oder „Pl“', async () => {
+  it('Handy-Tabelle: #, Sp., Diff., Pkt. mit Hinweis (@ZM-205: Sp. ist dazugekommen); Gegenbeispiel: nie „Pl.“, „Pos“ oder „Pl“', async () => {
     const { container } = await renderIn('de', <GroupTables standings={standings} teams={turnier.teams} />);
     const mobil = container.querySelector<HTMLElement>('.mobile-view table')!;
     const kopf = Array.from(mobil.querySelectorAll('thead th')).map((th) => th.querySelector('[aria-hidden="true"]')?.textContent ?? th.textContent);
-    expect(kopf.slice(0, 4)).toEqual(['#', 'Team', 'Pkt.', 'Diff.']);
+    expect(kopf.slice(0, 5)).toEqual(['#', 'Team', 'Sp.', 'Diff.', 'Pkt.']);
     expect(container.textContent).not.toMatch(/\bPl\.?(?![a-zäöüß])|\bPos\b/);
   });
 

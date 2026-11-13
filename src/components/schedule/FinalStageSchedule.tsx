@@ -24,6 +24,7 @@ import { MatchForfeitAction, type MatchForfeitActions } from './MatchForfeitActi
 import { cardStatusOf, resultFigures, type ResultFigures } from './matchResult';
 import { MatchStatusBadge } from '../ui/molecules/MatchStatusBadge';
 import { ShortLabel, Versus } from '../ui/atoms';
+import { SlashBreaks } from '../ui/atoms/TeamName';
 import { MatchMenuSlot, OriginalTimeNote } from './MatchTimeShiftSlots';
 import { SCHEDULE_AUTO_SCROLL, useScheduleDrag } from './useScheduleDrag';
 import type { LiveMatch } from '../live-cockpit/types';
@@ -264,8 +265,8 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                     ...teamCellStyle,
                     ...winnerCellStyle(result, 'a'),
                     ...(sideDisplay(match, 'A', sides).pending ? { color: cssVars.colors.textPlaceholder, fontStyle: 'italic' } : {})
-                  }}>
-                    {sideName(match, 'A', sides)}
+                  }} data-teamname>
+                    <SlashBreaks text={sideName(match, 'A', sides)} />
                   </td>
                   <td style={resultCellStyle}>
                     <MatchScoreCell
@@ -288,8 +289,8 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                     ...teamCellStyle,
                     ...winnerCellStyle(result, 'b'),
                     ...(sideDisplay(match, 'B', sides).pending ? { color: cssVars.colors.textPlaceholder, fontStyle: 'italic' } : {})
-                  }}>
-                    {sideName(match, 'B', sides)}
+                  }} data-teamname>
+                    <SlashBreaks text={sideName(match, 'B', sides)} />
                   </td>
                   {showFields && (() => {
                     const hasPendingField = pendingChanges?.fieldAssignments[match.id] !== undefined;

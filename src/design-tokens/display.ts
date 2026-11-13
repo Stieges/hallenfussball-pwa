@@ -11,6 +11,8 @@
  * @see MONITOR-KONFIGURATOR-UMSETZUNGSPLAN-v2.md P0-04
  */
 
+import { palette } from './colors/palette';
+
 // =============================================================================
 // DISPLAY FONT SIZES
 // =============================================================================
@@ -58,6 +60,9 @@ export const displayFontSizes = {
   liveInfo: 'max(3.4cqh, 3vh)',
   liveBadge: 'max(3.2cqh, 3vh)',
   liveSeparator: '14cqh',
+
+  // @ZM-208: Adresse unter dem QR-Code der Zuschauer-Folie, aus der Halle lesbar: mindestens 3 % der Bildhöhe (HART), hier 3,4 %
+  qrAddress: '3.4vh',
 
   // B-48a: Hinweis oben rechts, nie unter 3 % der Bildhöhe (@ZM-125, HART)
   notice: '3vh',
@@ -220,8 +225,6 @@ export const displayLayout = {
     header: '6%',
     // B-44a2: Abstand zwischen Kopfzeile (LIVE, Feld, Gruppe) und Kästen
     headerGap: '1.5cqh',
-    // B-44a2: Marke gleich breit für LIVE, PAUSE, BEENDET
-    badgeWidth: '11em',
     // B-44a2: Kindermodus: Namen oben bündig in der Kastenreihe, mit Abstand von oben
     kidsNamesOffset: '8cqh',
     // H3 @ZM-125: Kasten = 70 % einer Spalte; zwei Spalten teilen die Breite abzüglich seitlichem Polster (paddingX) = ca. 33 % Bildbreite
@@ -456,9 +459,9 @@ export const monitorThemes = {
     // Status Badges
     liveBadgeBg: 'rgba(0, 230, 118, 0.2)',
     liveBadgeText: '#00E676', // Endfarbe des Fortschrittsbalkens (MatchTimer): bleibt grün, Live-Rot gehört nur dem Abzeichen
-    // Aufgabe 1.1: Live-Rot des Abzeichens (Rose 400, Schrift dunkel) – eigene Tokens, damit der Balken unverändert bleibt
-    liveBadgeFill: '#FB7185',
-    liveBadgeOn: '#000000', // Schwarz: 7,8 : 1 auf Rose 400 (die Messung verlangt am Monitor ≥ 7 : 1, kontrast.monitor)
+    // Live-Rot des Abzeichens am Monitor – eigene Tokens, damit der Balken unverändert bleibt
+    liveBadgeFill: palette.special.liveMonitor, // Rose 800 (@ZM-167): weiße Schrift 8,0 : 1 (die Messung verlangt am Monitor ≥ 7 : 1, kontrast.monitor)
+    liveBadgeOn: '#FFFFFF',
     liveDot: '#00E676',
     pauseBadgeBg: 'rgba(251, 191, 36, 0.2)',
     pauseBadgeText: '#fbbf24',
@@ -530,8 +533,8 @@ export const monitorThemes = {
     // Status Badges
     liveBadgeBg: 'rgba(4, 120, 87, 0.15)',
     liveBadgeText: '#047857', // Endfarbe des Fortschrittsbalkens (MatchTimer): bleibt grün
-    // Aufgabe 1.1: Live-Rot des Abzeichens (Rose 700, Schrift weiß)
-    liveBadgeFill: '#BE123C',
+    // @ZM-167: am Monitor in beiden Themen Rose 800 mit weißer Schrift (8,0 : 1; Rose 700 schafft nur 6,3 : 1, verlangt sind 7 : 1)
+    liveBadgeFill: palette.special.liveMonitor,
     liveBadgeOn: '#FFFFFF',
     liveDot: '#047857',
     pauseBadgeBg: 'rgba(217, 119, 6, 0.15)',

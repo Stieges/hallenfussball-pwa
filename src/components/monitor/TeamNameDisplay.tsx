@@ -15,6 +15,7 @@ import type { MonitorTheme } from '../../types/monitor';
 import { useMonitorTheme } from '../../hooks';
 import { monitorTeamName } from '../../core/models/teamNameAbbrev';
 import { TEAM_NAME_ZEILENHOEHE, useTeamNameFit } from './teamNameFit';
+import { SlashBreaks } from '../ui/atoms/TeamName';
 
 export interface TeamNameDisplayProps {
   /** Full team name */
@@ -83,7 +84,7 @@ export const TeamNameDisplay: React.FC<TeamNameDisplayProps> = ({
 
   return (
     <div ref={ref} style={nameStyle} title={name} data-teamname data-fit-vorgabe={config.fontSize}>
-      {displayText}
+      <SlashBreaks text={displayText} />
     </div>
   );
 };

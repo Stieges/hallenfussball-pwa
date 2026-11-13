@@ -53,12 +53,13 @@ describe('@W2A-059 Zuschauer-Tabelle markiert offene Gleichstände', () => {
     expect(within(handy).queryByTestId('tie-marker-row')).toBeNull();
   });
 
-  it('keine Bedienelemente in den Zeilen mit Markierung (Desktop-Zeile und Handy-Zeile ganz)', async () => {
+  it('keine Bedienelemente der Turnierleitung in den Zeilen mit Markierung (Desktop-Zeile und Handy-Zeile); allein die Taste „Details anzeigen“ (@ZM-205) ist da', async () => {
     const { container } = await zuschauerTabelle(zweiGruppenWaging(DATA.ET_055));
     const zeilen = [...container.querySelectorAll('[data-testid="public-tie-mark"]')].map((m) => m.closest('tr'));
     expect(zeilen).toHaveLength(4);
     for (const zeile of zeilen) {
-      expect(zeile?.querySelectorAll('button, a, input, select, [role="button"]')).toHaveLength(0);
+      const bedienelemente = [...(zeile?.querySelectorAll('button, a, input, select, [role="button"]') ?? [])];
+      expect(bedienelemente.filter((el) => !(el.getAttribute('data-testid') ?? '').startsWith('standing-toggle-'))).toHaveLength(0);
     }
   });
 

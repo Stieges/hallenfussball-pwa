@@ -36,13 +36,12 @@ export const FONT_SCALE_VALUES: Record<FontSize, number> = {
 
 export type BaseTheme = 'system' | 'light' | 'dark' | 'high-contrast';
 
-type BaseThemeLabelRecord = Record<BaseTheme, { label: string; description: string; icon: string }>;
+type BaseThemeLabelRecord = Record<BaseTheme, { label: string; description: string }>;
 export const BASE_THEME_LABELS: BaseThemeLabelRecord = Object.create(null, {
   system: {
     get: () => ({
       label: i18n.t('settings:baseTheme.system.label', { defaultValue: '' }),
       description: i18n.t('settings:baseTheme.system.description', { defaultValue: '' }),
-      icon: '🔄',
     }),
     enumerable: true,
   },
@@ -50,7 +49,6 @@ export const BASE_THEME_LABELS: BaseThemeLabelRecord = Object.create(null, {
     get: () => ({
       label: i18n.t('settings:baseTheme.light.label', { defaultValue: '' }),
       description: i18n.t('settings:baseTheme.light.description', { defaultValue: '' }),
-      icon: '☀️',
     }),
     enumerable: true,
   },
@@ -58,7 +56,6 @@ export const BASE_THEME_LABELS: BaseThemeLabelRecord = Object.create(null, {
     get: () => ({
       label: i18n.t('settings:baseTheme.dark.label', { defaultValue: '' }),
       description: i18n.t('settings:baseTheme.dark.description', { defaultValue: '' }),
-      icon: '🌙',
     }),
     enumerable: true,
   },
@@ -66,7 +63,6 @@ export const BASE_THEME_LABELS: BaseThemeLabelRecord = Object.create(null, {
     get: () => ({
       label: i18n.t('settings:baseTheme.highContrast.label', { defaultValue: '' }),
       description: i18n.t('settings:baseTheme.highContrast.description', { defaultValue: '' }),
-      icon: '◐',
     }),
     enumerable: true,
   },

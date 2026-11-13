@@ -1,6 +1,6 @@
 /**
  * Info-Tab der Zuschauer-Seite (B-13d1, aus LiveViewScreen ausgelagert):
- * Turnier-Details, Darstellung (Theme) und Bambini-Hinweis. Texte wörtlich übernommen.
+ * Turnier-Details, Darstellung (Theme) und Bambini-Hinweis. Texte wörtlich übernommen; keine technische Kennung (kein Share-Code, @ZM-206).
  */
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
@@ -12,7 +12,6 @@ import type { Tournament } from '../../../types/tournament';
 
 export interface PublicInfoTabProps {
   tournament: Tournament;
-  shareCode: string;
   theme: ThemeContextValue['theme'];
   setTheme: ThemeContextValue['setTheme'];
   resolvedTheme: ThemeContextValue['resolvedTheme'];
@@ -20,7 +19,6 @@ export interface PublicInfoTabProps {
 
 export const PublicInfoTab: React.FC<PublicInfoTabProps> = ({
   tournament,
-  shareCode,
   theme,
   setTheme,
   resolvedTheme,
@@ -64,18 +62,6 @@ export const PublicInfoTab: React.FC<PublicInfoTabProps> = ({
             <span style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>{t('info.teams')}</span>
             <p style={{ fontSize: cssVars.fontSizes.md, color: cssVars.colors.textPrimary }}>
               {t('info.teamCount', { n: tournament.teams.length })}
-            </p>
-          </div>
-
-          <div>
-            <span style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>{t('info.shareCode')}</span>
-            <p style={{
-              fontSize: cssVars.fontSizes.xl,
-              fontWeight: cssVars.fontWeights.bold,
-              color: cssVars.colors.primary,
-              letterSpacing: '0.1em',
-            }}>
-              {shareCode.toUpperCase()}
             </p>
           </div>
         </div>

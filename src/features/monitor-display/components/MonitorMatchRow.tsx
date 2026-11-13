@@ -11,6 +11,7 @@ import { monitorSideLabel } from '../matchSides';
 import { monitorBadgeTone } from '../../../components/ui/molecules/matchStatusBadgeStyle';
 import { DEFAULT_FRAME, hyphenWordStaysTogether, nameCharsPerLine, rowHeight, type ListColumns, type ListFrame } from '../listRows';
 import { MonitorTimeCell } from './MonitorTimeCell';
+import { SlashBreaks } from '../../../components/ui/atoms/TeamName';
 
 interface MonitorMatchRowProps {
   /** Das Spiel der Ansicht: Status, Seitentexte, Anstoß und Endstand kommen von dort (A-36c). */
@@ -35,13 +36,8 @@ interface MonitorMatchRowProps {
  * der Text bleibt unverändert, Suche und Vorlesen sehen den echten Bindestrich.
  */
 function NameText({ name, perLine }: { name: string; perLine: number }) {
-  return (
-    <>
-      {name.split(/(\s+)/).map((teil, i) => (hyphenWordStaysTogether(teil, perLine)
-        ? <span key={i} style={{ whiteSpace: 'nowrap' }}>{teil}</span>
-        : teil))}
-    </>
-  );
+  // Umbruchstelle nach „/“ (@ZM-207): „SG Taching/Tengling“ bricht nie als „Ten-gling“
+  return <SlashBreaks text={name} keep={(teil) => hyphenWordStaysTogether(teil, perLine)} />;
 }
 
 /** Eine Zeile einer Spielliste: Uhrzeit, Feld, Paarung, Stand und Zusätze an festen Stellen (@ZM-187). */
