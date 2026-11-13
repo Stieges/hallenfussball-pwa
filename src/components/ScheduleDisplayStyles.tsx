@@ -1,8 +1,8 @@
 /**
- * Responsive und Druck-Regeln des Spielplans (`ScheduleDisplay`) – ganz auf Tokens (`cssVars`, `mediaQueries`, `breakpoints`).
+ * Responsive und Druck-Regeln des Spielplans (`ScheduleDisplay`) – ganz auf Tokens (`cssVars`, `mediaQueries`; Handy und Tablet bis 768 Bildpunkte wie bisher).
  */
 import type { ReactElement } from 'react';
-import { breakpoints, cssVars, mediaQueries } from '../design-tokens';
+import { cssVars, mediaQueries } from '../design-tokens';
 
 export function ScheduleDisplayStyles(): ReactElement {
   return (
@@ -14,7 +14,13 @@ export function ScheduleDisplayStyles(): ReactElement {
           }
         }
 
-        @media (max-width: ${breakpoints.tablet}) {
+        ${mediaQueries.mobile} {
+          .schedule-display {
+            padding: ${cssVars.spacing.lg} ${cssVars.spacing.sm} !important;
+          }
+        }
+
+        ${mediaQueries.tablet} {
           .schedule-display {
             padding: ${cssVars.spacing.lg} ${cssVars.spacing.sm} !important;
           }
