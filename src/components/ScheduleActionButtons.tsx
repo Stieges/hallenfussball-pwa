@@ -39,9 +39,15 @@ export const ScheduleActionButtons = ({
     const leiste = barRef.current;
     if (variant !== 'organizer' || !leiste || typeof ResizeObserver === 'undefined') { return; }
     const wurzel = document.documentElement;
-    const beobachter = new ResizeObserver(() => wurzel.style.setProperty('--schedule-action-bar-h', getComputedStyle(leiste).position === 'fixed' ? `${leiste.offsetHeight}px` : '0px'));
+    // Die Höhe zählt nur, solange die Leiste schwebt (0 im Fluss). Kommt oder geht die Karte „Läuft / Nächstes Spiel“ (`body:has(...)`, @ZP-109),
+    // wechselt die Leiste zwischen schwebender Spalte und Reihe im Fluss, ändert dabei ihre Größe und löst den ResizeObserver aus; `resize`
+    // fängt das Drehen des Geräts und Fensterwechsel ab (Lage kann sich ändern, ohne dass die Leiste ihre Größe ändert).
+    const aktualisiere = (): void => wurzel.style.setProperty('--schedule-action-bar-h', getComputedStyle(leiste).position === 'fixed' ? `${leiste.offsetHeight}px` : '0px');
+    const beobachter = new ResizeObserver(aktualisiere);
     beobachter.observe(leiste);
+    window.addEventListener('resize', aktualisiere);
     return () => {
+      window.removeEventListener('resize', aktualisiere);
       beobachter.disconnect();
       wurzel.style.removeProperty('--schedule-action-bar-h');
     };

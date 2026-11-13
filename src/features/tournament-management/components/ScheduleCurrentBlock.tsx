@@ -16,6 +16,7 @@ import type { MatchView, TournamentView, ViewLocale } from '../../../core/view';
 import type { Match, Tournament } from '../../../types/tournament';
 import { Button } from '../../../components/ui/Button';
 import { Icons } from '../../../components/ui/Icons';
+import { MatchStatusBadge } from '../../../components/ui/molecules/MatchStatusBadge';
 import { MatchClock } from '../../../components/ui/molecules/MatchClock';
 import { CurrentMatchCard } from '../../../components/schedule/CurrentMatchCard';
 import { currentBlockOf, kastenOf } from '../../../components/schedule/currentBlockOf';
@@ -48,6 +49,7 @@ const dotStyle: CSSProperties = {
   borderRadius: cssVars.borderRadius.full,
   background: cssVars.colors.statusLive,
 };
+const headLeftStyle: CSSProperties = { display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', columnGap: cssVars.spacing.sm, rowGap: cssVars.spacing.xs };
 const timeStyle: CSSProperties = { color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.md };
 const timeStrongStyle: CSSProperties = { color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.xl, fontWeight: cssVars.fontWeights.extrabold };
 const actionsStyle: CSSProperties = { display: 'grid', gap: cssVars.spacing.xs, padding: `0 ${cssVars.spacing.md} ${cssVars.spacing.md}` };
@@ -94,10 +96,15 @@ export function ScheduleCurrentBlock({
     const cockpit = matchActionsFor({ status: mv.status, rights, wired: COCKPIT_ONLY }).find((a) => a === 'kickOff' || a === 'toCockpit');
     const after = live ? view.currentFor(mv.field).next : undefined;
     const afterScheduled = after === undefined || after.id === mv.id ? undefined : schedule.allMatches.find((m) => m.id === after.id);
+    // Pause, Halbzeit, Verlängerung, Strafstoßschießen: das Wort steht im Kopf (Abzeichen), der Zustand ist nie nur an der Farbe der Uhr zu erkennen (@OB-066)
+    const stateWord = live && mv.badge.kind === 'badge' && mv.badge.state !== 'live' ? mv.badge : null;
     const head = (
-      <span data-testid={`schedule-current-meta-${mv.id}`}>
-        {live && <span style={dotStyle} aria-hidden="true" />}
-        {t(live ? 'scheduleCurrent.live' : 'scheduleCurrent.next', { name: nameOf(mv), field: mv.field })}
+      <span style={headLeftStyle}>
+        <span data-testid={`schedule-current-meta-${mv.id}`}>
+          {live && <span style={dotStyle} aria-hidden="true" />}
+          {t(live ? 'scheduleCurrent.live' : 'scheduleCurrent.next', { name: nameOf(mv), field: mv.field })}
+        </span>
+        {stateWord !== null && <MatchStatusBadge model={stateWord} size="card" testId={`schedule-current-badge-${mv.id}`} />}
       </span>
     );
     const headRight = live

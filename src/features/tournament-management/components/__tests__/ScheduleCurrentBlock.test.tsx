@@ -100,12 +100,15 @@ describe('@ZP-109 Karte oben im Spielplan der Turnierleitung', () => {
     expect(sek(0)).toBeGreaterThan(sek(100));
   });
 
-  it('@ZP-109 Restzeit in der Karte: in der Pause (Uhr angehalten) steht die Zeit gedämpft als angehalten, nicht als laufend', async () => {
+  it('@ZP-109 Pause in der Karte: das Wort „Pause“ steht im Kopf (nicht nur die graue Uhr); ein laufendes Spiel trägt kein Zusatzwort', async () => {
     const { tournament } = await fPAUSE();
     const { view } = zeige(tournament);
     const pause = view.current.live.find((m) => m.status === 'paused');
+    const lauft = view.current.live.find((m) => m.status === 'running');
     expect(pause).toBeDefined();
+    expect(screen.getByTestId(`schedule-current-badge-${pause?.id ?? ''}`)).toHaveTextContent(/Pause/);
     expect(screen.getByTestId(`schedule-current-clock-${pause?.id ?? ''}`)).toHaveAttribute('data-stopped', 'true');
+    expect(screen.queryByTestId(`schedule-current-badge-${lauft?.id ?? ''}`)).toBeNull();
   });
 
   it('@ZP-109 Restzeit in der Karte: ist die Spielzeit abgelaufen und noch nicht abgepfiffen, steht „Zeit abgelaufen“ bei 0:00, nie eine negative Zeit', async () => {
