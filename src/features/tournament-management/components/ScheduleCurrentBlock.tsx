@@ -121,6 +121,7 @@ export function ScheduleCurrentBlock({
         frame="live"
         showPlannedZero={false}
         testIdPrefix="schedule-current"
+        focusTarget={`${nameOf(mv)}, ${t('scheduleCurrent.field', { field: mv.field })}`}
         kind={current.kind}
         actions={cockpit !== undefined && onNavigateToCockpit !== undefined ? (
           <div style={actionsStyle}>
@@ -154,7 +155,7 @@ export function ScheduleCurrentBlock({
 
   const firstLive = current.kind === 'live' ? current.matches[0] : undefined;
   return (
-    <section style={blockStyle} data-testid="schedule-current" data-current-kind={current.kind}>
+    <section style={blockStyle} data-testid="schedule-current" data-current-kind={current.kind} data-no-float-cover>
       {shown.map(card)}
       {firstLive !== undefined && <JumpToLiveButton targetId={`schedule-current-card-${firstLive.id}`} />}
     </section>

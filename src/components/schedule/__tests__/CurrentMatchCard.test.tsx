@@ -1,7 +1,7 @@
 /**
  * @ZP-109 / @ZM-195 Die gemeinsame Karte „läuft / als Nächstes“: Zuschauer und Turnierleitung teilen den Aufbau, unterscheiden sich in
  * Rahmen (`frame`) und in den Kästen beim nächsten Spiel (`showPlannedZero`). Der Zuschauer-Rahmen bleibt `borderActive`, die Turnierleitung
- * trägt beim laufenden Spiel den Live-Rahmen; Zuschauer sehen beim nächsten Spiel 0 : 0 (@ZM-195), die Turnierleitung leere Kästen (Mockup Runde 4).
+ * trägt beim laufenden Spiel den Live-Rahmen; Zuschauer sehen beim nächsten Spiel 0 : 0 (@ZM-195), die Turnierleitung ohne Stand keine Kästen (Daniel 12.11.).
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -46,11 +46,15 @@ describe('@ZP-109 CurrentMatchCard', () => {
     expect(screen.getByTestId(`match-box-kopf-${m.id}-away`)).toHaveTextContent('0');
   });
 
-  it('@ZP-109 Gegenbeispiel: die Turnierleitung zeigt beim nächsten Spiel leere Kästen', async () => {
+  it('@ZP-109 @SL-239 Gegenbeispiel: die Turnierleitung zeigt beim nächsten Spiel (ohne Stand) keine Kästen und keine Torfläche, nur Kreis und Teamname', async () => {
     const { tournament } = await fZEIT();
     const m = karte(tournament, 'next', { frame: 'live', showPlannedZero: false });
-    expect(screen.getByTestId(`match-box-kopf-${m.id}-home`).textContent).not.toMatch(/\d/);
-    expect(screen.getByTestId(`match-box-kopf-${m.id}-away`).textContent).not.toMatch(/\d/);
+    for (const seite of ['home', 'away']) {
+      expect(screen.queryByTestId(`match-box-kopf-${m.id}-${seite}`)).toBeNull();
+      expect(screen.queryByTestId(`match-goals-kopf-${m.id}-${seite}`)).toBeNull();
+      expect(screen.getByTestId(`match-name-kopf-${m.id}-${seite}`)).toBeTruthy();
+    }
+    expect(screen.getByTestId(`t-card-${m.id}`).querySelectorAll('[data-score-circle]')).toHaveLength(0);
   });
 
   it('@ZP-109 Gegenbeispiel: ein laufendes Spiel zeigt den Stand, auch ohne showPlannedZero', async () => {

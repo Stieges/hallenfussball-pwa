@@ -798,6 +798,7 @@
     "live": "Läuft · {{name}} · Feld {{field}}",
     "next": "Nächstes Spiel · {{name}} · Feld {{field}}",
     "match": "Spiel {{number}}",
+    "field": "Feld {{field}}",
     "clockUnit": "Uhr",
     "kickOff": "Spiel im Cockpit anpfeifen",
     "kickOffHint": "Öffnet das Cockpit. Die Uhr startest du dort.",

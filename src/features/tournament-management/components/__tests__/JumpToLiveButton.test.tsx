@@ -13,7 +13,7 @@ vi.unmock('react-i18next');
 import { initRealDeI18n } from '../../../../test/realDeI18n';
 import { cssVars } from '../../../../design-tokens';
 import { JumpToLiveButton } from '../JumpToLiveButton';
-import { jumpButtonBottom } from '../jumpToLivePosition';
+import { footerLiftOf, jumpButtonBottom } from '../jumpToLivePosition';
 
 await initRealDeI18n();
 
@@ -36,7 +36,7 @@ function stelle(breite: number, scrollY: number): void {
 }
 
 function zeige() {
-  return render(<><div data-testid={TARGET} /><JumpToLiveButton targetId={TARGET} /></>);
+  return render(<><div data-testid={TARGET} tabIndex={-1} /><JumpToLiveButton targetId={TARGET} /></>);
 }
 
 const taste = () => screen.queryByTestId('schedule-jump-to-live');
@@ -92,6 +92,24 @@ describe('@ZP-109 schwebende Taste „Zum laufenden Spiel“', () => {
   it('@ZP-109 Gegenbeispiel: ab Tablet-Breite gibt es keine Navigationsleiste, die Pille hält sich nicht davon fern', () => {
     expect(jumpButtonBottom(false)).not.toContain('--layout-height-bottom-nav');
     expect(jumpButtonBottom(false)).not.toContain('--schedule-action-bar-h');
+  });
+
+  it('@ZP-109 nach dem Sprung hat die Karte den Fokus (Tastatur und Bildschirmleser); vorher nicht', async () => {
+    zeige();
+    aus();
+    expect(document.activeElement).not.toBe(screen.getByTestId(TARGET));
+    await userEvent.click(taste()!);
+    expect(document.activeElement).toBe(screen.getByTestId(TARGET));
+  });
+
+  it('@ZP-109 steht die Fußzeile im Bild, liegt die Pille darüber (Lift = Höhe, die die Fußzeile ins Bild ragt); ohne Fußzeile im Bild bleibt es beim Grundabstand', () => {
+    const rect = (top: number, bottom: number) => ({ getBoundingClientRect: () => ({ top, bottom }) });
+    expect(footerLiftOf([rect(700, 800)], 844)).toBe(144); // Fußzeile beginnt bei 700, Fenster 844 hoch
+    expect(footerLiftOf([rect(900, 1000)], 844)).toBe(0); // unter dem Bild
+    expect(footerLiftOf([rect(-200, -10)], 844)).toBe(0); // über dem Bild
+    expect(footerLiftOf([rect(900, 1000), rect(760, 860)], 844)).toBe(84); // mehrere Fußzeilen: die höchste zählt
+    expect(jumpButtonBottom(true, 144)).toMatch(/^max\(.*144px/);
+    expect(jumpButtonBottom(true, 0)).not.toContain('max(');
   });
 
   it('@ZP-109 Gegenbeispiel: ohne Karte des laufenden Spiels (Ziel fehlt) nie sichtbar', () => {

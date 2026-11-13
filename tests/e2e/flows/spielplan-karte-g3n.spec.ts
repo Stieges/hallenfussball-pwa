@@ -65,11 +65,48 @@ test.describe('@ZP-109 Karte oben im Spielplan der Turnierleitung', () => {
     }
     await expect(sprung).toBeVisible();
     await expect(sprung).toHaveText('Zum laufenden Spiel');
+    await animationenFertig(page);
     const taste = (await sprung.boundingBox())!;
-    expect(taste.height).toBeGreaterThanOrEqual(55.9);
+    expect(taste.height, 'Touch mindestens 44 px (Haupttasten-Höhe)').toBeGreaterThanOrEqual(43.9);
+    // Ganz unten liegt die Pille weder über der Fußzeile (Impressum, Datenschutz) noch über der unteren Navigation
+    const schneidet = (a: { x: number; y: number; width: number; height: number }, b: { x: number; y: number; width: number; height: number }): boolean =>
+      a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+    for (const ziel of [page.getByTestId('footer-impressum-link'), page.getByTestId('footer-datenschutz-link'), page.getByTestId('bottom-nav-schedule')]) {
+      if (await ziel.count() > 0 && await ziel.first().isVisible()) {
+        expect(schneidet(taste, (await ziel.first().boundingBox())!), 'Pille liegt nicht über Fußzeile oder Navigation').toBe(false);
+      }
+    }
     await sprung.click();
+    await expect(karte.locator('[data-testid^="schedule-current-card-"]').first(), 'nach dem Sprung hat die Karte den Fokus (Tastatur, Bildschirmleser)').toBeFocused();
     await expect(sprung, 'nach dem Sprung ist die Karte im Bild, die Taste weg').toHaveCount(0);
     await expect.poll(async () => (await karte.boundingBox())!.y, { message: 'Karte liegt im Bild' }).toBeGreaterThanOrEqual(-1);
     expect((await karte.boundingBox())!.y).toBeLessThan(page.viewportSize()!.height);
+  });
+
+  test('@ZP-109 schwebende Tasten verdecken die Karte nie: in jeder Fensterhöhe, an jeder Rollstelle, vor dem Anpfiff und während das Spiel läuft', async ({ page }) => {
+    for (const laeuft of [false, true]) {
+      if (laeuft) { await anpfeifen(page); }
+      for (const [w, h] of [[360, 568], [360, 640], [390, 844], [768, 1024]] as const) {
+        await page.setViewportSize({ width: w, height: h });
+        await page.goto(`/#/tournament/${ID}/schedule`);
+        const karte = page.getByTestId('schedule-current');
+        await expect(karte).toBeVisible({ timeout: 15_000 });
+        await animationenFertig(page);
+        for (const y of [0, 120, 300]) {
+          await page.evaluate((top) => { window.scrollTo(0, top); }, y);
+          await animationenFertig(page);
+          const verdeckt = await page.evaluate(() => {
+            const k = document.querySelector('[data-no-float-cover]')!.getBoundingClientRect();
+            return Array.from(document.querySelectorAll<HTMLElement>('.schedule-action-buttons, [data-testid="schedule-jump-to-live"]')).filter((el) => {
+              const st = getComputedStyle(el);
+              if (st.position !== 'fixed' || st.visibility === 'hidden' || st.display === 'none') { return false; }
+              const r = el.getBoundingClientRect();
+              return r.left < k.right && r.right > k.left && r.top < k.bottom && r.bottom > k.top;
+            }).map((el) => el.className !== '' ? el.className : (el.getAttribute('data-testid') ?? el.tagName));
+          });
+          expect(verdeckt, `${laeuft ? 'läuft' : 'vor Anpfiff'} ${String(w)}×${String(h)} scrollY ${String(y)}: schwebende Elemente über der Karte`).toEqual([]);
+        }
+      }
+    }
   });
 });

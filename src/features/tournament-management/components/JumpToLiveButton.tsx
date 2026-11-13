@@ -2,14 +2,15 @@
  * JumpToLiveButton – die schwebende Taste „Zum laufenden Spiel“ (@ZP-109, Variante B, Daniel 09.11.): eine dunkle Pille mit heller
  * Schrift, einzeilig, unten mittig. Sie erscheint nur unter 1280 Bildpunkten, nur wenn die Karte des laufenden Spiels aus dem Bild
  * gescrollt ist und die Seite mehr als `SHOW_AFTER_SCROLL` Bildpunkte gescrollt wurde; sie springt zur Karte und verschwindet,
- * sobald die Karte wieder im Bild ist. Beobachtet wird die Karte (`IntersectionObserver`), kein Wartezeit-Raten.
+ * sobald die Karte wieder im Bild ist; danach hat die Karte den Fokus. Sie liegt nie über Fußzeile, Navigationsleiste und der Leiste „Teilen · Als PDF“.
+ * Beobachtet wird die Karte (`IntersectionObserver`), kein Wartezeit-Raten.
  */
 import { useEffect, useState, type CSSProperties, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars, iconSizeValues } from '../../../design-tokens';
 import { breakpointValues } from '../../../design-tokens/breakpoints';
 import { Icons } from '../../../components/ui/Icons';
-import { jumpButtonBottom } from './jumpToLivePosition';
+import { footerLiftOf, jumpButtonBottom } from './jumpToLivePosition';
 
 /** Erst nach so viel Scrollen (Bildpunkte) kann die Taste erscheinen (@ZP-109) */
 export const SHOW_AFTER_SCROLL = 200;
@@ -48,6 +49,7 @@ export function JumpToLiveButton({ targetId }: JumpToLiveButtonProps): ReactElem
   const { t } = useTranslation('tournament');
   const [visible, setVisible] = useState(false);
   const [onPhone, setOnPhone] = useState(false);
+  const [footerLift, setFooterLift] = useState(0);
 
   useEffect(() => {
     const target = document.querySelector(`[data-testid="${targetId}"]`);
@@ -59,6 +61,7 @@ export function JumpToLiveButton({ targetId }: JumpToLiveButtonProps): ReactElem
     const update = (): void => {
       setVisible(narrow() && !inView && window.scrollY > SHOW_AFTER_SCROLL);
       setOnPhone(phone());
+      setFooterLift(footerLiftOf(document.querySelectorAll('footer'), window.innerHeight));
     };
     const observer = new IntersectionObserver((entries) => {
       inView = entries[0]?.isIntersecting ?? true;
@@ -79,10 +82,13 @@ export function JumpToLiveButton({ targetId }: JumpToLiveButtonProps): ReactElem
   }
   const jump = (): void => {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    document.querySelector(`[data-testid="${targetId}"]`)?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+    const target = document.querySelector<HTMLElement>(`[data-testid="${targetId}"]`);
+    target?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+    // Tastatur und Bildschirmleser landen auf der Karte (sie trägt tabIndex -1 und einen Namen), ohne dass der Fokus das Scrollen stört
+    target?.focus({ preventScroll: true });
   };
   return (
-    <button type="button" style={{ ...buttonStyle, bottom: jumpButtonBottom(onPhone) }} onClick={jump} data-testid="schedule-jump-to-live">
+    <button type="button" style={{ ...buttonStyle, bottom: jumpButtonBottom(onPhone, footerLift) }} onClick={jump} data-testid="schedule-jump-to-live">
       <Icons.ArrowUp size={iconSizeValues.sm} />
       {t('scheduleCurrent.jumpToLive')}
     </button>

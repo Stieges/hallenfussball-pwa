@@ -34,12 +34,12 @@ export const ScheduleActionButtons = ({
   const [showPDFDialog, setShowPDFDialog] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
 
-  // Die Höhe der Leiste steht als CSS-Variable bereit; die Spielplan-Karte reserviert damit den Platz unten (ScheduleTab)
+  // Die Höhe der schwebenden Leiste steht als CSS-Variable bereit (0, solange sie im Fluss steht); die Fußzeile und die Sprungtaste reservieren damit den Platz unten
   useEffect(() => {
     const leiste = barRef.current;
     if (variant !== 'organizer' || !leiste || typeof ResizeObserver === 'undefined') { return; }
     const wurzel = document.documentElement;
-    const beobachter = new ResizeObserver(() => wurzel.style.setProperty('--schedule-action-bar-h', `${leiste.offsetHeight}px`));
+    const beobachter = new ResizeObserver(() => wurzel.style.setProperty('--schedule-action-bar-h', getComputedStyle(leiste).position === 'fixed' ? `${leiste.offsetHeight}px` : '0px'));
     beobachter.observe(leiste);
     return () => {
       beobachter.disconnect();
@@ -129,8 +129,15 @@ export const ScheduleActionButtons = ({
               z-index: 100 !important;
             }
 
+            /* Steht oben im Spielplan die Karte „Läuft / Nächstes Spiel“ (@ZP-109), schwebt die Leiste nie über ihr: sie bleibt im Fluss unter der Karte
+               (wie ab Tablet-Breite), bei jeder Fensterhöhe ohne Messen. Ohne Karte (Bearbeiten-Modus, alle beendet) schwebt sie wie bisher. */
+            body:has([data-no-float-cover]) .schedule-action-buttons {
+              position: static !important;
+              flex-direction: row !important;
+            }
+
             .schedule-action-buttons button {
-              min-width: 120px;
+              min-width: calc(${cssVars.touchTargets.primary} * 2);
               box-shadow: ${cssVars.shadows.lg};
             }
           }

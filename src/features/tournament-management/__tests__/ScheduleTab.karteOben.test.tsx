@@ -4,7 +4,7 @@
  * Echte Kette useCan -> hasPermission (Eigentümer); die Tabelle ist eine Attrappe, hier zählt nur, was darüber steht.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import type { Tournament } from '../../../types/tournament';
@@ -16,7 +16,8 @@ vi.mock('../../auth/hooks/useMyTournamentRole', () => ({
   useMyTournamentRole: () => ({ role: 'owner', isLoading: false }),
 }));
 vi.mock('../../schedule-editor', () => ({ ScheduleEditor: () => <div data-testid="schedule-editor-stub" /> }));
-vi.mock('../../../components/ScheduleDisplay', () => ({ ScheduleDisplay: () => null }));
+const displayProps = vi.hoisted((): { current: Record<string, unknown> } => ({ current: {} }));
+vi.mock('../../../components/ScheduleDisplay', () => ({ ScheduleDisplay: (props: Record<string, unknown>) => { displayProps.current = props; return null; } }));
 const mockContext = {
   tournamentRepository: {},
   liveMatchRepository: { getAll: vi.fn().mockResolvedValue(new Map()) },
@@ -80,15 +81,24 @@ describe('@ZP-109 Karte oben im Reiter „Spielplan“', () => {
     expect(screen.queryByTestId('schedule-current')).toBeNull();
   });
 
-  it('@ZP-109 @SL-194 läuft ein anderes Spiel, fragt die Haupttaste „Spiel 7 läuft weiter. Trotzdem zu Spiel 8 wechseln?“; „Wechseln“ führt ins Cockpit', async () => {
+  it('@SL-194 Gegenbeispiel: die Haupttaste der Karte eines SELBST laufenden Spiels fragt nie nach (auch wenn auf dem anderen Feld ein zweites läuft)', async () => {
     const { tournament } = await fPAUSE();
     const { onNavigateToCockpit } = zeige(tournament);
     const id8 = tournament.matches[GAME[8]].id;
     await userEvent.click(screen.getByTestId(`schedule-current-cockpit-${id8}`));
-    expect(onNavigateToCockpit).not.toHaveBeenCalled();
-    expect(screen.getByText(/Spiel 7 läuft weiter\. Trotzdem zu Spiel 8 wechseln\?/)).toBeTruthy();
-    await userEvent.click(screen.getByRole('button', { name: /wechseln/i }));
+    expect(screen.queryByText(/läuft weiter\. Trotzdem zu/)).toBeNull();
     expect(onNavigateToCockpit).toHaveBeenCalledWith(id8);
+  });
+
+  it('@SL-194 läuft Spiel 7 und führt der Weg zu einem noch nicht laufenden Spiel (Liste, Aktionsauswahl), fragt die App „Spiel 7 läuft weiter. Trotzdem zu Spiel 9 wechseln?“; „Wechseln“ führt ins Cockpit', async () => {
+    const { tournament } = await fPAUSE();
+    const { onNavigateToCockpit } = zeige(tournament);
+    const id9 = tournament.matches[GAME[9]].id;
+    act(() => { (displayProps.current.onNavigateToCockpit as (id: string) => void)(id9); });
+    expect(onNavigateToCockpit).not.toHaveBeenCalled();
+    expect(screen.getByText(/Spiel \d+ läuft weiter\. Trotzdem zu Spiel 9 wechseln\?/)).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: /wechseln/i }));
+    expect(onNavigateToCockpit).toHaveBeenCalledWith(id9);
   });
 
   it('@ZP-109 Gegenbeispiel: läuft nichts, geht die Haupttaste ohne Rückfrage ins Cockpit', async () => {

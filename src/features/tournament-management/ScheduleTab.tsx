@@ -154,8 +154,9 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
 
   // Handler for navigating to cockpit with running match check
   const handleNavigateToCockpit = useCallback((matchId: string) => {
-    // Check if there's a running match (other than the target match)
-    const runningMatchArray = Array.from(liveMatchIds).filter(id => id !== matchId);
+    // Check if there's a running match (other than the target match). Läuft das Ziel selbst (Karte „Läuft“, zwei Felder), wechselt niemand
+    // von einem anderen Spiel weg: keine Rückfrage (@SL-194 gilt beim Wechsel zu einem anderen, noch nicht laufenden Spiel)
+    const runningMatchArray = liveMatchIds.has(matchId) ? [] : Array.from(liveMatchIds).filter(id => id !== matchId);
 
     if (runningMatchArray.length > 0) {
       // There's a running match - need confirmation
