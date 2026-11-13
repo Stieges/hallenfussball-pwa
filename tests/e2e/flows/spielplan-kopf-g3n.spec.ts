@@ -94,4 +94,41 @@ test.describe('@ZP-113 Kopf des Spielplans der Turnierleitung', () => {
     expect(await ueberlaeufe(page, 'tablet')).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
+
+  test('@ZP-113 Handy: die Werkzeugleiste unter der Karte steht bündig mit Karte, Filterzeile und Liste (nicht 24 px eingerückt)', async ({ page }) => {
+    for (const [w, h] of [[360, 640], [390, 844]] as const) {
+      await page.setViewportSize({ width: w, height: h });
+      await page.goto(`/#/tournament/${ID}/schedule`);
+      await expect(page.getByTestId('schedule-current')).toBeVisible({ timeout: 15_000 });
+      await animationenFertig(page);
+      const links = async (id: string) => (await page.getByTestId(id).boundingBox())!.x;
+      const karte = await links('schedule-current');
+      const bearbeiten = await links('schedule-edit-start');
+      expect(Math.abs(bearbeiten - karte), `${String(w)} px: Bearbeiten-Taste bündig mit der Karte`).toBeLessThanOrEqual(1);
+      expect(Math.abs((await links('schedule-filter-bar')) - karte), `${String(w)} px: Filterzeile bündig`).toBeLessThanOrEqual(1);
+    }
+  });
+
+  test('@ZP-113 Bearbeiten-Modus am Handy 360×640: keine Karte, Listenkopf und Teilnehmer bleiben, kein waagerechtes Scrollen', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 640 });
+    await page.goto(`/#/tournament/${ID}/schedule`);
+    await expect(page.getByTestId('schedule-current')).toBeVisible({ timeout: 15_000 });
+    await page.getByTestId('schedule-edit-start').click();
+    await expect(page.getByTestId('schedule-current')).toHaveCount(0);
+    await expect(page.getByTestId('schedule-list-head')).toBeVisible();
+    await expect(page.getByTestId('public-participants-toggle')).toBeVisible();
+    await animationenFertig(page);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+
+  test('@ZP-113 die erste Spielzeile liegt auch bei 390×844 nach höchstens einmal Wischen ganz im Bild', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/#/tournament/${ID}/schedule`);
+    const erste = page.locator('[data-match-card]:visible').first();
+    await expect(erste).toBeVisible({ timeout: 15_000 });
+    await animationenFertig(page);
+    const box = (await erste.boundingBox())!;
+    const scrollY = await page.evaluate(() => window.scrollY);
+    expect(box.y + scrollY + box.height).toBeLessThanOrEqual(2 * 844);
+  });
 });
