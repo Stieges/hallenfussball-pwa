@@ -63,6 +63,14 @@ describe('@ZP-109 Karte oben im Reiter „Spielplan“', () => {
     expect(karte.compareDocumentPosition(leiste) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
+  it('@ZP-113 der Reiter der Turnierleitung gibt der Tabelle die Schalter: keine Eckdaten-Karte, Listenkopf, Teilnehmer eingeklappt', async () => {
+    const { tournament } = await fZEIT();
+    zeige(tournament);
+    expect(displayProps.current.showTournamentHeader).toBe(false);
+    expect(displayProps.current.showListHead).toBe(true);
+    expect(displayProps.current.participantsCollapsed).toBe(true);
+  });
+
   it.each(['?g=B', '?p=finals', '?f=2', '?g=A&f=1&p=groupStage'])('@ZM-141 @ZP-109 kein Filter ändert die Karte (Adresse %s)', async (query) => {
     const { tournament } = await fZEIT();
     zeige(tournament);
