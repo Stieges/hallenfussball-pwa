@@ -314,7 +314,7 @@ for (const f of FENSTER) {
       expect(kopf).toBeLessThanOrEqual(zeile.y + 1);
     });
 
-    test(`@OB-021 @SL-206 Teamname mit 50 Zeichen, Wahl noch offen: Name im Kopf vollständig über der Karte, Karte vollständig im Fenster (${f.name})`, async ({ page }) => {
+    test(`C-LEIBCHEN-KARTE-KOPF-ABGESCHNITTEN-360 @OB-021 @SL-206 Teamname mit 50 Zeichen, Wahl noch offen: Name im Kopf vollständig über der Karte, Karte vollständig im Fenster (${f.name})`, async ({ page }) => {
       // BEFUND (Fixrunde 5): bei 360 × 640 reicht der Platz nicht – der Kopf mit dem 50-Zeichen-Namen endet ca. 65 px unter der Oberkante der Karte (Tafel mit großer
       // Spielzeit 302 px + Kopf + Karte 187 px). Wie beim Endstand (@SL-240) braucht es eine Entscheidung (große Spielzeit weg oder Karte kleiner); bis dahin erwartet rot.
       test.fail(f.width === 360, 'Befund: Kopf bei 50 Zeichen und offener Karte am 360er Handy abgeschnitten (Frage an Daniel)');
