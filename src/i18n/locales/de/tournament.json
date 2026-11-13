@@ -46,7 +46,10 @@
       "draws": "Unentschieden",
       "losses": "Niederlagen",
       "goalsFor": "Tore geschossen",
-      "goalsAgainst": "Tore kassiert"
+      "goalsAgainst": "Tore kassiert",
+      "column": "Details",
+      "showFor": "Details zu {{team}} anzeigen",
+      "hideFor": "Details zu {{team}} ausblenden"
     }
   },
   "finalRankings": {

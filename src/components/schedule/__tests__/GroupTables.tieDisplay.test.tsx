@@ -28,7 +28,8 @@ describe('GroupTables tieDisplay (@W2A-059)', () => {
     const mobil = container.querySelector<HTMLElement>('.mobile-view')!;
     const zeilen = mobil.querySelectorAll('[data-testid="tie-marker-row"]');
     expect(zeilen).toHaveLength(1); // nur das Team mit Marke
-    expect(zeilen[0].querySelector('td')?.getAttribute('colspan')).toBe('5');
+    // über die volle Breite = über alle Spalten der Tabelle (seit @ZM-205 mit „Sp.“ sechs, die Aufklapp-Taste am Ende zählt mit)
+    expect(zeilen[0].querySelector('td')?.getAttribute('colspan')).toBe(String(mobil.querySelectorAll('thead th').length));
     expect(zeilen[0].querySelector('[data-testid="tie-marker-probe"]')).not.toBeNull();
     // Gegenbeispiel: die Teamspalte (2. Zelle der Datenzeilen) trägt die Marke nicht
     const teamZellen = Array.from(mobil.querySelectorAll('tbody tr:not([data-testid="tie-marker-row"]) td:nth-child(2)'));

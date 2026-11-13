@@ -18,6 +18,7 @@ import { overHex } from '../../../design-tokens/displayColor';
 import { useTheme } from '../../../hooks/useTheme';
 import { MATCH_BADGE_WORD_KEY } from '../../../core/view/badge';
 import { TeamAvatar } from '../../ui/TeamAvatar';
+import { SlashBreaks } from '../../ui/atoms/TeamName';
 import { ScoreBox } from '../../ui/molecules/ScoreBox';
 import { pairFrameStrength } from '../../ui/molecules/scoreBoxStyle';
 import { ZeitstrafeHinweis } from '../../ui/molecules/ZeitstrafeHinweis';
@@ -127,7 +128,7 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
     const row = rowOf(side);
     const nameBlock = (
       <ZeitstrafeHinweis liste={zeitstrafen?.[seite]} testId={`match-time-penalty-${matchId}-${seite}`}>
-        <span style={nameStyle} data-winner={isWinner ? 'true' : undefined} data-testid={`match-name-${matchId}-${seite}`}>{team.name}</span>
+        <span style={nameStyle} data-winner={isWinner ? 'true' : undefined} data-testid={`match-name-${matchId}-${seite}`} data-teamname><SlashBreaks text={team.name} /></span>
       </ZeitstrafeHinweis>
     );
     return (

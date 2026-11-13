@@ -41,6 +41,10 @@ export const iconsGeraet = {
   Laptop: zeichen(<><rect x="3" y="4" width="18" height="12" rx="2" /><line x1="2" y1="20" x2="22" y2="20" /></>),
   /** Mond (der Browser hat den Lautsprecher schlafen gelegt) */
   Moon: zeichen(<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />),
+  /** Sonne (helle Darstellung) */
+  Sun: zeichen(<><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></>),
+  /** Kreis, halb gefüllt (hoher Kontrast) */
+  Contrast: zeichen(<><circle cx="12" cy="12" r="10" /><path d="M12 2a10 10 0 0 1 0 20z" fill="currentColor" /></>),
   /** Fragezeichen ohne Kreis (zum Zusammensetzen, z. B. mit `SpeakerLow`) */
   QuestionMark: zeichen(<>{FRAGE}<line x1="12" y1="17" x2="12.01" y2="17" /></>),
   /** Fragezeichen im Kreis (Status unbekannt) */

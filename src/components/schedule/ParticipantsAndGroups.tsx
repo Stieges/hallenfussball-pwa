@@ -9,6 +9,7 @@ import { Standing } from '../../types/tournament';
 import type { ScheduleSource } from './scheduleSource';
 import { getGroupDisplayName } from '../../utils/displayNames';
 import { TeamAvatar } from '../ui/TeamAvatar';
+import { SlashBreaks } from '../ui/atoms/TeamName';
 
 interface ParticipantsAndGroupsProps {
   teams: Array<{ id: string; name: string; group?: string }>;
@@ -107,8 +108,10 @@ export const ParticipantsAndGroups: React.FC<ParticipantsAndGroupsProps> = ({
     fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.textPrimary,
     fontWeight: cssVars.fontWeights.bold,
-    // Allow text to wrap so long names are not cut off
+    // Der Name darf umbrechen (an Leerzeichen und nach „/“, @ZM-207), damit lange Namen nicht abgeschnitten werden; nur ein zu langes Einzelwort bricht
     lineHeight: 1.3,
+    overflowWrap: 'break-word',
+    minWidth: 0,
   };
 
   // Special case: Only 1 group - hide group title
@@ -132,7 +135,7 @@ export const ParticipantsAndGroups: React.FC<ParticipantsAndGroupsProps> = ({
                     size="sm" // Small avatar (32px)
                     showColorRing={false}
                   />
-                  <span style={nameStyle}>{standing.team.name}</span>
+                  <span style={nameStyle} data-teamname><SlashBreaks text={standing.team.name} /></span>
                 </li>
               ))}
             </ul>

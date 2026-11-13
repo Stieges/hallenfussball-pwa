@@ -100,6 +100,7 @@ describe('Fehler 1 "Turnierver-/waltung" und Varianten', () => {
     ['teamname-zelle.html', 'text.hyphens'],
     ['titel-shy.html', 'titel.wortbruch'],
     ['titel-zwei-spans.html', 'titel.wortbruch'],
+    ['teamname-schraegstrich.html', 'titel.wortbruch'], // @ZM-207: „SG Taching/Ten-gling“ mitten im Wort
   ])('Variante %s wird gefunden (%s)', async (datei, metrik) => {
     const r = await messe('--ziel', FIX(datei), '--profil', 'handy-360', ...SCHNELL)
     expect(r.code).toBe(1)
@@ -113,7 +114,7 @@ describe('Fehler 1 "Turnierver-/waltung" und Varianten', () => {
     expect(r.b.modus).toBe('MOCKUP')
     expect(r.b.laeufe).toHaveLength(5 * 2 * 2 * 2)
   })
-  it.each(['titel-span-hyphens-korrigiert.html', 'teamname-zelle-korrigiert.html'])('Gegenbeispiel %s ist gruen', async (datei) => {
+  it.each(['titel-span-hyphens-korrigiert.html', 'teamname-zelle-korrigiert.html', 'teamname-schraegstrich-korrigiert.html'])('Gegenbeispiel %s ist gruen', async (datei) => {
     const r = await messe('--ziel', FIX(datei), '--profil', 'handy', ...SCHNELL)
     gruen(r)
   })

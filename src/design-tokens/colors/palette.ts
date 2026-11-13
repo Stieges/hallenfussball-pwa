@@ -173,6 +173,7 @@ export const palette = {
     silver: '#C0C0C0',
     bronze: '#CD7F32',
     live: '#FB7185', // Live-Rot (Rose 400, dunkles Thema): eigener Ton, nicht das Fehler-Rot (@OB-039, Aufgabe 1.1)
+    liveMonitor: '#9F1239', // Live-Rot am Monitor (Rose 800): weiße Schrift 8,0 : 1, beide Monitor-Themen (@ZM-167, Daniel 18.10.)
   },
 } as const;
 

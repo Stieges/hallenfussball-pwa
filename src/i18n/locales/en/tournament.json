@@ -46,7 +46,10 @@
       "draws": "Draws",
       "losses": "Losses",
       "goalsFor": "Goals scored",
-      "goalsAgainst": "Goals conceded"
+      "goalsAgainst": "Goals conceded",
+      "column": "Details",
+      "showFor": "Show details for {{team}}",
+      "hideFor": "Hide details for {{team}}"
     }
   },
   "finalRankings": {

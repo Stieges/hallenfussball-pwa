@@ -11,6 +11,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Match, Team } from '../../../types/tournament';
 import { buildSideContext, sideName, type SideSource } from '../../../components/schedule/matchSides';
+import { SlashBreaks } from '../../../components/ui/atoms/TeamName';
 import { isMatchInProgress } from '../../../core/view';
 import { ScheduleConflict } from '../types';
 import { cssVars } from '../../../design-tokens'
@@ -187,8 +188,7 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
     fontSize: cssVars.fontSizes.md,
     fontWeight: cssVars.fontWeights.semibold,
     color: cssVars.colors.textPrimary,
-    // MOBILE-UX: No truncation - team names must be fully visible
-    wordBreak: 'break-word',
+    // MOBILE-UX: keine Kürzung; Umbruch an Leerzeichen und nach „/“, nie mitten im Wort (@ZM-207, `SlashBreaks`); nur ein zu langes Einzelwort bricht
     overflowWrap: 'break-word',
     flex: 1,
     textAlign: 'center',
@@ -306,7 +306,7 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
 
         {/* Teams & Score - Horizontal Layout */}
         <div style={teamsContainerStyle}>
-          <span style={homeTeamStyle}>{homeTeamName}</span>
+          <span style={homeTeamStyle} data-teamname><SlashBreaks text={homeTeamName} /></span>
           {hasScore ? (
             <div style={scoreContainerStyle}>
               <span style={scoreStyle}>{match.scoreA}</span>
@@ -316,7 +316,7 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
           ) : (
             <span style={vsStyle}><Versus /></span>
           )}
-          <span style={awayTeamStyle}>{awayTeamName}</span>
+          <span style={awayTeamStyle} data-teamname><SlashBreaks text={awayTeamName} /></span>
         </div>
 
         {/* Footer */}

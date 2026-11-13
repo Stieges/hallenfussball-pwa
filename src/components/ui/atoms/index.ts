@@ -25,3 +25,6 @@ export type { ChipButtonProps } from './ChipButton';
 // H4-4 (Hallenton): Pille der gemeinsamen Statuszeile (@HT-045)
 export { StatusPille } from './StatusPille';
 export type { StatusPilleProps, StatusPilleTon, StatusPilleRand, StatusPilleAktion } from './StatusPille';
+// @ZM-207: Teamnamen brechen nur an Leerzeichen und nach „/“ um, nie mitten im Wort; `TeamName` trägt `data-teamname`
+export { TeamName, HyphenSafe, SlashBreaks } from './TeamName';
+export { splitAfterSlash } from './teamNameBreaks';

@@ -5,6 +5,8 @@ import { monitorTeamName } from '../../../core/models/teamNameAbbrev';
 import { publicTieMarkOf, type GroupTieView } from '../../../core/standings/tieViews';
 import { MonitorTieMark } from './MonitorTieMark';
 import { ShortLabel } from '../../../components/ui/atoms';
+import { SlashBreaks } from '../../../components/ui/atoms/TeamName';
+import { placeLabel } from '../../../core/standings/placeLabel';
 
 export type MonitorColors = (typeof monitorThemes)[keyof typeof monitorThemes];
 export type StandingRows = ReturnType<typeof calculateStandings>;
@@ -27,8 +29,7 @@ export function StandingsTable({ rows, themeColors, tie }: StandingsTableProps) 
     alignItems: 'center',
   } as const;
   const number = { textAlign: 'center' } as const;
-  // @ZM-198: Vor dem ersten gespielten Spiel der Tabelle steht bei allen Teams „–“ statt „1“ (die Reihenfolge bleibt die der Teilnehmerliste)
-  const ohnePlatz = rows.every((row) => row.played === 0);
+  // @ZM-198: Vor dem ersten gespielten Spiel steht bei allen Teams „–“ statt „1“ (`placeLabel`, dieselbe Logik wie auf der Zuschauer-Seite)
   return (
     <div style={{
       width: '100%',
@@ -72,9 +73,9 @@ export function StandingsTable({ rows, themeColors, tie }: StandingsTableProps) 
               color: themeColors.text,
             }}
           >
-            <div style={{ fontWeight: cssVars.fontWeights.semibold }}>{ohnePlatz ? '–' : row.place ?? idx + 1}</div>
+            <div style={{ fontWeight: cssVars.fontWeights.semibold }}>{placeLabel(rows, idx)}</div>
             <div data-teamname style={{ fontSize: displayList.fontSizes.team, minWidth: 0, overflowWrap: 'break-word' }}>
-              {monitorTeamName(row.team.name)}
+              <SlashBreaks text={monitorTeamName(row.team.name)} />
               {mark !== undefined && <MonitorTieMark mark={mark} themeColors={themeColors} />}
             </div>
             <div data-testid="standings-won" style={{ ...number, color: themeColors.text }}>{row.won}</div>
