@@ -81,7 +81,7 @@ describe('@ZP-109 Karte oben im Reiter „Spielplan“', () => {
     expect(screen.queryByTestId('schedule-current')).toBeNull();
   });
 
-  it('@SL-194 Gegenbeispiel: die Haupttaste der Karte eines SELBST laufenden Spiels fragt nie nach (auch wenn auf dem anderen Feld ein zweites läuft)', async () => {
+  it('@SL-194 Gegenbeispiel: die Haupttaste der KARTE eines SELBST laufenden Spiels fragt nie nach (auch wenn auf dem anderen Feld ein zweites läuft)', async () => {
     const { tournament } = await fPAUSE();
     const { onNavigateToCockpit } = zeige(tournament);
     const id8 = tournament.matches[GAME[8]].id;

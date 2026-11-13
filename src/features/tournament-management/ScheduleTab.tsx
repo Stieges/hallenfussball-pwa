@@ -154,9 +154,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
 
   // Handler for navigating to cockpit with running match check
   const handleNavigateToCockpit = useCallback((matchId: string) => {
-    // Check if there's a running match (other than the target match). Läuft das Ziel selbst (Karte „Läuft“, zwei Felder), wechselt niemand
-    // von einem anderen Spiel weg: keine Rückfrage (@SL-194 gilt beim Wechsel zu einem anderen, noch nicht laufenden Spiel)
-    const runningMatchArray = liveMatchIds.has(matchId) ? [] : Array.from(liveMatchIds).filter(id => id !== matchId);
+    // Check if there's a running match (other than the target match)
+    const runningMatchArray = Array.from(liveMatchIds).filter(id => id !== matchId);
 
     if (runningMatchArray.length > 0) {
       // There's a running match - need confirmation
@@ -255,7 +254,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
               elapsedSeconds={elapsedSeconds}
               locale={locale}
               rights={{ lead: canEndRunning, play: canControlTimer, schedule: canSchedule }}
-              onNavigateToCockpit={onNavigateToCockpit ? handleNavigateToCockpit : undefined}
+              // Die Karte „Läuft“ führt ins Cockpit des Spiels, das sie selbst zeigt: dort fragt nichts nach (@SL-194 gilt beim Wechsel zu einem anderen Spiel)
+              onNavigateToCockpit={onNavigateToCockpit ? (id) => (liveMatchIds.has(id) ? onNavigateToCockpit(id) : handleNavigateToCockpit(id)) : undefined}
             />
           )}
           {/* Action Buttons Header */}
