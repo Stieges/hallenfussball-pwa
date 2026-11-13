@@ -140,6 +140,15 @@ export async function seedRunningEngineMatch(
 const ENGINE_START_OFFSET_MS = ENGINE_CUP_SEED_NOW_START_OFFSET_MS;
 const ENGINE_GOAL_OFFSET_MS = -30_000;
 
+/**
+ * Anstoß der Ein-Spiel-Cups: 00:00 am Lauftag, damit er zu JEDER Uhrzeit des Laufs in der Vergangenheit liegt.
+ * Mit 09:00 lag er bei Läufen vor 09:00 Turnierzeit in der Zukunft; dann fragt der Spielplan vor dem Eintragen
+ * „Spiel 1 ist erst um 09:00 geplant. Ergebnis trotzdem eintragen?“ (@SL-195), und die Cloud-Tests, die ein
+ * Ergebnis eintragen, blieben an der Rückfrage hängen (C-CLOUD-TESTS-NACHTS-ROT, @TA-021: Zustand statt Uhrzeit).
+ * Die Rückfrage selbst prüfen die Tests in `useScheduleResultEntry.zukunft.test.tsx` und `ScheduleTab.direkteintrag.test.tsx`.
+ */
+const SINGLE_MATCH_CUP_START_TIME = '00:00';
+
 /** Zwei Teams, ein Spiel (S5/S8): feste IDs, Spiel-ID nach dem Spielplan überschrieben. */
 function buildSingleMatchCup(
   service: TournamentCreationService,
@@ -153,8 +162,8 @@ function buildSingleMatchCup(
       title,
       ageClass: 'U13',
       date: localDateIso(),
-      timeSlot: '09:00 - 16:00',
-      startTime: '09:00',
+      timeSlot: `${SINGLE_MATCH_CUP_START_TIME} - 16:00`,
+      startTime: SINGLE_MATCH_CUP_START_TIME,
       location: { name: 'Sporthalle Testumgebung' },
       numberOfFields: 1,
       numberOfTeams: 2,
