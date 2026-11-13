@@ -131,4 +131,18 @@ test.describe('@ZP-113 Kopf des Spielplans der Turnierleitung', () => {
     const scrollY = await page.evaluate(() => window.scrollY);
     expect(box.y + scrollY + box.height).toBeLessThanOrEqual(2 * 844);
   });
+
+  test('@ZP-113 @OB-074 ohne Karte (alle Spiele beendet) schwebt die Leiste „Teilen · Als PDF“ nicht über Werkzeugen und Liste; im Bearbeiten-Modus schwebt sie wie bisher', async ({ page, seedIndexedDB }) => {
+    const alle = cup({ namen: [NAME_50, ...NAMEN.slice(1)] });
+    await seedIndexedDB({ tournaments: [{ ...alle, matches: (alle.matches as Array<Record<string, unknown>>).map((m) => ({ ...m, matchStatus: 'finished', scoreA: 2, scoreB: 1 })) }] });
+    await page.setViewportSize({ width: 360, height: 640 });
+    await page.goto(`/#/tournament/${ID}/schedule`);
+    await expect(page.getByTestId('schedule-edit-start')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('schedule-current')).toHaveCount(0);
+    const position = () => page.evaluate(() => getComputedStyle(document.querySelector('.schedule-action-buttons')!).position);
+    await animationenFertig(page);
+    expect(await position(), 'nicht im Bearbeiten-Modus: im Fluss').not.toBe('fixed');
+    await page.getByTestId('schedule-edit-start').click();
+    await expect.poll(position, { message: 'im Bearbeiten-Modus schwebt die Leiste wie bisher' }).toBe('fixed');
+  });
 });
