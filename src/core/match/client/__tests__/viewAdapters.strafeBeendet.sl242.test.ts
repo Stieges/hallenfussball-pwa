@@ -5,9 +5,10 @@
  * Kein eigenes Ereignis: alle Fälle laufen über dieselben Ereignisse wie das Cockpit.
  */
 import { describe, expect, it } from 'vitest';
-import { toRetractedEvents, toRuntimeEvents } from '../viewAdapters';
+import { toLiveMatchView, toRetractedEvents, toRuntimeEvents, type LiveMatchMeta } from '../viewAdapters';
 import { reduceMatch, type EngineEvent, type MatchContext } from '../../';
 import { RULES } from './fixtures';
+import type { RuntimeMatchEvent } from '../../../../types/tournament';
 import { toPublicRuntimeEvents } from '../../../repositories/publicPayload';
 
 const NORD = 'fc-nord';
@@ -121,5 +122,83 @@ describe('@SL-242 Zusatz „beendet durch Tor“ an der Zeitstrafe', () => {
     ], { sideA: NORD, sideB: SUED, goalsA: 1, goalsB: 0 });
     expect(strafeOeffentlich).not.toHaveProperty('endedByGoalSeconds');
     expect(torOeffentlich).not.toHaveProperty('endedByGoalSeconds');
+  });
+
+  it('Tor mit Millisekunden (2:40,700): der Zusatz zeigt dieselbe Sekunde wie die Zeile des Tores (abgerundet, nicht aufgerundet)', () => {
+    const s = strafe(mmss(2, 0, 900), SUED, 6);
+    const log = [anpfiff(), s, tor(mmss(2, 40, 700), NORD)];
+    const events = toRuntimeEvents(reduceMatch(log, CTX).state, log, CTX);
+    const torZeile = events.find((e) => e.type === 'GOAL')!;
+    const strafZeile = events.find((e) => e.type === 'TIME_PENALTY')!;
+    expect(torZeile.timestampSeconds).toBe(160);
+    expect(strafZeile.endedByGoalSeconds).toBe(torZeile.timestampSeconds);
+  });
+
+  it('Tor zurück und danach ein neues Tor: der Zusatz nennt die Zeit des neuen Tores', () => {
+    const s = strafe(mmss(2, 0), SUED, 6);
+    const erstes = tor(mmss(2, 40), NORD);
+    const log = [anpfiff(), s, erstes, zurueck(mmss(2, 50), erstes), tor(mmss(3, 10), NORD)];
+    expect(zusaetze(log)[s.id]).toBe(190);
+  });
+
+  describe('2. Halbzeit und Verlängerung (Spieluhr kumulativ)', () => {
+    const halbzeit = (): EngineEvent[] => [
+      ev('SECTION_END', 600_000, null, {}),
+      ev('SECTION_START', 600_000, null, {}, { section: 2, at: 661_000 }),
+    ];
+    const inHz2 = (clockMs: number, ev2: (c: number) => EngineEvent): EngineEvent => ({ ...ev2(clockMs), section: 2 });
+
+    it('Strafe und Tor in der 2. Halbzeit: Zusatz „11:30“ (Zeit der Tor-Zeile)', () => {
+      const s = inHz2(mmss(11, 0), (c) => strafe(c, SUED, 6));
+      const log = [anpfiff(), ...halbzeit(), s, inHz2(mmss(11, 30), (c) => tor(c, NORD))];
+      expect(zusaetze(log)[s.id]).toBe(690);
+    });
+
+    it('Strafe aus der 1. Halbzeit (9:30) wird in der 2. Halbzeit (11:00) durch ein Tor beendet', () => {
+      const s = strafe(mmss(9, 30), SUED, 6);
+      const log = [anpfiff(), s, ...halbzeit(), inHz2(mmss(11, 0), (c) => tor(c, NORD))];
+      expect(zusaetze(log)[s.id]).toBe(660);
+    });
+
+    it('Tor in der Verlängerung beendet die Strafe aus der 2. Halbzeit', () => {
+      const knockout = ev('MATCH_START', 0, null, { rules: { ...RULES, knockout: true, tiebreak: 'overtime-then-shootout', overtimeSeconds: 300 } });
+      const s = inHz2(mmss(19, 30), (c) => strafe(c, SUED, 6));
+      const log = [
+        knockout, ...halbzeit(), s,
+        ev('MATCH_END', 1_200_000, null, {}, { section: 2, at: 1_261_000 }),
+        ev('SECTION_START', 1_200_000, null, {}, { section: 3, at: 1_321_000 }),
+        ev('GOAL', mmss(20, 20), NORD, {}, { section: 3, at: 1_371_000 }),
+      ];
+      const state = reduceMatch(log, CTX).state;
+      const penalty = toRuntimeEvents(state, log, CTX).find((e) => e.type === 'TIME_PENALTY')!;
+      expect(penalty.endedByGoalSeconds).toBe(1220);
+    });
+  });
+
+  describe('Uhrkorrektur: Tafel und Protokoll sagen dasselbe', () => {
+    const meta: LiveMatchMeta = {
+      id: 'spiel-11', number: 11, phaseLabel: 'Gruppe A', fieldId: 'f1', scheduledKickoff: '2026-11-13T10:00:00.000Z', version: 1,
+      homeTeam: { id: NORD, name: 'FC Nord' }, awayTeam: { id: SUED, name: 'SV Süd' },
+    };
+    // `LiveMatch.events` ist als älterer Draht-Typ deklariert, zur Laufzeit sind es die Runtime-Ereignisse des Adapters
+    const mitUhr = (log: EngineEvent[], serverNow: number): RuntimeMatchEvent =>
+      (toLiveMatchView(reduceMatch(log, CTX).state, meta, { serverNow, offsetMs: 0 }, log).events as unknown as RuntimeMatchEvent[])
+        .find((e) => e.type === 'TIME_PENALTY')!;
+    const grundlage = (): EngineEvent[] => [anpfiff(), strafe(mmss(2, 0), SUED, 6), tor(mmss(2, 40), NORD)];
+
+    it('ohne Korrektur: Tor liegt hinter uns, Zusatz steht', () => {
+      expect(mitUhr(grundlage(), 1_000 + mmss(2, 50)).endedByGoalSeconds).toBe(160);
+    });
+
+    it('Uhr nach dem Tor auf 2:10 zurückgestellt: die Tafel sieht die Strafe wieder laufen, das Protokoll trägt keinen Zusatz', () => {
+      const log = [...grundlage(), ev('CLOCK_ADJUST', mmss(2, 10), null, { previousClockMs: mmss(2, 49) }, { at: 1_000 + mmss(2, 49) })];
+      expect(mitUhr(log, 1_000 + mmss(2, 49)).endedByGoalSeconds).toBeUndefined();
+    });
+
+    it('Gegenbeispiel: Uhr wieder hinter das Tor gestellt (3:00): der Zusatz steht wieder da', () => {
+      const zurueckGestellt = ev('CLOCK_ADJUST', mmss(2, 10), null, { previousClockMs: mmss(2, 49) }, { at: 1_000 + mmss(2, 49) });
+      const vor = ev('CLOCK_ADJUST', mmss(3, 0), null, { previousClockMs: mmss(2, 10) }, { at: 1_000 + mmss(2, 49) });
+      expect(mitUhr([...grundlage(), zurueckGestellt, vor], 1_000 + mmss(2, 49)).endedByGoalSeconds).toBe(160);
+    });
   });
 });

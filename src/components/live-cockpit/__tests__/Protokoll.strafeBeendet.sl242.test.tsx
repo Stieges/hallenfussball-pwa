@@ -42,19 +42,24 @@ beforeEach(() => { locale.current = 'de'; });
 describe('@SL-242 Zusatz „beendet durch Tor“ im Cockpit-Protokoll', () => {
   it('Sidebar: Strafzeile trägt „beendet durch Tor 02:40“', () => {
     render(<Sidebar events={[strafe({ endedByGoalSeconds: 160 }), tor]} {...teams} />);
-    expect(screen.getByTestId('event-penalty-ended-by-goal').textContent).toBe('beendet durch Tor 02:40');
+    expect(screen.getByTestId('event-penalty-ended-by-goal').textContent).toBe('beendet durch Tor\u00a002:40');
   });
 
   it('Handy-Liste: Strafzeile trägt „beendet durch Tor 02:40“, Zeit der Zeile bleibt 02:00', () => {
     render(<EventLogBottomSheet isOpen onClose={() => undefined} events={[strafe({ endedByGoalSeconds: 160 }), tor]} {...teams} />);
-    expect(screen.getByTestId('event-penalty-ended-by-goal').textContent).toBe('beendet durch Tor 02:40');
+    expect(screen.getByTestId('event-penalty-ended-by-goal').textContent).toBe('beendet durch Tor\u00a002:40');
     expect(screen.getByText('02:00')).toBeTruthy();
+  });
+
+  it('die Zeit hängt mit geschütztem Leerzeichen an „Tor“ (bricht nie allein in eine neue Zeile)', () => {
+    render(<Sidebar events={[strafe({ endedByGoalSeconds: 160 })]} {...teams} />);
+    expect(screen.getByTestId('event-penalty-ended-by-goal').textContent).toMatch(/Tor\u00a0\d{2}:\d{2}$/);
   });
 
   it('EN: „ended by goal 02:40“', () => {
     locale.current = 'en';
     render(<Sidebar events={[strafe({ endedByGoalSeconds: 160 })]} {...teams} />);
-    expect(screen.getByTestId('event-penalty-ended-by-goal').textContent).toBe('ended by goal 02:40');
+    expect(screen.getByTestId('event-penalty-ended-by-goal').textContent).toBe('ended by goal\u00a002:40');
   });
 
   it('Gegenbeispiel: Strafzeile ohne Angabe (abgelaufen, läuft, Regel aus, Tor zurückgenommen) trägt keinen Zusatz', () => {

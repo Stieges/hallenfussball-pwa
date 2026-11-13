@@ -70,6 +70,7 @@ export function ProtocolRow({
     border: `1px solid ${cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.md,
     minHeight: 56,
+    gap: cssVars.spacing.sm,
   };
 
   const rowStyle: CSSProperties = variant === 'sidebar'
@@ -117,7 +118,7 @@ export function ProtocolRow({
     alignItems: 'center',
     gap: cssVars.spacing.sm,
     flex: 1,
-    overflow: 'hidden',
+    minWidth: 0,
   };
 
   const iconStyle: CSSProperties = {
@@ -130,17 +131,18 @@ export function ProtocolRow({
     fontWeight: cssVars.fontWeights.semibold,
     fontVariantNumeric: 'tabular-nums',
     color: cssVars.colors.textSecondary,
-    flexShrink: 0,
-    minWidth: 50,
   };
 
+  /** Handy-Blatt: die Beschreibung bricht an Leerzeichen um, nie mitten im Wort und nie mit „…“ (@OB-021, @OB-025). */
   const descStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.textPrimary,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
+    whiteSpace: 'normal',
+    overflowWrap: 'normal',
+    wordBreak: 'normal',
+    hyphens: 'manual',
   };
+  const sheetTextStyle: CSSProperties = { display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 };
 
   const sheetEditButtonStyle: CSSProperties = {
     display: 'flex',
@@ -167,8 +169,7 @@ export function ProtocolRow({
     fontSize: cssVars.fontSizes.xs,
     color: cssVars.colors.textSecondary,
     whiteSpace: 'normal',
-    overflowWrap: 'anywhere',
-    textOverflow: 'clip',
+    overflowWrap: 'normal',
   };
   const endedNoteElement = endedNote === null ? null : (
     <span style={endedNoteStyle} data-testid="event-penalty-ended-by-goal">{endedNote}</span>
@@ -198,6 +199,7 @@ export function ProtocolRow({
   return (
     <div
       style={rowStyle}
+      data-event-type={event.type}
       data-testid={discardedText !== null ? 'event-row-discarded' : retracted ? 'event-row-retracted' : undefined}
       aria-label={discardedText !== null ? `${description} – ${discardedText}` : retracted ? t('sidebar.retractedAria', { description }) : undefined}
     >
@@ -227,23 +229,15 @@ export function ProtocolRow({
         <>
           <div style={eventInfoStyle}>
             <span style={iconStyle}>{icon}</span>
-            <span style={timeStyle}>{time}</span>
-            {endedNote === null ? (
+            <div style={sheetTextStyle}>
+              <span style={timeStyle}>{time}</span>
               <span style={descStyle}>
                 {description}
                 {warning}
                 {mark}
               </span>
-            ) : (
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <span style={{ ...descStyle, display: 'block' }}>
-                  {description}
-                  {warning}
-                  {mark}
-                </span>
-                {endedNoteElement}
-              </div>
-            )}
+              {endedNoteElement}
+            </div>
           </div>
           {canEdit && (
             <button style={sheetEditButtonStyle} onClick={handleEditClick} aria-label={`${spokenDescription} bearbeiten`}>
