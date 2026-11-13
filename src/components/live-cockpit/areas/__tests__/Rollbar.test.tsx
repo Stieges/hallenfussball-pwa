@@ -32,4 +32,15 @@ describe('Rollbar', () => {
     render(<Rollbar als="div" testId="flaeche">inhalt</Rollbar>);
     expect(screen.getByTestId('flaeche')).not.toHaveAttribute('tabindex');
   });
+
+  it('ab 24 Bildpunkten Überhang trägt die Fläche zusätzlich die Marke für die weiche Kante, darunter nicht', () => {
+    mass(700, 500);
+    const a = render(<Rollbar als="div" testId="flaeche">inhalt</Rollbar>);
+    expect(screen.getByTestId('flaeche')).toHaveAttribute('data-rollt-viel', 'true');
+    a.unmount();
+    mass(510, 500);
+    render(<Rollbar als="div" testId="flaeche">inhalt</Rollbar>);
+    expect(screen.getByTestId('flaeche')).toHaveAttribute('data-rollt', 'true');
+    expect(screen.getByTestId('flaeche')).not.toHaveAttribute('data-rollt-viel');
+  });
 });

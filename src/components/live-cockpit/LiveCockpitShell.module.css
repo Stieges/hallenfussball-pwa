@@ -127,9 +127,9 @@
   overflow-y: auto;
 }
 
-/* Eine Fläche, die rollt (Rollbar), endet unten mit einer weichen Kante statt mit einem halb abgeschnittenen Text – etwa im Endstand, wo die Karte der Leibchen Platz braucht */
-.container [data-rollt='true'] {
-  -webkit-mask-image: linear-gradient(to bottom, var(--color-background) calc(100% - var(--spacing-md)), transparent);
-  mask-image: linear-gradient(to bottom, var(--color-background) calc(100% - var(--spacing-md)), transparent);
+/* Eine Fläche, die deutlich rollt (Rollbar, ab 24 px Überhang), endet unten mit einer weichen Kante statt mit einem halb abgeschnittenen Text – etwa im Endstand, wo die Karte der Leibchen Platz braucht */
+.container [data-rollt-viel='true'] {
+  -webkit-mask-image: linear-gradient(to bottom, var(--color-background) calc(100% - var(--spacing-xl)), transparent);
+  mask-image: linear-gradient(to bottom, var(--color-background) calc(100% - var(--spacing-xl)), transparent);
 }
 

@@ -5,6 +5,9 @@
  */
 import { createElement, useLayoutEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 
+/** Ab so vielen Bildpunkten Überhang endet die Fläche unten mit einer weichen Kante (`data-rollt-viel`), darunter genügt der Tabstopp. */
+const UEBERHANG_VIEL = 24;
+
 export interface RollbarProps {
   /** Ausgabe-Element */
   als: 'main' | 'div';
@@ -16,10 +19,11 @@ export interface RollbarProps {
 export function Rollbar({ als, className, children, testId }: RollbarProps): ReactElement {
   const ref = useRef<HTMLElement>(null);
   const [rollt, setRollt] = useState(false);
+  const [viel, setViel] = useState(false);
   useLayoutEffect(() => {
     const el = ref.current;
     if (el === null) { return undefined; }
-    const messen = (): void => { setRollt(el.scrollHeight > el.clientHeight + 1); };
+    const messen = (): void => { setRollt(el.scrollHeight > el.clientHeight + 1); setViel(el.scrollHeight > el.clientHeight + UEBERHANG_VIEL); };
     messen();
     const groesse = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(messen);
     groesse?.observe(el);
@@ -27,5 +31,5 @@ export function Rollbar({ als, className, children, testId }: RollbarProps): Rea
     inhalt?.observe(el, { childList: true, subtree: true, attributes: true });
     return () => { groesse?.disconnect(); inhalt?.disconnect(); };
   }, []);
-  return createElement(als, { ref, className, 'data-testid': testId, 'data-rollt': rollt ? 'true' : undefined, tabIndex: rollt ? 0 : undefined }, children);
+  return createElement(als, { ref, className, 'data-testid': testId, 'data-rollt': rollt ? 'true' : undefined, 'data-rollt-viel': viel ? 'true' : undefined, tabIndex: rollt ? 0 : undefined }, children);
 }
