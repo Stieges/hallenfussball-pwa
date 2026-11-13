@@ -37,6 +37,23 @@ async function aendernOeffnen(page: Page): Promise<void> {
   }).toPass({ timeout: 10000 });
 }
 
+const SPIEL_2 = '0000000b-0000-4000-9000-000000000002';
+
+/** Endstand von Spiel 2 (eben beendet, 2:1, 9:00 gespielt, Engine-Kopie der Saat); `ohneKarte`: Petting spielt Rot, dann braucht Spiel 3 keine Karte. */
+async function oeffneEndstand(page: Page, fenster: { width: number; height: number }, ohneKarte = false): Promise<void> {
+  await page.setViewportSize({ width: fenster.width, height: fenster.height });
+  const saat = leseSaat('leibchen-vor-anpfiff');
+  if (ohneKarte) {
+    for (const t of saat.datenbanken[0].eintraege.tournaments as Array<{ id: string; teams: Array<{ name: string; colors?: { primary: string } }> }>) {
+      for (const team of t.teams) { if (team.name === 'TSV Petting') { team.colors = { primary: '#C62828' }; } }
+    }
+  }
+  await installiereSaat(page.context(), saat);
+  await page.goto(`/#/tournament/leibchen-endstand/live?matchId=${SPIEL_2}`, { waitUntil: 'commit' }).catch(() => undefined);
+  await expect(page.getByTestId('match-next-button')).toBeVisible({ timeout: 25000 });
+  await animationenFertig(page);
+}
+
 interface Box { x: number; y: number; width: number; height: number }
 
 async function box(el: Locator): Promise<Box> {
@@ -45,13 +62,19 @@ async function box(el: Locator): Promise<Box> {
   return b;
 }
 
-async function oeffne(page: Page, fenster: { width: number; height: number }, hallenFarben?: readonly string[] | null, turnier = 'leibchen-7a'): Promise<{ tippe: (el: Locator) => Promise<void>; zaehle: () => void; tipps: () => number }> {
+async function oeffne(page: Page, fenster: { width: number; height: number }, hallenFarben?: readonly string[] | null, turnier = 'leibchen-7a', unbestaetigt = false): Promise<{ tippe: (el: Locator) => Promise<void>; zaehle: () => void; tipps: () => number }> {
   await page.setViewportSize({ width: fenster.width, height: fenster.height });
   const saat = leseSaat('leibchen-vor-anpfiff');
   if (hallenFarben !== undefined) {
     // andere Hallenfarben des Turniers (@SL-219: Gelb und Orange / Gelb und Grün / keine eingetragen)
     for (const t of saat.datenbanken[0].eintraege.tournaments as Array<Record<string, unknown>>) {
       if (hallenFarben === null) { delete t.bibColors; delete t.bibColor; } else { t.bibColors = [...hallenFarben]; t.bibColor = hallenFarben[0]; }
+    }
+  }
+  if (unbestaetigt) {
+    // die Wahl von Spiel 3 ist noch offen: die Karte steht statt der Zeile
+    for (const t of saat.datenbanken[0].eintraege.tournaments as Array<{ matches: Array<Record<string, unknown>> }>) {
+      for (const m of t.matches) { if (m.matchNumber === 3) { delete m.kitDecision; delete m.kit; } }
     }
   }
   await installiereSaat(page.context(), saat);
@@ -243,6 +266,39 @@ for (const f of FENSTER) {
       });
     }
 
+    test(`@SL-240 Endstand mit Karte: ${f.handy ? 'kein großer Uhr-Bereich, „gespielt 9:00“ in der Quittungszeile, Teamnamen und „Nächstes:“ vollständig, nichts von der Karte überdeckt' : 'der Uhr-Bereich bleibt wie in @SL-169 (Tablet und Laptop)'} (${f.name})`, async ({ page }) => {
+      await oeffneEndstand(page, f);
+      await expect(page.getByTestId('leibchen-karte')).toBeVisible();
+      const quittung = page.getByTestId('scoreboard-quittung');
+      if (f.handy) {
+        await expect(page.getByTestId('scoreboard-clock')).toHaveText(''); // kein Uhr-Bereich mehr
+        await expect(page.getByTestId('scoreboard-clock-rest')).toHaveCount(0);
+        await expect(quittung).toContainText('Abgepfiffen · 2:1 gespeichert · gespielt 9:00');
+        const karte = await box(page.getByTestId('leibchen-karte'));
+        for (const id of ['team-name-home', 'team-name-away', 'cockpit-naechstes']) {
+          const b = await box(page.getByTestId(id));
+          expect(b.y, `${id} beginnt im Fenster`).toBeGreaterThanOrEqual(0);
+          expect(b.y + b.height, `${id} endet über der Karte`).toBeLessThanOrEqual(karte.y + 1);
+          expect(b.x + b.width, `${id} ganz in der Breite`).toBeLessThanOrEqual(f.width);
+        }
+        const q = await box(quittung);
+        expect(q.y + q.height, 'Quittungszeile über der Karte').toBeLessThanOrEqual(karte.y + 1);
+        // der Satz bricht nicht mitten im Wort: nichts läuft seitlich über
+        expect(await quittung.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(0);
+      } else {
+        await expect(page.getByTestId('scoreboard-clock')).toContainText('Gespielt');
+        await expect(quittung).not.toContainText('gespielt 9:00');
+      }
+    });
+
+    test(`@SL-240 Gegenbeispiel: Endstand ohne Karte (kein Leibchen nötig) behält den großen Uhr-Bereich „Gespielt 9:00“ wie in @SL-169 (${f.name})`, async ({ page }) => {
+      await oeffneEndstand(page, f, true);
+      await expect(page.getByTestId('leibchen-karte')).toHaveCount(0);
+      await expect(page.getByTestId('scoreboard-clock')).toContainText('Gespielt');
+      await expect(page.getByTestId('scoreboard-clock-rest')).toHaveText('9:00');
+      await expect(page.getByTestId('scoreboard-quittung')).not.toContainText('gespielt');
+    });
+
     test(`@OB-021 @SL-208 Teamname mit 50 Zeichen: der Name im Kopf steht vollständig über der Zeile, nichts ist abgeschnitten (${f.name})`, async ({ page }) => {
       await oeffne(page, f, undefined, 'leibchen-lang');
       const name = page.getByTestId('team-name-home');
@@ -256,6 +312,20 @@ for (const f of FENSTER) {
       // der Kopf (nicht nur der Name) steht ganz im sichtbaren Bereich der Fläche über der Zeile
       const kopf = await page.getByTestId('team-head-home').evaluate((el) => el.getBoundingClientRect().bottom);
       expect(kopf).toBeLessThanOrEqual(zeile.y + 1);
+    });
+
+    test(`@OB-021 @SL-206 Teamname mit 50 Zeichen, Wahl noch offen: Name im Kopf vollständig über der Karte, Karte vollständig im Fenster (${f.name})`, async ({ page }) => {
+      // BEFUND (Fixrunde 5): bei 360 × 640 reicht der Platz nicht – der Kopf mit dem 50-Zeichen-Namen endet ca. 65 px unter der Oberkante der Karte (Tafel mit großer
+      // Spielzeit 302 px + Kopf + Karte 187 px). Wie beim Endstand (@SL-240) braucht es eine Entscheidung (große Spielzeit weg oder Karte kleiner); bis dahin erwartet rot.
+      test.fail(f.width === 360, 'Befund: Kopf bei 50 Zeichen und offener Karte am 360er Handy abgeschnitten (Frage an Daniel)');
+      await oeffne(page, f, undefined, 'leibchen-lang', true);
+      await expect(page.getByTestId('leibchen-karte')).toBeVisible();
+      const karte = await box(page.getByTestId('leibchen-karte'));
+      const n = await page.getByTestId('team-name-home').evaluate((el) => { const r = el.getBoundingClientRect(); return { unten: r.bottom, ueberlauf: el.scrollHeight - el.clientHeight }; });
+      const kopf = await page.getByTestId('team-head-home').evaluate((el) => el.getBoundingClientRect().bottom);
+      expect(n.ueberlauf).toBeLessThanOrEqual(0);
+      expect(kopf, 'der Kopf endet über der Karte').toBeLessThanOrEqual(karte.y + 1);
+      expect(karte.y + karte.height).toBeLessThanOrEqual(f.height);
     });
 
     test(`@SL-224 „Ändern“ in der Zeile und jede Farbe der Wahl sind mindestens 44×44 groß (${f.name})`, async ({ page }) => {

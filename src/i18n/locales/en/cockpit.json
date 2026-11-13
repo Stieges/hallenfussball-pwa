@@ -90,6 +90,11 @@
       "strafstoss": "after $t(sport:events.penaltyShootout)"
     },
     "quittung": "Match ended · {{links}}:{{rechts}} saved",
+    "quittungZusatz": {
+      "gespielt": "played {{zeit}}",
+      "gespieltVon": "played {{zeit}} of {{geplant}}",
+      "strafstoss": "$t(sport:events.penaltyShootout) {{ergebnis}}"
+    },
     "keinWeiteresSpiel": "No more matches",
     "uebernahmePruefen": "Match time comes from {{name}}'s device – please check",
     "uebernahmePruefenOhneName": "Match time comes from the previous device – please check",

@@ -301,4 +301,15 @@ describe('Das nächste Spiel: ausgefallene, offene Paarung, zwei Felder (@SL-117
     act(() => { r.result.current.ladeNaechstes(); });
     expect(aktuell(r)).toBe('m3');
   });
+
+  it('@SL-215 fehlt dem Turnierspiel die Uhrzeit, rechnet der Spielplan sie nicht heimlich nach: Tafel, „Weiter“ und Karte nennen trotzdem dasselbe Spiel (hier Spiel 2 nach Nummer)', () => {
+    const um = (h: number): Date => new Date(Date.UTC(2026, 10, 14, h, 0, 0));
+    const schedule: GeneratedSchedule = { allMatches: [feldSpiel('m1', 1, { scoreA: 1, scoreB: 0, startTime: um(9) }), feldSpiel('m2', 2, { startTime: um(12) }), feldSpiel('m3', 3, { startTime: um(10) })] } as unknown as GeneratedSchedule;
+    const matches = [tm('m1', 1, 'finished'), tm('m2', 2, 'scheduled'), tm('m3', 3, 'scheduled')]; // ohne scheduledTime
+    const r = render({ engine: engineMit({ m1: T0 - 5_000 }), schedule, live: karte(['m1', 'FINISHED']), initialMatchId: 'm1', tournamentMatches: matches });
+    const karteMeint = leibchenZiel(turnier(matches), 'm1', 'abgepfiffen')?.id;
+    expect(r.result.current.folgende[0]?.id).toBe(karteMeint);
+    act(() => { r.result.current.ladeNaechstes(); });
+    expect(aktuell(r)).toBe(karteMeint);
+  });
 });

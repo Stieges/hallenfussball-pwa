@@ -93,8 +93,8 @@ export function useFieldMatchSelection(p: FieldMatchSelectionParams): FieldMatch
     const ist = new Map((tournamentMatches ?? []).map((m) => [m.id, m]));
     return schedule.allMatches.map((m): NextCandidate & { geplant: ScheduledMatch } => {
       const tm = ist.get(m.id);
-      // Dasselbe Spiel, dieselbe Ableitung wie bei der Karte (`nextCandidateOf`); der Spielplan liefert Ergebnis und, wenn dem Spiel die Uhrzeit fehlt, die berechnete
-      const quelle: NextSource = { ...tm, ...m, scheduledTime: tm?.scheduledTime ?? m.startTime };
+      // Dasselbe Spiel, dieselbe Ableitung wie bei der Karte (`nextCandidateOf`); der Spielplan liefert das Ergebnis; die Uhrzeit kommt vom Spiel des Turniers (fehlt sie dort, fehlt sie auch der Karte – dieselbe Sortierung), nur ohne Turnierspiel die berechnete
+      const quelle: NextSource = { ...tm, ...m, scheduledTime: tm === undefined ? m.startTime : tm.scheduledTime };
       return { ...nextCandidateOf(quelle), geplant: m };
     });
   }, [schedule.allMatches, tournamentMatches]);

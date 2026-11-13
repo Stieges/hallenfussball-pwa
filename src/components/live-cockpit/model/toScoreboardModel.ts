@@ -44,6 +44,11 @@ export interface ScoreboardInput {
   vor?: ScoreboardVorInput;
   /** @FU-115: wer das Spiel im Spielplan beendet hat (Name aus dem Protokoll); `null`/fehlt = ohne Namen. */
   eingetragenVon?: string | null;
+  /**
+   * Endstand am Handy mit der Leibchen-Karte darunter (@SL-240): kein großer Uhr-Bereich in der Tafel; was er sagte („gespielt 9:00“, „gespielt 11:20 von 14:00“,
+   * Ergebnis des Strafstoßschießens) steht stattdessen in der Quittungszeile. Ohne das Flag bleibt der Uhr-Bereich wie in @SL-169.
+   */
+  uhrInQuittung?: boolean;
 }
 
 /** Sekunden als `m:ss` (Minuten ohne führende Null, nie negativ). */
@@ -100,7 +105,8 @@ function abschnittTextOf(phase: CockpitPhase, view: PhaseView | null, von: strin
  */
 export { BALKEN_TON_SCHLUSSPHASE } from '../../../core/view/zeitBalken';
 
-interface UhrErgebnis { uhr: ScoreboardUhr | null; hinweise: string[] }
+/** `endeText`: die Angabe des Uhr-Bereichs nach dem Abpfiff als Satzteil („gespielt 9:00“) – steht bei `uhrInQuittung` in der Quittungszeile (@SL-240). */
+interface UhrErgebnis { uhr: ScoreboardUhr | null; hinweise: string[]; endeText?: string }
 
 /** Uhr und stehende Zeilen der laufenden Zustände (läuft, pausiert, Pause, Entscheidung, Strafstoßschießen, abgepfiffen). */
 function uhrOf(input: ScoreboardInput, t: Uebersetzer): UhrErgebnis {
@@ -167,9 +173,11 @@ function uhrOf(input: ScoreboardInput, t: Uebersetzer): UhrErgebnis {
     const strafstoss = match && view.phase === 'shootout' ? liveMatchFinalScore(match)?.penalty : undefined; // nur, wenn die Phase es hergibt
     if (strafstoss) {
       const seite = (anzeige: Side): number => (anzeige === 'home' ? strafstoss.a : strafstoss.b);
+      const ergebnis = `${seite(input.links)}:${seite(input.rechts)}`;
       return {
         hinweise,
-        uhr: { rest: `${seite(input.links)}:${seite(input.rechts)}`, gespielt: null, schlussphase: false, steht: false, hervorgehoben: false, ton: 'gedaempft', label: t('tafel.uhr.strafstoss'), unterzeile: null },
+        endeText: t('tafel.quittungZusatz.strafstoss', { ergebnis }),
+        uhr: { rest: ergebnis, gespielt: null, schlussphase: false, steht: false, hervorgehoben: false, ton: 'gedaempft', label: t('tafel.uhr.strafstoss'), unterzeile: null },
       };
     }
     if (view.status === 'skipped') { return { uhr: null, hinweise }; } // ausgefallen: nichts gespielt, keine Zeit
@@ -179,6 +187,7 @@ function uhrOf(input: ScoreboardInput, t: Uebersetzer): UhrErgebnis {
     const vorzeitig = view.phase === 'regular' && gespielt < view.plannedMs;
     return {
       hinweise,
+      endeText: vorzeitig ? t('tafel.quittungZusatz.gespieltVon', { zeit: formatUhr(gespielt / 1000), geplant: formatUhr(view.plannedMs / 1000) }) : t('tafel.quittungZusatz.gespielt', { zeit: formatUhr(gespielt / 1000) }),
       uhr: {
         rest: formatUhr(gespielt / 1000), gespielt: null, schlussphase: false, steht: false, hervorgehoben: false, ton: 'gedaempft',
         label: t('tafel.uhr.gespielt'), unterzeile: vorzeitig ? t('tafel.unterzeile.vonGeplant', { zeit: formatUhr(view.plannedMs / 1000) }) : null,
@@ -232,7 +241,11 @@ export function toScoreboardModel(input: ScoreboardInput, t: Uebersetzer): Score
   };
   const links = seite('links');
   const rechts = seite('rechts');
-  const { uhr, hinweise } = uhrOf(input, t);
+  const { uhr: uhrRoh, hinweise, endeText } = uhrOf(input, t);
+  const uhrWandert = input.uhrInQuittung === true && phase.zustand === 'abgepfiffen' && endeText !== undefined;
+  const uhr = uhrWandert ? null : uhrRoh;
+  const quittung = quittungTextOf(input, links, rechts, t);
+  const quittungText = uhrWandert ? [quittung, endeText].filter((teil): teil is string => teil !== null && teil !== undefined && teil !== '').join(' · ') : quittung;
   const vor = scoreboardVor(input, t);
   const abschnittText = abschnittTextOf(phase, input.view, input.eingetragenVon, t) ?? vor.kopfText;
   const laeuft = phase.zustand === 'laeuft' || phase.zustand === 'pausiert';
@@ -244,7 +257,7 @@ export function toScoreboardModel(input: ScoreboardInput, t: Uebersetzer): Score
     kopfText: kopfText || null,
     badge: badgeOf(input), links, rechts,
     uhr: uhr ?? vor.uhr, abschnittText: abschnittTextOf(phase, input.view, input.eingetragenVon, t) ?? vor.kopfText, hinweise: [...hinweise, ...vor.hinweise], leerAnzeige: vor.leerAnzeige, farbHinweis: vor.farbHinweis,
-    ueberfaelligText: vor.ueberfaelligText, quittungText: quittungTextOf(input, links, rechts, t),
+    ueberfaelligText: vor.ueberfaelligText, quittungText,
     eintraegeWartenText: input.eintraegeWarten > 0 ? t('tafel.eintraegeWarten', { count: input.eintraegeWarten }) : null,
     eintraegeWartenKurz: input.eintraegeWarten > 0 ? String(input.eintraegeWarten) : null,
     helferAnfragenText: input.helferAnfragen > 0 ? t('tafel.helferAnfragen', { count: input.helferAnfragen }) : null,

@@ -65,6 +65,8 @@ export interface ScoreboardAreaProps {
   farbKonflikt?: 'same' | 'similar' | 'none';
   /** Spielzeit aus den Regeln vor dem Anpfiff (@SL-197). */
   spielzeit?: { abschnitte: number; abschnittSekunden: number } | null;
+  /** Endstand am Handy mit der Karte der Leibchen: der Uhr-Bereich wandert in die Quittungszeile (@SL-240). */
+  uhrInQuittung?: boolean;
 }
 
 /** Anstoßzeit als `HH:MM` (24 Stunden, auch in der englischen Anzeige) in Ortszeit; unlesbar → leer. */
@@ -97,7 +99,7 @@ function noticeIcon(stufe: NoticeStufe | undefined): ReactElement | undefined {
 }
 
 export function ScoreboardArea(props: ScoreboardAreaProps): ReactElement {
-  const { match, phase, view, settings, order, size, stufe, kasten, notices, eintraegeWarten, helferAnfragen = 0, onHelferAnfragen, tonHinweis, wachhaltenHinweis = null, sync, fieldName, tournamentName, leer = null, mindestpause = null, sperrHinweise = [], uebernahmeVon = null, eingetragenVon = null, naechstes = null, naechstesNamen, farbKonflikt = 'none', spielzeit = null } = props;
+  const { match, phase, view, settings, order, size, stufe, kasten, notices, eintraegeWarten, helferAnfragen = 0, onHelferAnfragen, tonHinweis, wachhaltenHinweis = null, sync, fieldName, tournamentName, leer = null, mindestpause = null, sperrHinweise = [], uebernahmeVon = null, eingetragenVon = null, naechstes = null, naechstesNamen, farbKonflikt = 'none', spielzeit = null, uhrInQuittung = false } = props;
   const { t, i18n } = useTranslation('cockpit');
   // Takt nur vor dem Anpfiff: „überfällig N Min“ (@OB-068) (@SL-118); sonst steht der Wert still
   const jetztMs = useNow(phase.zustand === 'vorAnpfiff' ? 30_000 : null);
@@ -105,10 +107,10 @@ export function ScoreboardArea(props: ScoreboardAreaProps): ReactElement {
   const model = useMemo(
     () => toScoreboardModel({
       match, phase, view, links: order.links, rechts: order.rechts, uhrArt: settings.clockMode,
-      schlussphaseMinuten: settings.finalPhaseMinutes, kasten, eintraegeWarten, helferAnfragen, jetztMs, fieldName, tournamentName,
+      uhrInQuittung, schlussphaseMinuten: settings.finalPhaseMinutes, kasten, eintraegeWarten, helferAnfragen, jetztMs, fieldName, tournamentName,
       vor: { anstoss: anstossText(kickoff, i18n.language), mindestpause, sperrHinweise, leer, uebernahmeVon, spielzeit, farbHinweis: farbKonflikt === 'none' ? null : t(farbKonflikt === 'same' ? 'anpfiff.hinweisGleich' : 'anpfiff.hinweisAehnlich') }, eingetragenVon,
     }, alsUebersetzer(t)),
-    [match, phase, view, kasten, order.links, order.rechts, settings.clockMode, settings.finalPhaseMinutes, eintraegeWarten, helferAnfragen, jetztMs, fieldName, tournamentName, kickoff, mindestpause, sperrHinweise, leer, uebernahmeVon, eingetragenVon, farbKonflikt, spielzeit, t, i18n.language],
+    [match, phase, view, kasten, order.links, order.rechts, settings.clockMode, settings.finalPhaseMinutes, eintraegeWarten, helferAnfragen, jetztMs, fieldName, tournamentName, kickoff, mindestpause, sperrHinweise, leer, uebernahmeVon, eingetragenVon, farbKonflikt, spielzeit, uhrInQuittung, t, i18n.language],
   );
   // @SL-152: solange die Quittung steht, sagt sie dasselbe genauer („Abgepfiffen · 2:1 gespeichert“); nur diese Meldung entfällt
   const meldung = notices.aktuell?.kennung === 'abgepfiffen' && model.quittungText ? null : notices.aktuell;

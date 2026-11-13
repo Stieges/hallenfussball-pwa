@@ -90,6 +90,11 @@
       "strafstoss": "nach $t(sport:events.penaltyShootout)"
     },
     "quittung": "Abgepfiffen · {{links}}:{{rechts}} gespeichert",
+    "quittungZusatz": {
+      "gespielt": "gespielt {{zeit}}",
+      "gespieltVon": "gespielt {{zeit}} von {{geplant}}",
+      "strafstoss": "$t(sport:events.penaltyShootout) {{ergebnis}}"
+    },
     "keinWeiteresSpiel": "Kein weiteres Spiel",
     "uebernahmePruefen": "Spielzeit beruht auf {{name}}s Gerät – bitte prüfen",
     "uebernahmePruefenOhneName": "Spielzeit beruht auf dem vorigen Gerät – bitte prüfen",
