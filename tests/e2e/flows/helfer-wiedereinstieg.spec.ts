@@ -101,7 +101,7 @@ test.describe('A-17c-2 Helfer-Wiedereinstieg (Netz-Stub)', () => {
   test.beforeAll(async ({}, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop', 'eigene Größen; nur im Projekt desktop');
     test.setTimeout(300_000);
-    app = await starteApp({ stubUrl: STUB_URL, log: () => undefined }) as App;
+    app = await starteApp({ stubUrl: STUB_URL, log: () => undefined });
   });
   test.afterAll(async () => { await app?.stop(); });
 

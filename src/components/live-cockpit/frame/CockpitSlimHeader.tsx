@@ -24,6 +24,8 @@ export interface CockpitSlimHeaderProps {
   verbindung: ReactNode;
   /** B-50 Q8: unauffälliger Einstieg in die Klärungsliste (nur Turnierleitung, nur bei offenen Fällen), links der Verbindung. */
   klaerung?: ReactNode;
+  /** H4-5: Statuszeile unter dem Kopf (Hallenton, später auch die Probe); eine Zeile im Fluss, `null`/leer = nichts. */
+  statuszeile?: ReactNode;
   /** Nur ab 1024 px (`layout === 'breit'`) und nur mit Handler. */
   breit?: boolean;
   onTastenkuerzel?: () => void;
@@ -58,6 +60,7 @@ export function CockpitSlimHeader(p: CockpitSlimHeaderProps): ReactElement {
   const schmal = breitePruefung.isMobile;
   const breit = p.breit ?? breitePruefung.isDesktop;
   return (
+    <>
     <header style={kopfStil(schmal)} data-testid="cockpit-slim-header">
       <button type="button" style={knopfStil} data-testid="cockpit-zurueck" aria-label={t('rahmen.zurueckAria')} onClick={() => { void navigate(buildTournamentTabPath(p.tournamentId, 'schedule')); }}>
         ← {t('rahmen.zurueck')}
@@ -72,5 +75,7 @@ export function CockpitSlimHeader(p: CockpitSlimHeaderProps): ReactElement {
       {p.klaerung}
       {p.verbindung}
     </header>
+    {p.statuszeile}
+    </>
   );
 }
