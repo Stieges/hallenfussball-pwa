@@ -78,7 +78,6 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   // B-50 (@FU-095, B6.3): verworfene Klärungseinträge stehen im Spielprotokoll der Turnierleitung (zählen nicht)
   const verworfene = useVerworfeneEintraege(tournamentId, currentMatch, istLeitung);
   const matchMitVerlauf = useMemo(() => (currentMatch && verworfene.length > 0 ? { ...currentMatch, discardedEntries: verworfene } : currentMatch), [currentMatch, verworfene]);
-
   // Einstellungen mit Vorgaben, Ton für das Ende, Gerätetyp
   const cockpitSettings = useMemo(() => ({ ...DEFAULT_MATCH_COCKPIT_SETTINGS, ...cockpitSettingsProp }), [cockpitSettingsProp]);
   const sound = useMatchSound(cockpitSettings.soundId, cockpitSettings.soundVolume, cockpitSettings.soundEnabled, tournamentId);
@@ -230,6 +229,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
     <div className={shell.container} data-layout={layout} data-stufe={layout === 'breit' ? stufe : undefined} data-testid="live-cockpit" data-leibchen-offen={leibchen.wahlOffen && isMobile ? 'true' : undefined}>
       <Rollbar als="main" className={isMobile ? `${shell.content} ${shell.contentMobile}` : shell.content}>
         <LegacyPlayArea
+          karte={layout === 'breit' ? leibchen.karte : null}
           kopf={(
             <>
               {tafel}
@@ -267,7 +267,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
         steuerung={props.steuerung}
         controls={cmd.controls}
         tastenAn={tastenAktiv}
-        karte={leibchen.karte}
+        karte={layout === 'breit' ? null : leibchen.karte}
         onWeiterNaechstes={() => { props.onLoadNextMatch(match.fieldId); }}
         onKorrigieren={props.onKorrigieren ? () => { props.onKorrigieren?.(match.id); } : undefined}
         onChooseTiebreak={props.onChooseTiebreak ? (wahl) => { props.onChooseTiebreak?.(match.id, wahl); } : undefined}

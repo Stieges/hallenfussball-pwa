@@ -127,10 +127,9 @@
   overflow-y: auto;
 }
 
-/* Laptop (@SL-218, Lage B „1.B“): die Karte und die Zeile liegen unten rechts über der Leiste, so breit wie die Ereignisspalte, nicht über die ganze Breite.
-   `!important` nur gegen den Rand, den die Karte inline trägt. */
-.container[data-layout='breit'] > [data-leibchen-leiste] > [data-leibchen-flaeche] {
-  box-sizing: border-box;
-  width: min(var(--cockpit-ereignisspalte, var(--sizing-cockpit-ereignisspalte)), 35%);
-  margin-left: auto !important;
+/* Eine Fläche, die rollt (Rollbar), endet unten mit einer weichen Kante statt mit einem halb abgeschnittenen Text – etwa im Endstand, wo die Karte der Leibchen Platz braucht */
+.container [data-rollt='true'] {
+  -webkit-mask-image: linear-gradient(to bottom, var(--color-background) calc(100% - var(--spacing-md)), transparent);
+  mask-image: linear-gradient(to bottom, var(--color-background) calc(100% - var(--spacing-md)), transparent);
 }
+

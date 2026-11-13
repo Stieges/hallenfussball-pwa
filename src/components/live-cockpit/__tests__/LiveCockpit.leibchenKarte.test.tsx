@@ -44,6 +44,9 @@ const live2 = (extra = {}) => makeLiveMatch({ id: 'spiel-2', number: 2, status: 
 const live1 = () => makeLiveMatch({ id: 'spiel-1', number: 1, status: 'FINISHED', homeScore: 2, awayScore: 1, homeTeam: { id: ASCHAU, name: 'SV Aschau' }, awayTeam: { id: SEEON, name: 'FC Seeon' } });
 const gleicheFarbe = [team(WAGING, 'TSV Waging 1', BLAU), team(PETTING, 'TSV Petting', BLAU), team(ASCHAU, 'SV Aschau', ROT), team(SEEON, 'FC Seeon', GELB)];
 
+const amHandy = (): void => { window.innerWidth = 360; window.dispatchEvent(new Event('resize')); };
+const amLaptop = (): void => { window.innerWidth = 1280; window.dispatchEvent(new Event('resize')); };
+
 /** Lässt die Uhr (`Date.now`) um `ms` weiterlaufen: der Schutz gegen den Doppeltipp zählt eine Sekunde. */
 const vergehe = (ms: number): void => { const jetzt = Date.now() + ms; vi.spyOn(Date, 'now').mockReturnValue(jetzt); };
 
@@ -68,8 +71,25 @@ function zeige(basis: Tournament, match: ReturnType<typeof live2>, extra: Partia
   return { ...ansicht, props, tippe, tipps };
 }
 
+describe('@SL-218 am Laptop steht die Karte unten rechts in der Spalte der Einträge, über der Leiste', () => {
+  it('@SL-218 Laptop: die Karte steht in der Spalte neben den Einträgen, nicht im Block der Leiste (der Fläche links nimmt sie nichts weg)', () => {
+    amLaptop();
+    zeige(turnier(gleicheFarbe, [spiel('spiel-2', WAGING, PETTING)]), live2());
+    const karte = screen.getByTestId('leibchen-karte');
+    expect(karte.parentElement).not.toContainElement(screen.getByTestId('match-start-button'));
+    expect(screen.getByTestId('cockpit-flaeche')).toContainElement(karte);
+  });
+
+  it('Gegenbeispiel: am Handy steht sie im Block über „Anpfeifen“, nicht in der Fläche', () => {
+    amHandy();
+    zeige(turnier(gleicheFarbe, [spiel('spiel-2', WAGING, PETTING)]), live2());
+    expect(screen.getByTestId('cockpit-flaeche')).not.toContainElement(screen.getByTestId('leibchen-karte'));
+  });
+});
+
 describe('@SL-206 bei gleichen Trikotfarben steht direkt über der Daumenleiste die Karte', () => {
   it('@SL-206 Spiel 2 Blau gegen Blau: Karte „TSV Waging 1 zieht Gelb“ im selben Block wie „Anpfeifen“ (klebt unten), mit „Bestätigen“ und „Keine Leibchen“', () => {
+    amHandy();
     zeige(turnier(gleicheFarbe, [spiel('spiel-2', WAGING, PETTING)]), live2());
     const karte = screen.getByTestId('leibchen-karte');
     expect(screen.getByTestId('leibchen-vorschlag')).toHaveTextContent('TSV Waging 1 zieht Gelb');
@@ -137,6 +157,7 @@ describe('@SL-208 @SL-211 nach dem Tipp bleibt eine Zeile, die Tipps bis zum Anp
   });
 
   it('@SL-208 „Ändern“ öffnet die Karte wieder an ihrem Platz (derselbe Block über der Daumenleiste)', async () => {
+    amHandy();
     const k = zeige(turnier(gleicheFarbe, [spiel('spiel-2', WAGING, PETTING)]), live2());
     await k.tippe(screen.getByTestId('leibchen-bestaetigen'));
     vergehe(1100); // ein zweiter Tipp unter einer Sekunde öffnet die Zeile nicht wieder (@SL-221)
@@ -149,6 +170,7 @@ describe('@SL-215 die Leibchen lassen sich schon im Endstand klären', () => {
   const basis = () => turnier(gleicheFarbe, [spiel('spiel-1', ASCHAU, SEEON, { matchStatus: 'finished' }), spiel('spiel-2', WAGING, PETTING)]);
 
   it('@SL-215 Spiel 1 abgepfiffen, Spiel 2 beide Blau: unter den Einträgen, direkt über „Weiter“ die Karte „TSV Waging 1 zieht Gelb“', () => {
+    amHandy();
     zeige(basis(), live1(), { upcomingMatches: [live2()] });
     const karte = screen.getByTestId('leibchen-karte');
     expect(screen.getByTestId('leibchen-vorschlag')).toHaveTextContent('TSV Waging 1 zieht Gelb');
