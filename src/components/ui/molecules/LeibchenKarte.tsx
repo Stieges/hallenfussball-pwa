@@ -104,14 +104,14 @@ export function LeibchenKarte(p: LeibchenKarteProps): ReactElement | null {
     return (
       <div style={{ ...flaeche, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }} data-leibchen-flaeche="" data-testid={`${prefix}-zeile`} data-art={p.gewaehlt.art}>
         {/* Zeichen und Satz in einem Element: ein langer Teamname umbricht zwischen den Wörtern über die ganze Breite, das Zeichen bleibt davor (`ueberlauf.element`) */}
-        <span style={{ flex: '1 1 auto', minWidth: 0, fontSize: cssVars.fontSizes.md }}>
+        <span style={{ flex: '1 1 0', minWidth: 'min-content', fontSize: cssVars.fontSizes.md }}>
           <span style={{ display: 'inline-flex', verticalAlign: 'middle', marginRight: cssVars.spacing.xs }}><MatchIcons.Shirt /></span>{text}
+          {status !== null && (
+            <span style={{ marginLeft: cssVars.spacing.xs, fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, display: 'inline-flex', alignItems: 'center', gap: cssVars.spacing.xs, verticalAlign: 'baseline' }} data-testid={`${prefix}-status`} data-status={p.senden}>
+              {p.senden === 'sent' && <Icons.Check size={iconSizeValues.sm} />}{status}
+            </span>
+          )}
         </span>
-        {status !== null && (
-          <span style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, display: 'inline-flex', alignItems: 'center', gap: cssVars.spacing.xs }} data-testid={`${prefix}-status`} data-status={p.senden}>
-            {p.senden === 'sent' && <Icons.Check size={iconSizeValues.sm} />}{status}
-          </span>
-        )}
         {p.lesen ? (
           p.onUebernehmen !== undefined && <button type="button" style={klein} onClick={p.onUebernehmen} data-testid={`${prefix}-uebernehmen`}>{t('leibchenKarte.uebernehmen')}</button>
         ) : (
