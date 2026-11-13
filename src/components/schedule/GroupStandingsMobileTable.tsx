@@ -92,7 +92,7 @@ export function GroupStandingsMobileTable({ standings, title, highlights, active
                   <td style={{ ...center, fontWeight: cssVars.fontWeights.bold }}>{placeLabel(standings, index)}</td>
                   <td style={{ ...mobileTdStyle, fontWeight: cssVars.fontWeights.semibold, fontSize: cssVars.fontSizes.md }}>
                     {/* @ZM-169: nur hier Vereinskürzel nach der Monitor-Liste; Desktop-Tabelle und Spielkarten zeigen den vollen Namen */}
-                    <StandingNameCell team={standing.team} label={monitorTeamName(standing.team.name)} playing={activeMatchTeamIds?.has(teamKey) === true} gap={cssVars.spacing.xs} breakLongWord />
+                    <StandingNameCell team={standing.team} label={monitorTeamName(standing.team.name)} playing={activeMatchTeamIds?.has(teamKey) === true} gap={cssVars.spacing.xs} />
                     {publicTieMarker?.(teamKey)}
                   </td>
                   <td style={{ ...center, fontWeight: cssVars.fontWeights.semibold }}>{standing.played}</td>

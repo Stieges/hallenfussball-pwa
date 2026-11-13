@@ -8,7 +8,7 @@ import type { Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from '@playwright/test';
 // @ts-expect-error – .mjs ohne Typen; derselbe Lader wie bei `npm run visual:metrics --saat`
-import { installiereSaat } from '../../scripts/visual-metrics/saat/lader.mjs';
+import { installiereSaat, leseSaat } from '../../scripts/visual-metrics/saat/lader.mjs';
 import { messSaat, ZUSCHAUER_CODE } from './helpers/messlaufTaching';
 import { seitenUeberlauf } from './helpers/wortbruch';
 import { kontrastVon } from './helpers/kontrast';
@@ -16,11 +16,12 @@ import { animationenFertig } from './helpers/animationenFertig';
 
 const MIN_KONTRAST = 4.5;
 
-async function oeffneTabelle(page: Page, thema: 'light' | 'dark', vorErstemSpiel = false): Promise<boolean> {
+async function oeffneTabelle(page: Page, thema: 'light' | 'dark', vorErstemSpiel = false, kurzeNamen = false): Promise<boolean> {
   await page.emulateMedia({ colorScheme: thema, reducedMotion: 'reduce' });
-  await installiereSaat(page.context(), messSaat({ vorErstemSpiel }));
-  await page.goto(`/#/live/${ZUSCHAUER_CODE}`);
-  await expect(page.getByText('SG Taching/Tengling').filter({ visible: true }).first()).toBeVisible({ timeout: 25000 });
+  await installiereSaat(page.context(), kurzeNamen ? leseSaat('hallencup-messlauf') : messSaat({ vorErstemSpiel }));
+  await page.goto(`/#/live/${kurzeNamen ? 'PHASES' : ZUSCHAUER_CODE}`);
+  await expect(page.locator('nav[aria-label="Public Navigation"]')).toBeVisible({ timeout: 25000 });
+  await expect(page.locator('[data-teamname]').filter({ visible: true }).first()).toBeVisible();
   await page.locator('nav[aria-label="Public Navigation"] button').nth(1).click();
   await expect(page.locator('.standings-table').first()).toBeVisible();
   await animationenFertig(page);
@@ -52,16 +53,22 @@ test.describe('@ZM-198 Tabelle der Zuschauer-Seite ohne Platz vor dem ersten bee
 });
 
 test.describe('@ZM-205 Tabelle der Zuschauer-Seite am Handy', () => {
-  test('@ZM-205 Platz, Name, „Sp.“, „Diff.“ und „Pkt.“ stehen in der Zeile, ohne dass etwas überläuft (auch mit dem 50-Zeichen-Namen)', async ({ page }) => {
+  test('@ZM-205 Platz, Name, „Sp.“, „Diff.“ und „Pkt.“ stehen in der Zeile, ohne dass etwas überläuft (auch mit dem 50-Zeichen-Namen: die Seite läuft nie über, die Tabelle scrollt höchstens in ihrem Kasten, kein Wort wird zerrissen, @ZM-088)', async ({ page }) => {
     const handy = await oeffneTabelle(page, 'light');
     test.skip(!handy, 'die Handy-Tabelle gilt bis 768 Pixel Breite');
     const kopf = await page.locator('.standings-table .mobile-view thead tr').first().locator('th [aria-hidden="true"]').allTextContents();
     expect(kopf).toEqual(['#', 'Sp.', 'Diff.', 'Pkt.']);
     expect(await seitenUeberlauf(page), 'kein waagerechtes Scrollen der Seite').toBe(0);
-    const ueberlaufTabellen = await page.locator('.standings-table .mobile-view').evaluateAll((l) => l.filter((el) => el.scrollWidth > el.clientWidth + 1).length);
-    expect(ueberlaufTabellen, 'keine Tabelle scrollt im Kasten').toBe(0);
     const aufgeklappt = await page.locator('.standings-table .mobile-view tbody td').filter({ hasText: /Siege|Unentschieden|Niederlagen/ }).count();
     expect(aufgeklappt, 'Siege, Unentschieden, Niederlagen und Tore stehen erst im aufgeklappten Bereich').toBe(0);
+  });
+
+  test('@ZM-205 mit kurzen Namen scrollt keine Tabelle im Kasten, die Spalte „Sp.“ und die Taste passen in 360 Pixel', async ({ page }) => {
+    const handy = await oeffneTabelle(page, 'light', false, true);
+    test.skip(!handy, 'die Handy-Tabelle gilt bis 768 Pixel Breite');
+    const ueberlauf = await page.locator('.standings-table .mobile-view').evaluateAll((l) => l.filter((el) => el.scrollWidth > el.clientWidth + 1).length);
+    expect(ueberlauf, 'keine Tabelle scrollt im Kasten').toBe(0);
+    expect(await seitenUeberlauf(page)).toBe(0);
   });
 
   test('@ZM-205 Aufklapp-Symbol der App statt „▶“: Vorlesetext „Details zu … anzeigen“, Tippfläche mindestens 44 Pixel, öffnet die Details', async ({ page }) => {

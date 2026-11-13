@@ -15,18 +15,18 @@ export interface StandingNameCellProps {
   label?: string;
   playing: boolean;
   gap: string;
-  /** Ein Wort, das allein länger ist als die Spalte, bricht an beliebiger Stelle, statt die Tabelle zu verbreitern (@ZM-205; wie bisher in den Tabellen). */
+  /** Ein Wort, das allein länger ist als die Spalte, bricht an beliebiger Stelle (`anywhere`); Vorgabe: nie mitten im Wort, die Tabelle scrollt dann in ihrem Kasten (@ZM-088). */
   breakLongWord?: boolean;
 }
 
-export function StandingNameCell({ team, label, playing, gap, breakLongWord = true }: StandingNameCellProps) {
+export function StandingNameCell({ team, label, playing, gap, breakLongWord = false }: StandingNameCellProps) {
   const { t } = useTranslation('tournament');
   const style: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
     gap,
-    // keine Kürzung; `overflow-wrap: break-word` bricht nur ein Wort, das allein länger ist als die Zeile (@OB-025)
-    overflowWrap: breakLongWord ? 'anywhere' : 'break-word',
+    // keine Kürzung, nie mitten im Wort (@ZM-088): ein zu langes Wort lässt die Tabelle in ihrem Kasten scrollen
+    overflowWrap: breakLongWord ? 'anywhere' : 'normal',
     hyphens: 'manual',
     minWidth: 0,
   };
