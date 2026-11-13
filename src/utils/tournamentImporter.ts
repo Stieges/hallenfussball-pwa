@@ -20,6 +20,7 @@ import {
   FinalsRefereeMode,
 } from '../types/tournament';
 import { generateUniqueId } from './idGenerator';
+import { parseTeamColors } from './importTeamColors';
 import { teamSlot, pendingSlot, matchSideTeamId } from '../core/models/matchSlot';
 import type { MatchSlot } from '../core/models/schemas/MatchSlotSchema';
 import { FILE_SOURCE_KEY, checkImportedFinalsPlan, parseFileSource, parseFinalsPhase, type FileSide } from './importFinalsPlan';
@@ -161,13 +162,20 @@ function parseJSONTournament(content: string): ImportValidationResult {
     const oldId = String(t.id ?? `imported-${index}`);
     const newId = generateUniqueId();
     teamIdMap.set(oldId, newId);
+    const name = String(t.name ?? `Team ${index + 1}`);
 
     return {
       id: newId,
-      name: String(t.name ?? `Team ${index + 1}`),
+      name,
       group: t.group ? String(t.group) : undefined,
+      ...parseTeamColors(t.colors, name, index, errors),
     };
   });
+
+  // @W1-043: eine ungültige Farbangabe wird genannt, nicht still weggelassen
+  if (errors.length > 0) {
+    return { isValid: false, errors, warnings };
+  }
 
   // Parse matches if provided
   let matches: Match[] = [];
