@@ -182,9 +182,11 @@ export const useUserTournaments = (
       // This automatically handles Local vs Cloud vs Offline
       const loadedTournaments = await repository.listForCurrentUser();
       // G7: Turniere mit Engine-Einträgen im Gastkonto im Konto ausblenden
+      // @W5-040: gelöschte Turniere (Papierkorb) stehen in der Cloud-Liste, gehören aber nicht in „Meine Turniere“
+      const visibleTournaments = loadedTournaments.filter((t) => t.deletedAt === undefined);
       const allTournaments = hideGuestTournaments
-        ? await filterWithoutGuestEngineEntries(loadedTournaments)
-        : loadedTournaments;
+        ? await filterWithoutGuestEngineEntries(visibleTournaments)
+        : visibleTournaments;
 
       // Combine memberships with tournaments
       const userTournaments: UserTournament[] = [];

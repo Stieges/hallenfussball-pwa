@@ -26,6 +26,12 @@ vi.mock('./hooks/useTournaments', () => ({
   }),
 }));
 
+// @W5-039: /edit lädt das ganze Turnier über das Repository (nie aus der Liste der Startseite); hier liefert es das Turnier der Aufgabe
+vi.mock('./hooks/useRepository', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./hooks/useRepository')>()),
+  useRepository: () => ({ get: () => Promise.resolve(liste.current[0] ?? null) }),
+}));
+
 // Verwaltung: ein Knopf, der „Im Wizard bearbeiten“ für das Turnier der Aufgabe auslöst.
 let verwaltungsTurnier: Tournament;
 vi.mock('./screens/TournamentManagementScreen', () => ({

@@ -8,6 +8,7 @@
  * @see supabaseMappers.ts for type conversion logic
  */
 
+import { assertWholeTournament } from './listEntryGuard';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
@@ -34,6 +35,13 @@ import { readAccountTournamentList, type CloudTournamentList } from './accountTo
 import { shareIfUnshared, type ShareIfUnsharedResult } from './shareIfUnshared';
 import { callDisplayTournament, callPublicTournament } from './publicPayloadRpc';
 import type { PublicReply } from './publicPayload';
+
+/** Y2: lehnt die Zeilen-Sicherheit (RLS) ein Update ab, kommt kein Fehler, nur 0 Zeilen -- das darf nie still bleiben. */
+function assertRowAffected(rows: ReadonlyArray<{ id: string }> | null, operation: string, id: string): void {
+  if (rows === null || rows.length === 0) {
+    throw new RepositoryError(operation, `Turnier ${id}: keine Zeile geändert (keine Berechtigung oder Turnier nicht vorhanden)`);
+  }
+}
 
 /**
  * Gets the Supabase client or throws an error if not configured.
@@ -256,6 +264,7 @@ export class SupabaseRepository implements ITournamentRepository {
    * Ohne `mustExist` (noch nie in der Cloud, @FU-124) legt die erste Übertragung das Turnier an.
    */
   async save(tournament: Tournament, options: { mustExist?: boolean } = {}): Promise<number> {
+    assertWholeTournament(tournament); // @W5-041: der Voll-Ersatz löscht, was dem Stand fehlt – nie mit einem Listen-Eintrag
     // Get current user for owner_id
     const {
       data: { user },
@@ -811,12 +820,13 @@ export class SupabaseRepository implements ITournamentRepository {
   }
 
   async delete(id: string): Promise<void> {
-    const { error } = await getSupabase().from('tournaments').delete().eq('id', id);
+    const { data, error } = await getSupabase().from('tournaments').delete().eq('id', id).select('id');
 
     if (error) {
       console.error('Failed to delete tournament:', error);
       throw new RepositoryError('delete', error.message, error);
     }
+    assertRowAffected(data, 'delete', id);
   }
 
   // =============================================================================
@@ -839,31 +849,41 @@ export class SupabaseRepository implements ITournamentRepository {
   /**
    * Soft deletes a tournament (moves to trash)
    */
-  async softDelete(id: string): Promise<void> {
-    const { error } = await getSupabase()
+  async softDelete(id: string, at: string = new Date().toISOString()): Promise<void> {
+    const { data, error } = await getSupabase()
       .from('tournaments')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', id);
+      .update({ deleted_at: at })
+      .eq('id', id)
+      .select('id');
 
     if (error) {
       console.error('Failed to soft delete tournament:', error);
       throw new RepositoryError('softDelete', error.message, error);
     }
+    assertRowAffected(data, 'softDelete', id);
+  }
+
+  /** @W5-040: Papierkorb ändert nur die Löschmarke (`deleted_at`), nie Teams oder Spiele. */
+  async setTrashed(id: string, deletedAt: string | null, metadata: Partial<Tournament> = {}): Promise<void> {
+    await (deletedAt === null ? this.restore(id) : this.softDelete(id, deletedAt));
+    if (Object.keys(metadata).length > 0) { await this.updateTournamentMetadata(id, metadata); }
   }
 
   /**
    * Restores a soft-deleted tournament
    */
   async restore(id: string): Promise<void> {
-    const { error } = await getSupabase()
+    const { data, error } = await getSupabase()
       .from('tournaments')
       .update({ deleted_at: null })
-      .eq('id', id);
+      .eq('id', id)
+      .select('id');
 
     if (error) {
       console.error('Failed to restore tournament:', error);
       throw new RepositoryError('restore', error.message, error);
     }
+    assertRowAffected(data, 'restore', id);
   }
 
   /**

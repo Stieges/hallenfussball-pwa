@@ -38,4 +38,12 @@ describe('CA-5 useUserTournaments: Rolle aus dem Listenobjekt', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.tournaments.map((u) => [u.tournament.id, u.membership.role])).toEqual([['eigen', 'owner'], ['nikolaus', 'co-admin']]);
   });
+
+  it('@W5-040 gelöschte Turniere (Papierkorb) stehen nicht in „Meine Turniere“; Gegenbeispiel: ein nicht gelöschtes bleibt', async () => {
+    hoisted.repoList = [{ ...tournament('korb'), deletedAt: '2026-11-10T00:00:00.000Z' }, tournament('aktiv')];
+    const { result } = renderHook(() => useUserTournaments('name'));
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.tournaments.map((u) => u.tournament.id)).toEqual(['aktiv']);
+  });
 });

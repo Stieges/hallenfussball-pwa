@@ -508,6 +508,12 @@ export interface Tournament {
   anyMatchStarted?: boolean;
   /** Nur Listen aus der Cloud (ohne Spiele): Ende des letzten Spiels, wenn jedes Spiel entschieden ist (@LZ-005, Hinweis auf der Startseite). Nie gespeichert. */
   lastMatchEndedAt?: string;
+  /**
+   * @W5-041 (Befund C-ENTWURF-WIEDEROEFFNEN-LOESCHT-TEAMS): nur Listen-Einträge aus der Cloud (Kopfdaten ohne Teams und Spiele).
+   * Ein so gekennzeichneter Stand ist kein ganzes Turnier: die Datenschicht lehnt `save` ab, weil der Voll-Ersatz am Server
+   * sonst Teams und Spiele löschen würde, die dem Eintrag fehlen. Nie gespeichert.
+   */
+  listEntryOnly?: true;
 
   // Dashboard Soft Delete (Papierkorb)
   /** ISO Date when moved to trash. Undefined = not deleted */

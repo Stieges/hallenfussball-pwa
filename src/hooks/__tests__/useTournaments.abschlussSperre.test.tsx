@@ -11,12 +11,13 @@ import type { Tournament } from '../../types/tournament';
 const hoisted = vi.hoisted(() => ({
   repoList: [] as unknown[],
   save: vi.fn(async () => undefined),
+  setTrashed: vi.fn(async () => undefined),
 }));
 vi.mock('../../features/auth/hooks/useAuth', () => ({
   useAuth: () => ({ user: { id: 'u1' }, isAuthenticated: false, isGuest: true, isAnonymous: false }),
 }));
 vi.mock('../useRepository', () => {
-  const repository = { listForCurrentUser: async () => hoisted.repoList, save: hoisted.save }; // stabil: sonst lädt der Hook endlos neu
+  const repository = { listForCurrentUser: async () => hoisted.repoList, save: hoisted.save, setTrashed: hoisted.setTrashed }; // stabil: sonst lädt der Hook endlos neu
   return { useRepository: () => repository };
 });
 
@@ -43,11 +44,12 @@ describe('@LZ-036 Startseite nach dem Abschluss', () => {
     expect(hoisted.save).not.toHaveBeenCalled();
   });
 
-  it('Gegenbeispiel: offen – „In den Papierkorb“ wird gespeichert', async () => {
+  it('Gegenbeispiel: offen – „In den Papierkorb“ wird ausgeführt', async () => {
     const { result } = renderHook(() => useTournaments());
     await waitFor(() => expect(result.current.tournaments).toHaveLength(2));
     await act(async () => { await result.current.softDeleteTournament('auf'); });
-    expect(hoisted.save).toHaveBeenCalledTimes(1);
+    expect(hoisted.setTrashed).toHaveBeenCalledTimes(1); // @W5-040: nur die Löschmarke, nie das ganze Turnier
+    expect(hoisted.save).not.toHaveBeenCalled();
   });
 
   it('Review #394 m-1: eine ältere Liste (offener Stand) öffnet die Sperre nicht wieder', async () => {
