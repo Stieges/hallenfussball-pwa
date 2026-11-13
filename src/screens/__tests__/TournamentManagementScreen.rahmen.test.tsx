@@ -14,7 +14,7 @@ const neuAbschluss = vi.hoisted(() => ({ aufruf: vi.fn() }));
 // A-15b (R2 PR 2): der Auslöser „erneut abschließen nach Korrektur“ hängt am Bildschirm der Turnierverwaltung
 vi.mock('../../hooks/useAutoRecompletion', () => ({ useAutoRecompletion: neuAbschluss.aufruf }));
 const verwaltung = vi.hoisted(() => ({
-  tournament: { id: 't-1', title: 'Hallencup Süd', ageClass: 'U11', date: '2026-11-28', numberOfFields: 1, teams: [], matches: [] },
+  tournament: { id: 't-1', title: 'Hallencup Süd', ageClass: 'U11', date: '2026-11-28', numberOfFields: 1, teams: [], matches: [{ id: 'm1' }] },
   schedule: { allMatches: [], phases: [], teams: [] },
 }));
 // GA4 A-13c: Spielplan und Tabellen liegen unter den Anbietern für „Gruppe abschließen“ (Rechte, Repositories); hier nur die Hülle des Bildschirms

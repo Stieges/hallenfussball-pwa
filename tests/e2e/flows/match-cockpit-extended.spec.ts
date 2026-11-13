@@ -11,6 +11,7 @@
  */
 
 import { test, expect } from '../helpers/test-fixtures';
+import { mitSpielplan } from '../helpers/seedMatches';
 import { schliesseTorAuswahl } from '../helpers/cockpitNeu';
 
 /**
@@ -24,7 +25,7 @@ function getFutureDate(): string {
 
 function createTestTournamentWithMatch() {
   const futureDate = getFutureDate();
-  return {
+  return mitSpielplan({
     id: 'cockpit-extended-test',
     title: 'Cockpit Test Turnier',
     status: 'published',
@@ -60,11 +61,10 @@ function createTestTournamentWithMatch() {
       { id: '00000000-0000-4000-8000-0000000000e3', name: 'Test Team C' },
       { id: '00000000-0000-4000-8000-0000000000e4', name: 'Test Team D' },
     ],
-    // Let the app generate matches from the schedule
-    matches: [],
+    // matches: die Spiele erzeugt `mitSpielplan` (die Verwaltung erzeugt beim Öffnen keinen Plan, @W5-042)
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-  };
+  });
 }
 
 /**

@@ -31,6 +31,7 @@ import { TabellenTabMitAdresse } from '../features/tournament-management/Tabelle
 import { StandingTieProvider } from '../features/tournament-management/standings/StandingTieProvider';
 import { GroupCompletionProvider } from '../features/tournament-management/group-completion/GroupCompletionProvider';
 import { ManagementTab } from '../features/tournament-management/ManagementTab';
+import { ScheduleMissingNotice } from '../features/tournament-management/ScheduleMissingNotice';
 import { SettingsTabConnected } from '../features/tournament-management/SettingsTabConnected';
 import { TeamsTab } from '../features/tournament-management/TeamsTab';
 import { MonitorsConfigTab } from '../features/tournament-management/MonitorsConfigTab';
@@ -216,6 +217,8 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
     );
   }
 
+  const noMatches = tournament.matches.length === 0;
+
   const containerStyle: CSSProperties = {
     minHeight: 'var(--min-h-screen)',
     ...(vollbild ? { flex: 1, minHeight: 0 } : {}),
@@ -245,7 +248,11 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
 
       {/* TAB CONTENT */}
       <div style={contentStyle}>
-        {(activeTab === 'schedule' || activeTab === 'tabellen') && (
+        {/* @W5-042: ohne Spiele erzeugt die Verwaltung keinen Plan (Laden schreibt nie), sie weist auf den Wizard hin */}
+        {noMatches && (activeTab === 'schedule' || activeTab === 'tabellen' || activeTab === 'management') && (
+          <ScheduleMissingNotice onOpenWizard={() => { void navigate(`/tournament/${tournamentId}/edit`); }} />
+        )}
+        {!noMatches && (activeTab === 'schedule' || activeTab === 'tabellen') && (
           // GA4 A-13c: Spielplan und Tabellen teilen sich Rechte, Netz und den Ablauf „Gruppe abschließen“ (Banner, Dialoge)
           <StandingTieProvider tournamentId={tournamentId} onChanged={reloadFresh}>
             <GroupCompletionProvider tournament={tournament}>
@@ -275,7 +282,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
             </GroupCompletionProvider>
           </StandingTieProvider>
         )}
-        {activeTab === 'management' && (
+        {!noMatches && activeTab === 'management' && (
           <ManagementTab
             tournament={tournament}
             schedule={schedule}

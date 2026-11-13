@@ -12,30 +12,8 @@ export class ScheduleService {
     constructor(private repository: ITournamentRepository) { }
 
     /**
-     * Initializes the schedule for a given tournament.
-     * - If matches exist in DB -> Returns them (Truth).
-     * - If matches empty -> Generates them using Rules, Persists, Returns.
-     */
-    async initializeSchedule(tournamentId: string): Promise<Match[]> {
-        const tournament = await this.repository.get(tournamentId);
-
-        if (!tournament) {
-            throw new Error(`Tournament ${tournamentId} not found`);
-        }
-
-        // A. Truth exists in DB
-        if (tournament.matches.length > 0) {
-            // NOTE: We do NOT re-generate here. That was the bug.
-            return tournament.matches;
-        }
-
-        // B. First-time Generation (fresh)
-        return this.regenerateSchedule(tournamentId);
-    }
-
-    /**
      * Forces a re-generation of the schedule based on current tournament rules.
-     * WARNING: Overwrites existing matches!
+     * WARNING: Overwrites existing matches! Nur als bewusste Aktion aufrufen -- nie beim Laden/Öffnen (@W5-042).
      */
     async regenerateSchedule(tournamentId: string): Promise<Match[]> {
         const tournament = await this.repository.get(tournamentId);

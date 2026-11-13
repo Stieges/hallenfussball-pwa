@@ -107,31 +107,42 @@ export function useTournamentManager(tournamentId: string) {
     }
 
     // Load Tournament
-    const loadTournament = useCallback(async (options?: { fresh?: boolean }) => {
-        if (!tournamentId) {return;}
+    const loadTournament = useCallback(async (options?: { fresh?: boolean }): Promise<Tournament | null | undefined> => {
+        if (!tournamentId) {return undefined;}
         const stillActive = () => activeIdRef.current === tournamentId;
 
         try {
             if (!options?.fresh) { setIsLoading(true); } // A-08f3b: Laden-Anzeige nur beim ersten Laden
             const data = await service.loadTournament(tournamentId, options);
-            if (!stillActive()) { return; }
+            if (!stillActive()) { return undefined; }
             setTournament(data);
             setError(null);
+            return data;
         } catch (err) {
-            if (!stillActive()) { return; }
+            if (!stillActive()) { return undefined; }
             console.error('Failed to load tournament:', err);
             setError('Fehler beim Laden des Turniers');
+            return undefined;
         } finally {
             if (stillActive()) { setIsLoading(false); }
         }
     }, [service, tournamentId]);
 
-    // Initial Load
+    // Außen bleibt `reload` ohne Rückgabewert (Aufrufer erwarten `void | Promise<void>`)
+    const reload = useCallback(async (options?: { fresh?: boolean }): Promise<void> => { await loadTournament(options); }, [loadTournament]);
+
+    // Initial Load. @W5-042: das erste Laden ist local-first (die lokale Kopie steht sofort); der Cloud-Abruf läuft im Hintergrund und
+    // meldet sein Ergebnis nicht an die Anzeige. Liegt lokal nur eine ältere Kopie OHNE Spiele (z. B. der Entwurf, den ein anderes Gerät
+    // inzwischen festgelegt hat), folgt genau ein frisches Lesen: es hängt sich an den laufenden Abruf, führt den Stand des Servers mit
+    // der lokalen Kopie zusammen und zeigt ihn an (ohne Netz bleibt die lokale Kopie). Das Lesen schreibt nie.
     useEffect(() => {
-        void loadTournament();
+        void loadTournament().then((first) => {
+            if (first?.matches.length === 0) { return loadTournament(FRESH); }
+            return undefined;
+        });
     }, [loadTournament]);
     // A-08f3b (@FU-087, @FU-001): Push und Abfrage-Ausweichen lesen frisch aus der Cloud
-    const loadFresh = useCallback(() => loadTournament(FRESH), [loadTournament]);
+    const loadFresh = useCallback(async (): Promise<void> => { await loadTournament(FRESH); }, [loadTournament]);
     useEngineCatchUpOnCloudChange(tournamentId); // H-1: geladene Engine-Kopien nachladen
     // A-08f3b2-F (I-1): Pushes eines Turniers bündeln (Debounce + Max-Wait), dann EIN frisches Lesen
     const loadFreshRef = useRef(loadFresh);
@@ -292,7 +303,7 @@ export function useTournamentManager(tournamentId: string) {
         handleTournamentUpdate,
         saveTournamentOrThrow,
         applyRemote,
-        reload: loadTournament,
+        reload,
         scheduleService: service.schedule,
         // Realtime status
         isRealtimeConnected,

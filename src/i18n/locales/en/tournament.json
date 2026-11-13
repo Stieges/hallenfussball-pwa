@@ -1246,6 +1246,11 @@
       "ownGoals_other": "{{count}} own goals"
     }
   },
+  "scheduleMissing": {
+    "title": "Schedule not created yet",
+    "text": "This tournament has no matches yet. Finish it in the wizard and the schedule will appear here.",
+    "action": "Finish in the wizard"
+  },
   "rights": {
     "leadOnlyHint": "Only the tournament management can change this",
     "closedTitle": "Tournament finished",
