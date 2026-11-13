@@ -7,6 +7,7 @@ import { type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars, touchTargets } from '../../../design-tokens';
 import type { RuntimeMatchEvent } from '../../../types/tournament';
+import { bindTrailingNumber, splitProtocolText } from './protocolText';
 import { retractedMarkStyle, retractedRowStyle, formatTime, type ProtocolEntry } from './protocolEntries';
 import { cardKindOf } from '../../../utils/cardKind';
 import { FOUL_SYMBOL } from '../../../utils/eventSymbols';
@@ -70,6 +71,7 @@ export function ProtocolRow({
     border: `1px solid ${cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.md,
     minHeight: 56,
+    gap: cssVars.spacing.sm,
   };
 
   const rowStyle: CSSProperties = variant === 'sidebar'
@@ -117,12 +119,17 @@ export function ProtocolRow({
     alignItems: 'center',
     gap: cssVars.spacing.sm,
     flex: 1,
-    overflow: 'hidden',
+    minWidth: 0,
   };
 
+  /** Feste Breite: Uhrzeit und Text beginnen in jeder Zeilenart an derselben Stelle (Symbole sind verschieden breit). */
   const iconStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.lg,
     flexShrink: 0,
+    width: cssVars.spacing.lg,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   };
 
   const timeStyle: CSSProperties = {
@@ -130,17 +137,18 @@ export function ProtocolRow({
     fontWeight: cssVars.fontWeights.semibold,
     fontVariantNumeric: 'tabular-nums',
     color: cssVars.colors.textSecondary,
-    flexShrink: 0,
-    minWidth: 50,
   };
 
+  /** Handy-Blatt: die Beschreibung bricht an Leerzeichen um, nie mitten im Wort und nie mit „…“ (@OB-021, @OB-025). */
   const descStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.textPrimary,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
+    whiteSpace: 'normal',
+    overflowWrap: 'normal',
+    wordBreak: 'normal',
+    hyphens: 'manual',
   };
+  const sheetTextStyle: CSSProperties = { display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 };
 
   const sheetEditButtonStyle: CSSProperties = {
     display: 'flex',
@@ -157,6 +165,21 @@ export function ProtocolRow({
     minWidth: 80,
     minHeight: 44,
   };
+
+  // @SL-242: Zeitstrafe, die ein gültiges Gegentor beendet hat -- abgeleitet, nur im Cockpit-Protokoll; zurückgenommene Zeilen tragen nichts.
+  const endedBySeconds = event.type === 'TIME_PENALTY' && !retracted ? event.endedByGoalSeconds : undefined;
+  const endedNote = endedBySeconds === undefined ? null : t('sidebar.penaltyEndedByGoal', { time: formatTime(endedBySeconds) });
+  const spokenDescription = endedNote === null ? description : `${description}, ${endedNote}`;
+  const endedNoteStyle: CSSProperties = {
+    display: 'block',
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textSecondary,
+    whiteSpace: 'normal',
+    overflowWrap: 'normal',
+  };
+  const endedNoteElement = endedNote === null ? null : (
+    <span style={endedNoteStyle} data-testid="event-penalty-ended-by-goal">{endedNote}</span>
+  );
 
   const warning = isIncomplete ? <span style={incompleteStyle}>⚠️</span> : null;
   const discarded = entry.discarded;
@@ -182,15 +205,17 @@ export function ProtocolRow({
   return (
     <div
       style={rowStyle}
+      data-event-type={event.type}
       data-testid={discardedText !== null ? 'event-row-discarded' : retracted ? 'event-row-retracted' : undefined}
       aria-label={discardedText !== null ? `${description} – ${discardedText}` : retracted ? t('sidebar.retractedAria', { description }) : undefined}
     >
       {variant === 'sidebar' ? (
         <>
-          <span>
+          <span style={{ minWidth: 0 }}>
             {icon} {description}
             {warning}
             {mark}
+            {endedNoteElement}
           </span>
           <div style={logEntryRightStyle}>
             <span style={logTimeStyle}>{time}</span>
@@ -198,7 +223,7 @@ export function ProtocolRow({
               <button
                 style={sidebarEditButtonStyle}
                 onClick={handleEditClick}
-                aria-label={t('sidebar.editAria', { description })}
+                aria-label={t('sidebar.editAria', { description: spokenDescription })}
                 title={t('sidebar.edit')}
               >
                 ✏️
@@ -210,15 +235,20 @@ export function ProtocolRow({
         <>
           <div style={eventInfoStyle}>
             <span style={iconStyle}>{icon}</span>
-            <span style={timeStyle}>{time}</span>
-            <span style={descStyle}>
-              {description}
-              {warning}
-              {mark}
-            </span>
+            <div style={sheetTextStyle}>
+              <span style={timeStyle}>{time}</span>
+              <span style={descStyle}>
+                {splitProtocolText(bindTrailingNumber(description)).map((part, index) => (
+                  part.keepTogether ? <span key={index} style={{ whiteSpace: 'nowrap' }}>{part.text}</span> : part.text
+                ))}
+                {warning}
+                {mark}
+              </span>
+              {endedNoteElement}
+            </div>
           </div>
           {canEdit && (
-            <button style={sheetEditButtonStyle} onClick={handleEditClick} aria-label={`${description} bearbeiten`}>
+            <button style={sheetEditButtonStyle} onClick={handleEditClick} aria-label={`${spokenDescription} bearbeiten`}>
               ✏️ Bearbeiten
             </button>
           )}

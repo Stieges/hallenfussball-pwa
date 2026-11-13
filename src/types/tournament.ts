@@ -1047,6 +1047,8 @@ export interface RuntimeMatchEvent {
   clockMs?: number;
   /** Event was recorded without details - needs completion */
   incomplete?: boolean;
+  /** Zeitstrafe, die ein Gegentor beendet hat: Spielsekunde dieses Tores (abgeleitet, nur Cockpit-Protokoll, @SL-242). */
+  endedByGoalSeconds?: number;
 }
 
 /**
