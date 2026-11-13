@@ -29,8 +29,13 @@ test.use({ locale: 'de-DE', timezoneId: 'Europe/Berlin', serviceWorkers: 'block'
 test.beforeEach(async ({}, testInfo) => { // eslint-disable-line no-empty-pattern
   test.skip(testInfo.project.name !== 'desktop', 'Fenstergröße setzt der Test selbst, nur im Projekt „desktop“.');
 });
-/** Der Schutz gegen Doppeltipp (@SL-221) schluckt ein „Ändern“ in der ersten Sekunde nach „Bestätigen“. */
-const NACH_DOPPELTIPP_MS = 1100;
+/** Der Schutz gegen Doppeltipp (@SL-221) schluckt ein „Ändern“ in der ersten Sekunde nach „Bestätigen“: antippen, bis die Karte offen ist (keine feste Wartezeit). */
+async function aendernOeffnen(page: Page): Promise<void> {
+  await expect(async () => {
+    await page.getByTestId('leibchen-aendern').click({ timeout: 1000 });
+    await expect(page.getByTestId('leibchen-vorschlag')).toBeVisible({ timeout: 300 });
+  }).toPass({ timeout: 10000 });
+}
 
 interface Box { x: number; y: number; width: number; height: number }
 
@@ -40,7 +45,7 @@ async function box(el: Locator): Promise<Box> {
   return b;
 }
 
-async function oeffne(page: Page, fenster: { width: number; height: number }, hallenFarben?: readonly string[] | null): Promise<{ tippe: (el: Locator) => Promise<void>; tipps: () => number }> {
+async function oeffne(page: Page, fenster: { width: number; height: number }, hallenFarben?: readonly string[] | null, turnier = 'leibchen-7a'): Promise<{ tippe: (el: Locator) => Promise<void>; zaehle: () => void; tipps: () => number }> {
   await page.setViewportSize({ width: fenster.width, height: fenster.height });
   const saat = leseSaat('leibchen-vor-anpfiff');
   if (hallenFarben !== undefined) {
@@ -51,11 +56,11 @@ async function oeffne(page: Page, fenster: { width: number; height: number }, ha
   }
   await installiereSaat(page.context(), saat);
   // Die App ersetzt beim Start einmal die Adresse; ein dadurch abgebrochenes `goto` ist kein Fehler, entscheidend ist die Karte im Bild
-  await page.goto(`/#/tournament/leibchen-7a/live?matchId=${SPIEL_3}`, { waitUntil: 'commit' }).catch(() => undefined);
-  await expect(page.getByTestId('leibchen-karte')).toBeVisible({ timeout: 25000 });
+  await page.goto(`/#/tournament/${turnier}/live?matchId=${SPIEL_3}`, { waitUntil: 'commit' }).catch(() => undefined);
+  await expect(page.locator('[data-testid="leibchen-karte"],[data-testid="leibchen-zeile"]').first()).toBeVisible({ timeout: 25000 });
   await page.evaluate(() => document.fonts.ready);
   let n = 0;
-  return { tippe: async (el) => { n += 1; await el.click(); }, tipps: () => n };
+  return { tippe: async (el) => { n += 1; await el.click(); }, zaehle: () => { n += 1; }, tipps: () => n };
 }
 
 for (const f of FENSTER) {
@@ -109,8 +114,8 @@ for (const f of FENSTER) {
       expect(o.tipps()).toBe(3);
       // K-8: eine Wahl wieder aufgeben („Ändern“, „Keine Leibchen“) = 2 Tipps
       const davor = o.tipps();
-      await page.waitForTimeout(NACH_DOPPELTIPP_MS);
-      await o.tippe(page.getByTestId('leibchen-aendern'));
+      await aendernOeffnen(page);
+      o.zaehle(); // der erfolgreiche Tipp auf „Ändern“ zählt einmal (die vom Schutz geschluckten zählen nicht)
       await o.tippe(page.getByTestId('leibchen-keine'));
       await expect(page.getByTestId('leibchen-zeile')).toContainText('Keine Leibchen');
       expect(o.tipps() - davor).toBe(2);
@@ -195,7 +200,7 @@ for (const f of FENSTER) {
       });
     }
 
-    test(`@SL-219 @SL-150 Nachtragen im laufenden Spiel: „X“ und „Speichern“ stehen im Fenster, „Andere Farbe …“ öffnet dasselbe Blatt mit allen Feldern im Fenster (${f.name})`, async ({ page }) => {
+    test(`@SL-219 @SL-150 Nachtragen im laufenden Spiel: nichts rollt, „X“ und „Speichern“ stehen im Fenster, „Andere Farbe …“ öffnet dasselbe Blatt mit allen Feldern im Fenster (${f.name})`, async ({ page }) => {
       await oeffne(page, f);
       await page.getByTestId('leibchen-bestaetigen').click();
       await page.getByTestId('match-start-button').click();
@@ -205,7 +210,8 @@ for (const f of FENSTER) {
       const nachtragen = page.getByTestId('leibchen-nachtragen');
       await expect(nachtragen).toBeVisible();
       await animationenFertig(page);
-      // Kopf („X“) und Tasten stehen fest; die Wahl dazwischen darf bei engem Fenster rollen (Schriften der Umgebung), die Tasten bleiben im Bild
+      // streng (@SL-150/@SL-219): nichts rollt im Blatt, „X“ oben und „Speichern“ unten stehen im Fenster
+      expect(await nachtragen.evaluate((el) => [el, ...el.querySelectorAll('*')].filter((e) => e.scrollHeight > e.clientHeight + 1 && ['auto', 'scroll'].includes(getComputedStyle(e).overflowY)).length), 'nichts rollt im Nachtragen-Blatt').toBe(0);
       const schliessen = await box(page.getByTestId('nachtrag-schliessen'));
       expect(schliessen.y).toBeGreaterThanOrEqual(0);
       expect(schliessen.height).toBeGreaterThanOrEqual(44);
@@ -214,9 +220,12 @@ for (const f of FENSTER) {
       await page.getByTestId('nachtrag-andere').click();
       const felder = await page.locator('[data-testid="nachtrag-andere-blatt"] [data-testid^="nachtrag-farbe-"]').all();
       expect(felder).toHaveLength(8);
+      const blatt = page.getByTestId('nachtrag-andere-blatt');
+      expect(await blatt.evaluate((el) => [el, ...el.querySelectorAll('*')].filter((e) => e.scrollHeight > e.clientHeight + 1 && ['auto', 'scroll'].includes(getComputedStyle(e).overflowY)).length), 'nichts rollt im Blatt „Andere Farbe“').toBe(0);
       for (const el of felder) {
         const b = await box(el);
         expect(b.height).toBeGreaterThanOrEqual(44);
+        expect(b.y).toBeGreaterThanOrEqual(0);
         expect(b.y + b.height).toBeLessThanOrEqual(f.height);
         expect(b.x + b.width).toBeLessThanOrEqual(f.width);
       }
@@ -234,14 +243,28 @@ for (const f of FENSTER) {
       });
     }
 
+    test(`@OB-021 @SL-208 Teamname mit 50 Zeichen: der Name im Kopf steht vollständig über der Zeile, nichts ist abgeschnitten (${f.name})`, async ({ page }) => {
+      await oeffne(page, f, undefined, 'leibchen-lang');
+      const name = page.getByTestId('team-name-home');
+      await expect(name).toBeVisible();
+      const zeile = await box(page.getByTestId('leibchen-zeile'));
+      const n = await name.evaluate((el) => { const r = el.getBoundingClientRect(); return { unten: r.bottom, oben: r.top, ueberlauf: el.scrollHeight - el.clientHeight, breite: el.scrollWidth - el.clientWidth }; });
+      expect(n.oben).toBeGreaterThanOrEqual(0);
+      expect(n.unten, 'der Name endet über der Zeile').toBeLessThanOrEqual(zeile.y + 1);
+      expect(n.ueberlauf).toBeLessThanOrEqual(0);
+      expect(n.breite).toBeLessThanOrEqual(0);
+      // der Kopf (nicht nur der Name) steht ganz im sichtbaren Bereich der Fläche über der Zeile
+      const kopf = await page.getByTestId('team-head-home').evaluate((el) => el.getBoundingClientRect().bottom);
+      expect(kopf).toBeLessThanOrEqual(zeile.y + 1);
+    });
+
     test(`@SL-224 „Ändern“ in der Zeile und jede Farbe der Wahl sind mindestens 44×44 groß (${f.name})`, async ({ page }) => {
       await oeffne(page, f);
       await page.getByTestId('leibchen-bestaetigen').click();
       const aendern = await box(page.getByTestId('leibchen-aendern'));
       expect(aendern.height).toBeGreaterThanOrEqual(44);
       expect(aendern.width).toBeGreaterThanOrEqual(44);
-      await page.waitForTimeout(NACH_DOPPELTIPP_MS);
-      await page.getByTestId('leibchen-aendern').click();
+      await aendernOeffnen(page);
       await page.getByTestId('leibchen-vorschlag').click();
       await page.getByTestId('leibchen-andere').click();
       for (const el of await page.locator('[data-testid^="leibchen-farbe-"], [data-testid^="leibchen-team-"]').all()) {

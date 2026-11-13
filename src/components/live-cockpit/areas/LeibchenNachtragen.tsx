@@ -47,7 +47,7 @@ export function LeibchenNachtragen({ isOpen, onClose, daten }: LeibchenNachtrage
       )}
     >
       {/* Kopf und Tasten stehen fest, die Wahl dazwischen rollt nötigenfalls: „Speichern“ ist immer erreichbar */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm, padding: cssVars.spacing.md }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm, padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}` }}>
         <LeibchenWahlFelder teams={daten.teams} seite={seite} farbe={farbe} hallenFarben={daten.hallenFarben} trikot={daten.trikot}
           onSeite={setSeite} onFarbe={setFarbe} andereAlsBlatt testIdPrefix="nachtrag" />
       </div>

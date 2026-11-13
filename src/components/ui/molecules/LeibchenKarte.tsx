@@ -48,8 +48,9 @@ const flaeche: CSSProperties = {
   borderTop: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`, minWidth: 0,
 };
 /** Die Karte als Handlungsfläche (Mockup Runde 3): getönt mit Rahmen; die Zeile danach ist unauffällig. */
+const { borderTop: _ohneObenlinie, ...flaecheOhneLinie } = flaeche;
 const karteFlaeche: CSSProperties = {
-  ...flaeche, background: cssVars.colors.warningSubtle, border: `${cssVars.borderWidth.medium} solid ${cssVars.colors.warningBorder}`, borderRadius: cssVars.borderRadius.md,
+  ...flaecheOhneLinie, background: cssVars.colors.warningSubtle, border: `${cssVars.borderWidth.medium} solid ${cssVars.colors.warningBorder}`, borderRadius: cssVars.borderRadius.md,
   margin: `${cssVars.spacing.xs} ${cssVars.spacing.xs} 0`,
 };
 /** „Bestätigen“ und „Keine Leibchen“ bleiben am unteren Rand der Karte sichtbar, auch wenn die Wahl so lang ist, dass die Karte rollt (deckend, im Ton der Karte). */
