@@ -236,7 +236,7 @@ describe('Das nächste Spiel: ausgefallene, offene Paarung, zwei Felder (@SL-117
   const A = '00000000-0000-4000-8000-0000000000a1';
   const B = '00000000-0000-4000-8000-0000000000a2';
   const feldSpiel = (id: string, nr: number, extra: Record<string, unknown> = {}) => spiel(id, nr, { slotA: teamSlot(A), slotB: teamSlot(B), ...extra });
-  const tm = (id: string, nr: number, matchStatus: Match['matchStatus'], extra: Record<string, unknown> = {}): Match => ({ id, matchNumber: nr, field: 1, round: 1, slot: nr, matchStatus, slotA: teamSlot(A), slotB: teamSlot(B), ...extra }) as unknown as Match;
+  const tm = (id: string, nr: number, matchStatus: Match['matchStatus'], extra: Record<string, unknown> = {}): Match => ({ id, matchNumber: nr, field: 1, round: 1, slot: nr, matchStatus, slotA: teamSlot(A), slotB: teamSlot(B), ...extra });
   const turnier = (matches: Match[]): Tournament => ({ id: 't', teams: [{ id: A, name: 'A' }, { id: B, name: 'B' }], matches }) as unknown as Tournament;
 
   it('@SL-117 Gegenbeispiel 1: Spiel 3 ist abgesetzt, das Feld spielt Spiel 4 – „Weiter“ springt nicht zu Spiel 3 zurück, sondern zu Spiel 5; die Tafel nennt Spiel 5; die Karte gilt Spiel 5', () => {
