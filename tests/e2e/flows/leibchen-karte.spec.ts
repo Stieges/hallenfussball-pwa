@@ -195,7 +195,7 @@ for (const f of FENSTER) {
       });
     }
 
-    test(`@SL-219 @SL-150 Nachtragen im laufenden Spiel: nichts rollt, „Speichern“ steht im Fenster, „Andere Farbe …“ öffnet dasselbe Blatt mit allen Feldern im Fenster (${f.name})`, async ({ page }) => {
+    test(`@SL-219 @SL-150 Nachtragen im laufenden Spiel: „X“ und „Speichern“ stehen im Fenster, „Andere Farbe …“ öffnet dasselbe Blatt mit allen Feldern im Fenster (${f.name})`, async ({ page }) => {
       await oeffne(page, f);
       await page.getByTestId('leibchen-bestaetigen').click();
       await page.getByTestId('match-start-button').click();
@@ -205,7 +205,10 @@ for (const f of FENSTER) {
       const nachtragen = page.getByTestId('leibchen-nachtragen');
       await expect(nachtragen).toBeVisible();
       await animationenFertig(page);
-      expect(await nachtragen.evaluate((el) => [el, ...el.querySelectorAll('*')].filter((e) => e.scrollHeight > e.clientHeight + 1 && ['auto', 'scroll'].includes(getComputedStyle(e).overflowY)).length), 'nichts rollt im Nachtragen-Blatt').toBe(0);
+      // Kopf („X“) und Tasten stehen fest; die Wahl dazwischen darf bei engem Fenster rollen (Schriften der Umgebung), die Tasten bleiben im Bild
+      const schliessen = await box(page.getByTestId('nachtrag-schliessen'));
+      expect(schliessen.y).toBeGreaterThanOrEqual(0);
+      expect(schliessen.height).toBeGreaterThanOrEqual(44);
       const speichern = await box(page.getByTestId('nachtrag-speichern'));
       expect(speichern.y + speichern.height).toBeLessThanOrEqual(f.height);
       await page.getByTestId('nachtrag-andere').click();
