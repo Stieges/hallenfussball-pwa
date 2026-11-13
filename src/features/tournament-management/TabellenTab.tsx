@@ -716,7 +716,8 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
         </button>
       )}
 
-      <Card>
+      {/* Handy: schmales Polster der Karte (statt xl), damit der Tabelle Breite für Name, Sp., Diff., Pkt. und Taste bleibt (@ZM-205) */}
+      <Card style={isMobile ? { padding: cssVars.spacing.sm } : undefined}>
         {/* GA4 A-13c: Zustand der Phasen und Vorschlag „Gruppe abschließen“ (nur Turnierleitung), nicht im Verwaltungskopf */}
         <GroupCompletionTop />
         {/* Segment Control */}

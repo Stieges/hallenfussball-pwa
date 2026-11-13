@@ -12,6 +12,7 @@ import { ShortLabel } from '../ui/atoms';
 import { Icons } from '../ui/Icons';
 import { monitorTeamName } from '../../core/models/teamNameAbbrev';
 import { placeLabel } from '../../core/standings/placeLabel';
+import { goalDiffLabel } from '../../core/standings/goalDiffLabel';
 import { StandingNameCell } from './StandingNameCell';
 import { goalDiffColor, hiddenStyle, highlightStyle, mobileFixedColStyle, mobileTdStyle, mobileThStyle, tableStyle, type PlacementHighlights } from './groupTablesStyle';
 
@@ -101,7 +102,7 @@ export function GroupStandingsMobileTable({ standings, title, highlights, active
                   <td style={{ ...center, fontWeight: cssVars.fontWeights.semibold }}>{standing.played}</td>
                   <td style={{ ...center, color: goalDiffColor(goalDiff) }}>
                     <span style={{ fontWeight: cssVars.fontWeights.semibold, fontSize: cssVars.fontSizes.md, ...highlightStyle(highlights.goalDiff), fontVariantNumeric: 'tabular-nums' }}>
-                      {goalDiff > 0 ? '+' : ''}{goalDiff}
+                      {goalDiffLabel(goalDiff)}
                     </span>
                   </td>
                   <td style={center}>

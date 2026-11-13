@@ -44,20 +44,20 @@ test('@ZM-208 die gezeigte Adresse führt beim Eintippen zur Zuschauer-Seite, au
   await page.goto(`http://${gezeigt}`);
   await expect(page.locator('nav[aria-label="Public Navigation"]')).toBeVisible({ timeout: 25000 });
   await expect(page.getByText('Hallencup Messlauf').first()).toBeVisible();
-  expect(page.url()).toContain(`/#/live/${ZUSCHAUER_CODE}`);
+  await expect(page).toHaveURL(new RegExp(`/#/live/${ZUSCHAUER_CODE}$`));
 });
 
 test('@ZM-208 Gegenbeispiele: bestehende Hash-Adresse bleibt, andere Pfade werden nicht umgeleitet, der Auth-Callback bleibt unberührt', async ({ page }) => {
   await installiereSaat(page.context(), messSaat());
   await page.goto(`/#/live/${ZUSCHAUER_CODE}`);
   await expect(page.locator('nav[aria-label="Public Navigation"]')).toBeVisible({ timeout: 25000 });
-  expect(page.url()).toMatch(new RegExp(`/#/live/${ZUSCHAUER_CODE}$`));
+  await expect(page).toHaveURL(new RegExp(`/#/live/${ZUSCHAUER_CODE}$`));
   await page.goto('/tournament/hallencup-messlauf');
-  expect(new URL(page.url()).pathname).toBe('/tournament/hallencup-messlauf');
-  expect(new URL(page.url()).hash).not.toContain('live');
+  await expect.poll(() => new URL(page.url()).pathname).toBe('/tournament/hallencup-messlauf');
+  await expect.poll(() => new URL(page.url()).hash).not.toContain('live');
   // Der Auth-Callback wird nicht zur Zuschauer-Seite umgeleitet. Ohne Anmeldecode führt die App ihn selbst weiter
   // (über `/#/auth/callback` zur Startseite `/#/`); geprüft wird deshalb der Endzustand, nicht die Zwischenadresse.
   await page.goto('/auth/callback');
   await expect(page).toHaveURL(/\/#\/(auth\/callback)?$/);
-  expect(page.url()).not.toContain('/live');
+  await expect.poll(() => page.url()).not.toContain('/live');
 });

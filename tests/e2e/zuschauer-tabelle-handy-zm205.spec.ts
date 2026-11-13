@@ -9,7 +9,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from '@playwright/test';
 // @ts-expect-error – .mjs ohne Typen; derselbe Lader wie bei `npm run visual:metrics --saat`
 import { installiereSaat, leseSaat } from '../../scripts/visual-metrics/saat/lader.mjs';
-import { messSaat, ZUSCHAUER_CODE } from './helpers/messlaufTaching';
+import { messSaat, TURNIER_ID, ZUSCHAUER_CODE } from './helpers/messlaufTaching';
 import { namensLagen, seitenUeberlauf } from './helpers/wortbruch';
 import { kontrastVon } from './helpers/kontrast';
 import { animationenFertig } from './helpers/animationenFertig';
@@ -92,7 +92,7 @@ test.describe('@ZM-205 Tabelle der Zuschauer-Seite am Handy', () => {
     test(`@ZM-205 Tordifferenz „−3“ hat zum Hintergrund mindestens 4,5 : 1, ${thema === 'dark' ? 'dunkel' : 'hell'}`, async ({ page }) => {
       const handy = await oeffneTabelle(page, thema);
       test.skip(!handy, 'die Handy-Tabelle gilt bis 768 Pixel Breite');
-      const negativ = page.locator('.standings-table .mobile-view tbody tr').locator('td:nth-child(4)').filter({ hasText: /^-\d/ });
+      const negativ = page.locator('.standings-table .mobile-view tbody tr').locator('td:nth-child(4)').filter({ hasText: /^\u2212\d/ });
       expect(await negativ.count(), 'die Saat hat Teams mit negativer Tordifferenz').toBeGreaterThan(0);
       for (const zelle of await negativ.all()) {
         const wert = await kontrastVon(zelle.locator('span').first());
@@ -114,14 +114,19 @@ test.describe('@ZM-205 Tabelle der Zuschauer-Seite am Handy', () => {
 });
 
 test.describe('@ZM-205 Zeilen der Handy-Tabelle bei üblichen Vereinsnamen', () => {
+  for (const ansicht of ['zuschauer', 'leitung'] as const) {
   for (const breite of [360, 390]) {
-    test(`@ZM-205 ${String(breite)} Pixel: „TSV Fridolfing“ steht einzeilig, „SG Taching/Tengling“ höchstens zweizeilig, gleiche Zeilenhöhen`, async ({ page }) => {
+    test(`@ZM-205 ${ansicht === 'leitung' ? 'Turnierleitung' : 'Zuschauer-Seite'}, ${String(breite)} Pixel: „TSV Fridolfing“ steht einzeilig, „SG Taching/Tengling“ höchstens zweizeilig, gleiche Zeilenhöhen`, async ({ page }) => {
       test.skip(test.info().project.name !== 'desktop', 'setzt das Fenster selbst');
       await page.setViewportSize({ width: breite, height: 900 });
       await installiereSaat(page.context(), messSaat({ kurzeNamen: true }));
-      await page.goto(`/#/live/${ZUSCHAUER_CODE}`);
-      await expect(page.locator('nav[aria-label="Public Navigation"]')).toBeVisible({ timeout: 25000 });
-      await page.locator('nav[aria-label="Public Navigation"] button').nth(1).click();
+      if (ansicht === 'leitung') {
+        await page.goto(`/#/tournament/${TURNIER_ID}/standings`);
+      } else {
+        await page.goto(`/#/live/${ZUSCHAUER_CODE}`);
+        await expect(page.locator('nav[aria-label="Public Navigation"]')).toBeVisible({ timeout: 25000 });
+        await page.locator('nav[aria-label="Public Navigation"] button').nth(1).click();
+      }
       await expect(page.locator('.standings-table .mobile-view').first()).toBeVisible();
       await animationenFertig(page);
       const lagen = await namensLagen(page, 'Fridolfing', '.standings-table .mobile-view');
@@ -141,5 +146,6 @@ test.describe('@ZM-205 Zeilen der Handy-Tabelle bei üblichen Vereinsnamen', () 
       // Zeilen nicht höher als vorher (~45 Pixel; die 44-Pixel-Taste treibt sie nicht auf ~61)
       expect(Math.max(...einzeilig), `Zeilenhöhen ${JSON.stringify(einzeilig)}`).toBeLessThanOrEqual(50);
     });
+  }
   }
 });

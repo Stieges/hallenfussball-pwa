@@ -87,41 +87,44 @@ window.addEventListener('unhandledrejection', (event) => {
 
 /**
  * Kurze Zuschauer-Adresse `host/live/CODE` (@ZM-208): vor dem Router auf die Hash-Adresse umleiten, nur diese eine Route.
+ * Wird umgeleitet, startet diese Seite nichts mehr (kein Sentry, kein Rendern): sonst blitzte kurz die Startseite der Verwaltung auf.
  */
-(function redirectShortLiveAddress() {
+const redirectsToShortLive = ((): boolean => {
   const target = shortLiveTarget(window.location.pathname, window.location.search, window.location.hash);
-  if (target !== null) {
-    window.location.replace(`${window.location.origin}${target}`);
-  }
+  if (target === null) { return false; }
+  window.location.replace(`${window.location.origin}${target}`);
+  return true;
 })();
 
-// Initialize inert polyfill for Safari <15.5 compatibility
-// Must run before React renders to ensure dialogs work correctly
-initInertPolyfill().catch((error) => {
-  console.error('Failed to initialize inert polyfill:', error);
-});
+if (!redirectsToShortLive) {
+  // Initialize inert polyfill for Safari <15.5 compatibility
+  // Must run before React renders to ensure dialogs work correctly
+  initInertPolyfill().catch((error) => {
+    console.error('Failed to initialize inert polyfill:', error);
+  });
 
-// Initialize Sentry error tracking (only in production; switchable in settings, @RE-002)
-// Must be called early to catch all errors
-initSentry();
+  // Initialize Sentry error tracking (only in production; switchable in settings, @RE-002)
+  // Must be called early to catch all errors
+  initSentry();
 
-// Telemetry snapshot of the client state at boot (build hash, SW state, cache
-// keys, navigator.onLine). Lets us correlate auth/cache bugs with specific
-// deploys and surface the stale-precache class of issues. Async, fire-and-forget.
-void captureBootContext();
+  // Telemetry snapshot of the client state at boot (build hash, SW state, cache
+  // keys, navigator.onLine). Lets us correlate auth/cache bugs with specific
+  // deploys and surface the stale-precache class of issues. Async, fire-and-forget.
+  void captureBootContext();
 
-// Start-Weiche für Helfer-Geräte: nur entscheiden, wenn die Startseite die erste Adresse ist (@HE-096, @HE-110)
-noteHelperStartEntry(window.location.hash);
+  // Start-Weiche für Helfer-Geräte: nur entscheiden, wenn die Startseite die erste Adresse ist (@HE-096, @HE-110)
+  noteHelperStartEntry(window.location.hash);
 
-const rootElement = document.getElementById('root');
-if (!rootElement) {
-  throw new Error('Root element not found');
+  const rootElement = document.getElementById('root');
+  if (!rootElement) {
+    throw new Error('Root element not found');
+  }
+
+  ReactDOM.createRoot(rootElement).render(
+    <React.StrictMode>
+      <HashRouter>
+        <App />
+      </HashRouter>
+    </React.StrictMode>
+  );
 }
-
-ReactDOM.createRoot(rootElement).render(
-  <React.StrictMode>
-    <HashRouter>
-      <App />
-    </HashRouter>
-  </React.StrictMode>
-);

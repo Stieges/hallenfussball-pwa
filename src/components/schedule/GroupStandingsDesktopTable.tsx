@@ -8,6 +8,7 @@ import { cssVars } from '../../design-tokens';
 import type { Standing } from '../../types/tournament';
 import { ShortLabel } from '../ui/atoms';
 import { placeLabel } from '../../core/standings/placeLabel';
+import { goalDiffLabel } from '../../core/standings/goalDiffLabel';
 import { StandingNameCell } from './StandingNameCell';
 import { fixedColStyle, goalDiffColor, highlightStyle, tableStyle, tdStyle, thStyle, type PlacementHighlights } from './groupTablesStyle';
 
@@ -63,7 +64,7 @@ export function GroupStandingsDesktopTable({ standings, highlights, activeMatchT
               </td>
               <td style={{ ...center, color: goalDiffColor(goalDiff) }}>
                 <span style={{ fontWeight: highlights.goalDiff ? cssVars.fontWeights.bold : cssVars.fontWeights.semibold, ...highlightStyle(highlights.goalDiff) }}>
-                  {goalDiff > 0 ? '+' : ''}{goalDiff}
+                  {goalDiffLabel(goalDiff)}
                 </span>
               </td>
               <td style={center}>

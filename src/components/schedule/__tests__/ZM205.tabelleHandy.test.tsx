@@ -111,7 +111,7 @@ describe('@ZM-205 Tabelle der Zuschauer-Seite am Handy', () => {
     const { handy } = tabelle(alleBeendet);
     const farben = datenzeilen(handy).map((tr) => {
       const zelle = tr.querySelectorAll('td')[3];
-      return { wert: Number((zelle.textContent ?? '0').replace('+', '')), farbe: (zelle as HTMLElement).style.color };
+      return { wert: Number((zelle.textContent ?? '0').replace('+', '').replace('\u2212', '-')), farbe: (zelle as HTMLElement).style.color };
     });
     expect(farben.some((f) => f.wert < 0)).toBe(true);
     for (const { wert, farbe } of farben) {
