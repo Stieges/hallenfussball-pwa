@@ -158,6 +158,22 @@ export function ProtocolRow({
     minHeight: 44,
   };
 
+  // @SL-242: Zeitstrafe, die ein gültiges Gegentor beendet hat -- abgeleitet, nur im Cockpit-Protokoll; zurückgenommene Zeilen tragen nichts.
+  const endedBySeconds = event.type === 'TIME_PENALTY' && !retracted ? event.endedByGoalSeconds : undefined;
+  const endedNote = endedBySeconds === undefined ? null : t('sidebar.penaltyEndedByGoal', { time: formatTime(endedBySeconds) });
+  const spokenDescription = endedNote === null ? description : `${description}, ${endedNote}`;
+  const endedNoteStyle: CSSProperties = {
+    display: 'block',
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textSecondary,
+    whiteSpace: 'normal',
+    overflowWrap: 'anywhere',
+    textOverflow: 'clip',
+  };
+  const endedNoteElement = endedNote === null ? null : (
+    <span style={endedNoteStyle} data-testid="event-penalty-ended-by-goal">{endedNote}</span>
+  );
+
   const warning = isIncomplete ? <span style={incompleteStyle}>⚠️</span> : null;
   const discarded = entry.discarded;
   const discardedText = discarded
@@ -187,10 +203,11 @@ export function ProtocolRow({
     >
       {variant === 'sidebar' ? (
         <>
-          <span>
+          <span style={{ minWidth: 0 }}>
             {icon} {description}
             {warning}
             {mark}
+            {endedNoteElement}
           </span>
           <div style={logEntryRightStyle}>
             <span style={logTimeStyle}>{time}</span>
@@ -198,7 +215,7 @@ export function ProtocolRow({
               <button
                 style={sidebarEditButtonStyle}
                 onClick={handleEditClick}
-                aria-label={t('sidebar.editAria', { description })}
+                aria-label={t('sidebar.editAria', { description: spokenDescription })}
                 title={t('sidebar.edit')}
               >
                 ✏️
@@ -211,14 +228,25 @@ export function ProtocolRow({
           <div style={eventInfoStyle}>
             <span style={iconStyle}>{icon}</span>
             <span style={timeStyle}>{time}</span>
-            <span style={descStyle}>
-              {description}
-              {warning}
-              {mark}
-            </span>
+            {endedNote === null ? (
+              <span style={descStyle}>
+                {description}
+                {warning}
+                {mark}
+              </span>
+            ) : (
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <span style={{ ...descStyle, display: 'block' }}>
+                  {description}
+                  {warning}
+                  {mark}
+                </span>
+                {endedNoteElement}
+              </div>
+            )}
           </div>
           {canEdit && (
-            <button style={sheetEditButtonStyle} onClick={handleEditClick} aria-label={`${description} bearbeiten`}>
+            <button style={sheetEditButtonStyle} onClick={handleEditClick} aria-label={`${spokenDescription} bearbeiten`}>
               ✏️ Bearbeiten
             </button>
           )}

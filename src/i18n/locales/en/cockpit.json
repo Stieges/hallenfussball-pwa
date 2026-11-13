@@ -298,6 +298,7 @@
     "assistFormat": "Assist: {{assists}}",
     "editAria": "Edit {{description}}",
     "edit": "Edit",
+    "penaltyEndedByGoal": "ended by goal {{time}}",
     "retractedMark": "retracted",
     "discardedMark": "discarded by {{by}}, {{time}}",
     "discardedByLead": "the organisers",
