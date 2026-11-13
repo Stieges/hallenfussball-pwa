@@ -19,6 +19,11 @@ const FENSTER = [
   { name: 'desktop 1440×900', width: 1440, height: 900, handy: false },
 ] as const;
 
+/** Wartet, bis alle endlichen Animationen (Blatt, Einblendungen) fertig sind; die endlose „Live“-Pulsanimation zählt nicht. */
+async function animationenFertig(page: Page): Promise<void> {
+  await page.evaluate(() => Promise.all(document.getAnimations().filter((a) => a.effect?.getComputedTiming().iterations !== Infinity).map((a) => a.finished)));
+}
+
 test.use({ locale: 'de-DE', timezoneId: 'Europe/Berlin', serviceWorkers: 'block' });
 // Die Fenstergröße setzt jeder Test selbst: ein Projekt genügt (sonst läuft dieselbe Messung 4 × je Fenster).
 test.beforeEach(async ({}, testInfo) => { // eslint-disable-line no-empty-pattern
@@ -159,7 +164,7 @@ for (const f of FENSTER) {
         await page.getByTestId('leibchen-andere').click();
         const blatt = page.getByTestId('leibchen-andere-blatt');
         await expect(blatt).toBeVisible();
-        await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
+        await animationenFertig(page);
         const felder = await page.locator('[data-testid="leibchen-andere-blatt"] [data-testid^="leibchen-farbe-"]').all();
         const namen: string[] = [];
         for (const el of felder) { namen.push(((await el.getAttribute('data-testid')) ?? '').replace('leibchen-farbe-', '')); }
@@ -199,7 +204,7 @@ for (const f of FENSTER) {
       await page.getByTestId('mehr-leibchen-nachtragen').click();
       const nachtragen = page.getByTestId('leibchen-nachtragen');
       await expect(nachtragen).toBeVisible();
-      await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
+      await animationenFertig(page);
       expect(await nachtragen.evaluate((el) => [el, ...el.querySelectorAll('*')].filter((e) => e.scrollHeight > e.clientHeight + 1 && ['auto', 'scroll'].includes(getComputedStyle(e).overflowY)).length), 'nichts rollt im Nachtragen-Blatt').toBe(0);
       const speichern = await box(page.getByTestId('nachtrag-speichern'));
       expect(speichern.y + speichern.height).toBeLessThanOrEqual(f.height);
