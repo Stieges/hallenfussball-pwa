@@ -6,8 +6,9 @@
  * - kein Eintrag → `keiner` (Feld ohne Lautsprecher bleibt neutral, @HT-016, @HT-038)
  * - nie gemeldet oder letztes Lebenszeichen älter als 10 s → `meldetSichNicht` mit „zuletzt“ (Serverzeit, @HT-011, @HT-040).
  *   10 s: der Lautsprecher meldet alle 5 s; wer alle 5 s liest, sieht einen Ausfall so nach höchstens 15 s (Ableitung).
- * - `ready` → `bereit`; sonst `nichtBereit` mit Grund. `custom_sound_failed` ist „nicht bereit – eigener Ton nicht geladen“,
- *   aber ohne Cockpit-Hinweis, weil die Halle „Hupe 1“ hört (@HT-039). Ein Zustand, den dieser App-Stand nicht kennt
+ * - `ready` → `bereit`; sonst `nichtBereit` mit Grund. `custom_sound_failed` ist BEREIT mit dem ruhigen Hinweis „Hupe 1 statt eigener
+ *   Ton“ (`eigenerTonFehlt`): die Halle hört „Hupe 1“ (Record 07.11., @HT-028; vorher „nicht bereit – eigener Ton nicht geladen“).
+ *   Ein Zustand, den dieser App-Stand nicht kennt
  *   (`zustandUnbekannt`, tolerant gelesen in `hallentonRpc.ts`): nicht bereit ohne Wortgrund – nicht „Status unbekannt“, das bleibt
  *   dem Netzausfall der Verwaltung vorbehalten (@HT-041).
  * - `pruefen`: Hinweis „🔈? Prüfen“ (@HT-047), bis jemand „Gehört“ wählt (@HT-049).
@@ -30,8 +31,8 @@ export interface LautsprecherAmServer {
 export type LautsprecherLage =
   | { art: 'keiner' }
   | { art: 'meldetSichNicht'; zuletztServerMs: number | null }
-  | { art: 'bereit'; pruefen: boolean }
-  | { art: 'nichtBereit'; grund: Exclude<HallSpeakerStateGelesen, 'ready'>; pruefen: boolean };
+  | { art: 'bereit'; pruefen: boolean; eigenerTonFehlt?: true }
+  | { art: 'nichtBereit'; grund: Exclude<HallSpeakerStateGelesen, 'ready' | 'custom_sound_failed'>; pruefen: boolean };
 
 export function lautsprecherLage(lautsprecher: LautsprecherAmServer | null, serverNow: number): LautsprecherLage {
   if (lautsprecher === null) {
@@ -41,7 +42,13 @@ export function lautsprecherLage(lautsprecher: LautsprecherAmServer | null, serv
   if (state === null || ageMs === null || ageMs > MELDET_SICH_NICHT_AB_MS) {
     return { art: 'meldetSichNicht', zuletztServerMs: ageMs === null ? null : serverNow - ageMs };
   }
-  return state === 'ready' ? { art: 'bereit', pruefen: outputHint } : { art: 'nichtBereit', grund: state, pruefen: outputHint };
+  if (state === 'ready') {
+    return { art: 'bereit', pruefen: outputHint };
+  }
+  // @HT-028 (Record 07.11.): „eigener Ton nicht geladen“ ist bereit mit ruhigem Hinweis, die Halle hört „Hupe 1“
+  return state === 'custom_sound_failed'
+    ? { art: 'bereit', pruefen: outputHint, eigenerTonFehlt: true }
+    : { art: 'nichtBereit', grund: state, pruefen: outputHint };
 }
 
 /** `zustandUnbekannt`: ein Zustand, den dieser App-Stand nicht kennt – nicht bereit, aber ohne Wortgrund (nur die Pille, @HT-039). */
@@ -65,10 +72,7 @@ export function cockpitHinweisAus(lage: LautsprecherLage): CockpitHinweis {
     case 'meldetSichNicht':
       return { art: 'aus', grund: 'meldetSichNicht', zuletztServerMs: lage.zuletztServerMs };
     case 'nichtBereit':
-      if (lage.grund !== 'custom_sound_failed') {
-        return { art: 'aus', grund: lage.grund, zuletztServerMs: null };
-      }
-      return lage.pruefen ? { art: 'ausgangGeaendert' } : { art: 'bereit' };
+      return { art: 'aus', grund: lage.grund, zuletztServerMs: null };
     case 'bereit':
       return lage.pruefen ? { art: 'ausgangGeaendert' } : { art: 'bereit' };
   }

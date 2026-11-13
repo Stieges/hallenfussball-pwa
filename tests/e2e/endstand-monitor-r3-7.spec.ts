@@ -24,7 +24,7 @@ const TYP: Record<string, string> = {};
 for (const e of GW.grenzwerte) {
   if (!e.geltung.includes('monitor') || e.id.startsWith('gate.') || e.id.startsWith('langtext.') || e.id === 'overscan.standard') { continue; }
   let w = e.wert;
-  if (typeof w === 'string' && w.startsWith('sehwinkel.')) { w = sehwinkelAnteil(GW.sehwinkel, GW.sehwinkel.winkelBogenminuten[w.slice('sehwinkel.'.length)]) as number; }
+  if (typeof w === 'string' && w.startsWith('sehwinkel.')) { w = sehwinkelAnteil(GW.sehwinkel, GW.sehwinkel.winkelBogenminuten[w.slice('sehwinkel.'.length)]); }
   if (w === 'profil.randPx') { w = 0; }
   GRENZEN[e.id] = w;
   TYP[e.id] = e.typJeArt?.monitor ?? e.typ;

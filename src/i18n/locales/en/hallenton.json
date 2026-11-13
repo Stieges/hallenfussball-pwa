@@ -14,7 +14,8 @@
     "pruefen": "Check",
     "pruefenLesetext": "Field {{feld}} speaker: output may have changed, please check",
     "hupeStattEigenerTon": "Horn 1 instead of custom tone",
-    "titel": "Status"
+    "anderesFenster": "Speaker already runs in another window",
+    "handyOhneNetz": "Field {{feld}}: phone offline"
   },
   "feld": {
     "titel": "Field {{feld}}",
