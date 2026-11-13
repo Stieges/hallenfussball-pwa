@@ -3,7 +3,6 @@
  * Nachtragen im laufenden Spiel unter „Mehr“ (@SL-150), der Hinweis auf gleiche Trikotfarben in der Tafel und die Meldungen der Warteschlange in der
  * Meldezeile (@SL-228, @SL-229).
  */
-import { leibchenKarteSteht } from '../model/leibchenKarteSteht';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { KitConflict } from '../../../core/models/kit';
@@ -31,8 +30,6 @@ export interface LeibchenBereich {
   wahlOffen: boolean;
   farbKonflikt: KitConflict | undefined;
   karte: ReactNode;
-  /** Karte (mit Vorschlag) oder Zeile (Wahl getroffen) steht im Bild: nur dann weicht die Tafel (@SL-240, @SL-241). */
-  karteSteht: boolean;
   mehrAktion: Partial<Record<MehrPunkt, () => void>>;
   nachtragBlatt: ReactNode;
 }
@@ -59,7 +56,7 @@ export function useLeibchenBereich({ turnier, matchId, zustand, melde, kannSteue
     />
   );
   return {
-    wahlOffen: wahlFuer !== null && wahlFuer === kartenId, farbKonflikt, karte, karteSteht: leibchenKarteSteht(daten),
+    wahlOffen: wahlFuer !== null && wahlFuer === kartenId, farbKonflikt, karte,
     mehrAktion: nachtrag ? { leibchenNachtragen: () => { setNachtragOffen(true); } } : {},
     nachtragBlatt: nachtrag && nachtragOffen ? <LeibchenNachtragen isOpen daten={nachtrag} onClose={() => { setNachtragOffen(false); }} /> : null,
   };

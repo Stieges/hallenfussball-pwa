@@ -242,21 +242,23 @@ describe('@SL-150 Nachtragen im laufenden Spiel nur durch die Turnierleitung', (
 });
 
 describe('@SL-197 vor dem Anpfiff die Spielzeit aus den Regeln (neben der Karte)', () => {
-  it('@SL-197 9 Minuten → groß „9:00“, darunter „Anstoß hh:mm · Spiel 12 · Feld 1“', () => {
+  it('@SL-197 9 Minuten → groß „9:00“, darunter „Anstoß hh:mm · Spiel 12 · Feld 1“ (Tablet und Laptop; am Handy steht sie klein, @SL-241)', () => {
+    amLaptop();
     render(<LiveCockpit {...makeProps(makeLiveMatch({ id: 'spiel-12', number: 12, status: 'NOT_STARTED', elapsedSeconds: 0, homeTeam: { id: 'sv-sued', name: 'SV Süd' }, awayTeam: { id: 'fc-nord', name: 'FC Nord' } }), { spielzeit: { abschnitte: 1, abschnittSekunden: 540 } })} />);
     expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('9:00');
     expect(screen.getByTestId('scoreboard-clock')).toHaveTextContent('Spielzeit');
     expect(screen.getByTestId('scoreboard-clock-sub')).toHaveTextContent(/^Anstoß \d{2}:\d{2} · Spiel 12 · Feld 1$/);
   });
 
-  it('@SL-197 zwei Abschnitte zu 4 Minuten → „2 ד vor „4:00“', () => {
+  it('@SL-197 zwei Abschnitte zu 4 Minuten → „2 ד vor „4:00“ (Tablet und Laptop)', () => {
+    amLaptop();
     render(<LiveCockpit {...makeProps(makeLiveMatch({ id: 'spiel-12', number: 12, status: 'NOT_STARTED', elapsedSeconds: 0 }), { spielzeit: { abschnitte: 2, abschnittSekunden: 240 } })} />);
     expect(screen.getByTestId('scoreboard-clock-vorsatz')).toHaveTextContent('2 ×');
     expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('4:00');
   });
 });
 
-describe('@SL-241 am Handy steht die Spielzeit mit Karte klein in der Zeile (Daniel „V1b“)', () => {
+describe('@SL-241 am Handy steht die Spielzeit vor dem Anpfiff immer klein in der Zeile (Daniel „am Handy immer“)', () => {
   const kleinText = /^Anstoß\u00A0\d{2}:\d{2} · Spiel\u00A0\d+ · Feld\u00A01 · Spielzeit\u00A09:00$/;
   const spielzeit = { spielzeit: { abschnitte: 1, abschnittSekunden: 540 } };
   it('@SL-241 Handy mit Karte: keine große Spielzeit, die Zeile nennt „Spielzeit 9:00“, die Karte steht', () => {
@@ -266,11 +268,19 @@ describe('@SL-241 am Handy steht die Spielzeit mit Karte klein in der Zeile (Dan
     expect(screen.queryByTestId('scoreboard-clock-rest')).toBeNull();
     expect(screen.getByTestId('scoreboard-clock-sub').textContent).toMatch(kleinText);
   });
-  it('@SL-241 Gegenbeispiel Handy ohne Karte (verschiedene Trikotfarben): groß wie in @SL-197', () => {
+  it('@SL-241 Handy ohne Karte (verschiedene Trikotfarben): ebenso klein, unabhängig von der Karte', () => {
     amHandy();
     zeige(turnier(verschiedeneFarbe, [spiel('spiel-2', WAGING, PETTING)]), live2(), spielzeit);
     expect(screen.queryByTestId('leibchen-karte')).toBeNull();
-    expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('9:00');
+    expect(screen.queryByTestId('scoreboard-clock-rest')).toBeNull();
+    expect(screen.getByTestId('scoreboard-clock-sub').textContent).toMatch(kleinText);
+  });
+  it('@SL-241 langer Feldname: bricht nur an Leerzeichen um (Angaben aus zwei Wörtern bleiben zusammen, der Name selbst nicht)', () => {
+    amHandy();
+    zeige(turnier(gleicheFarbe, [spiel('spiel-2', WAGING, PETTING)]), live2(), { ...spielzeit, fieldName: 'Dreifachhalle Waging Nord' });
+    const zeile = screen.getByTestId('scoreboard-clock-sub').textContent ?? '';
+    expect(zeile).toContain('Dreifachhalle Waging Nord');
+    expect(zeile).toContain('Spielzeit\u00A09:00');
   });
   it('@SL-241 Gegenbeispiel Laptop mit Karte: groß, die Tafel bleibt unverändert', () => {
     amLaptop();

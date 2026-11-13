@@ -55,9 +55,12 @@ function formatMinuten(sekunden: number): string {
   return `${String(Math.floor(sekunden / 60))}:${String(sekunden % 60).padStart(2, '0')}`;
 }
 
-/** Zeile bricht nur an „ · “ um, nie mitten in einer Angabe („Spiel 3“, „Spielzeit 9:00“ bleiben zusammen). */
-function umbruchNurAmPunkt(zeile: string): string {
-  return zeile.split(' · ').map((teil) => teil.replace(/ /g, '\u00A0')).join(' · ');
+/**
+ * Zeile bricht bevorzugt an „ · “ um: Angaben aus höchstens zwei Wörtern („Spiel 3“, „Anstoß 10:20“, „Spielzeit 9:00“) bleiben zusammen, ein längerer
+ * Feldname darf an Leerzeichen umbrechen (nie mitten im Wort, läuft nicht über).
+ */
+function umbruchBevorzugtAmPunkt(zeile: string): string {
+  return zeile.split(' · ').map((teil) => (teil.split(' ').length <= 2 ? teil.replace(/ /g, '\u00A0') : teil)).join(' · ');
 }
 
 /** Minuten seit der angesetzten Anstoßzeit, ganz; `0`, wenn sie nicht lesbar ist oder noch bevorsteht. */
@@ -86,7 +89,7 @@ export function scoreboardVor(input: VorEingang, t: Uebersetzer): ScoreboardVorE
       const zeile = vor.anstoss ? t('tafel.vor.anstossSpielFeld', { zeit: vor.anstoss, spielFeld }) : spielFeld;
       uhr = {
         rest: '', gespielt: null, schlussphase: false, steht: false, hervorgehoben: false, ton: 'gedaempft', nurZeile: true,
-        unterzeile: umbruchNurAmPunkt(kleinSpielzeit ? t('tafel.vor.zeileMitSpielzeit', { zeile, spielzeit: kleinSpielzeit }) : zeile),
+        unterzeile: umbruchBevorzugtAmPunkt(kleinSpielzeit ? t('tafel.vor.zeileMitSpielzeit', { zeile, spielzeit: kleinSpielzeit }) : zeile),
       };
     } else {
       uhr = zeit ? {

@@ -55,8 +55,8 @@ async function oeffneEndstand(page: Page, fenster: { width: number; height: numb
 }
 
 /** Wie weit der Teamkopf unten über den Rand der Fläche ragt, die ihn zeigt (> 0: von einer rollenden oder abgeschnittenen Fläche gekappt). */
-async function kopfRagtUeber(page: Page): Promise<number> {
-  return page.getByTestId('team-head-home').evaluate((el) => {
+async function kopfRagtUeber(page: Page, seite: 'home' | 'away' = 'home'): Promise<number> {
+  return page.getByTestId(`team-head-${seite}`).evaluate((el) => {
     const r = el.getBoundingClientRect();
     let schlimmster = Number.NEGATIVE_INFINITY;
     for (let p = el.parentElement; p !== null; p = p.parentElement) {
@@ -309,31 +309,17 @@ for (const f of FENSTER) {
       }
     });
 
-    if (f.handy) {
-      test(`@SL-240 @SL-208 Endstand am Handy: nach „Bestätigen“ (Zeile statt Karte) springt die Tafel nicht, die Uhr bleibt klein (${f.name})`, async ({ page }) => {
-        await oeffneEndstand(page, f);
-        const messen = async (): Promise<{ tafelOben: number; tafelHoehe: number; kopfOben: number; weiter: number }> => ({
-          tafelOben: (await box(page.getByTestId('scoreboard'))).y, tafelHoehe: (await box(page.getByTestId('scoreboard'))).height,
-          kopfOben: (await box(page.getByTestId('team-head-home'))).y, weiter: (await box(page.getByTestId('match-next-button'))).y,
-        });
-        const vorher = await messen();
-        await page.getByTestId('leibchen-bestaetigen').click();
-        await expect(page.getByTestId('leibchen-zeile')).toBeVisible();
-        await animationenFertig(page);
-        const nachher = await messen();
-        expect(Math.abs(nachher.tafelHoehe - vorher.tafelHoehe), 'Tafel gleich hoch').toBeLessThanOrEqual(1);
-        expect(Math.abs(nachher.kopfOben - vorher.kopfOben), 'Teamköpfe an derselben Stelle').toBeLessThanOrEqual(1);
-        expect(Math.abs(nachher.weiter - vorher.weiter), '„Weiter“ springt nicht').toBeLessThanOrEqual(1);
-        await expect(page.getByTestId('scoreboard-clock-rest')).toHaveCount(0);
-      });
-    }
-
-    test(`@SL-240 Gegenbeispiel: Endstand ohne Karte (kein Leibchen nötig) behält den großen Uhr-Bereich „Gespielt 9:00“ wie in @SL-169 (${f.name})`, async ({ page }) => {
+    test(`@SL-240 Endstand ohne Karte (kein Leibchen nötig): ${f.handy ? 'am Handy trotzdem „gespielt 9:00“ in der Quittungszeile, kein großer Uhr-Bereich' : 'Gegenbeispiel Tablet/Laptop: der große Uhr-Bereich „Gespielt 9:00“ wie in @SL-169'} (${f.name})`, async ({ page }) => {
       await oeffneEndstand(page, f, true);
       await expect(page.getByTestId('leibchen-karte')).toHaveCount(0);
-      await expect(page.getByTestId('scoreboard-clock')).toContainText('Gespielt');
-      await expect(page.getByTestId('scoreboard-clock-rest')).toHaveText('9:00');
-      await expect(page.getByTestId('scoreboard-quittung')).not.toContainText('gespielt');
+      if (f.handy) {
+        await expect(page.getByTestId('scoreboard-clock-rest')).toHaveCount(0);
+        await expect(page.getByTestId('scoreboard-quittung')).toContainText('Abgepfiffen · 2:1 gespeichert · gespielt 9:00');
+      } else {
+        await expect(page.getByTestId('scoreboard-clock')).toContainText('Gespielt');
+        await expect(page.getByTestId('scoreboard-clock-rest')).toHaveText('9:00');
+        await expect(page.getByTestId('scoreboard-quittung')).not.toContainText('gespielt');
+      }
     });
 
     test(`@OB-021 @SL-208 Teamname mit 50 Zeichen: der Name im Kopf steht vollständig über der Zeile, nichts ist abgeschnitten (${f.name})`, async ({ page }) => {
@@ -389,33 +375,6 @@ for (const f of FENSTER) {
     });
 
     if (f.handy) {
-      test(`@SL-241 nach „Bestätigen“ bleibt die Tafel, wie sie ist: Höhe, Köpfe und „Anpfeifen“ springen nicht, die Spielzeit bleibt klein (${f.name})`, async ({ page }) => {
-        await oeffne(page, f);
-        await animationenFertig(page);
-        const messe = async () => ({
-          tafel: (await box(page.getByTestId('scoreboard'))).height, kopf: (await box(page.getByTestId('team-head-home'))).y,
-          anpfiff: (await box(page.getByTestId('match-start-button'))).y,
-        });
-        const vorher = await messe();
-        await page.getByTestId('leibchen-bestaetigen').click();
-        await expect(page.getByTestId('leibchen-zeile')).toBeVisible();
-        await animationenFertig(page);
-        const nachher = await messe();
-        expect(Math.abs(nachher.tafel - vorher.tafel), 'Tafelhöhe').toBeLessThanOrEqual(1);
-        expect(Math.abs(nachher.anpfiff - vorher.anpfiff), '„Anpfeifen“').toBeLessThanOrEqual(1);
-        await expect(page.getByTestId('scoreboard-clock-rest')).toHaveCount(0);
-        await expect(page.getByTestId('scoreboard-clock-sub')).toContainText('Spielzeit');
-        expect(await kopfRagtUeber(page)).toBeLessThanOrEqual(0);
-        expect(nachher.kopf).toBeGreaterThanOrEqual(0);
-      });
-
-      test(`@SL-241 Gegenbeispiel ohne Karte (verschiedene Trikotfarben): die Spielzeit steht groß wie in @SL-197 (${f.name})`, async ({ page }) => {
-        await oeffne(page, f, undefined, 'leibchen-7a', false, true);
-        await animationenFertig(page);
-        await expect(page.getByTestId('leibchen-karte')).toHaveCount(0);
-        await expect(page.getByTestId('scoreboard-clock-rest')).toHaveText('9:00');
-      });
-
       test(`@SL-241 nach dem Anpfiff läuft die große Uhr wie sonst, nichts ist verdeckt (${f.name})`, async ({ page }) => {
         await oeffne(page, f);
         await page.getByTestId('leibchen-bestaetigen').click();
@@ -443,4 +402,113 @@ for (const f of FENSTER) {
       }
     });
   });
+}
+
+// ---------------------------------------------------------------------------------------------------------------------------------------------
+// @SL-240 @SL-241 Zustands-Matrix: am Handy (360 und 390) dieselben Invarianten in JEDEM Zustand der Leibchen-Karte, und beim Wechsel zwischen den Zuständen
+// springt nichts (Tafelhöhe, Köpfe, Haupttaste ±1 px). Ein neuer Zustand ist eine Zeile in der Tabelle `SCHRITTE`.
+// ---------------------------------------------------------------------------------------------------------------------------------------------
+type Aktion = (page: Page) => Promise<void>;
+interface Schritt { zustand: string; aktion: Aktion; erwartet: 'karte' | 'zeile' | 'knopf' | 'nichts' }
+const klick = (id: string): Aktion => async (page) => { await page.getByTestId(id).click(); await animationenFertig(page); };
+const SCHRITTE: Record<'vor-gleich' | 'vor-verschieden' | 'end-gleich' | 'end-verschieden', Schritt[]> = {
+  'vor-gleich': [
+    { zustand: 'Vorschlag offen', aktion: async () => undefined, erwartet: 'karte' },
+    { zustand: 'Wahl offen (Vorschlag angetippt)', aktion: klick('leibchen-vorschlag'), erwartet: 'karte' },
+    { zustand: '„Andere Farbe …“ offen', aktion: klick('leibchen-andere'), erwartet: 'karte' },
+    { zustand: '„Andere Farbe …“ wieder zu', aktion: klick('leibchen-andere-schliessen'), erwartet: 'karte' },
+    { zustand: 'bestätigte Zeile', aktion: klick('leibchen-bestaetigen'), erwartet: 'zeile' },
+    { zustand: 'Karte wieder offen (Ändern)', aktion: async (page) => { await aendernOeffnen(page); await animationenFertig(page); }, erwartet: 'karte' },
+    { zustand: '„Keine Leibchen“', aktion: klick('leibchen-keine'), erwartet: 'zeile' },
+  ],
+  'vor-verschieden': [
+    { zustand: 'Knopf „Leibchen festlegen“', aktion: async () => undefined, erwartet: 'knopf' },
+    { zustand: 'über den Knopf geöffnet', aktion: klick('leibchen-festlegen'), erwartet: 'karte' },
+    { zustand: 'bestätigte Zeile', aktion: klick('leibchen-bestaetigen'), erwartet: 'zeile' },
+  ],
+  'end-gleich': [
+    { zustand: 'Karte offen', aktion: async () => undefined, erwartet: 'karte' },
+    { zustand: 'bestätigte Zeile', aktion: klick('leibchen-bestaetigen'), erwartet: 'zeile' },
+  ],
+  'end-verschieden': [
+    { zustand: 'ohne Karte (kein Leibchen nötig)', aktion: async () => undefined, erwartet: 'nichts' },
+  ],
+};
+const MATRIX_FENSTER = FENSTER.filter((f) => f.handy);
+const NAMEN = [['normal', 'leibchen-7a'], ['50 Zeichen', 'leibchen-lang']] as const;
+
+async function messeTafel(page: Page): Promise<{ tafel: number; kopf: number; haupt: number } | null> {
+  if (!(await page.getByTestId('scoreboard').isVisible())) { return null; }
+  const haupt = page.getByTestId('match-start-button').or(page.getByTestId('match-next-button')).first();
+  return { tafel: (await box(page.getByTestId('scoreboard'))).height, kopf: (await box(page.getByTestId('team-head-home'))).y, haupt: (await box(haupt)).y };
+}
+
+async function pruefeInvarianten(page: Page, fenster: { width: number; height: number }, schritt: Schritt, phase: 'vor' | 'end', wo: string): Promise<void> {
+  const tafelDa = await page.getByTestId('scoreboard').isVisible();
+  if (tafelDa) {
+    // (a) beide Teamköpfe vollständig, von nichts gekappt
+    expect(await kopfRagtUeber(page, 'home'), `${wo}: Heim-Kopf gekappt`).toBeLessThanOrEqual(0);
+    expect(await kopfRagtUeber(page, 'away'), `${wo}: Gast-Kopf gekappt`).toBeLessThanOrEqual(0);
+    // (d) keine große Spielzeit oder gespielte Zeit, die Angabe steht in der Kopf- bzw. Quittungszeile
+    await expect(page.getByTestId('scoreboard-clock-rest'), `${wo}: große Uhr`).toHaveCount(0);
+    if (phase === 'vor') { await expect(page.getByTestId('scoreboard-clock-sub')).toContainText('Spielzeit'); }
+    else { await expect(page.getByTestId('scoreboard-quittung')).toContainText('gespielt'); }
+  }
+  // (b) Karte, Zeile oder Knopf vollständig im Fenster, Tippziele ≥ 44
+  const flaeche = page.locator('[data-testid="leibchen-karte"],[data-testid="leibchen-zeile"],[data-testid="leibchen-festlegen"]').first();
+  if (schritt.erwartet === 'nichts') { await expect(flaeche, `${wo}: nichts erwartet`).toHaveCount(0); } else {
+    await expect(flaeche, `${wo}: Karte/Zeile/Knopf fehlt`).toBeVisible();
+    const b = await box(flaeche);
+    expect(b.y, `${wo}: Fläche oben im Fenster`).toBeGreaterThanOrEqual(0);
+    expect(b.y + b.height, `${wo}: Fläche unten im Fenster`).toBeLessThanOrEqual(fenster.height + 1);
+    for (const knopf of await flaeche.locator('button').all()) {
+      if (!(await knopf.isVisible())) { continue; }
+      const k = await box(knopf);
+      expect(k.height, `${wo}: Tippziel Höhe`).toBeGreaterThanOrEqual(43.5);
+      expect(k.width, `${wo}: Tippziel Breite`).toBeGreaterThanOrEqual(43.5);
+    }
+  }
+  // (c) kein Seitenüberlauf
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), `${wo}: Seitenüberlauf`).toBeLessThanOrEqual(0);
+}
+
+for (const f of MATRIX_FENSTER) {
+  for (const [namenName, turnier] of NAMEN) {
+    for (const trikots of ['gleich', 'verschieden'] as const) {
+      test(`@SL-241 Zustände vor dem Anpfiff, Trikots ${trikots}, Namen ${namenName}: gleiche Invarianten, nichts springt (${f.name})`, async ({ page }) => {
+        await oeffne(page, f, undefined, turnier, true, trikots === 'verschieden');
+        await animationenFertig(page);
+        let basis: Awaited<ReturnType<typeof messeTafel>> = null;
+        for (const schritt of SCHRITTE[`vor-${trikots}`]) {
+          await schritt.aktion(page);
+          const wo = `${schritt.zustand} [${f.name}, ${namenName}, ${trikots}]`;
+          await pruefeInvarianten(page, f, schritt, 'vor', wo);
+          const jetzt = await messeTafel(page);
+          if (jetzt !== null) {
+            basis ??= jetzt;
+            expect(Math.abs(jetzt.tafel - basis.tafel), `${wo}: Tafelhöhe springt`).toBeLessThanOrEqual(1);
+            expect(Math.abs(jetzt.kopf - basis.kopf), `${wo}: Köpfe springen`).toBeLessThanOrEqual(1);
+            expect(Math.abs(jetzt.haupt - basis.haupt), `${wo}: „Anpfeifen“ springt`).toBeLessThanOrEqual(1);
+          }
+        }
+      });
+    }
+  }
+  for (const trikots of ['gleich', 'verschieden'] as const) {
+    test(`@SL-240 Zustände im Endstand, Trikots ${trikots}: gleiche Invarianten, nichts springt (${f.name})`, async ({ page }) => {
+      await oeffneEndstand(page, f, trikots === 'verschieden');
+      let basis: Awaited<ReturnType<typeof messeTafel>> = null;
+      for (const schritt of SCHRITTE[`end-${trikots}`]) {
+        await schritt.aktion(page);
+        const wo = `${schritt.zustand} [${f.name}, Endstand, ${trikots}]`;
+        await pruefeInvarianten(page, f, schritt, 'end', wo);
+        const jetzt = await messeTafel(page);
+        if (jetzt !== null) {
+          basis ??= jetzt;
+          expect(Math.abs(jetzt.tafel - basis.tafel), `${wo}: Tafelhöhe springt`).toBeLessThanOrEqual(1);
+          expect(Math.abs(jetzt.kopf - basis.kopf), `${wo}: Köpfe springen`).toBeLessThanOrEqual(1);
+        }
+      }
+    });
+  }
 }

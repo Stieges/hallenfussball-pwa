@@ -182,8 +182,8 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
       sperrHinweise={props.sperrHinweise}
       uebernahmeVon={props.uebernahmeVon}
       eingetragenVon={eingetragenVon}
-      naechstes={isMobile ? naechstesZeile : null} uhrInQuittung={uhrInQuittungWenn({ isMobile, hatLeibchenKarte: leibchen.karteSteht, phase })}
-      spielzeitKlein={spielzeitKleinWenn({ isMobile, hatLeibchenKarte: leibchen.karteSteht, phase })}
+      naechstes={isMobile ? naechstesZeile : null} uhrInQuittung={uhrInQuittungWenn({ isMobile, phase })}
+      spielzeitKlein={spielzeitKleinWenn({ isMobile, phase })}
       farbKonflikt={leibchen.farbKonflikt} spielzeit={props.spielzeit}
       naechstesNamen={naechstesSpiel ? [naechstesSpiel.homeTeam.name, naechstesSpiel.awayTeam.name] : undefined}
       // A4 (C-SYNC): rendert selbst nichts außerhalb des Cloud-Modus. I4 (W1, Nachtrag
