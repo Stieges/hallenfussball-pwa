@@ -55,12 +55,12 @@ export function highlightStyle(active: boolean): CSSProperties {
 }
 
 /**
- * Farbe der Tordifferenz: Plus in der Hauptfarbe, Null gedämpft, Minus in der Schriftfarbe der Tabelle. Rot auf der Wertungsfläche
- * (`rankingHighlightBg`) schafft nur 4,4 : 1 (hell) bzw. 3,7 : 1 (dunkel); das Minuszeichen trägt die Bedeutung, nicht die Farbe (@ZM-205, WCAG 1.4.1/1.4.3).
+ * Farbe der Tordifferenz: Plus in der Hauptfarbe, Null gedämpft, Minus in einem dunkleren Rot (`rankingNegativeText`, mindestens 4,5 : 1 auch auf der
+ * Wertungsfläche `rankingHighlightBg`; `error` schafft dort nur 4,4 : 1 hell und 3,7 : 1 dunkel). Das Minuszeichen trägt die Bedeutung zusätzlich (@ZM-205, WCAG 1.4.1/1.4.3).
  */
 export function goalDiffColor(goalDiff: number): string {
   if (goalDiff > 0) { return cssVars.colors.primary; }
-  if (goalDiff < 0) { return cssVars.colors.textPrimary; }
+  if (goalDiff < 0) { return cssVars.colors.rankingNegativeText; }
   return cssVars.colors.textSecondary;
 }
 

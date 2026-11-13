@@ -248,6 +248,8 @@ export const semanticColorsLight = {
   // Management & Ranking Colors
   // ---------------------------------------------------------------------------
   rankingHighlightBg: 'rgba(5, 150, 105, 0.08)',
+  /** Schrift der negativen Tordifferenz in Tabellen: mindestens 4,5 : 1 auch auf `rankingHighlightBg` (@ZM-205) */
+  rankingNegativeText: palette.red[700],
   rankingPlacementBg: 'rgba(5, 150, 105, 0.05)',
   rankingExpandedBg: 'rgba(5, 150, 105, 0.03)',
 

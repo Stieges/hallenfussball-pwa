@@ -107,7 +107,7 @@ describe('@ZM-205 Tabelle der Zuschauer-Seite am Handy', () => {
     expect(container.textContent).not.toMatch(/[▶▼▲►]/);
   });
 
-  it('Tordifferenz: Minus in der Schriftfarbe der Tabelle (4,5 : 1 auf der Wertungsfläche), Plus in der Hauptfarbe – nie Rot auf der Fläche', () => {
+  it('Tordifferenz: Minus im dunkleren Rot `rankingNegativeText` (4,5 : 1 auch auf der Wertungsfläche), Plus in der Hauptfarbe, nie das Fehler-Rot', () => {
     const { handy } = tabelle(alleBeendet);
     const farben = datenzeilen(handy).map((tr) => {
       const zelle = tr.querySelectorAll('td')[3];
@@ -116,7 +116,7 @@ describe('@ZM-205 Tabelle der Zuschauer-Seite am Handy', () => {
     expect(farben.some((f) => f.wert < 0)).toBe(true);
     for (const { wert, farbe } of farben) {
       expect(farbe).not.toBe(cssVars.colors.error);
-      if (wert < 0) { expect(farbe).toBe(cssVars.colors.textPrimary); }
+      if (wert < 0) { expect(farbe).toBe(cssVars.colors.rankingNegativeText); }
       if (wert > 0) { expect(farbe).toBe(cssVars.colors.primary); }
     }
   });

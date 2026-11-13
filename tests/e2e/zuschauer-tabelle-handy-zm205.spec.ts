@@ -113,6 +113,31 @@ test.describe('@ZM-205 Tabelle der Zuschauer-Seite am Handy', () => {
   });
 });
 
+test.describe('@ZM-205 negative Tordifferenz in der Turnierleitung', () => {
+  for (const thema of ['light', 'dark'] as const) {
+    test(`@ZM-205 Tabelle der Leitung (Handy) und Gesamtplatzierung: „−“ und Kontrast mindestens 4,5 : 1, ${thema === 'dark' ? 'dunkel' : 'hell'}`, async ({ page }) => {
+      test.skip(test.info().project.name !== 'desktop', 'setzt das Fenster selbst');
+      await page.emulateMedia({ colorScheme: thema, reducedMotion: 'reduce' });
+      await page.setViewportSize({ width: 390, height: 900 });
+      await installiereSaat(page.context(), messSaat({ kurzeNamen: true }));
+      await page.goto(`/#/tournament/${TURNIER_ID}/standings`);
+      await expect(page.locator('.standings-table .mobile-view').first()).toBeVisible({ timeout: 25000 });
+      await animationenFertig(page);
+      const negativ = page.locator('.standings-table .mobile-view tbody tr td:nth-child(4)').filter({ hasText: /^\u2212\d/ });
+      expect(await negativ.count()).toBeGreaterThan(0);
+      for (const zelle of await negativ.all()) {
+        expect(await kontrastVon(zelle.locator('span').first())).toBeGreaterThanOrEqual(MIN_KONTRAST);
+      }
+      // Gesamtplatzierung: dasselbe Minuszeichen
+      await page.getByText('Gesamtplatzierung', { exact: true }).first().click();
+      await expect(page.locator('tbody tr').first()).toBeVisible();
+      const texte = await page.locator('tbody tr td').allInnerTexts();
+      expect(texte.some((t) => /^\u2212\d/.test(t.trim())), 'Minuszeichen U+2212 in der Gesamtplatzierung').toBe(true);
+      expect(texte.some((t) => /^-\d/.test(t.trim())), 'kein Bindestrich als Vorzeichen').toBe(false);
+    });
+  }
+});
+
 test.describe('@ZM-205 Zeilen der Handy-Tabelle bei üblichen Vereinsnamen', () => {
   for (const ansicht of ['zuschauer', 'leitung'] as const) {
   for (const breite of [360, 390]) {

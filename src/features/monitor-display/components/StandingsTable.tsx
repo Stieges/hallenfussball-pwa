@@ -7,6 +7,7 @@ import { MonitorTieMark } from './MonitorTieMark';
 import { ShortLabel } from '../../../components/ui/atoms';
 import { SlashBreaks } from '../../../components/ui/atoms/TeamName';
 import { placeLabel } from '../../../core/standings/placeLabel';
+import { goalDiffLabel } from '../../../core/standings/goalDiffLabel';
 
 export type MonitorColors = (typeof monitorThemes)[keyof typeof monitorThemes];
 export type StandingRows = ReturnType<typeof calculateStandings>;
@@ -89,7 +90,7 @@ export function StandingsTable({ rows, themeColors, tie }: StandingsTableProps) 
                   ? themeColors.progressBarWarning
                   : themeColors.text,
             }}>
-              {row.goalDifference > 0 ? '+' : ''}{row.goalDifference}
+              {goalDiffLabel(row.goalDifference)}
             </div>
             <div style={{
               ...number,
