@@ -164,6 +164,9 @@ test.describe('Leibchen: Wahl, Server und Anzeige (zwei Kontexte, lokaler Stack)
     const olli = await newRoleContext(browser, 'owner');
     const halle = await browser.newContext();
     try {
+      // Zuschauer-Seite schon offen: sie holt den Nachtrag selbst (Abfrage alle 10 s, @SL-226), ohne Neuladen
+      const tafel = await zuschauer(halle, 'LEIBCHENLIVE');
+      await expect(tafel.getByTestId('public-current').getByTestId(/^match-box-.*-away-bib$/), 'vor dem Nachtrag keine Weste').toHaveCount(0);
       await openCockpit(olli.page, ids.tournamentId, ids.matchId);
       await expectEngineMatchRunningUi(olli.page);
       await olli.page.getByTestId('cockpit-more-button').click();
@@ -179,7 +182,6 @@ test.describe('Leibchen: Wahl, Server und Anzeige (zwei Kontexte, lokaler Stack)
       await expect(feld.getByTestId('live-box-away-bib')).toBeVisible({ timeout: 25_000 });
       await expect(feld.getByTestId('live-box-home-bib')).toHaveCount(0);
       // @SL-150 @ZM-201: auch die Zuschauer-Seite zeigt den Nachtrag im laufenden Spiel (nach höchstens 10 s, @SL-226)
-      const tafel = await zuschauer(halle, 'LEIBCHENLIVE');
       await expect(tafel.getByTestId('public-current').getByTestId(/^match-box-.*-away-bib$/)).toBeVisible({ timeout: 15_000 });
       await expect(tafel.getByTestId('public-current').getByTestId(/^match-box-.*-home-bib$/)).toHaveCount(0);
     } finally {
