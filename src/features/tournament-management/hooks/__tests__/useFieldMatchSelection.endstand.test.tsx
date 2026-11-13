@@ -280,4 +280,25 @@ describe('Das nächste Spiel: ausgefallene, offene Paarung, zwei Felder (@SL-117
     const r = render({ engine: engineMit({ m1: T0 - 5_000 }), schedule, live: karte(['m1', 'FINISHED']), initialMatchId: 'm1', tournamentMatches: matches });
     expect(r.result.current.folgende.map((m) => m.id)).toEqual(['m3']);
   });
+
+  it('@SL-215 eine Ableitung: Spiel 2 hat ein Ergebnis, der Status steht noch „angesetzt“ – Tafel, „Weiter“ UND Karte nennen Spiel 3, nicht Spiel 2', () => {
+    const schedule: GeneratedSchedule = { allMatches: [feldSpiel('m1', 1, { scoreA: 1, scoreB: 0 }), feldSpiel('m2', 2, { scoreA: 2, scoreB: 2 }), feldSpiel('m3', 3)] } as unknown as GeneratedSchedule;
+    const matches = [tm('m1', 1, 'finished'), tm('m2', 2, 'scheduled', { scoreA: 2, scoreB: 2 }), tm('m3', 3, 'scheduled')];
+    const r = render({ engine: engineMit({ m1: T0 - 5_000 }), schedule, live: karte(['m1', 'FINISHED']), initialMatchId: 'm1', tournamentMatches: matches });
+    expect(r.result.current.folgende.map((m) => m.id)).toEqual(['m3']); // Tafel
+    expect(leibchenZiel(turnier(matches), 'm1', 'abgepfiffen')?.id).toBe('m3'); // Karte
+    act(() => { r.result.current.ladeNaechstes(); });
+    expect(aktuell(r)).toBe('m3'); // „Weiter“
+  });
+
+  it('@SL-215 ein zeitlich verschobenes Spiel: Spiel 2 wurde auf nach Spiel 3 gelegt – Tafel, „Weiter“ und Karte nennen Spiel 3 (Sortierung nach Uhrzeit, nicht nach Nummer)', () => {
+    const um = (h: number): Date => new Date(Date.UTC(2026, 10, 14, h, 0, 0));
+    const schedule: GeneratedSchedule = { allMatches: [feldSpiel('m1', 1, { scoreA: 1, scoreB: 0, startTime: um(9) }), feldSpiel('m2', 2, { startTime: um(11) }), feldSpiel('m3', 3, { startTime: um(10) })] } as unknown as GeneratedSchedule;
+    const matches = [tm('m1', 1, 'finished', { scheduledTime: um(9) }), tm('m2', 2, 'scheduled', { scheduledTime: um(11) }), tm('m3', 3, 'scheduled', { scheduledTime: um(10) })];
+    const r = render({ engine: engineMit({ m1: T0 - 5_000 }), schedule, live: karte(['m1', 'FINISHED']), initialMatchId: 'm1', tournamentMatches: matches });
+    expect(r.result.current.folgende.map((m) => m.id)).toEqual(['m3', 'm2']);
+    expect(leibchenZiel(turnier(matches), 'm1', 'abgepfiffen')?.id).toBe('m3');
+    act(() => { r.result.current.ladeNaechstes(); });
+    expect(aktuell(r)).toBe('m3');
+  });
 });

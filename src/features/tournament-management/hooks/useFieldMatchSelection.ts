@@ -11,7 +11,7 @@ import { useSearchParams } from 'react-router-dom';
 import type { GeneratedSchedule, ScheduledMatch } from '../../../core/generators';
 import type { LiveMatch } from '../../../components/live-cockpit/types';
 import { matchesOfFieldInPlayOrder } from '../utils/fieldMatchOrder';
-import { openMatchesInPlayOrder, type NextCandidate } from '../../../core/models/nextMatch';
+import { nextCandidateOf, openMatchesInPlayOrder, type NextCandidate, type NextSource } from '../../../core/models/nextMatch';
 import type { Match } from '../../../types/tournament';
 import { useEndstandHalten } from './useEndstandHalten';
 
@@ -93,9 +93,9 @@ export function useFieldMatchSelection(p: FieldMatchSelectionParams): FieldMatch
     const ist = new Map((tournamentMatches ?? []).map((m) => [m.id, m]));
     return schedule.allMatches.map((m): NextCandidate & { geplant: ScheduledMatch } => {
       const tm = ist.get(m.id);
-      const hatErgebnis = m.scoreA !== undefined && m.scoreB !== undefined;
-      const status = tm?.matchStatus === 'skipped' || tm?.matchStatus === 'finished' ? tm.matchStatus : hatErgebnis ? 'finished' : (tm?.matchStatus ?? 'scheduled');
-      return { id: m.id, field: m.field, round: tm?.round ?? Number.POSITIVE_INFINITY, slot: m.slot, matchNumber: m.matchNumber, scheduledTime: m.startTime, matchStatus: status, slotA: m.slotA, slotB: m.slotB, geplant: m };
+      // Dasselbe Spiel, dieselbe Ableitung wie bei der Karte (`nextCandidateOf`); der Spielplan liefert Ergebnis und, wenn dem Spiel die Uhrzeit fehlt, die berechnete
+      const quelle: NextSource = { ...tm, id: m.id, field: m.field, matchNumber: m.matchNumber, slotA: m.slotA, slotB: m.slotB, slot: m.slot ?? tm?.slot, scoreA: m.scoreA ?? tm?.scoreA, scoreB: m.scoreB ?? tm?.scoreB, scheduledTime: tm?.scheduledTime ?? m.startTime };
+      return { ...nextCandidateOf(quelle), geplant: m };
     });
   }, [schedule.allMatches, tournamentMatches]);
   const offeneImFeld = (ausser?: string): ScheduledMatch[] => openMatchesInPlayOrder(kandidaten.filter((k) => k.id !== ausser), feld).map((k) => k.geplant);

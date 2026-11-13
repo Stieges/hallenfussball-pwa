@@ -9,6 +9,19 @@ import { slotTeamId } from './matchSlot';
 
 export type NextCandidate = Pick<Match, 'id' | 'field' | 'round' | 'slot' | 'matchNumber' | 'scheduledTime' | 'matchStatus' | 'slotA' | 'slotB'>;
 
+/** Was die Kandidaten brauchen: ein Spiel des Turniers (`Match`) oder ein Spiel des Spielplans mit denselben Feldern. */
+export type NextSource = Pick<Match, 'id' | 'field' | 'matchNumber' | 'slotA' | 'slotB'> & Partial<Pick<Match, 'round' | 'slot' | 'scheduledTime' | 'matchStatus' | 'scoreA' | 'scoreB'>>;
+
+/**
+ * Der EINE Weg von einem Spiel zum Kandidaten für „nächstes Spiel“ – für Tafel, „Weiter“ und Karte der Leibchen (@SL-117, @SL-215): ausgefallen und beendet gelten
+ * wie gesagt, ein Ergebnis zählt als beendet, auch wenn der Status noch „angesetzt“ sagt; ohne Status gilt „angesetzt“.
+ */
+export function nextCandidateOf(m: NextSource): NextCandidate {
+  const hatErgebnis = m.scoreA !== undefined && m.scoreB !== undefined;
+  const status = m.matchStatus === 'skipped' || m.matchStatus === 'finished' ? m.matchStatus : hatErgebnis ? 'finished' : (m.matchStatus ?? 'scheduled');
+  return { id: m.id, field: m.field, round: m.round as number, slot: m.slot, matchNumber: m.matchNumber, scheduledTime: m.scheduledTime, matchStatus: status, slotA: m.slotA, slotB: m.slotB };
+}
+
 const nullsLast = (value: number | undefined): number => value ?? Number.POSITIVE_INFINITY;
 
 function compare(a: NextCandidate, b: NextCandidate): number {
