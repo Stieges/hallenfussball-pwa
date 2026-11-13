@@ -26,7 +26,7 @@ beforeEach(() => __setzeInstallAngebotFuerTests());
 
 describe('Angebot „App installieren“ festhalten', () => {
   it('das Ereignis wird festgehalten (und der Browser öffnet sein Angebot nicht von selbst); die Taste öffnet es genau einmal', async () => {
-    starteInstallAngebot();
+    const aufhoeren = starteInstallAngebot();
     const { result } = renderHook(() => useSyncExternalStore(abonniereInstallAngebot, installAngebotVorhanden, () => false));
     expect(result.current).toBe(false);
     const e = ereignis();
@@ -38,13 +38,31 @@ describe('Angebot „App installieren“ festhalten', () => {
     expect(result.current).toBe(false);
     await act(async () => { await installiereApp(); });
     expect(e.prompt).toHaveBeenCalledTimes(1);
+    aufhoeren();
+  });
+  it('B1 Gegenbeispiel: auf jeder anderen Seite (z. B. /live/ABC123) lauscht die App nicht, der Browser behält sein Angebot (kein preventDefault)', () => {
+    const e = ereignis();
+    act(() => { window.dispatchEvent(e); });
+    expect(e.defaultPrevented).toBe(false);
+    expect(installAngebotVorhanden()).toBe(false);
+  });
+  it('B1 solange der Unterpunkt offen ist wird das Angebot zurückgehalten, nach dem Aushängen wieder nicht mehr', () => {
+    const aufhoeren = starteInstallAngebot();
+    const waehrend = ereignis();
+    act(() => { window.dispatchEvent(waehrend); });
+    expect(waehrend.defaultPrevented).toBe(true);
+    aufhoeren();
+    const danach = ereignis();
+    act(() => { window.dispatchEvent(danach); });
+    expect(danach.defaultPrevented).toBe(false);
   });
   it('„appinstalled“ nimmt das Angebot weg', () => {
-    starteInstallAngebot();
+    const aufhoeren = starteInstallAngebot();
     act(() => { window.dispatchEvent(ereignis()); });
     expect(installAngebotVorhanden()).toBe(true);
     act(() => { window.dispatchEvent(new Event('appinstalled')); });
     expect(installAngebotVorhanden()).toBe(false);
+    aufhoeren();
   });
 });
 

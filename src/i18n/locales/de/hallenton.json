@@ -131,7 +131,7 @@
     "schritt3": "Ton aktivieren",
     "schritt3Text": "Der Browser spielt Ton erst nach einem Klick. Der Knopf „Ton aktivieren“ erscheint unten, sobald ein Feld gewählt ist.",
     "schritt4": "Testton in der Halle",
-    "schritt4Text": "Dann spielt „Testton in der Halle“ einmal den Abpfiff-Ton, und hier steht „gespielt 14:02“.",
+    "schritt4Text": "Dann spielt „Testton in der Halle“ einmal den Abpfiff-Ton, und hier steht „gespielt“ mit der Uhrzeit.",
     "erledigt": "erledigt"
   },
   "anleitung": {
@@ -171,7 +171,9 @@
     "frageOhneName": "Dieses Gerät ist schon Hallen-Lautsprecher für ein anderes Turnier. Wechseln?",
     "folge": "Danach tönt es nur noch für dieses Turnier. Im anderen Turnier steht bei den Feldern „kein Hallen-Lautsprecher“.",
     "bestaetigen": "Wechseln",
-    "abbrechen": "Abbrechen"
+    "abbrechen": "Abbrechen",
+    "alteAbmeldung": "Im Turnier ‚{{turnier}}‘ konnte der Lautsprecher nicht abgemeldet werden – dort bitte selbst ausschalten.",
+    "alteAbmeldungOhneName": "Im alten Turnier konnte der Lautsprecher nicht abgemeldet werden – dort bitte selbst ausschalten."
   },
   "anmelden": {
     "titel": "Bitte melde dich an",

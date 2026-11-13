@@ -28,7 +28,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { merkeAbmeldung, vergissAbmeldung, vergissAbmeldungWenn } from './ausstehendeAbmeldung';
 import { leseTonWahlSofort, leseTorWahlZumAnhoeren } from './browserLaufzeit';
-import { meldeFeldAb, wechsleTurnier } from './geraetZuordnung';
+import { meldeFeldAb, wechsleTurnier, type WechselErgebnis } from './geraetZuordnung';
 import { ladeTurnierLokal } from './lokalesTurnier';
 import {
   abgeloestVerstanden, abonniereGeraet, erneutVersuchen, geraetSpieler, geraetStand, schlafenQuittiert, setzeEinschaltung, setzeLebenszeichenFehler,
@@ -50,7 +50,7 @@ export interface HallLautsprecher {
   tonAktivieren(): Promise<boolean>;
   ausschalten(): Promise<HallErgebnis<HallReleaseAntwort> | null>;
   /** @HT-056: dieses Gerät ist Lautsprecher in einem anderen Turnier – hier eingeschaltet wechselt es (erst neu zuordnen, dann alt abmelden). */
-  wechseln(felder: readonly number[], name: string, abloesen?: boolean): Promise<HallErgebnis<HallAssignAntwort> | null>;
+  wechseln(felder: readonly number[], name: string, abloesen?: boolean): Promise<WechselErgebnis | null>;
   /** Ein einzelnes Feld abwählen, die übrigen bleiben (der letzte Chip ist `ausschalten`). */
   feldAbmelden(feld: number): Promise<HallErgebnis<HallReleaseAntwort> | null>;
   /** Das andere Turnier, in dem dieses Gerät Lautsprecher ist (`rolle === 'anderesTurnier'`); sonst `null`. */

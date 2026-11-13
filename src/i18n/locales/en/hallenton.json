@@ -131,7 +131,7 @@
     "schritt3": "Activate audio",
     "schritt3Text": "The browser only plays audio after a click. The “Activate audio” button appears at the bottom once a field is chosen.",
     "schritt4": "Test tone in the hall",
-    "schritt4Text": "Then “Test tone in the hall” plays the final whistle once, and here it says “played 14:02”.",
+    "schritt4Text": "Then “Test tone in the hall” plays the final whistle once, and here it says “played” with the time.",
     "erledigt": "done"
   },
   "anleitung": {
@@ -171,7 +171,9 @@
     "frageOhneName": "This device is already hall speaker for another tournament. Switch?",
     "folge": "After that it only plays for this tournament. In the other tournament the fields say “no hall speaker”.",
     "bestaetigen": "Switch",
-    "abbrechen": "Cancel"
+    "abbrechen": "Cancel",
+    "alteAbmeldung": "In ‘{{turnier}}’ the speaker could not be removed – please switch it off there yourself.",
+    "alteAbmeldungOhneName": "In the old tournament the speaker could not be removed – please switch it off there yourself."
   },
   "anmelden": {
     "titel": "Please sign in",

@@ -84,6 +84,11 @@ export function DiesesGeraetAbschnitt({ abschnitt: a, darfAendern, leisteLinks =
   const sichtbareBanner = darfAendern ? a.banner : a.banner.filter((b) => b.art !== 'keinLautsprecher');
   return (
     <>
+      {a.alteAbmeldung === null ? null : (
+        <InlineNotice tone="info" data-testid="geraet-alte-abmeldung">
+          {a.alteAbmeldung.turnierName === null ? t('wechseln.alteAbmeldungOhneName') : t('wechseln.alteAbmeldung', { turnier: a.alteAbmeldung.turnierName })}
+        </InlineNotice>
+      )}
       {a.modus === 'einrichtung' ? (
         <>
           <EinrichtungSchritte

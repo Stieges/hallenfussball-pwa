@@ -54,7 +54,7 @@ function RightCheck({ permission, category, tournamentId, children }: { permissi
  * H4-8 (@HT-022, @HT-046): „Hallenton“ lesen darf, wer `manageScreens` hat – auch nach dem Turnierende (dann lesbar, ändern sperrt jede
  * Taste selbst über `useCan('manageScreens')` ohne Ausnahme). Kein `CLOSED_LOCKED`, kein `RightCheck`: ohne das Recht steht immer
  * „Ändern nur durch die Turnierleitung“ (Helfer, Helfer-Zugang und Bildschirm), nie der Abschluss-Hinweis. H4-9 (@HT-026): wer gar nicht
- * angemeldet ist (zweiter Rechner), bekommt „Anmelden“ mit Rückweg in diesen Unterpunkt statt des Hinweises „nur Turnierleitung“.
+ * angemeldet ist oder nur als Gast (zweiter Rechner), bekommt „Anmelden“ mit Rückweg in diesen Unterpunkt statt des Hinweises „nur Turnierleitung“.
  */
 function HallentonLesen({ tournamentId, children }: { tournamentId: string; children: ReactNode }) {
   const { allowed, isLoading } = useCanState('manageScreens', tournamentId, { openAfterClose: true });
@@ -62,7 +62,7 @@ function HallentonLesen({ tournamentId, children }: { tournamentId: string; chil
   if (allowed) {
     return <>{children}</>;
   }
-  if (auth !== undefined && !auth.isLoading && auth.user === null) {
+  if (auth !== undefined && !auth.isLoading && (auth.user === null || auth.isGuest)) {
     return <HallentonAnmeldeHinweis />;
   }
   return isLoading ? <CategorySkeleton /> : <LeadOnlyHint />;

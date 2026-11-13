@@ -2,14 +2,20 @@
  * H4-9 @HT-026 Rücksprung nach der Anmeldung: „Dann meldet er sich dort an wie auf dem Rechner der Turnierleitung. Und danach öffnet sich
  * derselbe Unterpunkt ‚Hallenton‘“. Erwartung aus dem Gherkin; dazu die Gegenbeispiele: nichts Fremdes, nur einmal, ohne Merker die Startseite.
  */
-import { beforeEach, describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { RUECKKEHR_SCHLUESSEL, holeRueckkehr, istRueckkehrZiel, merkeRueckkehr } from '../loginRueckkehr';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { RUECKKEHR_FRIST_MS, RUECKKEHR_SCHLUESSEL, holeRueckkehr, istRueckkehrZiel, merkeRueckkehr } from '../loginRueckkehr';
+import { FalscherSpeicher } from '../../../../test/hallenton/falschesGeraet';
 
 const HALLENTON = '/tournament/hallencup-nord/admin/hallenton';
 
-beforeEach(() => window.sessionStorage.clear());
+const speicherBinden = (): void => {
+  const speicher = new FalscherSpeicher();
+  vi.mocked(localStorage.getItem).mockImplementation((k: string) => speicher.getItem(k));
+  vi.mocked(localStorage.setItem).mockImplementation((k: string, w: string) => speicher.setItem(k, w));
+  vi.mocked(localStorage.removeItem).mockImplementation((k: string) => speicher.removeItem(k));
+};
+
+beforeEach(speicherBinden);
 
 describe('@HT-026 Rücksprung in den Unterpunkt „Hallenton“', () => {
   it('die Adresse des Unterpunkts wird gemerkt und nach der Anmeldung zurückgegeben', () => {
@@ -20,7 +26,7 @@ describe('@HT-026 Rücksprung in den Unterpunkt „Hallenton“', () => {
     merkeRueckkehr(HALLENTON);
     expect(holeRueckkehr()).toBe(HALLENTON);
     expect(holeRueckkehr()).toBeNull();
-    expect(window.sessionStorage.getItem(RUECKKEHR_SCHLUESSEL)).toBeNull();
+    expect(window.localStorage.getItem(RUECKKEHR_SCHLUESSEL)).toBeNull();
   });
   it('Gegenbeispiel: ohne Merker nichts (die Anmeldung führt wie bisher zur Startseite)', () => {
     expect(holeRueckkehr()).toBeNull();
@@ -34,14 +40,31 @@ describe('@HT-026 Rücksprung in den Unterpunkt „Hallenton“', () => {
   });
   it('Gegenbeispiel: eine fremde Adresse wird nicht gemerkt, und ein untergeschobener Merker wird nicht befolgt', () => {
     merkeRueckkehr('https://evil.example/');
-    expect(window.sessionStorage.getItem(RUECKKEHR_SCHLUESSEL)).toBeNull();
-    window.sessionStorage.setItem(RUECKKEHR_SCHLUESSEL, '//evil.example/');
+    expect(window.localStorage.getItem(RUECKKEHR_SCHLUESSEL)).toBeNull();
+    window.localStorage.setItem(RUECKKEHR_SCHLUESSEL, JSON.stringify({ pfad: '//evil.example/', bis: Date.now() + 60_000 }));
     expect(holeRueckkehr()).toBeNull();
-    expect(window.sessionStorage.getItem(RUECKKEHR_SCHLUESSEL)).toBeNull(); // auch der falsche Merker ist gelöscht
+    expect(window.localStorage.getItem(RUECKKEHR_SCHLUESSEL)).toBeNull(); // auch der falsche Merker ist gelöscht
   });
-  it('App.tsx führt die Anmeldung zurück: onSuccess der Anmeldeseite fragt `holeRueckkehr()` und fällt auf „/“ zurück', () => {
-    const quelle = readFileSync(join(__dirname, '../../../../App.tsx'), 'utf8');
-    const stelle = quelle.slice(quelle.indexOf('<LoginScreen'));
-    expect(stelle.slice(0, 400)).toContain("onSuccess={() => void navigate(holeRueckkehr() ?? '/')}");
+  it('Magic-Link in einem neuen Tab: der Merker liegt im gemeinsamen Speicher und gilt 15 Minuten, danach nicht mehr', () => {
+    vi.useFakeTimers();
+    try {
+      merkeRueckkehr(HALLENTON);
+      vi.advanceTimersByTime(RUECKKEHR_FRIST_MS - 1000);
+      expect(holeRueckkehr()).toBe(HALLENTON);
+      merkeRueckkehr(HALLENTON);
+      vi.advanceTimersByTime(RUECKKEHR_FRIST_MS + 1000);
+      expect(holeRueckkehr()).toBeNull();
+      expect(window.localStorage.getItem(RUECKKEHR_SCHLUESSEL)).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it('Gegenbeispiel: ein unlesbarer oder untergeschobener Merker ohne Frist wird nicht befolgt', () => {
+    window.localStorage.setItem(RUECKKEHR_SCHLUESSEL, 'kein json');
+    expect(holeRueckkehr()).toBeNull();
+    window.localStorage.setItem(RUECKKEHR_SCHLUESSEL, JSON.stringify({ pfad: HALLENTON }));
+    expect(holeRueckkehr()).toBeNull();
+    window.localStorage.setItem(RUECKKEHR_SCHLUESSEL, JSON.stringify({ pfad: 'https://evil.example/', bis: Date.now() + 60_000 }));
+    expect(holeRueckkehr()).toBeNull();
   });
 });

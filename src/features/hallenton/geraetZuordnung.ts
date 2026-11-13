@@ -9,7 +9,7 @@
  */
 import { getDeviceId } from '../../core/device/deviceId';
 import {
-  hallSpeakerAssign, hallSpeakerRelease, type HallAssignAntwort, type HallErgebnis, type HallReleaseAntwort,
+  hallSpeakerAssign, hallSpeakerRelease, type HallAssignAntwort, type HallErgebnis, type HallFehlerGrund, type HallReleaseAntwort,
 } from '../../core/repositories/hallentonRpc';
 import { supabase } from '../../lib/supabase';
 import { merkeAbmeldung, vergissAbmeldung, vergissAbmeldungWenn } from './ausstehendeAbmeldung';
@@ -24,8 +24,15 @@ export interface WechselEingabe {
   abloesen?: boolean;
 }
 
+/**
+ * Antwort der Zuordnung im neuen Turnier. `alteAbmeldungFehler`: die Abmeldung im alten Turnier ist an etwas anderem als dem Netz gescheitert
+ * (z. B. dort kein Recht mehr, Turnier beendet) und wird nicht wiederholt – dort steht dann ein verwaister Lautsprecher, die Oberfläche sagt es.
+ * Am Netz gescheitert heißt: der Baustein holt sie nach, kein Hinweis nötig.
+ */
+export type WechselErgebnis = HallErgebnis<HallAssignAntwort> & { alteAbmeldungFehler?: HallFehlerGrund };
+
 /** `null`: dieses Gerät ist in keinem anderen Turnier Lautsprecher (nichts zu wechseln). Sonst die Antwort der Zuordnung im neuen Turnier. */
-export async function wechsleTurnier({ tid, felder, name, abloesen = false }: WechselEingabe): Promise<HallErgebnis<HallAssignAntwort> | null> {
+export async function wechsleTurnier({ tid, felder, name, abloesen = false }: WechselEingabe): Promise<WechselErgebnis | null> {
   const alt = geraetStand().einschaltung;
   if (alt === null || alt.turnierId === tid) {
     return null;
@@ -50,6 +57,9 @@ export async function wechsleTurnier({ tid, felder, name, abloesen = false }: We
     const abgemeldet = await hallSpeakerRelease(supabase, { p_tournament_id: abmeldung.turnierId, p_fields: abmeldung.felder, p_device_id: getDeviceId() });
     if (abgemeldet.ok || abgemeldet.grund !== 'netz') {
       vergissAbmeldungWenn(abmeldung);
+    }
+    if (!abgemeldet.ok && abgemeldet.grund !== 'netz') {
+      return { ...ergebnis, alteAbmeldungFehler: abgemeldet.grund };
     }
   }
   return ergebnis;

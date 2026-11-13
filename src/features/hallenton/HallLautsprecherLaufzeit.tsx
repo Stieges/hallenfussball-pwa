@@ -22,7 +22,6 @@ import { erzeugeBrowserLeitung, setzeLeitung } from './leitungGeraet';
 import { ladeTurnierLokal } from './lokalesTurnier';
 import { abonniereGeraet, erneutVersuchen, geraetStand, setzeLaufzeit } from './lautsprecherGeraet';
 import type { LaufzeitSnapshot } from './runtime/HallLautsprecherLaufzeit';
-import { starteInstallAngebot } from './runtime/installAngebot';
 import { verbindeLautsprecherReloadTor } from './runtime/lautsprecherReloadTor';
 import { echterZeitgeber } from './runtime/zeitgeber';
 
@@ -44,10 +43,6 @@ export function HallLautsprecherLaufzeit(): null {
     }
     letzterToken.current = token;
   }, [token]);
-
-  useEffect(() => {
-    starteInstallAngebot(); // H4-9: das einmalige Installations-Angebot des Browsers festhalten (Schritt „App installieren“)
-  }, []);
 
   useEffect(() => {
     const kanal = erzeugeBrowserKanal();

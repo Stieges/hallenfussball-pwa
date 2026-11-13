@@ -120,6 +120,29 @@ describe('@HT-056 Wer das Gerät in einem zweiten Turnier zum Lautsprecher macht
   });
 });
 
+describe('B4 Abmeldung im alten Turnier scheitert nicht am Netz', () => {
+  it('kein Recht im alten Turnier → das Ergebnis nennt den Fehler, die Abmeldung wird nicht wiederholt, das neue Turnier gilt', async () => {
+    imHallencupSued();
+    falsch.rpcFehler.hall_speaker_release = '42501';
+    const { result } = renderHook(() => useHallLautsprecher(NORD));
+    let antwort: unknown;
+    await act(async () => { antwort = await result.current.wechseln([1], 'Rechner der Turnierleitung'); });
+    expect(antwort).toMatchObject({ ok: true, status: 'assigned', alteAbmeldungFehler: 'kein_recht' });
+    expect(geraetStand().einschaltung?.turnierId).toBe(NORD);
+    expect(localStorage.getItem(ABMELDEN_SCHLUESSEL)).toBeNull();
+  });
+  it('Gegenbeispiel: nur am Netz gescheitert (Antwort hängt) → kein Fehlerhinweis, die Abmeldung bleibt gemerkt und wird nachgeholt', async () => {
+    imHallencupSued();
+    falsch.haengendeRpcs.add('hall_speaker_release');
+    const { result } = renderHook(() => useHallLautsprecher(NORD));
+    const gefragt = vi.fn();
+    act(() => { void result.current.wechseln([1], 'x').then(gefragt); });
+    await warten();
+    expect(gefragt).not.toHaveBeenCalled(); // noch unterwegs, kein Hinweis
+    expect(JSON.parse(localStorage.getItem(ABMELDEN_SCHLUESSEL) ?? 'null')).toEqual({ turnierId: SUED, felder: [1] });
+  });
+});
+
 describe('@HT-002 ein einzelnes Feld abwählen', () => {
   const zweiFelder = (): void => {
     localStorage.setItem(GERAET_SCHLUESSEL, JSON.stringify({ turnierId: NORD, felder: [1, 2], name: 'Rechner' }));

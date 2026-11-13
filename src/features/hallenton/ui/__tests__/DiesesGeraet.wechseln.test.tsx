@@ -104,6 +104,7 @@ describe('@HT-056 Rückfrage beim zweiten Turnier', () => {
     render(seite());
     await feldWaehlen();
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' })); await Promise.resolve(); });
+    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false'); // B5: auch der Schalter steht wie vorher
     expect(wechseln()).not.toHaveBeenCalled();
     expect(doppel.lautsprecher.einschalten).not.toHaveBeenCalled();
     expect(screen.queryByText(/Wechseln\?/)).toBeNull();
@@ -134,5 +135,22 @@ describe('@HT-056 Rückfrage beim zweiten Turnier', () => {
     await feldWaehlen();
     expect(screen.queryByText(/Wechseln\?/)).toBeNull();
     expect(doppel.lautsprecher.einschalten).toHaveBeenCalledTimes(1);
+  });
+  it('B4 die Abmeldung im alten Turnier scheitert (z. B. dort kein Recht): das neue Turnier gilt, ein ruhiger Hinweis mit dem Namen sagt, dort selbst auszuschalten', async () => {
+    doppel.lautsprecher = lautsprecherDoppel({
+      rolle: 'anderesTurnier', anderesTurnier: { turnierId: 't-sued', felder: [1] },
+      wechseln: vi.fn(() => Promise.resolve({ ok: true as const, status: 'assigned' as const, fields: [1], replaced: [], alteAbmeldungFehler: 'kein_recht' as const })),
+    } as never);
+    render(seite());
+    await feldWaehlen();
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Wechseln' })); await Promise.resolve(); });
+    expect(screen.getByTestId('geraet-alte-abmeldung')).toHaveTextContent('Im Turnier ‚Hallencup Süd‘ konnte der Lautsprecher nicht abgemeldet werden – dort bitte selbst ausschalten.');
+    expect(screen.queryByTestId('geraet-fehler')).toBeNull();
+  });
+  it('Gegenbeispiel B4: Abmeldung gelungen → kein Hinweis', async () => {
+    render(seite());
+    await feldWaehlen();
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Wechseln' })); await Promise.resolve(); });
+    expect(screen.queryByTestId('geraet-alte-abmeldung')).toBeNull();
   });
 });

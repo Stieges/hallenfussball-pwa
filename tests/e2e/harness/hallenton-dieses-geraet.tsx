@@ -21,7 +21,7 @@ import { hallAnzeige } from '../../../src/features/hallenton/hallAnzeige';
 import { lautsprecherLage, type LautsprecherLage } from '../../../src/features/hallenton/runtime/hallStatusAuswertung';
 import { baueFeldKarten } from '../../../src/features/hallenton/ui/feldKarten';
 import { baueGeraetBanner } from '../../../src/features/hallenton/ui/geraetBanner';
-import type { GeraetAbschnitt } from '../../../src/features/hallenton/ui/useGeraetAbschnitt';
+import { waehleModus, type GeraetAbschnitt } from '../../../src/features/hallenton/ui/useGeraetAbschnitt';
 import { formatUhrzeit } from '../../../src/features/hallenton/ui/uhrzeit';
 import type { HallStatus } from '../../../src/features/hallenton/useHallStatus';
 import type { HallStatusVoll } from '../../../src/core/repositories/hallentonRpc';
@@ -76,10 +76,12 @@ export function Seite() {
     eigeneAnzeige: anzeige.felder.filter((f) => f.eigenesGeraet), karten,
     sprecherName: (feld) => server.speakers.find((s) => s.field === feld && !s.isThisDevice)?.deviceName, t,
   });
-  const einrichtung = fall === 'leer';
+  // Modus wie im echten Hook (`waehleModus`), nicht von Hand (B8): „wechseln“ ist ein Turnier ohne Lautsprecher, also die Einrichtung
+  const modus = waehleModus({ istLautsprecher, keinLautsprecherImTurnier: karten.every((k) => k.zustand.art === 'keinLautsprecher'), standAktuell: true, abgeloest: abgeloest !== null });
+  const einrichtung = modus === 'einrichtung';
   const aus = () => undefined;
   const abschnitt: GeraetAbschnitt = {
-    modus: einrichtung ? 'einrichtung' : 'abschnitt', oben: einrichtung || istLautsprecher, banner, verstanden: aus,
+    modus, alteAbmeldung: null, oben: einrichtung || istLautsprecher, banner, verstanden: aus,
     felder: [1, 2], gewaehlt: istLautsprecher ? [1] : [], an: istLautsprecher || fall === 'abloesen' || fall === 'wechseln', name: EIGEN, setzeName: aus, nameVerlassen: aus,
     schalterUmlegen: aus, feldUmschalten: aus, beschaeftigt: false, fehler: null, handy: false, installiert: fall !== 'leer', installAngebot: false, installieren: aus,
     schalterErledigt: istLautsprecher, tonErledigt: fall === 'bereit' || fall === 'anleitung', tonNoetig: fall === 'eingerichtet', tonAktivieren: aus,

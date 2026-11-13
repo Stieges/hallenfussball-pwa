@@ -274,6 +274,36 @@ describe('@HT-015 Ein zweites Gerät für dasselbe Feld löst das erste ab', () 
   });
 });
 
+describe('B1 Installations-Angebot nur im Unterpunkt', () => {
+  it('der Unterpunkt hält das Angebot des Browsers zurück, solange er offen ist; danach nicht mehr', () => {
+    const ereignis = (): Event => Object.assign(new Event('beforeinstallprompt', { cancelable: true }), { prompt: vi.fn(() => Promise.resolve()), userChoice: Promise.resolve({ outcome: 'dismissed' }) });
+    const { unmount } = render(seite());
+    const offen = ereignis();
+    act(() => { window.dispatchEvent(offen); });
+    expect(offen.defaultPrevented).toBe(true);
+    expect(screen.getByTestId('einrichtung-installieren')).toBeInTheDocument(); // Taste, weil das Angebot da ist
+    unmount();
+    const zu = ereignis();
+    act(() => { window.dispatchEvent(zu); });
+    expect(zu.defaultPrevented).toBe(false);
+  });
+});
+
+describe('B5 Abbrechen setzt den Schalter zurück', () => {
+  it('Ablösen abbrechen: Schalter wieder „Aus“, nichts gewählt', async () => {
+    doppel.lautsprecher = lautsprecherDoppel({
+      einschalten: vi.fn(() => Promise.resolve({ ok: true as const, status: 'occupied' as const, fields: [{ field: 1, deviceName: 'Hallenmonitor Halle' }] })),
+    });
+    render(seite());
+    await klick('geraet-schalter-taste');
+    await klick('geraet-feld-1');
+    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'true');
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' })); await Promise.resolve(); });
+    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByTestId('geraet-feld-1')).toBeDisabled();
+  });
+});
+
 describe('@HT-021 Handy: Hinweis, aber keine Sperre', () => {
   const kennung = (ua: string): void => { vi.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue(ua); };
   it('auf einem Handy steht der Hinweis, und Schalter, Felder und „Ton aktivieren“ bleiben benutzbar', async () => {
