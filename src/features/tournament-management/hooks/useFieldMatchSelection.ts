@@ -94,7 +94,7 @@ export function useFieldMatchSelection(p: FieldMatchSelectionParams): FieldMatch
     return schedule.allMatches.map((m): NextCandidate & { geplant: ScheduledMatch } => {
       const tm = ist.get(m.id);
       // Dasselbe Spiel, dieselbe Ableitung wie bei der Karte (`nextCandidateOf`); der Spielplan liefert Ergebnis und, wenn dem Spiel die Uhrzeit fehlt, die berechnete
-      const quelle: NextSource = { ...tm, id: m.id, field: m.field, matchNumber: m.matchNumber, slotA: m.slotA, slotB: m.slotB, slot: m.slot ?? tm?.slot, scoreA: m.scoreA ?? tm?.scoreA, scoreB: m.scoreB ?? tm?.scoreB, scheduledTime: tm?.scheduledTime ?? m.startTime };
+      const quelle: NextSource = { ...tm, ...m, scheduledTime: tm?.scheduledTime ?? m.startTime };
       return { ...nextCandidateOf(quelle), geplant: m };
     });
   }, [schedule.allMatches, tournamentMatches]);
