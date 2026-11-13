@@ -39,6 +39,9 @@ const SettingsCategory = lazy(() =>
 const MatchCockpitCategory = lazy(() =>
   import('../categories/MatchCockpit').then((m) => ({ default: m.MatchCockpitCategory }))
 );
+const HallentonCategory = lazy(() =>
+  import('../categories/Hallenton').then((m) => ({ default: m.HallentonCategory }))
+);
 const VisibilityCategory = lazy(() =>
   import('../categories/Visibility').then((m) => ({ default: m.VisibilityCategory }))
 );
@@ -83,6 +86,8 @@ export function AdminCategoryContent({ category, ...categoryProps }: AdminCatego
       return <SettingsCategory {...categoryProps} />;
     case 'match-cockpit':
       return <MatchCockpitCategory {...categoryProps} />;
+    case 'hallenton':
+      return <HallentonCategory {...categoryProps} />;
     case 'visibility':
       return <VisibilityCategory {...categoryProps} />;
     case 'metadata':

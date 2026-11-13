@@ -134,6 +134,15 @@ export const styles = {
     borderRadius: cssVars.borderRadius.full,
   } as CSSProperties,
 
+  neuBadge: {
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.primary}`,
+    color: cssVars.colors.textPrimary,
+    fontSize: cssVars.fontSizes.labelSm,
+    fontWeight: cssVars.fontWeights.semibold,
+    padding: `0 ${cssVars.spacing.xs}`,
+    borderRadius: cssVars.borderRadius.full,
+  } as CSSProperties,
+
   separator: {
     height: 1,
     background: cssVars.colors.border,

@@ -53,5 +53,40 @@
   "geraet": {
     "uebernommen": "Field {{feld}} taken over by another device",
     "abgemeldet": "The tournament director removed this device as the hall speaker for field {{feld}}."
+  },
+  "seite": {
+    "felderTitel": "Speaker per field",
+    "felderLeer": "No hall speaker set up yet. That is fine as long as matches run at the field: the tone plays in the cockpit.",
+    "keinNetzTitel": "No connection – status unknown",
+    "keinNetzText": "This admin view has no connection. You will see whether the speakers are ready once you are back online."
+  },
+  "testton": {
+    "titel": "Test tone",
+    "anhoerenTitel": "Listen here",
+    "anhoerenText": "Plays the final-whistle tone on this device, at this device's volume. For checking and adjusting. Nothing is heard in the hall.",
+    "anhoerenTextGeraet": "Plays the final-whistle tone on this device ({{name}}), at this device's volume. For checking and adjusting. Nothing is heard in the hall.",
+    "anhoeren": "Listen here",
+    "halleTitel": "Test tone in the hall",
+    "halleText": "Plays the final-whistle tone once on the field's hall speaker. Afterwards this page shows when it was played.",
+    "halle": "Test tone in the hall",
+    "lautsprecher": "Speaker: {{name}}",
+    "keinLautsprecherKein": "no hall speaker, no test tone",
+    "gespielt": "played {{zeit}}",
+    "laeuft": "Requesting test tone …",
+    "keineAntwort": "not played – no answer",
+    "nichtGespieltMeldetSich": "not played – not responding (last seen {{zeit}})",
+    "keinNetz": "No test tone: no connection",
+    "keinRecht": "No test tone: no permission",
+    "beendet": "No test tone: tournament ended",
+    "fehler": "No test tone: that did not work",
+    "zuFrueh": "Please wait a moment and try again",
+    "keinLautsprecher": "No test tone: no hall speaker"
+  },
+  "toeneKarte": {
+    "abschnitt": "Tones",
+    "titel": "Tones",
+    "ziel": "Hall tone",
+    "text": "Hall speaker, volume and test tone are now in the sub-page “Hall tone”.",
+    "oeffnen": "Open hall tone"
   }
 }

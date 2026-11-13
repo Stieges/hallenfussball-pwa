@@ -53,5 +53,40 @@
   "geraet": {
     "uebernommen": "Feld {{feld}} von einem anderen Gerät übernommen",
     "abgemeldet": "Die Turnierleitung hat dieses Gerät als Hallen-Lautsprecher für Feld {{feld}} abgemeldet."
+  },
+  "seite": {
+    "felderTitel": "Lautsprecher je Feld",
+    "felderLeer": "Noch kein Hallen-Lautsprecher eingerichtet. Das ist in Ordnung, solange die Spiele am Feld laufen: dort ertönt der Ton im Cockpit.",
+    "keinNetzTitel": "Kein Netz – Status unbekannt",
+    "keinNetzText": "Diese Verwaltung hat kein Netz. Ob die Lautsprecher bereit sind, siehst du erst wieder mit Netz."
+  },
+  "testton": {
+    "titel": "Testton",
+    "anhoerenTitel": "Hier anhören",
+    "anhoerenText": "Spielt den Abpfiff-Ton auf diesem Gerät, mit der Lautstärke dieses Geräts. Zum Prüfen und Einstellen. In der Halle ist dabei nichts zu hören.",
+    "anhoerenTextGeraet": "Spielt den Abpfiff-Ton auf diesem Gerät ({{name}}), mit der Lautstärke dieses Geräts. Zum Prüfen und Einstellen. In der Halle ist dabei nichts zu hören.",
+    "anhoeren": "Hier anhören",
+    "halleTitel": "Testton in der Halle",
+    "halleText": "Spielt einmal den Abpfiff-Ton auf dem Hallen-Lautsprecher des Feldes. Danach steht hier, wann er gespielt wurde.",
+    "halle": "Testton in der Halle",
+    "lautsprecher": "Lautsprecher: {{name}}",
+    "keinLautsprecherKein": "kein Hallen-Lautsprecher, kein Testton",
+    "gespielt": "gespielt {{zeit}}",
+    "laeuft": "Testton wird angefordert …",
+    "keineAntwort": "nicht gespielt – keine Antwort",
+    "nichtGespieltMeldetSich": "nicht gespielt – meldet sich nicht (zuletzt {{zeit}})",
+    "keinNetz": "Kein Testton: kein Netz",
+    "keinRecht": "Kein Testton: kein Recht",
+    "beendet": "Kein Testton: Turnier beendet",
+    "fehler": "Kein Testton: das hat nicht geklappt",
+    "zuFrueh": "Bitte kurz warten und dann noch einmal versuchen",
+    "keinLautsprecher": "Kein Testton: kein Hallen-Lautsprecher"
+  },
+  "toeneKarte": {
+    "abschnitt": "Töne",
+    "titel": "Töne",
+    "ziel": "Hallenton",
+    "text": "Hallen-Lautsprecher, Lautstärke und Testton stehen jetzt im Unterpunkt „Hallenton“.",
+    "oeffnen": "Hallenton öffnen"
   }
 }

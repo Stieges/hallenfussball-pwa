@@ -34,6 +34,7 @@ export function AdminSidebar({
   warnings = [],
   onBackToTournament,
   onWarningClick,
+  hiddenCategories,
 }: AdminSidebarProps) {
   const { t } = useTranslation('admin');
 
@@ -42,7 +43,7 @@ export function AdminSidebar({
     const ids: string[] = [];
     (['overview', 'management', 'settings', 'support'] as AdminCategoryGroup[]).forEach((group) => {
       getCategoriesByGroup(group).forEach((cat) => {
-        if (!cat.isComingSoon) {
+        if (!cat.isComingSoon && !hiddenCategories?.has(cat.id)) {
           ids.push(cat.id);
         }
       });
@@ -54,7 +55,7 @@ export function AdminSidebar({
       }
     });
     return ids;
-  }, []);
+  }, [hiddenCategories]);
 
   // Track focused item index for roving tabindex
   const [focusedIndex, setFocusedIndex] = useState(() => {
@@ -144,6 +145,7 @@ export function AdminSidebar({
       >
         <span style={styles.categoryIcon}>{category.icon}</span>
         <span style={styles.categoryLabel}>{category.label}</span>
+        {category.isNew && <span style={styles.neuBadge} data-testid={`admin-neu-${category.id}`}>{t('categoryNew')}</span>}
         {category.badge && category.badge > 0 && (
           <span style={styles.badge}>{category.badge}</span>
         )}
@@ -153,7 +155,7 @@ export function AdminSidebar({
 
   const renderGroup = (group: AdminCategoryGroup) => {
     const groupConfig = ADMIN_CATEGORY_GROUPS.find((g) => g.id === group);
-    const categories = getCategoriesByGroup(group);
+    const categories = getCategoriesByGroup(group).filter((cat) => !hiddenCategories?.has(cat.id));
 
     if (categories.length === 0) {return null;}
 

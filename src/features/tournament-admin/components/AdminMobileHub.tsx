@@ -30,6 +30,7 @@ export function AdminMobileHub({
   onNavigate,
   warnings = [],
   onBackToTournament,
+  hiddenCategories,
 }: AdminMobileHubProps) {
   const { t } = useTranslation('admin');
 
@@ -38,13 +39,14 @@ export function AdminMobileHub({
 
   // Filter categories based on search query
   const filteredCategories = useMemo(() => {
+    const sichtbar = ADMIN_CATEGORIES.filter((cat) => !hiddenCategories?.has(cat.id));
     if (!searchQuery.trim()) {
-      return { categories: ADMIN_CATEGORIES, dangerItems: DANGER_ZONE_ITEMS };
+      return { categories: sichtbar, dangerItems: DANGER_ZONE_ITEMS };
     }
 
     const query = searchQuery.toLowerCase();
     return {
-      categories: ADMIN_CATEGORIES.filter(
+      categories: sichtbar.filter(
         (cat) =>
           cat.label.toLowerCase().includes(query) ||
           // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR chain for filter conditions
@@ -59,7 +61,7 @@ export function AdminMobileHub({
           item.description?.toLowerCase().includes(query)
       ),
     };
-  }, [searchQuery]);
+  }, [searchQuery, hiddenCategories]);
 
   const hasResults = filteredCategories.categories.length > 0 || filteredCategories.dangerItems.length > 0;
 
@@ -95,6 +97,7 @@ export function AdminMobileHub({
             </div>
           )}
         </div>
+        {category.isNew && <span style={styles.neuBadge} data-testid={`admin-neu-${category.id}`}>{t('categoryNew')}</span>}
         {category.badge && category.badge > 0 && (
           <span style={styles.badge}>{category.badge}</span>
         )}

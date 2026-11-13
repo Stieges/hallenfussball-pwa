@@ -7,7 +7,7 @@
  * @see docs/concepts/TOURNAMENT-ADMIN-CENTER-KONZEPT-v1.2.md
  */
 
-import { useState, useEffect, Suspense, CSSProperties, useCallback } from 'react';
+import { useState, useEffect, useMemo, Suspense, CSSProperties, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { useNavigate } from 'react-router-dom';
@@ -19,6 +19,7 @@ import { useToast } from '../../components/ui/Toast';
 import type { AdminCategoryId, AdminWarning } from './types/admin.types';
 import { ADMIN_LAYOUT, getAdminCategory } from './constants/admin.constants';
 import { CategoryRightGate } from './components/CategoryRightGate';
+import { useCan } from '../auth/hooks/useCan';
 
 // Components
 import { AdminSidebar } from './components/AdminSidebar';
@@ -67,6 +68,10 @@ const styles = {
   } as CSSProperties,
 } as const;
 
+/** @HT-022: „Hallenton“ wird ohne `manageScreens` nicht angeboten (direkte Adresse → Hinweis im `CategoryRightGate`). */
+const OHNE_HALLENTON: ReadonlySet<AdminCategoryId> = new Set<AdminCategoryId>(['hallenton']);
+const NICHTS_VERSTECKT: ReadonlySet<AdminCategoryId> = new Set<AdminCategoryId>();
+
 // =============================================================================
 // PROPS
 // =============================================================================
@@ -94,6 +99,8 @@ export function TournamentAdminCenter({
   // A4 (C-SYNC): AdminHeader schaltet SyncStatusIndicator frei, das intern selbst nichts rendert
   // außerhalb des Cloud-Modus (isCloudSyncAvailable in useSyncStatus) -- kein Auth-Check hier nötig.
   const showSyncStatus = true;
+  const darfHallenton = useCan('manageScreens', tournamentId);
+  const hiddenCategories = useMemo(() => (darfHallenton ? NICHTS_VERSTECKT : OHNE_HALLENTON), [darfHallenton]);
 
   // Category from URL is now passed as prop from App.tsx (single source of truth)
   const categoryFromUrl = initialCategory;
@@ -217,6 +224,7 @@ export function TournamentAdminCenter({
           onNavigate={handleNavigate}
           warnings={warnings}
           onBackToTournament={onBackToTournament}
+          hiddenCategories={hiddenCategories}
         />
       );
     }
@@ -232,6 +240,7 @@ export function TournamentAdminCenter({
             onBackToTournament={onBackToTournament}
             tournamentId={tournamentId}
             showSyncStatus={showSyncStatus}
+            ohneLautsprecherEintrag={activeCategory === 'hallenton'}
           />
           <div style={{ ...styles.contentArea, ...styles.contentAreaMobile }}>
             <ErrorBoundary onReset={handleErrorReset}>
@@ -258,6 +267,7 @@ export function TournamentAdminCenter({
         warnings={warnings}
         onBackToTournament={onBackToTournament}
         onWarningClick={handleWarningClick}
+        hiddenCategories={hiddenCategories}
       />
 
       {/* Main Content */}
@@ -268,6 +278,7 @@ export function TournamentAdminCenter({
           onBackToTournament={onBackToTournament}
           tournamentId={tournamentId}
           showSyncStatus={showSyncStatus}
+          ohneLautsprecherEintrag={activeCategory === 'hallenton'}
         />
         <div style={styles.contentArea}>
           <ErrorBoundary onReset={handleErrorReset}>
