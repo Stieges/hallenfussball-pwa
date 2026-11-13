@@ -136,7 +136,8 @@ test.describe('Cockpit: Halbzeit, Wiederanpfiff, Abpfiff von selbst', () => {
 
     // @SL-152: das Abzeichen bleibt „Ende“, darunter die Quittungszeile mit dem tatsächlichen Endstand; nach 30 Sekunden ist sie weg
     await expect(page.getByTestId('scoreboard-state')).toHaveText('Ende');
-    await expect(page.getByTestId('scoreboard-quittung')).toHaveText('Abgepfiffen · 1:0 gespeichert');
+    // @SL-240: am Handy (unter 768 px) steht „gespielt …“ in der Quittungszeile
+    await expect(page.getByTestId('scoreboard-quittung')).toHaveText((page.viewportSize()?.width ?? 1024) < 768 ? /^Abgepfiffen · 1:0 gespeichert · gespielt \d+:\d{2}( von \d+:\d{2})?$/ : 'Abgepfiffen · 1:0 gespeichert');
     await expect(page.getByTestId('notice-line'), '@SL-152 keine Doppelung: „Spiel abgepfiffen“ steht nicht zusätzlich in der Meldezeile').not.toContainText('abgepfiffen');
     await bild('4-abgepfiffen');
     // @SL-049 @SL-152: nach den 30 Sekunden keine Zeile mehr, und das Cockpit zeigt von selbst das nächste Spiel (kein „Ende“ mehr)

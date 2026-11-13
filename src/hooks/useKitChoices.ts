@@ -6,7 +6,7 @@
  *   alle 15 Sekunden, und lässt Einträge fallen, deren Spiel lokal schon angepfiffen ist (der Anpfiff trägt die Wahl im `kit`, @SL-202).
  * - `useKitChoices()`: Einträge, Meldungen und `choose` für die Karte (Schritt 2b-2). `choose` merkt die Wahl vor und sendet sofort.
  */
-import { useCallback, useContext, useEffect, useMemo, useSyncExternalStore } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { AuthContext } from '../features/auth/context/AuthContext';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { kitChoiceQueueFor } from '../features/match-engine/kitChoiceRegistry';
@@ -37,31 +37,46 @@ export function useKitChoiceOverlay(tournament: Tournament | null): Tournament |
   const entries = useSyncExternalStore(queue.subscribe.bind(queue), () => queue.entries(), () => NO_ENTRIES);
 
   // Server-Zeilen und lokale Anpfiffe gegen die Einträge halten
-  useEffect(() => {
+  const abgleichen = useCallback((): void => {
     if (!tournament) { return; }
-    if (entries.length === 0) { return; }
+    // Wahl vom Server zurückgenommen (anderes Team auf einer Seite, @SL-212)? Zeilen aller Spiele mit Wahl und der bisher bekannten
+    const beobachtet = new Map<string, KitRowState>();
+    const bekannt = new Set(queue.decidedMatchIds());
+    for (const m of tournament.matches) {
+      if (m.kitDecision !== undefined || bekannt.has(m.id)) { beobachtet.set(m.id, kitRowStateOf(m)); }
+    }
+    queue.observeRows(beobachtet);
+    if (queue.entries().length === 0) { return; }
     const rows = new Map<string, KitRowState>();
-    for (const entry of entries) {
+    for (const entry of queue.entries()) {
       const match = tournament.matches.find((m) => m.id === entry.matchId);
       if (match) { rows.set(match.id, kitRowStateOf(match)); }
     }
-    queue.reconcile(rows);
-    if (!context) { return; }
     const started = new Set<string>();
-    for (const entry of buildValidMatches(tournament)) {
-      const view = context.engine.view(entry.matchId);
-      if (view && kitStartsOf(view.log).length > 0) { started.add(entry.externalId); }
+    if (context !== null) {
+      for (const entry of buildValidMatches(tournament)) {
+        const view = context.engine.view(entry.matchId);
+        const match = tournament.matches.find((m) => m.id === entry.externalId);
+        // Entscheidend ist der Zustand jetzt: nach „Anpfiff rückgängig“ bleibt der MATCH_START im Log, das Spiel ist aber wieder nicht angepfiffen (@SL-214)
+        const kicked = match?.matchStatus === 'running' || match?.matchStatus === 'paused';
+        if (view && kicked && kitStartsOf(view.log).length > 0) { started.add(entry.externalId); }
+      }
     }
-    queue.discardStarted(started);
-  }, [tournament, queue, context, entries]);
+    queue.discardStarted(started); // zuerst: wer selbst angepfiffen hat, dessen Wahl trägt der Anpfiff
+    queue.reconcile(rows);
+  }, [tournament, queue, context]);
+  useEffect(() => { abgleichen(); }, [abgleichen, entries]);
 
-  // Wartende Einträge senden: sofort, bei Netz und regelmäßig
+  // Wartende Einträge senden: sofort, bei Netz und regelmäßig – erst gegen die Zeile abgleichen, dann senden: eine Wahl vor dem Anpfiff, die ein fremder
+  // Anpfiff überholt hat, geht nicht als Nachtrag raus (@SL-229 Zeile 1); kommt sie doch als „live“ an, meldet die Warteschlange „zu spät“
+  const abgleichenRef = useRef(abgleichen);
+  abgleichenRef.current = abgleichen;
   useEffect(() => {
-    const flush = (): void => { void queue.flush(); };
-    flush();
-    window.addEventListener('online', flush);
-    const timer = setInterval(flush, RETRY_MS);
-    return () => { window.removeEventListener('online', flush); clearInterval(timer); };
+    const sende = (): void => { abgleichenRef.current(); void queue.flush(); };
+    sende();
+    window.addEventListener('online', sende);
+    const timer = setInterval(sende, RETRY_MS);
+    return () => { window.removeEventListener('online', sende); clearInterval(timer); };
   }, [queue, entries.length]);
 
   return useMemo(() => (tournament ? applyKitChoices(tournament, entries) : tournament), [tournament, entries]);
@@ -84,8 +99,9 @@ export function useKitChoices(): KitChoicesApi {
     const match = tournament.matches.find((m) => m.id === choice.matchId);
     if (!match) { return; }
     const row: KitRowState = kitRowStateOf(match);
+    const phase = row.kickedOff === true ? 'live' : 'before';
     const teams = row.teams?.a !== undefined && row.teams.b !== undefined ? { a: row.teams.a, b: row.teams.b } : undefined;
-    queue.submit({ ...choice, teams, deviceId: getDeviceId() }, row);
+    queue.submit({ ...choice, teams, deviceId: getDeviceId(), phase }, row);
     void queue.flush();
   }, [queue]);
   return useMemo(() => ({ entries, notices, choose, dismissNotice: (id: string) => { queue.dismissNotice(id); } }), [entries, notices, choose, queue]);

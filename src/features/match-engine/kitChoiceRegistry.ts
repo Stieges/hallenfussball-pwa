@@ -4,7 +4,7 @@
  * Gast (kein Supabase): nichts wird gesendet; der Eintrag gilt nur lokal und geht mit dem Anpfiff in dessen `kit` (`kitBeimAnpfiff`).
  */
 import { KitChoiceQueue } from '../../core/match/client/kitChoiceQueue';
-import { sendMatchKitSet } from '../../core/repositories/matchKitSetRpc';
+import { loadMatchKickoffStates, sendMatchKitSet } from '../../core/repositories/matchKitSetRpc';
 import { getDeviceId } from '../../core/device/deviceId';
 import { safeLocalStorage } from '../../core/utils/safeStorage';
 import { isSupabaseConfigured, supabase } from '../../lib/supabase';
@@ -20,6 +20,7 @@ export function kitChoiceQueueFor(accountId: string): KitChoiceQueue {
   }
   const queue = new KitChoiceQueue({
     send: (args) => (accountId === 'guest' || !isSupabaseConfigured ? Promise.resolve({ kind: 'offline' as const }) : sendMatchKitSet(supabase, args)),
+    fresh: (ids) => (accountId === 'guest' || !isSupabaseConfigured ? Promise.resolve(null) : loadMatchKickoffStates(supabase, ids)),
     storage: { get: (storageKey) => safeLocalStorage.getItem(storageKey), set: (storageKey, value) => { safeLocalStorage.setItem(storageKey, value); } },
     storageKey: key,
     now: () => Date.now(),

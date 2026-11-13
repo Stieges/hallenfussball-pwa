@@ -4,8 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { kitChoiceState, parseKitDecision, KIT_DECISIONS } from '../kit';
-import { LEIBCHEN_FARBEN, leibchenAuswahl, leibchenFarbName, leibchenFarbenMit, vorschauKaesten } from '../kitChoice';
-import { FALLBACK_PATTERN, type SideBox } from '../scoreBoxColors';
+import { LEIBCHEN_FARBEN, leibchenAuswahl, leibchenFarbName, leibchenFarbenMit } from '../kitChoice';
 import { bibColorPresets, palette, wizardJerseyPresets } from '../../../design-tokens/colors/palette';
 
 const J = palette.jersey;
@@ -95,28 +94,3 @@ describe('@SL-220 drei Zustände der Wahl', () => {
   });
 });
 
-describe('@ZM-203 Vorschau-Kästen vor dem Anpfiff', () => {
-  const STANDARD: { a: SideBox; b: SideBox } = {
-    a: { fill: { kind: 'solid', color: palette.kit.blue }, bib: false },
-    b: { fill: { kind: 'solid', color: palette.kit.red }, bib: false },
-  };
-  const OHNE = { bibSide: null, bibColor: J.yellow } as const;
-  const MUSTER = { kind: 'striped', light: FALLBACK_PATTERN.light, dark: FALLBACK_PATTERN.dark };
-
-  it('@ZM-203 Heim ohne Trikotfarbe, Gast Blau: Heim im Muster, Gast Blau (kein Ausweichen)', () => {
-    const k = vorschauKaesten({ b: J.blue }, OHNE, STANDARD);
-    expect(k.a.fill).toEqual(MUSTER);
-    expect(k.b.fill).toEqual({ kind: 'solid', color: J.blue });
-  });
-
-  it('@ZM-203 Aber beide ohne Trikotfarbe: Standardfarben Heim Blau, Gast Rot', () => {
-    const k = vorschauKaesten({}, OHNE, STANDARD);
-    expect([k.a.fill, k.b.fill]).toEqual([STANDARD.a.fill, STANDARD.b.fill]);
-  });
-
-  it('@SL-196 beide Blau, Leibchen für Heim gewählt: beide Kästen bleiben Blau, nur das Leibchen-Zeichen an Heim (Weste erst ab Anpfiff)', () => {
-    const k = vorschauKaesten({ a: J.blue, b: J.blue }, { bibSide: 'a', bibColor: J.yellow }, STANDARD);
-    expect([k.a.fill, k.b.fill]).toEqual([{ kind: 'solid', color: J.blue }, { kind: 'solid', color: J.blue }]);
-    expect([k.a.bib, k.b.bib]).toEqual([true, false]);
-  });
-});

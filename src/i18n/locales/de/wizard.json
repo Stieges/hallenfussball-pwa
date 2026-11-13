@@ -225,6 +225,15 @@
       "unreadable": "Die Datei konnte nicht gelesen werden. Bitte eine andere Datei wählen.",
       "generic": "Das Logo konnte nicht verarbeitet werden. Bitte eine andere Datei versuchen.",
       "consent": "Bitte bestätige die Nutzungsrechte."
+    },
+    "bib": {
+      "title": "Leibchenfarben dieses Turniers",
+      "hilfe": "Welche Leibchenfarben hat die Halle? Wähle eine oder zwei, die erste ist die erste Wahl. Ohne Eintrag schlägt die App Gelb vor.",
+      "regelTitel": "Bei gleicher Trikotfarbe zieht die Leibchen an",
+      "heim": "Erstgenannte Mannschaft (Heim)",
+      "gast": "Gast",
+      "gewaehlt": "gewählt als {{position}}. Farbe",
+      "max": "Höchstens zwei Farben"
     }
   },
   "step5": {

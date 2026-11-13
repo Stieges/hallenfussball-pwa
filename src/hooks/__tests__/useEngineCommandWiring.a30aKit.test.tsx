@@ -23,7 +23,6 @@ import { rejectionMessageKey } from '../engineCommandWiringHelpers';
 import { MatchCommandRejectedError } from '../../core/match/client';
 import { ERROR_CODES } from '../../core/match/types';
 import { DEFAULT_BIB_COLOR } from '../../core/models/kit';
-import type { LeibchenWahl } from '../../core/models/kitChoice';
 import { looseVs } from '../../test/matchSlotFixtures';
 import { makeEngineContext } from '../../test/engineContextFixture';
 
@@ -43,11 +42,11 @@ function tournament(colorA: string | undefined, colorB: string | undefined, bibC
   } as unknown as Tournament;
 }
 
-async function startAndReadKit(t: Tournament, leibchen?: LeibchenWahl): Promise<unknown> {
+async function startAndReadKit(t: Tournament): Promise<unknown> {
   const engineContext = await makeEngineContext();
   const engineLiveMatches = new Map<string, LiveMatch>([[MATCH_ID, { id: MATCH_ID } as unknown as LiveMatch]]);
   const { result } = renderHook(() => useEngineCommandWiring(t, engineContext, engineLiveMatches));
-  expect(await (leibchen ? result.current.handleStart(MATCH_ID, leibchen) : result.current.handleStart(MATCH_ID))).toBe(true);
+  expect(await result.current.handleStart(MATCH_ID)).toBe(true);
   const copy = await engineContext.store.load(engineContext.accountId, MATCH_ID);
   const start = copy?.pending.find((event) => event.type === 'MATCH_START');
   return start?.payload.kit;
@@ -96,15 +95,5 @@ describe('A-30a Meldung bei ungültigem kit', () => {
   it('Gegenbeispiel: eine andere INVALID_PAYLOAD-Ablehnung bleibt „gerade nicht möglich“', () => {
     const error = new MatchCommandRejectedError(ERROR_CODES.INVALID_PAYLOAD, { reason: 'SHOOTOUT_REQUIRED' });
     expect(rejectionMessageKey(error)).toBe('engine.invalid');
-  });
-});
-
-describe('Cockpit-Paket K1: das kit des Anpfiffs kommt aus der Wahl der Anpfiff-Ansicht (@SL-137, @SL-149)', () => {
-  it('@SL-149 beide Rot, „Ohne Leibchen anpfeifen“ → beide Trikotfarben, kein bibSide (nicht die stille Vorbelegung)', async () => {
-    expect(await startAndReadKit(tournament(ROT, ROT), { bibSide: null, bibColor: DEFAULT_BIB_COLOR })).toEqual({ a: ROT, b: ROT });
-  });
-
-  it('@SL-137 Tom wählt „Leibchen für FC Nord“ (Gast) in Orange → Gast mit Leibchen Orange', async () => {
-    expect(await startAndReadKit(tournament(ROT, ROT), { bibSide: 'b', bibColor: ORANGE })).toEqual({ a: ROT, b: ORANGE, bibSide: 'b' });
   });
 });

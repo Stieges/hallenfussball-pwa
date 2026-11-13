@@ -46,11 +46,21 @@ interface VorEingang {
   fieldName?: string;
   tournamentName?: string;
   vor?: ScoreboardVorInput;
+  /** @SL-241: Spielzeit klein in der Zeile unter den Teamköpfen, keine große Uhr. */
+  spielzeitKlein?: boolean;
 }
 
 /** Sekunden als `m:ss` (Spielzeit aus den Regeln). */
 function formatMinuten(sekunden: number): string {
   return `${String(Math.floor(sekunden / 60))}:${String(sekunden % 60).padStart(2, '0')}`;
+}
+
+/**
+ * Zeile bricht bevorzugt an „ · “ um: Angaben aus höchstens zwei Wörtern („Spiel 3“, „Anstoß 10:20“, „Spielzeit 9:00“) bleiben zusammen, ein längerer
+ * Feldname darf an Leerzeichen umbrechen (nie mitten im Wort, läuft nicht über).
+ */
+function umbruchBevorzugtAmPunkt(zeile: string): string {
+  return zeile.split(' · ').map((teil) => (teil.split(' ').length <= 2 ? teil.replace(/ /g, '\u00A0') : teil)).join(' · ');
 }
 
 /** Minuten seit der angesetzten Anstoßzeit, ganz; `0`, wenn sie nicht lesbar ist oder noch bevorsteht. */
@@ -73,14 +83,24 @@ export function scoreboardVor(input: VorEingang, t: Uebersetzer): ScoreboardVorE
     // @SL-197: groß die Spielzeit aus den Regeln („9:00“, bei Abschnitten „2 × 4:00“), darunter „Anstoß 9:10 · Spiel 1 · Feld 1“; ohne Regeln die Anstoßzeit wie bisher
     const zeit = vor.spielzeit && vor.spielzeit.abschnittSekunden > 0 ? vor.spielzeit : null;
     const spielFeld = t('tafel.vor.spielFeld', { nummer: match.number, feld: input.fieldName ?? '' });
-    uhr = zeit ? {
-      rest: formatMinuten(zeit.abschnittSekunden), vorsatz: zeit.abschnitte > 1 ? t('tafel.vor.abschnitteMal', { anzahl: zeit.abschnitte }) : null,
-      gespielt: null, schlussphase: false, steht: false, hervorgehoben: false, ton: 'gedaempft', label: t('tafel.uhr.spielzeit'),
-      unterzeile: vor.anstoss ? t('tafel.vor.anstossSpielFeld', { zeit: vor.anstoss, spielFeld }) : spielFeld,
-    } : {
-      rest: vor.anstoss, gespielt: null, schlussphase: false, steht: false, hervorgehoben: false, ton: 'gedaempft',
-      label: t('tafel.uhr.anstoss'), unterzeile: spielFeld,
-    };
+    const kleinSpielzeit = zeit ? `${zeit.abschnitte > 1 ? `${t('tafel.vor.abschnitteMal', { anzahl: zeit.abschnitte })} ` : ''}${formatMinuten(zeit.abschnittSekunden)}` : null;
+    if (input.spielzeitKlein === true) {
+      // @SL-241: „Anstoß 10:20 · Spiel 3 · Feld 1 · Spielzeit 9:00“ klein, ohne große Ziffern
+      const zeile = vor.anstoss ? t('tafel.vor.anstossSpielFeld', { zeit: vor.anstoss, spielFeld }) : spielFeld;
+      uhr = {
+        rest: '', gespielt: null, schlussphase: false, steht: false, hervorgehoben: false, ton: 'gedaempft', nurZeile: true,
+        unterzeile: umbruchBevorzugtAmPunkt(kleinSpielzeit ? t('tafel.vor.zeileMitSpielzeit', { zeile, spielzeit: kleinSpielzeit }) : zeile),
+      };
+    } else {
+      uhr = zeit ? {
+        rest: formatMinuten(zeit.abschnittSekunden), vorsatz: zeit.abschnitte > 1 ? t('tafel.vor.abschnitteMal', { anzahl: zeit.abschnitte }) : null,
+        gespielt: null, schlussphase: false, steht: false, hervorgehoben: false, ton: 'gedaempft', label: t('tafel.uhr.spielzeit'),
+        unterzeile: vor.anstoss ? t('tafel.vor.anstossSpielFeld', { zeit: vor.anstoss, spielFeld }) : spielFeld,
+      } : {
+        rest: vor.anstoss, gespielt: null, schlussphase: false, steht: false, hervorgehoben: false, ton: 'gedaempft',
+        label: t('tafel.uhr.anstoss'), unterzeile: spielFeld,
+      };
+    }
     if (vor.mindestpause) { hinweise.push(t('tafel.vor.mindestpause', { ...vor.mindestpause })); }
     const minuten = ueberfaelligMinuten(match.scheduledKickoff, input.jetztMs);
     if (minuten >= 1) { ueberfaelligText = t('tafel.vor.ueberfaellig', { minuten }); }

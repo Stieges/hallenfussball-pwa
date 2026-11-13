@@ -11,6 +11,8 @@ import { useSearchParams } from 'react-router-dom';
 import type { GeneratedSchedule, ScheduledMatch } from '../../../core/generators';
 import type { LiveMatch } from '../../../components/live-cockpit/types';
 import { matchesOfFieldInPlayOrder } from '../utils/fieldMatchOrder';
+import { nextCandidateOf, openMatchesInPlayOrder, type NextCandidate, type NextSource } from '../../../core/models/nextMatch';
+import type { Match } from '../../../types/tournament';
 import { useEndstandHalten } from './useEndstandHalten';
 
 export interface FieldMatchSelectionParams {
@@ -18,6 +20,8 @@ export interface FieldMatchSelectionParams {
   schedule: GeneratedSchedule;
   liveMatches: ReadonlyMap<string, LiveMatch>;
   initialMatchId?: string | null;
+  /** Die Spiele des Turniers (Status, Runde): Grundlage der einen Regel für das nächste Spiel – ohne sie zählt nur das Ergebnis. */
+  tournamentMatches?: readonly Match[];
   onInitialMatchConsumed?: () => void;
 }
 
@@ -26,6 +30,8 @@ export interface FieldMatchSelection {
   setFeld: (n: number) => void;
   fieldMatches: ScheduledMatch[];
   currentMatchData: ScheduledMatch | undefined;
+  /** Die noch offenen Spiele des Felds ohne das gezeigte, in Spielfolge (Tafel „Nächstes:“): das erste ist das Ziel von „Weiter“ und der Karte der Leibchen. */
+  folgende: ScheduledMatch[];
   /** Das gewählte Spiel zurücksetzen (`null`: automatisch das laufende oder nächste Spiel). */
   waehleSpiel: (id: string | null) => void;
   /** „Weiter“ (@SL-162): das nächste ungespielte Spiel des Felds, sonst das erste ungespielte irgendeines Felds. */
@@ -40,7 +46,7 @@ const FELD_PARAM = 'f';
 const MATCH_PARAM = 'matchId';
 
 export function useFieldMatchSelection(p: FieldMatchSelectionParams): FieldMatchSelection {
-  const { numberOfFields, schedule, liveMatches, initialMatchId, onInitialMatchConsumed } = p;
+  const { numberOfFields, schedule, liveMatches, initialMatchId, onInitialMatchConsumed, tournamentMatches } = p;
   const [params, setParams] = useSearchParams();
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
 
@@ -81,6 +87,19 @@ export function useFieldMatchSelection(p: FieldMatchSelectionParams): FieldMatch
 
   const fieldMatches = useMemo(() => matchesOfFieldInPlayOrder(schedule.allMatches, feld), [schedule.allMatches, feld]);
 
+  // Eine Regel für „nächstes Spiel“ (@SL-117, @SL-215): `openMatchesInPlayOrder` – dieselbe wie für die Karte der Leibchen. Ein Ergebnis gilt als beendet,
+  // auch wenn der Status des Turniers noch nachzieht; ausgefallene Spiele zählen nie.
+  const kandidaten = useMemo(() => {
+    const ist = new Map((tournamentMatches ?? []).map((m) => [m.id, m]));
+    return schedule.allMatches.map((m): NextCandidate & { geplant: ScheduledMatch } => {
+      const tm = ist.get(m.id);
+      // Dasselbe Spiel, dieselbe Ableitung wie bei der Karte (`nextCandidateOf`); der Spielplan liefert das Ergebnis; die Uhrzeit kommt vom Spiel des Turniers (fehlt sie dort, fehlt sie auch der Karte – dieselbe Sortierung), nur ohne Turnierspiel die berechnete
+      const quelle: NextSource = { ...tm, ...m, scheduledTime: tm === undefined ? m.startTime : tm.scheduledTime };
+      return { ...nextCandidateOf(quelle), geplant: m };
+    });
+  }, [schedule.allMatches, tournamentMatches]);
+  const offeneImFeld = (ausser?: string): ScheduledMatch[] => openMatchesInPlayOrder(kandidaten.filter((k) => k.id !== ausser), feld).map((k) => k.geplant);
+
   const { gehalten, quittiere, pausiere, setzeFort } = useEndstandHalten(fieldMatches, liveMatches);
   const endstandPause = useMemo(() => ({ pausiere, setzeFort }), [pausiere, setzeFort]);
 
@@ -113,22 +132,25 @@ export function useFieldMatchSelection(p: FieldMatchSelectionParams): FieldMatch
       const status = liveStatus(m);
       return status !== undefined && status !== 'FINISHED';
     });
-    return geladen ?? fieldMatches.find((m) => m.scoreA === undefined || m.scoreB === undefined);
-  }, [selectedMatchId, fieldMatches, liveMatches, gehalten.id]);
+    return geladen ?? offeneImFeld()[0];
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `offeneImFeld` hängt nur an `kandidaten` und `feld`
+  }, [selectedMatchId, fieldMatches, liveMatches, gehalten.id, kandidaten, feld]);
 
   const ladeNaechstes = useCallback(() => {
     quittiere(); // das abgepfiffene Spiel kommt nicht zurück (@SL-162)
-    const index = fieldMatches.findIndex((m) => m.id === currentMatchData?.id);
-    const naechstes = fieldMatches.slice(index + 1).find((m) => m.scoreA === undefined || m.scoreB === undefined);
+    const naechstes = offeneImFeld(currentMatchData?.id)[0];
     if (naechstes) { setSelectedMatchId(naechstes.id); return; }
-    const erstes = schedule.allMatches.find((m) => m.scoreA === undefined || m.scoreB === undefined);
+    const erstes = openMatchesInPlayOrder(kandidaten.filter((k) => k.id !== currentMatchData?.id)).find((k) => k.field !== feld)?.geplant;
     if (erstes && erstes.field !== feld) {
       schreibeFeld(erstes.field);
       setSelectedMatchId(erstes.id);
     } else {
       setSelectedMatchId(null);
     }
-  }, [fieldMatches, currentMatchData, schedule.allMatches, feld, schreibeFeld, quittiere]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `offeneImFeld` hängt nur an `kandidaten` und `feld`
+  }, [currentMatchData, kandidaten, feld, schreibeFeld, quittiere]);
 
-  return { feld, setFeld, fieldMatches, currentMatchData, waehleSpiel: setSelectedMatchId, ladeNaechstes, endstandPause, gehaltenId };
+  const folgende = useMemo(() => offeneImFeld(currentMatchData?.id), [kandidaten, feld, currentMatchData?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return { feld, setFeld, fieldMatches, currentMatchData, folgende, waehleSpiel: setSelectedMatchId, ladeNaechstes, endstandPause, gehaltenId };
 }
