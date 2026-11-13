@@ -13,8 +13,7 @@ import path from 'node:path';
 import { getLocalServiceRoleClient, safeCleanup } from './helpers';
 import { E2E_DRAFT_CUP_ID } from './testData';
 import { neuLaden } from '../helpers/neuLaden';
-import { appendOwner, regularResultEvents } from './turniertag/steps/playViaRpc';
-import type { TurniertagMatch } from './turniertag/steps/shared';
+import { appendOwner, eventOf } from './turniertag/steps/playViaRpc';
 import { createMatchRow, createTeamRow, createTournamentRow } from '../../factories/supabase';
 
 /** Takt des Autosave im Assistenten (10 000 ms, TournamentCreationScreen); die Wartezeit liegt darüber, sonst würde ein fehlerhafter Autosave nicht auffallen. */
@@ -42,9 +41,26 @@ async function ownerId(): Promise<string> {
   return rows[0].owner_id;
 }
 
-/** Wegwerf-Turnier des Eigentümers mit 6 Teams; veröffentlicht zusätzlich mit 3 Spielen (Anstoß in der Zukunft, nichts angepfiffen). */
+/** Spiele des festgelegten Wegwerf-Turniers: jeder gegen jeden bei 6 Teams (@W5-040: „6 Teams und 15 Spiele“). */
+const SPIELE_ANZAHL = 15;
+
+/**
+ * Wegwerf-Turnier des Eigentümers mit 6 Teams; festgelegt zusätzlich mit 15 Spielen (Anstoß in der Zukunft, nichts angepfiffen,
+ * auf Wunsch das erste Spiel beendet 2:1). Scheitert der Aufbau, wird das Halbfertige gleich wieder entfernt.
+ */
 async function seedCup(kind: 'draft' | 'published', mitErgebnis = false): Promise<Cup> {
-  const id = randomUUID();
+  const cup: Cup = { id: randomUUID(), teamIds: [], matchIds: [] };
+  try {
+    await seedInto(cup, kind, mitErgebnis);
+  } catch (error) {
+    await safeCleanup('W5-039 halber Aufbau', () => dropCup(cup));
+    throw error;
+  }
+  return cup;
+}
+
+async function seedInto(cup: Cup, kind: 'draft' | 'published', mitErgebnis: boolean): Promise<void> {
+  const id = cup.id;
   const owner = await ownerId();
   const published = kind === 'published';
   const config = published ? { publishedAt: '2026-11-01T08:00:00.000Z' } : {};
@@ -55,7 +71,8 @@ async function seedCup(kind: 'draft' | 'published', mitErgebnis = false): Promis
       number_of_teams: TEAM_ANZAHL, number_of_groups: 2, number_of_fields: 1, date: '2030-01-01', config,
     })),
   });
-  const teamIds = Array.from({ length: TEAM_ANZAHL }, () => randomUUID());
+  const teamIds = cup.teamIds;
+  for (let i = 0; i < TEAM_ANZAHL; i++) { teamIds.push(randomUUID()); }
   await rest('/rest/v1/teams', {
     method: 'POST',
     body: JSON.stringify(teamIds.map((teamId, index) => createTeamRow({
@@ -63,31 +80,40 @@ async function seedCup(kind: 'draft' | 'published', mitErgebnis = false): Promis
       color_primary: '#e53935', color_secondary: '#ffffff',
     }))),
   });
-  const matchIds: string[] = [];
+  const matchIds = cup.matchIds;
   if (published) {
-    const paare: Array<[number, number]> = [[0, 1], [2, 0], [1, 2]];
+    const paare: Array<[number, number]> = [];
+    for (let a = 0; a < TEAM_ANZAHL; a++) { for (let b = a + 1; b < TEAM_ANZAHL; b++) { paare.push([a, b]); } }
+    expect(paare).toHaveLength(SPIELE_ANZAHL);
     const rows = paare.map(([a, b], index) => {
       const matchId = randomUUID();
       matchIds.push(matchId);
       return createMatchRow({
         id: matchId, tournament_id: id, round: 1, field: 1, slot: index, group_letter: 'A', match_number: index + 1,
         team_a_id: teamIds[a], team_b_id: teamIds[b], match_status: 'scheduled', phase: 'groupStage',
-        scheduled_start: `${String(9 + index).padStart(2, '0')}:00:00`, // Uhrzeit-Spalte (time), das Datum steht am Turnier
+        scheduled_start: `${String(9 + Math.floor(index / 6)).padStart(2, '0')}:${String((index % 6) * 10).padStart(2, '0')}:00`, // Uhrzeit-Spalte (time), das Datum steht am Turnier
       });
     });
     await rest('/rest/v1/matches', { method: 'POST', body: JSON.stringify(rows) });
     if (mitErgebnis) {
       // Ergebnis auf dem sicheren Weg des Turniertags: Anpfiff, Tore, Abpfiff über append_match_events als Turnierleitung
-      const erstes = { id: matchIds[0], team_a_id: teamIds[0], team_b_id: teamIds[1] } as TurniertagMatch;
-      await appendOwner(erstes.id, regularResultEvents(erstes, 2, 1));
+      const start = Date.now() - 600_000;
+      const ereignisse = [
+        eventOf('MATCH_START', start, start),
+        eventOf('GOAL', start + 1000, start, { teamId: teamIds[0] }),
+        eventOf('GOAL', start + 2000, start, { teamId: teamIds[0] }),
+        eventOf('GOAL', start + 3000, start, { teamId: teamIds[1] }),
+        eventOf('MATCH_END', start + 4000, start),
+      ];
+      const antwort = await appendOwner(matchIds[0], ereignisse);
+      const stati = antwort.results.map((r) => r.status);
+      if (stati.some((status) => status !== 'accepted')) { throw new Error(`Ergebnis konnte nicht angelegt werden: ${JSON.stringify(antwort.results)}`); }
     }
   }
-  return { id, teamIds, matchIds };
 }
 
+/** Eine DELETE-Anweisung auf die Turnierzeile reicht (Kaskade, auch mit Spielen und Ereignissen; Muster protect-matches-with-events). */
 async function dropCup(cup: Cup): Promise<void> {
-  await rest(`/rest/v1/matches?tournament_id=eq.${cup.id}`, { method: 'DELETE' });
-  await rest(`/rest/v1/teams?tournament_id=eq.${cup.id}`, { method: 'DELETE' });
   await rest(`/rest/v1/tournaments?id=eq.${cup.id}`, { method: 'DELETE' });
 }
 
@@ -106,7 +132,8 @@ async function freshOwnerPage(browser: Browser): Promise<Page> {
   return context.newPage();
 }
 
-async function expectAllTeamsInStepTeams(page: Page): Promise<void> {
+async function expectAllTeamsInStepTeams(page: Page, adresse?: string): Promise<void> {
+  if (adresse !== undefined) { await page.goto(adresse); }
   // Anker zuerst: steht wirklich Schritt „Teams“ da? Sonst wäre ein Fehlschlag der Zählung ein Selektor-, kein Produktfehler.
   await expect(page.locator('[aria-current="step"]')).toHaveAttribute('aria-label', new RegExp(`^Schritt ${SCHRITT_TEAMS}:`), { timeout: 20_000 });
   await expect.poll(
@@ -162,8 +189,11 @@ test.describe('@W5-039 der Assistent öffnet ein Turnier mit allen Teams und än
     try {
       const before = await serverState(cup);
       const page = await freshOwnerPage(browser);
-      await page.goto(`/#/tournament/${cup.id}`); // legt die lokale Kopie an (Verwaltung lädt das Turnier)
-      await page.waitForLoadState('networkidle');
+      // Erstes Öffnen über „Gespeicherte Entwürfe“ legt die lokale Kopie an; danach zurück zur Startseite und neu laden: im selben Browser
+      // liegt jetzt eine Kopie ohne wartende Änderung vor (wie im echten Ablauf, ohne Umweg über die Verwaltung).
+      await openCardOfDraft(page, cup);
+      await expectAllTeamsInStepTeams(page, `/#/tournament/${cup.id}/edit?step=${SCHRITT_TEAMS}`);
+      await page.goto('/#/');
       await neuLaden(page);
       await openCardOfDraft(page, cup);
       await page.goto(`/#/tournament/${cup.id}/edit?step=${SCHRITT_TEAMS}`);
@@ -175,7 +205,7 @@ test.describe('@W5-039 der Assistent öffnet ein Turnier mit allen Teams und än
     const cup = await seedCup('published');
     try {
       const before = await serverState(cup);
-      expect(before.matches).toBe(3);
+      expect(before.matches).toBe(SPIELE_ANZAHL);
       const page = await freshOwnerPage(browser);
       await page.goto(`/#/tournament/${cup.id}/edit?step=${SCHRITT_TEAMS}`);
       await expectAllTeamsInStepTeams(page);
@@ -198,34 +228,51 @@ test.describe('@W5-039 der Assistent öffnet ein Turnier mit allen Teams und än
   });
 });
 
+async function openActionsOfCard(page: Page, cup: Cup): Promise<void> {
+  await page.goto('/#/');
+  const card = `[data-testid="tournament-card-${cup.id}"]`;
+  const section = page.locator('[data-testid^="section-"]', { has: page.locator(card) });
+  const toggle = section.locator('[aria-expanded]').first();
+  await expect(toggle).toBeVisible({ timeout: 15000 });
+  if ((await toggle.getAttribute('aria-expanded')) === 'false') { await toggle.click(); }
+  await page.locator(`[data-testid="tournament-${cup.id}-actions-trigger"]`).click();
+}
+
+/** In den Papierkorb und wieder heraus, auf einem Gerät ohne lokale Kopie; Teams, Spiele und Ergebnisse bleiben am Server unverändert. */
+async function trashAndRestore(browser: Browser, cup: Cup): Promise<void> {
+  const before = await serverState(cup);
+  const page = await freshOwnerPage(browser);
+  await openActionsOfCard(page, cup);
+  await page.locator('[data-testid="action-menu-item-delete"]').click();
+  await page.locator('[data-testid="confirm-dialog-confirm"]').click();
+
+  await expect.poll(async () => (await serverState(cup)).deletedAt, { timeout: 20_000 }).not.toBeNull();
+  const inKorb = await serverState(cup);
+  expect({ teams: inKorb.teams, matches: inKorb.matches, results: inKorb.results }).toEqual({ teams: before.teams, matches: before.matches, results: before.results });
+
+  await page.goto('/#/papierkorb');
+  await page.locator(`[data-testid="trash-card-${cup.id}"]`).getByRole('button', { name: /Wiederherstellen/ }).click();
+  await expect.poll(async () => (await serverState(cup)).deletedAt, { timeout: 20_000 }).toBeNull();
+
+  const after = await serverState(cup);
+  expect({ teams: after.teams, matches: after.matches, results: after.results }).toEqual({ teams: before.teams, matches: before.matches, results: before.results });
+}
+
 test.describe('@W5-040 Papierkorb und Wiederherstellen lassen Teams und Spiele unverändert', () => {
   test.describe.configure({ timeout: 90_000 });
+
+  test('festgelegtes Turnier mit 6 Teams und 15 Spielen: in den Papierkorb und zurück, am Server bleibt alles', async ({ browser }) => {
+    const cup = await seedCup('published');
+    try {
+      expect(await serverState(cup)).toMatchObject({ teams: TEAM_ANZAHL, matches: SPIELE_ANZAHL });
+      await trashAndRestore(browser, cup);
+    } finally { await safeCleanup('W5-040 Papierkorb festgelegt', () => dropCup(cup)); }
+  });
 
   test('Entwurf mit 6 Teams: in den Papierkorb und zurück, am Server bleiben alle Teams', async ({ browser }) => {
     const cup = await seedCup('draft');
     try {
-      const before = await serverState(cup);
-      const page = await freshOwnerPage(browser);
-      await page.goto('/#/');
-      const card = `[data-testid="tournament-card-${cup.id}"]`;
-      const section = page.locator('[data-testid^="section-"]', { has: page.locator(card) });
-      const toggle = section.locator('[aria-expanded]').first();
-      await expect(toggle).toBeVisible({ timeout: 15000 });
-      if ((await toggle.getAttribute('aria-expanded')) === 'false') { await toggle.click(); }
-      await page.locator(`[data-testid="tournament-${cup.id}-actions-trigger"]`).click();
-      await page.locator('[data-testid="action-menu-item-delete"]').click();
-      await page.locator('[data-testid="confirm-dialog-confirm"]').click();
-
-      await expect.poll(async () => (await serverState(cup)).deletedAt, { timeout: 20_000 }).not.toBeNull();
-      expect((await serverState(cup)).teams).toBe(before.teams);
-
-      await page.goto('/#/papierkorb');
-      await page.locator(`[data-testid="trash-card-${cup.id}"]`).getByRole('button', { name: /Wiederherstellen/ }).click();
-      await expect.poll(async () => (await serverState(cup)).deletedAt, { timeout: 20_000 }).toBeNull();
-
-      const after = await serverState(cup);
-      expect(after.teams).toBe(TEAM_ANZAHL);
-      expect(after.matches).toBe(before.matches);
-    } finally { await safeCleanup('W5-040 Papierkorb', () => dropCup(cup)); }
+      await trashAndRestore(browser, cup);
+    } finally { await safeCleanup('W5-040 Papierkorb Entwurf', () => dropCup(cup)); }
   });
 });

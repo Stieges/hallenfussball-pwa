@@ -306,6 +306,11 @@ function AppContent() {
   const wizardTournament = wizardLoad.status === 'ready' ? wizardLoad.tournament : undefined;
   const [liveShareCode, setLiveShareCode] = useState<string | null>(null);
   const [quickEditMode, setQuickEditMode] = useState(false); // Für schnelles Bearbeiten & Zurück
+  // Wer den Assistenten verlässt (auch per Browser-Zurück), lässt keinen gehaltenen Stand zurück: sonst schriebe ein späteres
+  // „Abbrechen“ eines anderen Assistenten den Stand vom ersten Öffnen als Voll-Ersatz zurück
+  useEffect(() => {
+    if (!isEditWizardPath) { setSelectedTournament(null); setQuickEditMode(false); }
+  }, [isEditWizardPath]);
 
   // MON-KONF-01: Monitor Display Route params (now using URL-based detection above)
   // Removed monitorDisplayParams state in favor of monitorDisplayParamsFromUrl
@@ -574,7 +579,7 @@ function AppContent() {
             onBack={() => {
               // Abbrechen im Wizard-Bearbeiten stellt den Stand von vorher wieder her – mit dem Zustand von vorher
               // (C-ENTWURF-KIPPT-BEIM-ABBRECHEN: ein Entwurf wurde sonst „festgelegt“ gespeichert)
-              if (quickEditMode && selectedTournament) {
+              if (quickEditMode && selectedTournament?.id === editingTournamentId && selectedTournament !== null) {
                 const restoredTournament: Tournament = {
                   ...selectedTournament,
                   updatedAt: new Date().toISOString(),

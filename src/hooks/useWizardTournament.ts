@@ -49,12 +49,12 @@ export function useWizardTournament(editingId: string | null, selected: Tourname
   useEffect(() => {
     if (editingId === null || hasDirect || heldId === editingId) { return; }
     let cancelled = false;
-    const offline = typeof navigator !== 'undefined' && !navigator.onLine;
-    repository.get(editingId, { fresh: true }).then(
+    let fellBack = false; // Y3: der Cloud-Abruf scheiterte (Zeitgrenze, Fehler) und die lokale Kopie wurde geliefert
+    repository.get(editingId, { fresh: true, onLocalFallback: () => { fellBack = true; } }).then(
       (loaded) => {
         if (cancelled) { return; }
         if (loaded === null || isListEntryOnly(loaded)) { setFailedId(editingId); return; }
-        setHeld({ id: editingId, tournament: loaded, ...(offline ? { offline: true as const } : {}) });
+        setHeld({ id: editingId, tournament: loaded, ...(fellBack || (typeof navigator !== 'undefined' && !navigator.onLine) ? { offline: true as const } : {}) });
       },
       () => { if (!cancelled) { setFailedId(editingId); } },
     );

@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import type { Tournament } from '../../types/tournament';
 
-const repo = vi.hoisted(() => ({ get: vi.fn<(id: string, options?: { fresh?: boolean }) => Promise<Tournament | null>>() }));
+const repo = vi.hoisted(() => ({ get: vi.fn<(id: string, options?: { fresh?: boolean; onLocalFallback?: () => void }) => Promise<Tournament | null>>() }));
 vi.mock('../useRepository', () => ({ useRepository: () => repo }));
 
 import { useWizardTournament } from '../useWizardTournament';
@@ -26,7 +26,7 @@ describe('@W5-039 useWizardTournament', () => {
     repo.get.mockReturnValue(new Promise<Tournament>((resolve) => { fertig = resolve; }));
     const { result } = renderHook(() => useWizardTournament('T', null));
     expect(result.current).toEqual({ status: 'loading' });
-    expect(repo.get).toHaveBeenCalledWith('T', { fresh: true });
+    expect(repo.get).toHaveBeenCalledWith('T', expect.objectContaining({ fresh: true }));
     fertig(voll());
     await waitFor(() => expect(result.current.status).toBe('ready'));
     expect(result.current.status === 'ready' && result.current.tournament?.teams).toHaveLength(6);
@@ -121,5 +121,12 @@ describe('@W5-039 useWizardTournament', () => {
     await waitFor(() => expect(b.result.current.status).toBe('ready'));
     expect(b.result.current).not.toHaveProperty('offline');
     online.mockRestore();
+  });
+
+  it('Y3: auch bei bestehender Verbindung meldet das Ergebnis offline, wenn das Repository auf die lokale Kopie zurückfiel (Zeitgrenze)', async () => {
+    repo.get.mockImplementation((_id, options) => { options?.onLocalFallback?.(); return Promise.resolve(voll()); });
+    const { result } = renderHook(() => useWizardTournament('T', null));
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    expect(result.current).toMatchObject({ status: 'ready', offline: true });
   });
 });

@@ -14,12 +14,13 @@ const hoisted = vi.hoisted(() => ({
   repoList: [] as unknown[],
   save: vi.fn(async () => undefined),
   setTrashed: vi.fn(async () => undefined),
+  del: vi.fn(async (_id: string) => undefined),
 }));
 vi.mock('../../features/auth/hooks/useAuth', () => ({
   useAuth: () => ({ user: { id: 'u1' }, isAuthenticated: false, isGuest: true, isAnonymous: false }),
 }));
 vi.mock('../useRepository', () => {
-  const repository = { listForCurrentUser: async () => hoisted.repoList, save: hoisted.save, setTrashed: hoisted.setTrashed };
+  const repository = { listForCurrentUser: async () => hoisted.repoList, save: hoisted.save, setTrashed: hoisted.setTrashed, delete: hoisted.del };
   return { useRepository: () => repository };
 });
 
@@ -61,5 +62,34 @@ describe('@W5-040 Papierkorb und Wiederherstellen der Startseite', () => {
     await waitFor(() => expect(result.current.tournaments).toHaveLength(2));
     const gespeichert = hoisted.save.mock.calls.map((aufruf) => (aufruf as unknown as [Tournament])[0].id);
     expect(gespeichert).toEqual(['v']);
+  });
+
+  it('@W5-040 endgültig löschen: das Turnier bleibt aus der Anzeige, auch wenn die Cloud-Liste es bis zur Bestätigung noch kennt', async () => {
+    const { result } = renderHook(() => useTournaments());
+    await waitFor(() => expect(result.current.tournaments).toHaveLength(2));
+    await act(async () => { await result.current.permanentDeleteTournament('b'); });
+    expect(hoisted.del).toHaveBeenCalledWith('b');
+    expect(result.current.tournaments.map((t) => t.id)).toEqual(['a']); // die Liste liefert 'b' noch, die Anzeige nicht
+    await act(async () => { window.dispatchEvent(new Event('tournament-updated')); });
+    await waitFor(() => expect(result.current.tournaments.map((t) => t.id)).toEqual(['a']));
+  });
+
+  it('Gegenbeispiel: scheitert das Löschen, steht das Turnier wieder da', async () => {
+    hoisted.del.mockRejectedValueOnce(new Error('abgelehnt'));
+    const { result } = renderHook(() => useTournaments());
+    await waitFor(() => expect(result.current.tournaments).toHaveLength(2));
+    await act(async () => { await expect(result.current.permanentDeleteTournament('b')).rejects.toThrow('abgelehnt'); });
+    await act(async () => { window.dispatchEvent(new Event('tournament-updated')); });
+    await waitFor(() => expect(result.current.tournaments.map((t) => t.id)).toEqual(['a', 'b']));
+  });
+
+  it('Papierkorb leeren: bestätigte Löschungen verschwinden, das gescheiterte bleibt sichtbar', async () => {
+    hoisted.repoList = [eintrag('a', { deletedAt: '2026-11-01T08:00:00.000Z' }), eintrag('b', { deletedAt: '2026-11-01T08:00:00.000Z' })];
+    hoisted.del.mockImplementation(async (id: string) => { if (id === 'b') { throw new Error('nein'); } });
+    const { result } = renderHook(() => useTournaments());
+    await waitFor(() => expect(result.current.tournaments).toHaveLength(2));
+    await act(async () => { await result.current.emptyTrash(); });
+    expect(result.current.tournaments.map((t) => t.id)).toEqual(['b']);
+    hoisted.del.mockImplementation(async () => undefined);
   });
 });

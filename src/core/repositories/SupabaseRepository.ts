@@ -9,13 +9,6 @@
  */
 
 import { assertWholeTournament } from './listEntryGuard';
-
-/** Y2: lehnt die Zeilen-Sicherheit (RLS) ein Update ab, kommt kein Fehler, nur 0 Zeilen -- das darf nie still bleiben. */
-function assertRowAffected(rows: ReadonlyArray<{ id: string }> | null, operation: string, id: string): void {
-  if (rows === null || rows.length === 0) {
-    throw new RepositoryError(operation, `Turnier ${id}: keine Zeile geändert (keine Berechtigung oder Turnier nicht vorhanden)`);
-  }
-}
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
@@ -42,6 +35,13 @@ import { readAccountTournamentList, type CloudTournamentList } from './accountTo
 import { shareIfUnshared, type ShareIfUnsharedResult } from './shareIfUnshared';
 import { callDisplayTournament, callPublicTournament } from './publicPayloadRpc';
 import type { PublicReply } from './publicPayload';
+
+/** Y2: lehnt die Zeilen-Sicherheit (RLS) ein Update ab, kommt kein Fehler, nur 0 Zeilen -- das darf nie still bleiben. */
+function assertRowAffected(rows: ReadonlyArray<{ id: string }> | null, operation: string, id: string): void {
+  if (rows === null || rows.length === 0) {
+    throw new RepositoryError(operation, `Turnier ${id}: keine Zeile geändert (keine Berechtigung oder Turnier nicht vorhanden)`);
+  }
+}
 
 /**
  * Gets the Supabase client or throws an error if not configured.
@@ -820,12 +820,13 @@ export class SupabaseRepository implements ITournamentRepository {
   }
 
   async delete(id: string): Promise<void> {
-    const { error } = await getSupabase().from('tournaments').delete().eq('id', id);
+    const { data, error } = await getSupabase().from('tournaments').delete().eq('id', id).select('id');
 
     if (error) {
       console.error('Failed to delete tournament:', error);
       throw new RepositoryError('delete', error.message, error);
     }
+    assertRowAffected(data, 'delete', id);
   }
 
   // =============================================================================

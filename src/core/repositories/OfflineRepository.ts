@@ -250,7 +250,7 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
      * A-08f3b `fresh` (Push/Abfrage-Ausweichen, @FU-087/@FU-001): wartet auf den Cloud-Abruf, führt zusammen und
      * liefert das Ergebnis, bei Fehler die lokale Kopie. Das erste Laden bleibt local-first.
      */
-    async get(id: string, options?: { fresh?: boolean }): Promise<Tournament | null> {
+    async get(id: string, options?: { fresh?: boolean; onLocalFallback?: () => void }): Promise<Tournament | null> {
         // 1. LOCAL-FIRST: Try local storage immediately
         const localData = await this.localRepo.get(id);
 
@@ -259,7 +259,7 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
             this.serverRevisions.record(id, await this.localRepo.readServerRevisions(id));
             const refreshed = this.refreshFromCloudInBackground(id, options?.fresh);
             if (!options?.fresh) { return localData; }
-            await refreshed;
+            if (!(await refreshed)) { options.onLocalFallback?.(); } // Y3: der Cloud-Stand kam nicht, es gilt die lokale Kopie
             return (await this.localRepo.get(id)) ?? localData;
         }
 
@@ -279,13 +279,15 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
     }
 
     /** Background sync: Cloud lesen und zusammenführen (Versionsweg oder Feldweg). Fehler werden nur gemeldet. */
-    private async refreshFromCloudInBackground(id: string, fresh?: boolean): Promise<void> {
+    private async refreshFromCloudInBackground(id: string, fresh?: boolean): Promise<boolean> {
         try {
             await this.syncFromCloud(id, undefined, fresh);
+            return true;
         } catch (error) {
             if (!isAbortError(error) && !isCloudReadTimeout(error) && error instanceof Error) {
                 captureFeatureError(error, 'repository', 'backgroundSync', { tournamentId: id });
             }
+            return false;
         }
     }
 

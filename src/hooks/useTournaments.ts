@@ -1,6 +1,6 @@
 import { setTournamentClosed } from '../core/services/closedTournaments';
 import { isTournamentClosed } from '../core/services/lifecycle';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Tournament, TRASH_RETENTION_DAYS } from '../types/tournament';
 import { useRepository } from '../hooks/useRepository';
 import { isListEntryOnly } from '../core/repositories/listEntryGuard';
@@ -30,6 +30,9 @@ export const useTournaments = () => {
   const [loading, setLoading] = useState(true);
   const repository = useRepository();
   const { isAuthenticated, isGuest } = useAuth();
+  // Endgültig gelöschte Turniere: `OfflineRepository.delete` reiht das Löschen nur ein, die Cloud-Liste kennt sie bis zur
+  // Bestätigung des Servers noch. Bis dahin bleiben sie aus der Anzeige (sonst stünden sie sofort wieder im Papierkorb).
+  const deletingIds = useRef<Set<string>>(new Set());
 
   // G7: ausgeblendet wird nur im Konto — im Gastmodus (nach Abmelden) bleibt
   // alles sichtbar, inklusive der Ergebnisse in der lokalen Engine-Kopie.
@@ -55,16 +58,20 @@ export const useTournaments = () => {
         await Promise.all(migrated.filter((t, idx) => typeof loaded[idx]?.location === 'string' && !isListEntryOnly(t)).map(t => repository.save(t)));
       }
 
+      // Gelöschte, die der Server nicht mehr liefert, sind bestätigt: aus dem Merkzettel nehmen
+      const listed = new Set(migrated.map((t) => t.id));
+      deletingIds.current.forEach((id) => { if (!listed.has(id)) { deletingIds.current.delete(id); } });
+      const shown = migrated.filter((t) => !deletingIds.current.has(t.id));
       // G7: Turnier-Limit zählt auch ausgeblendete Turniere weiter — daher der
       // ungefilterte Zähler vor dem Ausblenden in der Anzeige.
-      setAllActiveCount(getActiveTournaments(migrated).length);
+      setAllActiveCount(getActiveTournaments(shown).length);
       // R3-3: `useCan` und die Sperren der Oberfläche kennen den Abschluss jedes Turniers der Liste (Wizard, Startseite)
       // nur „abgeschlossen“ setzen, nie zurück: eine ältere Liste (lokale Kopie, Zeitüberschreitung) darf die Sperre der Verwaltung nicht öffnen
-      migrated.forEach((t) => { if (isTournamentClosed(t)) { setTournamentClosed(t.id, true); } });
+      shown.forEach((t) => { if (isTournamentClosed(t)) { setTournamentClosed(t.id, true); } });
       setTournaments(
         hideGuestTournaments
-          ? await filterWithoutGuestEngineEntries(migrated)
-          : migrated
+          ? await filterWithoutGuestEngineEntries(shown)
+          : shown
       );
     } catch (error) {
       console.error('Failed to load tournaments:', error);
@@ -127,10 +134,12 @@ export const useTournaments = () => {
 
   // Delete tournament (Legacy/Permanent)
   const deleteTournament = useCallback(async (id: string) => {
+    deletingIds.current.add(id);
     try {
       await repository.delete(id);
       await loadTournaments();
     } catch (error) {
+      deletingIds.current.delete(id);
       console.error('Failed to delete tournament:', error);
       throw error;
     }
@@ -207,7 +216,13 @@ export const useTournaments = () => {
     if (expired.length === 0) { return 0; }
 
     for (const tournament of expired) {
-      await repository.delete(tournament.id);
+      deletingIds.current.add(tournament.id);
+      try {
+        await repository.delete(tournament.id);
+      } catch (error) {
+        deletingIds.current.delete(tournament.id);
+        throw error;
+      }
     }
 
     await loadTournaments();
@@ -225,9 +240,11 @@ export const useTournaments = () => {
     const failed: EmptyTrashResult['failed'] = [];
 
     for (const tournament of trashed) {
+      deletingIds.current.add(tournament.id);
       try {
         await repository.delete(tournament.id);
       } catch (error) {
+        deletingIds.current.delete(tournament.id);
         console.error('Failed to delete trashed tournament:', tournament.id, error);
         failed.push({ id: tournament.id, title: tournament.title });
       }

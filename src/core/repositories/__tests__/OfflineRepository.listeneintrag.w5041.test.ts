@@ -235,6 +235,21 @@ describe('Listen-Eintrag und Datenschicht', () => {
   });
 
   describe('@W5-039 frisch laden: eine veraltete lokale Kopie ohne wartende Änderung überschreibt den Server nicht', () => {
+    it('Y3: scheitert der Cloud-Abruf, liefert fresh die lokale Kopie UND meldet den Rückfall; mit Cloud-Stand kein Rückfall', async () => {
+      stores.raw.set('tournaments', [volles(7)]);
+      const cloud = createFakeCloud({ tournament: volles(8), revisions: new Map([['m1', 1], ['m2', 1]]) });
+      const repo = repoFor(cloud);
+      const fallback = vi.fn();
+
+      await repo.get('T', { fresh: true, onLocalFallback: fallback });
+      expect(fallback).not.toHaveBeenCalled();
+
+      cloud.fake.getWithMatchRevisions.mockRejectedValueOnce(new Error('Zeitgrenze'));
+      const got = await repo.get('T', { fresh: true, onLocalFallback: fallback });
+      expect(got?.id).toBe('T');
+      expect(fallback).toHaveBeenCalledTimes(1);
+    });
+
     it('get ohne fresh liefert die alte lokale Kopie (Risiko), get mit fresh den Server-Stand mit allen 6 Teams', async () => {
       stores.raw.set('tournaments', [volles(7, { teams: SECHS_TEAMS.slice(0, 2) })]);
       const repo = repoFor(createFakeCloud({ tournament: volles(8), revisions: new Map([['m1', 1], ['m2', 1]]) }));
