@@ -137,6 +137,7 @@
       "endQuestionExpired": "Spielzeit abgelaufen – jetzt mit {{score}} beenden?",
       "endControlledBy": "Feld {{field}} wird gerade von {{name}} gesteuert",
       "endControlledByOther": "Feld {{field}} wird gerade von einem anderen Gerät gesteuert",
+      "endGoalsMismatch": "Im Cockpit sind Tore gebucht, die nicht zu {{entered}} passen (dort {{booked}}). Die Torschützenliste zählt nur die gebuchten Tore.",
       "teamsMissing": "Ergebnis erst, wenn beide Teams feststehen",
       "unavailable": "Ergebnis eintragen ist gerade nicht möglich",
       "shootoutTitle": "Ergebnis des Strafstoßschießens",
