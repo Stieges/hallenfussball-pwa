@@ -715,6 +715,7 @@ import { RepositoryProvider, useRepositories } from './core/contexts/RepositoryC
 import { MatchEngineProvider } from './features/match-engine/MatchEngineProvider';
 import { OfflineRepository } from './core/repositories/OfflineRepository';
 import { HallLautsprecherLaufzeit } from './features/hallenton/HallLautsprecherLaufzeit';
+import { HallGeraetStreifen } from './features/hallenton/ui/HallGeraetStreifen';
 
 /**
  * SyncManager - Background component that syncs local data to cloud
@@ -790,6 +791,8 @@ function App() {
           <SyncManager />
           {/* H3b-2b: Hallen-Lautsprecher – unsichtbar, startet nur auf einem eingeschalteten Lautsprecher-Gerät */}
           <HallLautsprecherLaufzeit />
+          {/* H4-5 (@HT-012): „Ton nicht aktiv – hier klicken“ in jeder Ansicht, solange keine Kopfzeile mit Statuszeile da ist */}
+          <HallGeraetStreifen />
           <PendingChangesWarning />
           <AppChrome>
             <AppContent />

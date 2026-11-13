@@ -15,7 +15,6 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS, Tournament } from '../../types/tournament';
 import { GeneratedSchedule, ScheduledMatch } from '../../core/generators';
-import { KLAERUNG_IM_COCKPIT_KOPF, KlaerungslisteEinstieg } from '../klaerungsliste/KlaerungslisteEinstieg';
 import { LiveCockpit } from '../../components/live-cockpit';
 import { ShortcutHelp } from '../../components/live-cockpit/areas/ShortcutHelp';
 import type { MatchSummary } from '../../components/live-cockpit/types';
@@ -35,10 +34,9 @@ import { useCockpitKorrektur } from './hooks/useCockpitKorrektur';
 import { laeuftAufFeld, useCockpitFieldControl } from './hooks/useCockpitFieldControl';
 import { toMatchSummary } from './model/toMatchSummary';
 import { toCockpitBoxes, toCockpitLeibchen, toCockpitSpielzeit } from './model/toCockpitBoxes';
-import { CockpitSlimHeader } from '../../components/live-cockpit/frame/CockpitSlimHeader';
+import { ManagementTabKopf } from './components/ManagementTabKopf';
 import { StorageWarningBanner } from '../../components/StorageWarningBanner';
 import { FeldWahl } from '../../components/live-cockpit/frame/FeldWahl';
-import { ConnectionPill } from '../../components/live-cockpit/frame/ConnectionPill';
 import { useAnnounceCockpitFrame, istCockpitVollbild } from '../../components/live-cockpit/frame/cockpitFrame';
 import styles from './ManagementTab.module.css';
 
@@ -206,10 +204,8 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   return (
     <div className={vollbild ? `${styles.container} ${styles.containerVollbild}` : styles.container} data-testid="management-tab">
       {vollbild && (
-        <CockpitSlimHeader
-          tournamentId={tournament.id} turnierName={tournament.title} felder={tournament.numberOfFields} feld={feld} onFeld={setFeld} halter={steuer.halter}
-          verbindung={<ConnectionPill tournamentId={tournament.id} />} onTastenkuerzel={() => setTastenHilfe(true)}
-          klaerung={KLAERUNG_IM_COCKPIT_KOPF ? <KlaerungslisteEinstieg tournament={tournament} variant="cockpit" /> : undefined}
+        <ManagementTabKopf
+          tournament={tournament} feld={feld} onFeld={setFeld} halter={steuer.halter} onTastenkuerzel={() => setTastenHilfe(true)}
         />
       )}
       {/* Speicher-Warnung im Rahmen: im Fluss unter dem Kopf, damit sie nicht verloren geht (die feste Leiste der Hülle entfällt hier) */}

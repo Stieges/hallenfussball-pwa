@@ -16,6 +16,7 @@ import { AwaitingServerCopyLine, SyncStatusIndicator } from '../../collaboration
 import { useRejectedOutboxDialog } from '../../collaboration/outbox/useRejectedOutboxDialog';
 import { RejectedOutboxDialog } from '../../collaboration/outbox/RejectedOutboxDialog';
 import { useToast } from '../../../components/ui/Toast/ToastContext';
+import { HallStatusZeile } from '../../hallenton/ui/HallStatusZeile';
 
 // =============================================================================
 // STYLES
@@ -266,6 +267,8 @@ export function AdminHeader({
     {showSyncStatus && tournamentId && (
       <AwaitingServerCopyLine tournamentId={tournamentId} stickyTop={ADMIN_LAYOUT.headerHeight} zIndex={cssVars.zIndex.raised} />
     )}
+    {/* H4-5 (@HT-045): Statuszeile des Hallentons unter dem Kopf, nur mit Recht manageScreens und nur mit Lautsprecher */}
+    {tournamentId && <HallStatusZeile tournamentId={tournamentId} />}
     </>
   );
 }
