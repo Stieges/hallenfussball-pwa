@@ -92,7 +92,14 @@ describe('@SL-150 @SL-226 Nachtragen im laufenden Spiel (Turnierleitung)', () =>
 
 describe('kitRowStateOf: was die Zeile (Server) zur Wahl sagt', () => {
   it('@SL-220 bestätigt: Zustand bib, Seite und Leibchenfarbe, die Teams der Seiten', () => {
-    expect(kitRowStateOf(spiel({ kitDecision: 'bib', kit: { b: ORANGE, bibSide: 'b' } }))).toEqual({ decision: 'bib', bibSide: 'b', bibColor: ORANGE, teams: { a: WAGING, b: PETTING } });
+    expect(kitRowStateOf(spiel({ kitDecision: 'bib', kit: { b: ORANGE, bibSide: 'b' } }))).toEqual({ decision: 'bib', bibSide: 'b', bibColor: ORANGE, teams: { a: WAGING, b: PETTING }, kickedOff: false });
+  });
+
+  it('@SL-229 läuft das Spiel (running oder paused), meldet die Zeile „angepfiffen“; angesetzt, beendet nicht', () => {
+    expect(kitRowStateOf(spiel({ matchStatus: 'running' })).kickedOff).toBe(true);
+    expect(kitRowStateOf(spiel({ matchStatus: 'paused' })).kickedOff).toBe(true);
+    expect(kitRowStateOf(spiel({ matchStatus: 'scheduled' })).kickedOff).toBe(false);
+    expect(kitRowStateOf(spiel({ matchStatus: 'finished' })).kickedOff).toBe(false);
   });
 
   it('@SL-220 offen: kein Zustand, keine Seite', () => {

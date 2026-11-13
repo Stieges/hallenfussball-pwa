@@ -99,3 +99,22 @@ function classifyError(error: unknown): MatchKitSetResult {
   }
   return { kind: 'error', message: error instanceof Error ? error.message : typeof error === 'object' && error !== null && 'message' in error ? String(error.message) : String(error) };
 }
+
+/**
+ * Frischer Stand „angepfiffen?“ der Spiele vom Server (nur Lesen der Zeile, RLS gilt): Grundlage, vor dem Senden einer alten Wahl zu entscheiden (@SL-229 Zeile 1).
+ * `null` bei fehlendem Client, Netzfehler oder Zeitlimit – wirft nie.
+ */
+export async function loadMatchKickoffStates(client: Client, matchIds: readonly string[]): Promise<ReadonlyMap<string, { kickedOff: boolean }> | null> {
+  if (!client || matchIds.length === 0) {
+    return null;
+  }
+  try {
+    const response = await withCloudReadTimeout(Promise.resolve(client.from('matches').select('id, match_status').in('id', [...matchIds])));
+    if (response.error) {
+      return null;
+    }
+    return new Map(response.data.map((row) => [row.id, { kickedOff: row.match_status === 'running' || row.match_status === 'paused' }]));
+  } catch {
+    return null;
+  }
+}

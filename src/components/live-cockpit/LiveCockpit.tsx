@@ -29,6 +29,9 @@ import type { LiveCockpitProps } from './types';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../types/tournament';
 import { ScoreboardArea } from './areas/ScoreboardArea';
 import { LegacyPlayArea } from './areas/LegacyPlayArea';
+import { Rollbar } from './areas/Rollbar';
+import { uhrInQuittung as uhrInQuittungWenn } from './model/uhrInQuittung';
+import { spielzeitKlein as spielzeitKleinWenn } from './model/spielzeitKlein';
 import { CockpitOverlays } from './areas/CockpitOverlays';
 import { ThumbBarArea } from './areas/ThumbBarArea';
 import { LeerLeiste } from './areas/LeerLeiste';
@@ -56,12 +59,9 @@ import { usePenaltyExpiryNotice } from './hooks/usePenaltyExpiryNotice';
 import { alsUebersetzer } from './model/alsUebersetzer';
 import { kastenOderStandard } from './model/kastenOderStandard';
 import { hatSchonGelb as hatSchonGelbIn } from './model/secondYellow';
-import { useLeibchenWahl } from './hooks/useLeibchenWahl';
-import { anpfiffTeile } from './areas/anpfiffTeile';
-
+import { useLeibchenBereich } from './hooks/useLeibchenBereich';
 const NO_SPERREN: readonly SperrHinweis[] = [];
 const NO_TEAMS = { home: { id: '', name: '' }, away: { id: '', name: '' } };
-
 export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   const { fieldName, tournamentName, tournamentId, cockpitSettings: cockpitSettingsProp, kannSteuern, istLeitung = false, currentMatch, upcomingMatches, leer = null } = props;
   const { t } = useTranslation('cockpit');
@@ -78,14 +78,12 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   // B-50 (@FU-095, B6.3): verworfene Klärungseinträge stehen im Spielprotokoll der Turnierleitung (zählen nicht)
   const verworfene = useVerworfeneEintraege(tournamentId, currentMatch, istLeitung);
   const matchMitVerlauf = useMemo(() => (currentMatch && verworfene.length > 0 ? { ...currentMatch, discardedEntries: verworfene } : currentMatch), [currentMatch, verworfene]);
-
   // Einstellungen mit Vorgaben, Ton für das Ende, Gerätetyp
   const cockpitSettings = useMemo(() => ({ ...DEFAULT_MATCH_COCKPIT_SETTINGS, ...cockpitSettingsProp }), [cockpitSettingsProp]);
   const sound = useMatchSound(cockpitSettings.soundId, cockpitSettings.soundVolume, cockpitSettings.soundEnabled, tournamentId);
   const { isMobile, isTablet, width } = useBreakpoint();
   const layout = width >= breakpointValues.desktop ? 'breit' : 'daumen';
   const stufe = useCockpitStufe();
-
   // Seiten tauschen: nur die Anzeige dieses Geräts (@SL-065)
   const sides = useSideOrder(currentMatch);
   const notices = useCockpitNotices(currentMatch?.id); // Meldezeile statt Toast (Spec § 7); endet mit dem Spielwechsel (@SL-192)
@@ -132,13 +130,14 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
     zustand: phase.zustand, melde: notices.melde, t: tx, hatSchonGelb,
   });
 
-  // Vor dem Anpfiff: echte Trikotfarben und die Leibchen-Wahl (@SL-137, @SL-196); danach die Kästen wie am Hallenmonitor (@SL-176)
-  const kastenSpiel = useMemo(() => kastenOderStandard(props.kasten), [props.kasten]);
-  const leibchen = useLeibchenWahl(currentMatch?.id, props.leibchen, kastenSpiel);
-  const anpfiffLeibchen = leibchen && kannSteuern && phase.zustand === 'vorAnpfiff' ? leibchen : null;
-  const kasten = phase.zustand === 'vorAnpfiff' && leibchen ? leibchen.kasten : kastenSpiel;
+  // Kästen wie am Hallenmonitor (@SL-176): vor dem Anpfiff die echten Trikotfarben bzw. die bestätigte Weste (@ZM-195, @ZM-200)
+  const kasten = useMemo(() => kastenOderStandard(props.kasten), [props.kasten]);
+  // Leibchen: Karte über der Daumenleiste (@SL-206, Lage B), Nachtragen unter „Mehr“ (@SL-150), Hinweis in der Tafel
+  const leibchen = useLeibchenBereich({
+    turnier: props.leibchenTurnier, matchId: currentMatch?.id, zustand: phase.zustand, melde: notices.melde, kannSteuern, onUebernehmen: props.steuerung?.onUebernehmen,
+  });
   const cmd = useCockpitCommands({
-    props, settings: cockpitSettings, sound, flows, sides, melde: notices.melde, engineView, view, anpfiffWahl: leibchen?.wahlBeimAnpfiff,
+    props, settings: cockpitSettings, sound, flows, sides, melde: notices.melde, engineView, view,
   });
   // Tastenkürzel (@SL-153): nur am Laptop mit Steuerrecht und eingeschaltetem Schalter; `?` auch ohne Steuerrecht
   const [tastenAn] = useTastenkuerzelAn();
@@ -183,8 +182,9 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
       sperrHinweise={props.sperrHinweise}
       uebernahmeVon={props.uebernahmeVon}
       eingetragenVon={eingetragenVon}
-      naechstes={isMobile ? naechstesZeile : null}
-      farbKonflikt={phase.zustand === 'vorAnpfiff' ? (leibchen?.gegnerAehnlich ? 'gegner' : leibchen?.hinweis) : undefined} spielzeit={props.spielzeit}
+      naechstes={isMobile ? naechstesZeile : null} uhrInQuittung={uhrInQuittungWenn({ isMobile, phase })}
+      spielzeitKlein={spielzeitKleinWenn({ isMobile, phase })}
+      farbKonflikt={leibchen.farbKonflikt} spielzeit={props.spielzeit}
       naechstesNamen={naechstesSpiel ? [naechstesSpiel.homeTeam.name, naechstesSpiel.awayTeam.name] : undefined}
       // A4 (C-SYNC): rendert selbst nichts außerhalb des Cloud-Modus. I4 (W1, Nachtrag
       // Fixrunde 1): rejectedCount/reviewCount aus dem echten Sender (useEngineOutboxSummary).
@@ -199,7 +199,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
     if (leer) {
       return (
         <div className={shell.container} data-layout={layout} data-stufe={layout === 'breit' ? stufe : undefined} data-testid="live-cockpit">
-          <main className={isMobile ? `${shell.content} ${shell.contentMobile}` : shell.content}>{tafel}</main>
+          <Rollbar als="main" className={isMobile ? `${shell.content} ${shell.contentMobile}` : shell.content}>{tafel}</Rollbar>
           {leer.art === 'wartetAufHerkunft' && (
             <LeerLeiste
               phase={phase} layout={layout} kannSteuern={kannSteuern} istLeitung={istLeitung} fieldName={fieldName}
@@ -226,9 +226,10 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   const effectiveScore = getEffectiveScore(match);
 
   return (
-    <div className={shell.container} data-layout={layout} data-stufe={layout === 'breit' ? stufe : undefined} data-testid="live-cockpit">
-      <main className={isMobile ? `${shell.content} ${shell.contentMobile}` : shell.content}>
+    <div className={shell.container} data-layout={layout} data-stufe={layout === 'breit' ? stufe : undefined} data-testid="live-cockpit" data-leibchen-offen={leibchen.wahlOffen && isMobile ? 'true' : undefined}>
+      <Rollbar als="main" className={isMobile ? `${shell.content} ${shell.contentMobile}` : shell.content}>
         <LegacyPlayArea
+          karte={layout === 'breit' ? leibchen.karte : null}
           kopf={(
             <>
               {tafel}
@@ -253,11 +254,9 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
           strafstossForm={props.strafstossForm}
           columns={spalten}
           zusammenfassung={zusammenfassung}
-          anpfiff={anpfiffLeibchen ? anpfiffTeile(anpfiffLeibchen, { a: match.homeTeam.name, b: match.awayTeam.name }, anzeigeOrdnung) : null}
           sidebar={{ strafen, onEventEdit: cmd.onSidebarEventEdit }}
         />
-      </main>
-
+      </Rollbar>
       <ThumbBarArea
         phase={phase}
         layout={layout}
@@ -268,7 +267,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
         steuerung={props.steuerung}
         controls={cmd.controls}
         tastenAn={tastenAktiv}
-        onOhneLeibchen={anpfiffLeibchen && anpfiffLeibchen.hinweis !== 'none' ? () => { anpfiffLeibchen.waehleSeite(null); cmd.controls.onStart(); } : undefined}
+        karte={layout === 'breit' ? null : leibchen.karte}
         onWeiterNaechstes={() => { props.onLoadNextMatch(match.fieldId); }}
         onKorrigieren={props.onKorrigieren ? () => { props.onKorrigieren?.(match.id); } : undefined}
         onChooseTiebreak={props.onChooseTiebreak ? (wahl) => { props.onChooseTiebreak?.(match.id, wahl); } : undefined}
@@ -287,11 +286,12 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
         handlers={cmd.overlayHandlers}
         rejectedOutbox={rejectedOutbox}
         mehr={{
-          punkte: mehrPunkteGrundgeruest(phase, { kannSteuern, istLeitung: istLeitung && props.onNichtAngetreten !== undefined }),
-          aktionen: { ...cmd.mehrAktionen, nichtAngetreten: () => { props.onNichtAngetreten?.(match.id); } },
+          punkte: mehrPunkteGrundgeruest(phase, { kannSteuern, istLeitung: istLeitung && props.onNichtAngetreten !== undefined, leibchenNachtragen: istLeitung }),
+          aktionen: { ...cmd.mehrAktionen, nichtAngetreten: () => { props.onNichtAngetreten?.(match.id); }, ...leibchen.mehrAktion },
         }}
         entrySheets={{ flows, teams: teams ?? NO_TEAMS, ausloeserSeite: (seite) => (sides.links === seite ? 'links' : 'rechts'), kartenArten: cockpitSettings.enabledCards, t: tx }}
       />
+      {leibchen.nachtragBlatt}
     </div>
   );
 };

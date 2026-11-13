@@ -42,8 +42,16 @@ export async function bild(page: Page, name: string): Promise<void> {
   if (BILDER !== '') { writeFileSync(`${BILDER}/${name}.png`, await page.screenshot()); }
 }
 
-export async function anpfeifen(page: Page): Promise<void> {
+/**
+ * Pfeift an. Der Anpfiff belegt nichts vor (@SL-210): Leibchen gibt es nur, wenn vorher „Bestätigen“ auf der Karte getippt ist.
+ * `leibchen: true` tippt bei gleicher Trikotfarbe vor dem Anpfiff „Bestätigen“ (der Vorschlag: das Heim-Team zieht die erste Hallenfarbe, @SL-206).
+ */
+export async function anpfeifen(page: Page, { leibchen = false }: { leibchen?: boolean } = {}): Promise<void> {
   await page.goto(`/#/tournament/${ID}/live`);
+  if (leibchen) {
+    await page.getByTestId('leibchen-bestaetigen').click({ timeout: 15000 });
+    await expect(page.getByTestId('leibchen-zeile')).toBeVisible();
+  }
   await page.getByTestId('match-start-button').click({ timeout: 15000 });
   await expect(page.getByTestId('match-pause-button')).toBeVisible();
 }

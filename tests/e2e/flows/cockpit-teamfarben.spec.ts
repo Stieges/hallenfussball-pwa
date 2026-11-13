@@ -1,6 +1,6 @@
 /**
  * E2E: Teamfarben im Cockpit und Foul je Halbzeit (Plan Cockpit v2 A2/A5, M3).
- * @SL-176: Blau gegen Navy (zu ähnlich) → der Anpfiff gibt dem Heim-Team Leibchen, Kasten und Kopf zeigen die Weste – auch ohne Netz.
+ * @SL-176: Blau gegen Navy (zu ähnlich) → Tom bestätigt die Karte, Kasten und Kopf zeigen die Weste – auch ohne Netz.
  * @SL-036/@SL-099: Foul, Halbzeit, Wiederanpfiff, Foul → „Foul 0/5“, dann „Foul 1/5“ (der Zähler gegen die Grenze zählt je Halbzeit;
  * die Grenze 5 setzt das Testturnier selbst – die Vorgabe ist aus, @SL-101).
  */
@@ -12,12 +12,14 @@ test.describe('Cockpit: Teamfarben und Foul je Halbzeit (Gast, lokal)', () => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Safe-Area-Emulation verdeckt Tasten (wie live-cockpit.spec.ts)');
   });
 
-  test('@SL-176 Blau/Navy: nach dem Anpfiff zeigt das Cockpit die Weste (Gelb mit blauen Streifen, Leibchen-Zeichen), auch ohne Netz', async ({ page, context, seedIndexedDB }) => {
+  test('@SL-176 Blau/Navy: nach „Bestätigen“ und Anpfiff zeigt das Cockpit die Weste (Gelb mit blauen Streifen, Leibchen-Zeichen), auch ohne Netz', async ({ page, context, seedIndexedDB }) => {
     await seedIndexedDB({ tournaments: [cup({ farben: ['#1565C0', '#0D1B4C', FARBEN[2], FARBEN[3]] })] });
     await page.goto(`/#/tournament/${ID}/live`);
     await expect(page.getByTestId('match-start-button')).toBeVisible({ timeout: 15000 });
     await expect(page.getByTestId('scoreboard-box-links')).toHaveAttribute('data-fill', 'solid'); // vor dem Anpfiff: Teamfarbe
     await context.setOffline(true);
+    await page.getByTestId('leibchen-bestaetigen').click(); // Tom bestätigt „TSV … zieht Gelb“ (sofort im Cockpit, auch ohne Netz, @SL-226)
+    await expect(page.getByTestId('scoreboard-box-links')).toHaveAttribute('data-fill', 'vest');
     await page.getByTestId('match-start-button').click();
     await expect(page.getByTestId('match-pause-button')).toBeVisible();
     const kasten = page.getByTestId('scoreboard-box-links');

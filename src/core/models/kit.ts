@@ -145,6 +145,20 @@ export function kitSameBrightness(colorA: unknown, colorB: unknown): boolean {
   return a !== undefined && b !== undefined && getContrastRatio(a, b) < KIT_SIMILAR_LUMINANCE_RATIO;
 }
 
+/** @W3-029: höchstens zwei Hallenfarben. */
+export const MAX_HALLEN_FARBEN = 2;
+
+/** @W3-029/@W3-041: Hallenfarben des Turniers (erste = erste Wahl) und die Regel; ohne Einstellung keine Farbe (der Vorschlag nimmt Gelb) und Heim. */
+export function hallenFarbenOf(tournament: { bibColor?: string | undefined; bibColors?: readonly string[] | undefined }): string[] {
+  const list = (tournament.bibColors ?? []).map((c) => normalizeKitColor(c)).filter((c): c is string => c !== undefined);
+  const first = normalizeKitColor(tournament.bibColor);
+  return (list.length > 0 ? list : first === undefined ? [] : [first]).slice(0, MAX_HALLEN_FARBEN);
+}
+
+export function bibRuleOf(tournament: { bibRule?: 'home' | 'away' | undefined }): 'home' | 'away' {
+  return tournament.bibRule === 'away' ? 'away' : 'home';
+}
+
 type KitMatch = Pick<Match, 'slotA' | 'slotB'>;
 type KitTeam = Pick<Team, 'id' | 'colors'>;
 type KitTournament = Pick<Tournament, 'bibColor'>;

@@ -1,0 +1,9 @@
+/* Blatt „Andere Farbe …“ am Laptop (@SL-218): es öffnet bei der Karte unten rechts, nicht unten links; am Handy bleibt es das Blatt von unten über die ganze Breite */
+@media (min-width: 1024px) {
+  .blatt {
+    margin-left: auto;
+    margin-right: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+    border-radius: var(--border-radius-lg);
+  }
+}

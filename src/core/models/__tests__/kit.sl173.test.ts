@@ -47,7 +47,7 @@ describe('@SL-173 Helligkeitsabstand der Trikotfarben', () => {
       { id: DJK_BERG, name: 'DJK Berg', colors: { primary: berg } },
     ];
     const match: Match = { id: 'spiel-15', round: 1, field: 1, slotA: teamSlot(FC_NORD), slotB: teamSlot(DJK_BERG) };
-    expect(kitBeimAnpfiff(match, teams, undefined).bibSide).toBeUndefined();
+    expect(kitBeimAnpfiff(match, teams).bibSide).toBeUndefined();
   });
 
   // Gegenbeispiel: Die Helligkeitsregel gilt nicht für die Ergebniskästen der Zuschauer (@ZM-153, @ZM-159).

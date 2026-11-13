@@ -81,12 +81,13 @@ export function applyKitChoices<TTournament extends { matches: ChoosableMatch[];
 }
 
 /** Was die Zeile des Spiels zur Wahl sagt (für `KitChoiceQueue.submit`/`reconcile`). */
-export function kitRowStateOf(match: Pick<Match, 'slotA' | 'slotB' | 'kit' | 'kitDecision'>): KitRowState {
+export function kitRowStateOf(match: Pick<Match, 'slotA' | 'slotB' | 'kit' | 'kitDecision'> & Partial<Pick<Match, 'matchStatus'>>): KitRowState {
   const side = match.kit?.bibSide;
   return {
     decision: match.kitDecision,
     bibSide: side,
     bibColor: side === undefined ? undefined : match.kit?.[side],
     teams: { a: slotTeamId(match.slotA), b: slotTeamId(match.slotB) },
+    kickedOff: match.matchStatus === 'running' || match.matchStatus === 'paused',
   };
 }

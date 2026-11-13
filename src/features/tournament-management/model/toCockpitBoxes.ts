@@ -5,10 +5,8 @@
  */
 import { matchBoxes } from '../../../core/view';
 import { parseSpectatorDisplay } from '../../../core/models/spectatorDisplay';
-import type { CockpitKasten, CockpitLeibchen } from '../../../components/live-cockpit/typesFarben';
+import type { CockpitKasten } from '../../../components/live-cockpit/typesFarben';
 import type { Tournament } from '../../../types/tournament';
-import { bibColorOf } from '../../../core/models/kit';
-import { trikotFarben } from '../../../core/models/kitChoice';
 import { serverRulesFor } from '../../../hooks/engineServerRules';
 
 export function toCockpitBoxes(tournament: Pick<Tournament, 'matches' | 'teams' | 'spectatorDisplay'>, matchId: string | undefined): CockpitKasten | undefined {
@@ -16,15 +14,6 @@ export function toCockpitBoxes(tournament: Pick<Tournament, 'matches' | 'teams' 
   const match = tournament.matches.find((m) => m.id === matchId);
   if (!match) { return undefined; }
   return matchBoxes(match, tournament.teams, parseSpectatorDisplay(tournament.spectatorDisplay));
-}
-
-/**
- * Leibchen-Wahl vor dem Anpfiff (@SL-137, @SL-196): die echten Trikotfarben beider Seiten (aktuelle Teamfarbe, ohne Ausweichfarbe)
- * und die Leibchenfarbe des Turniers (@W3-029). Ohne das Spiel im Turnier `undefined`.
- */
-export function toCockpitLeibchen(tournament: Pick<Tournament, 'matches' | 'teams' | 'bibColor'>, matchId: string | undefined): CockpitLeibchen | undefined {
-  const match = matchId === undefined ? undefined : tournament.matches.find((m) => m.id === matchId);
-  return match ? { farben: trikotFarben(match, tournament.teams), turnierFarbe: bibColorOf(tournament) } : undefined;
 }
 
 /** @SL-197: Spielzeit aus den Turnierregeln des Spiels (dieselbe Regel wie beim Anpfiff, `serverRulesFor`). */

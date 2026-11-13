@@ -79,6 +79,18 @@ function finishedCup(slug: string): EngineCupSpec {
   };
 }
 
+/** Leibchen 2b-2: Cup mit gleicher Trikotfarbe (Blau gegen Blau); Monitor und Zuschauer-Seite legt der Seed an (`seedOneEngineCup`). */
+export const E2E_LEIBCHEN_TRIKOT = '#1565C0';
+export const E2E_LEIBCHEN_SHARE_CODES = { LEIBCHENA: 'E2ELBA', LEIBCHENB: 'E2ELBB', LEIBCHENC: 'E2ELBC', LEIBCHENLIVE: 'E2ELBL' } as const;
+export type LeibchenCupSlug = keyof typeof E2E_LEIBCHEN_SHARE_CODES;
+export const leibchenMonitorId = (slug: LeibchenCupSlug): string => e2eUuid(`monitor:engine-cup:${slug}:feld-1`);
+
+function leibchenCup(slug: LeibchenCupSlug, form: 'untouched' | 'running'): EngineCupSpec {
+  return form === 'running'
+    ? runningCup(slug)
+    : { slug, title: `Engine-Cup ${slug}`, form: 'untouched', events: [], expected: { status: 'scheduled', scoreA: 0, scoreB: 0 }, helper: true };
+}
+
 export const E2E_ENGINE_CUPS = [
   runningCup('TOR'),
   runningCup('FINISH'),
@@ -128,6 +140,12 @@ export const E2E_ENGINE_CUPS = [
   // @SL-047: Tor und Rücknahme ohne Netz, danach am Hallenmonitor über die echte Server-Antwort (ohne-netz-ruecknahme.cloud.spec.ts).
   runningCup('MONRUECKNAHME'),
   runningCup('SPIELPLANKANAL'),
+  // Leibchen 2b-2 (@SL-202, @SL-229, @SL-150, @ZM-200, @ZM-201): Blau gegen Blau, ein Feld-Monitor und die Zuschauer-Seite über einen festen Share-Code
+  // (leibchen.cloud.spec.ts). A bestätigen, B Keine Leibchen, C fremdes Gerät hält das Feld, LIVE Nachtrag im laufenden Spiel.
+  leibchenCup('LEIBCHENA', 'untouched'),
+  leibchenCup('LEIBCHENB', 'untouched'),
+  leibchenCup('LEIBCHENC', 'untouched'),
+  leibchenCup('LEIBCHENLIVE', 'running'),
   runningCup('SPIELPLANHELFER'),
   finishedCup('SCHREIBWEG'),
   // @FU-084 (präzisiert 24.10.) / @FU-116 Z. 2: ein Tor nach dem Ende legt der Server zur Klärung ab -- der Test
