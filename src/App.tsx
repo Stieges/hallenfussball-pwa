@@ -38,7 +38,7 @@ import { AppChrome, SwUpdateNoticeSlot } from './components/AppChrome';
 import { lazyWithRetry } from './lib/lazyWithRetry';
 import { isTournamentClosed } from './core/services/lifecycle';
 import { ClosedTournamentEditNotice } from './screens/ClosedTournamentEditNotice';
-import { WizardOpeningNotice } from './screens/WizardOpeningNotice';
+import { WizardOpeningNotice, WizardOfflineHint } from './screens/WizardOpeningNotice';
 import { useWizardTournament } from './hooks/useWizardTournament';
 import { HelperStartGate } from './features/helpers/components/HelperStartGate'; // A-17c: Wiedereinstieg @HE-096
 
@@ -565,6 +565,7 @@ function AppContent() {
         {isEditWizardPath && wizardTournament !== undefined && isTournamentClosed(wizardTournament) && (
           <ClosedTournamentEditNotice onBack={() => void navigate(`/tournament/${wizardTournament.id}`)} />
         )}
+        {isEditWizardPath && wizardLoad.status === 'ready' && wizardLoad.offline === true && <WizardOfflineHint />}
         {isEditWizardPath && wizardLoad.status !== 'ready' && (
           <WizardOpeningNotice status={wizardLoad.status} onBack={() => void navigate('/')} />
         )}

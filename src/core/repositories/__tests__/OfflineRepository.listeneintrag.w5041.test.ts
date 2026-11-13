@@ -10,7 +10,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Tournament } from '../../models/types';
 
 const stores = vi.hoisted(() => ({ raw: new Map<string, unknown>(), queue: new Map<string, string>() }));
-const ops = vi.hoisted(() => ({ list: [] as Array<{ table: string; method: string; args: unknown[] }> }));
+const ops = vi.hoisted(() => ({ list: [] as Array<{ table: string; method: string; args: unknown[] }>, rows: [{ id: 'T' }] as Array<{ id: string }> }));
 
 vi.mock('../../storage/StorageFactory', () => ({
   createStorage: () => Promise.resolve({
@@ -32,7 +32,7 @@ vi.mock('../../../lib/supabase', () => {
   // Aufzeichnender Client: jeder Aufruf einer Abfrage landet in `ops.list`, jede Antwort ist „leer, ohne Fehler“.
   const chain = (table: string): unknown => new Proxy(() => undefined, {
     get: (_target, property) => {
-      if (property === 'then') { return (resolve: (value: unknown) => unknown) => resolve({ data: [], error: null, count: 0 }); }
+      if (property === 'then') { return (resolve: (value: unknown) => unknown) => resolve({ data: ops.rows, error: null, count: 0 }); }
       return (...args: unknown[]) => { ops.list.push({ table, method: String(property), args }); return chain(table); };
     },
   });
@@ -91,6 +91,7 @@ describe('Listen-Eintrag und Datenschicht', () => {
     stores.raw.clear();
     stores.queue.clear();
     ops.list = [];
+    ops.rows = [{ id: 'T' }];
   });
 
   afterEach(() => {
@@ -113,6 +114,34 @@ describe('Listen-Eintrag und Datenschicht', () => {
       const list = await readAccountTournamentList(client);
       expect(list.tournaments).toHaveLength(1);
       expect(list.tournaments[0]).toMatchObject({ id: 'T', listEntryOnly: true, teams: [], matches: [] });
+    });
+
+    it('@W5-040 Y1: die Cloud-Liste führt gelöschte Turniere des Kontos als Listen-Eintrag mit deletedAt (der Papierkorb zeigt sie auf jedem Gerät)', async () => {
+      const client = {
+        auth: { getUser: () => Promise.resolve({ data: { user: { id: 'olli', is_anonymous: false } }, error: null }) },
+        from: (table: string) => {
+          const builder: Record<string, unknown> = {};
+          for (const m of ['select', 'eq', 'not', 'is', 'order', 'in']) { builder[m] = () => builder; }
+          const rows = [createTournamentRow({ id: 'aktiv', owner_id: 'olli' }), createTournamentRow({ id: 'korb', owner_id: 'olli', deleted_at: '2026-11-13T10:00:00.000Z' })];
+          builder.then = (resolve: (r: unknown) => unknown) => resolve({ data: table === 'tournaments' ? rows : [], error: null });
+          return builder;
+        },
+      } as unknown as SupabaseClient;
+      const list = await readAccountTournamentList(client);
+      const korb = list.tournaments.find((t) => t.id === 'korb');
+      expect(korb).toMatchObject({ deletedAt: '2026-11-13T10:00:00.000Z', listEntryOnly: true, teams: [], matches: [] });
+      expect(list.tournaments.find((t) => t.id === 'aktiv')?.deletedAt).toBeUndefined();
+    });
+
+    it('@W5-040 Y1: endgültig löschen eines Papierkorb-Eintrags ohne lokale Kopie reiht nur das Löschen ein, speichert nichts', async () => {
+      const cloud = createFakeCloud({ tournament: volles(), revisions: new Map() });
+      const repo = repoFor(cloud);
+
+      await repo.delete('T');
+
+      expect(repo.mutationQueue.hasPendingOf('T', ['DELETE_TOURNAMENT'])).toBe(true);
+      expect(repo.mutationQueue.hasPendingOf('T', ['SAVE_TOURNAMENT'])).toBe(false);
+      expect(cloud.fake.save).not.toHaveBeenCalled();
     });
 
     it('SupabaseRepository.save lehnt den Listen-Eintrag ab, bevor eine einzige Abfrage läuft (kein teams.delete, kein matches.delete)', async () => {
@@ -156,6 +185,13 @@ describe('Listen-Eintrag und Datenschicht', () => {
       expect(ops.list.some((op) => op.method === 'delete')).toBe(false);
       const marken = ops.list.filter((op) => op.method === 'update').map((op) => op.args[0]);
       expect(marken).toEqual([{ deleted_at: IN_DEN_KORB }, { deleted_at: null }]);
+    });
+
+    it('@W5-040 Y2: lehnt die Zeilen-Sicherheit ab (0 Zeilen, kein Fehler), scheitern Papierkorb und Wiederherstellen laut', async () => {
+      ops.rows = [];
+      const server = new SupabaseRepository();
+      await expect(server.setTrashed('T', IN_DEN_KORB)).rejects.toThrow(/keine Zeile geändert/);
+      await expect(server.setTrashed('T', null)).rejects.toThrow(/keine Zeile geändert/);
     });
 
     it('Gerät mit lokaler Kopie: Papierkorb und Wiederherstellen lassen 6 Teams und 2 Spiele stehen und reihen keinen Voll-Ersatz ein', async () => {

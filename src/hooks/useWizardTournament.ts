@@ -19,20 +19,29 @@ import { isListEntryOnly } from '../core/repositories/listEntryGuard';
 import { useRepository } from './useRepository';
 
 export type WizardTournamentLoad =
-  | { status: 'ready'; tournament: Tournament | undefined }
+  /** `offline`: ohne Netz geladen -- es ist der Stand dieses Geräts (Y3: der Assistent weist darauf hin). */
+  | { status: 'ready'; tournament: Tournament | undefined; offline?: true }
   | { status: 'loading' }
   | { status: 'failed' };
 
-interface Held { id: string; tournament: Tournament }
+interface Held { id: string; tournament: Tournament; offline?: true }
 
 export function useWizardTournament(editingId: string | null, selected: Tournament | null): WizardTournamentLoad {
   const repository = useRepository();
   const [held, setHeld] = useState<Held | null>(null);
   const [failedId, setFailedId] = useState<string | null>(null);
+  // Das Turnier aus der Verwaltung gilt nur einmal: bleibt es nach Browser-Zurück stehen, ist es beim nächsten Öffnen veraltet.
+  const [usedSelected, setUsedSelected] = useState<Tournament | null>(null);
 
-  const direct = editingId !== null && selected?.id === editingId && !isListEntryOnly(selected) ? selected : null;
+  // Verlässt der Assistent dieses Turnier (andere Adresse, anderes Turnier), gilt der gehaltene Stand nicht mehr:
+  // jedes Öffnen lädt frisch (sonst zeigt ein erneutes Öffnen den Stand vom ersten Öffnen und speichert ihn als Voll-Ersatz).
+  if (held !== null && held.id !== editingId) { setHeld(null); }
+  if (failedId !== null && failedId !== editingId) { setFailedId(null); }
+
+  const direct = editingId !== null && selected?.id === editingId && selected !== usedSelected && !isListEntryOnly(selected) ? selected : null;
   if (direct !== null && held?.tournament !== direct) {
     setHeld({ id: direct.id, tournament: direct });
+    setUsedSelected(direct);
   }
   const heldId = held?.id ?? null;
   const hasDirect = direct !== null;
@@ -40,12 +49,12 @@ export function useWizardTournament(editingId: string | null, selected: Tourname
   useEffect(() => {
     if (editingId === null || hasDirect || heldId === editingId) { return; }
     let cancelled = false;
-    setFailedId(null);
+    const offline = typeof navigator !== 'undefined' && !navigator.onLine;
     repository.get(editingId, { fresh: true }).then(
       (loaded) => {
         if (cancelled) { return; }
         if (loaded === null || isListEntryOnly(loaded)) { setFailedId(editingId); return; }
-        setHeld({ id: editingId, tournament: loaded });
+        setHeld({ id: editingId, tournament: loaded, ...(offline ? { offline: true as const } : {}) });
       },
       () => { if (!cancelled) { setFailedId(editingId); } },
     );
@@ -56,6 +65,6 @@ export function useWizardTournament(editingId: string | null, selected: Tourname
     return { status: 'ready', tournament: selected !== null && !isListEntryOnly(selected) ? selected : undefined };
   }
   if (direct !== null) { return { status: 'ready', tournament: direct }; }
-  if (held?.id === editingId) { return { status: 'ready', tournament: held.tournament }; }
+  if (held?.id === editingId) { return { status: 'ready', tournament: held.tournament, ...(held.offline ? { offline: true as const } : {}) }; }
   return failedId === editingId ? { status: 'failed' } : { status: 'loading' };
 }

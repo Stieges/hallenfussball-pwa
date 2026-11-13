@@ -6,6 +6,7 @@ import { useEffect, useRef, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../design-tokens';
 import { Button } from '../components/ui/Button';
+import { InlineNotice } from '../components/ui/molecules/InlineNotice';
 
 export interface WizardOpeningNoticeProps {
   status: 'loading' | 'failed';
@@ -40,6 +41,16 @@ export function WizardOpeningNotice({ status, onBack }: WizardOpeningNoticeProps
       <h1 ref={headingRef} tabIndex={-1} style={heading}>{t('opening.failedTitle')}</h1>
       <p style={body}>{t('opening.failedBody')}</p>
       <Button variant="secondary" size="lg" onClick={onBack} data-testid="wizard-opening-back" data-primary>{t('opening.back')}</Button>
+    </div>
+  );
+}
+
+/** Y3: ohne Netz geöffnet -- der Assistent zeigt den Stand dieses Geräts (der Server konnte nicht gefragt werden). */
+export function WizardOfflineHint() {
+  const { t } = useTranslation('wizard');
+  return (
+    <div style={{ padding: `${cssVars.spacing.md} ${cssVars.spacing.lg} 0` }}>
+      <InlineNotice tone="info" data-testid="wizard-offline-hint">{t('opening.offlineHint')}</InlineNotice>
     </div>
   );
 }

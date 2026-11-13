@@ -1,8 +1,9 @@
 /**
  * CA-5 (Befund C-LISTE-NUR-EIGENTUEMER; @HE-085, @HE-086, @HE-087): die Startseiten-Liste eines Kontos aus der Cloud.
  *
- * - Eigene Turniere (`owner_id`), Rolle `owner`. Gelesen auch die im Papierkorb (`deleted_at`), damit `ownIds` sie kennt;
- *   in der Liste stehen sie wie bisher nicht.
+ * - Eigene Turniere (`owner_id`), Rolle `owner`. Auch die im Papierkorb (`deleted_at`) stehen als Listen-Eintrag mit `deletedAt`
+ *   in der Liste: der Papierkorb der Startseite zeigt sie auf jedem Gerät, Wiederherstellen und endgültiges Löschen gehen darauf
+ *   (@W5-040, nie als ganzes Turnier gespeichert, `listEntryOnly`). Sie zählen nicht als aktive Turniere (`getActiveTournaments`).
  * - Dazu Turniere mit angenommener, nicht widerrufener Mitgliedschaft (`tournament_collaborators`: `accepted_at` gesetzt,
  *   `declined_at` leer – dieselbe Regel wie `is_active_tournament_member`), mit der Rolle aus der Mitgliedszeile.
  *   Nie über die Lese-Regel allein: `tournaments_select_v3` lässt jedes öffentliche Turnier durch (Plan-Review CA, § 3).
@@ -26,7 +27,7 @@ import { storedLifecycleOf } from '../services/lifecycle';
 export type MembershipLookup = 'known' | 'unknown' | 'not-queried';
 
 export interface CloudTournamentList {
-    /** Sichtbare Turniere (nicht im Papierkorb), jedes mit `myRole`. */
+    /** Eigene Turniere (auch die im Papierkorb, mit `deletedAt`) und Mitglieds-Turniere, jedes mit `myRole`. */
     tournaments: Tournament[];
     /** Alle eigenen Turniere des Kontos, auch die im Papierkorb. */
     ownIds: ReadonlySet<string>;
@@ -57,7 +58,7 @@ async function readOwn(client: Client, userId: string): Promise<{ tournaments: T
         throw new RepositoryError('list', error.message, error);
     }
     return {
-        tournaments: data.filter((row) => row.deleted_at === null).map((row) => listed(row, 'owner')),
+        tournaments: data.map((row) => listed(row, 'owner')),
         ownIds: new Set(data.map((row) => row.id)),
     };
 }

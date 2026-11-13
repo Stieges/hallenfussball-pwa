@@ -13,6 +13,8 @@ import path from 'node:path';
 import { getLocalServiceRoleClient, safeCleanup } from './helpers';
 import { E2E_DRAFT_CUP_ID } from './testData';
 import { neuLaden } from '../helpers/neuLaden';
+import { appendOwner, regularResultEvents } from './turniertag/steps/playViaRpc';
+import type { TurniertagMatch } from './turniertag/steps/shared';
 import { createMatchRow, createTeamRow, createTournamentRow } from '../../factories/supabase';
 
 /** Takt des Autosave im Assistenten (10 000 ms, TournamentCreationScreen); die Wartezeit liegt darüber, sonst würde ein fehlerhafter Autosave nicht auffallen. */
@@ -20,6 +22,8 @@ const AUTOSAVE_TAKT_MS = 10_000;
 const WARTEZEIT_MS = AUTOSAVE_TAKT_MS + 3_000; // >= 12 s: der Prüfgegenstand ist, dass in dieser Zeit nichts geschrieben wird
 const TEAM_PREFIX = 'W5039 Team';
 const TEAM_ANZAHL = 6;
+/** Schritt „Teams“ des Assistenten (Schritt 4 ist „Gruppen & Felder“). */
+const SCHRITT_TEAMS = 5;
 
 interface Cup { id: string; teamIds: string[]; matchIds: string[] }
 
@@ -39,7 +43,7 @@ async function ownerId(): Promise<string> {
 }
 
 /** Wegwerf-Turnier des Eigentümers mit 6 Teams; veröffentlicht zusätzlich mit 3 Spielen (Anstoß in der Zukunft, nichts angepfiffen). */
-async function seedCup(kind: 'draft' | 'published'): Promise<Cup> {
+async function seedCup(kind: 'draft' | 'published', mitErgebnis = false): Promise<Cup> {
   const id = randomUUID();
   const owner = await ownerId();
   const published = kind === 'published';
@@ -68,10 +72,15 @@ async function seedCup(kind: 'draft' | 'published'): Promise<Cup> {
       return createMatchRow({
         id: matchId, tournament_id: id, round: 1, field: 1, slot: index, group_letter: 'A', match_number: index + 1,
         team_a_id: teamIds[a], team_b_id: teamIds[b], match_status: 'scheduled', phase: 'groupStage',
-        scheduled_start: `2030-01-01T${String(9 + index).padStart(2, '0')}:00:00.000Z`,
+        scheduled_start: `${String(9 + index).padStart(2, '0')}:00:00`, // Uhrzeit-Spalte (time), das Datum steht am Turnier
       });
     });
     await rest('/rest/v1/matches', { method: 'POST', body: JSON.stringify(rows) });
+    if (mitErgebnis) {
+      // Ergebnis auf dem sicheren Weg des Turniertags: Anpfiff, Tore, Abpfiff über append_match_events als Turnierleitung
+      const erstes = { id: matchIds[0], team_a_id: teamIds[0], team_b_id: teamIds[1] } as TurniertagMatch;
+      await appendOwner(erstes.id, regularResultEvents(erstes, 2, 1));
+    }
   }
   return { id, teamIds, matchIds };
 }
@@ -82,13 +91,13 @@ async function dropCup(cup: Cup): Promise<void> {
   await rest(`/rest/v1/tournaments?id=eq.${cup.id}`, { method: 'DELETE' });
 }
 
-interface ServerState { teams: number; matches: number; updatedAt: string; deletedAt: string | null }
+interface ServerState { teams: number; matches: number; results: string; updatedAt: string; deletedAt: string | null }
 
 async function serverState(cup: Cup): Promise<ServerState> {
   const teams = (await (await rest(`/rest/v1/teams?tournament_id=eq.${cup.id}&select=id`)).json()) as unknown[];
-  const matches = (await (await rest(`/rest/v1/matches?tournament_id=eq.${cup.id}&select=id`)).json()) as unknown[];
+  const matches = (await (await rest(`/rest/v1/matches?tournament_id=eq.${cup.id}&select=id,match_status,score_a,score_b&order=id.asc`)).json()) as Array<{ id: string; match_status: string | null; score_a: number | null; score_b: number | null }>;
   const row = ((await (await rest(`/rest/v1/tournaments?id=eq.${cup.id}&select=updated_at,deleted_at`)).json()) as Array<{ updated_at: string; deleted_at: string | null }>)[0];
-  return { teams: teams.length, matches: matches.length, updatedAt: row.updated_at, deletedAt: row.deleted_at };
+  return { teams: teams.length, matches: matches.length, results: matches.map((m) => `${m.id}:${m.match_status ?? '-'}:${m.score_a ?? '-'}:${m.score_b ?? '-'}`).join('|'), updatedAt: row.updated_at, deletedAt: row.deleted_at };
 }
 
 /** Neues „Gerät“: leerer lokaler Speicher, nur die Anmeldung des Eigentümers. */
@@ -98,6 +107,8 @@ async function freshOwnerPage(browser: Browser): Promise<Page> {
 }
 
 async function expectAllTeamsInStepTeams(page: Page): Promise<void> {
+  // Anker zuerst: steht wirklich Schritt „Teams“ da? Sonst wäre ein Fehlschlag der Zählung ein Selektor-, kein Produktfehler.
+  await expect(page.locator('[aria-current="step"]')).toHaveAttribute('aria-label', new RegExp(`^Schritt ${SCHRITT_TEAMS}:`), { timeout: 20_000 });
   await expect.poll(
     () => page.evaluate((prefix) => Array.from(document.querySelectorAll('input')).filter((input) => input.value.startsWith(prefix)).length, TEAM_PREFIX),
     { timeout: 20_000, message: 'Schritt „Teams“ zeigt alle Teams' },
@@ -131,7 +142,7 @@ test.describe('@W5-039 der Assistent öffnet ein Turnier mit allen Teams und än
       const page = await freshOwnerPage(browser);
       await openCardOfDraft(page, cup);
       await expect(page).toHaveURL(new RegExp(`/tournament/${cup.id}/edit`));
-      await page.goto(`/#/tournament/${cup.id}/edit?step=4`); // Schritt „Teams“, Hash-Wechsel ohne Neuladen
+      await page.goto(`/#/tournament/${cup.id}/edit?step=${SCHRITT_TEAMS}`); // Schritt „Teams“, Hash-Wechsel ohne Neuladen
       await expectUnchangedAfterWaiting(page, cup, before);
     } finally { await safeCleanup('W5-039 Entwurf Startseite', () => dropCup(cup)); }
   });
@@ -141,7 +152,7 @@ test.describe('@W5-039 der Assistent öffnet ein Turnier mit allen Teams und än
     try {
       const before = await serverState(cup);
       const page = await freshOwnerPage(browser);
-      await page.goto(`/#/tournament/${cup.id}/edit?step=4`);
+      await page.goto(`/#/tournament/${cup.id}/edit?step=${SCHRITT_TEAMS}`);
       await expectUnchangedAfterWaiting(page, cup, before);
     } finally { await safeCleanup('W5-039 Entwurf Adresse', () => dropCup(cup)); }
   });
@@ -155,7 +166,7 @@ test.describe('@W5-039 der Assistent öffnet ein Turnier mit allen Teams und än
       await page.waitForLoadState('networkidle');
       await neuLaden(page);
       await openCardOfDraft(page, cup);
-      await page.goto(`/#/tournament/${cup.id}/edit?step=4`);
+      await page.goto(`/#/tournament/${cup.id}/edit?step=${SCHRITT_TEAMS}`);
       await expectUnchangedAfterWaiting(page, cup, before);
     } finally { await safeCleanup('W5-039 Entwurf lokale Kopie', () => dropCup(cup)); }
   });
@@ -166,11 +177,24 @@ test.describe('@W5-039 der Assistent öffnet ein Turnier mit allen Teams und än
       const before = await serverState(cup);
       expect(before.matches).toBe(3);
       const page = await freshOwnerPage(browser);
-      await page.goto(`/#/tournament/${cup.id}/edit?step=4`);
+      await page.goto(`/#/tournament/${cup.id}/edit?step=${SCHRITT_TEAMS}`);
       await expectAllTeamsInStepTeams(page);
       await neuLaden(page);
       await expectUnchangedAfterWaiting(page, cup, before);
     } finally { await safeCleanup('W5-039 veröffentlicht', () => dropCup(cup)); }
+  });
+
+  test('veröffentlichtes Turnier mit Ergebnissen, Neuladen der Seite bei geöffnetem Assistenten', async ({ browser }) => {
+    const cup = await seedCup('published', true);
+    try {
+      const before = await serverState(cup);
+      expect(before.results).toContain(':finished:2:1'); // das Ergebnis steht am Server, bevor der Assistent öffnet
+      const page = await freshOwnerPage(browser);
+      await page.goto(`/#/tournament/${cup.id}/edit?step=${SCHRITT_TEAMS}`);
+      await expectAllTeamsInStepTeams(page);
+      await neuLaden(page);
+      await expectUnchangedAfterWaiting(page, cup, before);
+    } finally { await safeCleanup('W5-039 veröffentlicht mit Ergebnis', () => dropCup(cup)); }
   });
 });
 

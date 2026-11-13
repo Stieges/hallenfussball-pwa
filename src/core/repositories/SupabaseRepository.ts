@@ -9,6 +9,13 @@
  */
 
 import { assertWholeTournament } from './listEntryGuard';
+
+/** Y2: lehnt die Zeilen-Sicherheit (RLS) ein Update ab, kommt kein Fehler, nur 0 Zeilen -- das darf nie still bleiben. */
+function assertRowAffected(rows: ReadonlyArray<{ id: string }> | null, operation: string, id: string): void {
+  if (rows === null || rows.length === 0) {
+    throw new RepositoryError(operation, `Turnier ${id}: keine Zeile geändert (keine Berechtigung oder Turnier nicht vorhanden)`);
+  }
+}
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
@@ -842,15 +849,17 @@ export class SupabaseRepository implements ITournamentRepository {
    * Soft deletes a tournament (moves to trash)
    */
   async softDelete(id: string, at: string = new Date().toISOString()): Promise<void> {
-    const { error } = await getSupabase()
+    const { data, error } = await getSupabase()
       .from('tournaments')
       .update({ deleted_at: at })
-      .eq('id', id);
+      .eq('id', id)
+      .select('id');
 
     if (error) {
       console.error('Failed to soft delete tournament:', error);
       throw new RepositoryError('softDelete', error.message, error);
     }
+    assertRowAffected(data, 'softDelete', id);
   }
 
   /** @W5-040: Papierkorb ändert nur die Löschmarke (`deleted_at`), nie Teams oder Spiele. */
@@ -863,15 +872,17 @@ export class SupabaseRepository implements ITournamentRepository {
    * Restores a soft-deleted tournament
    */
   async restore(id: string): Promise<void> {
-    const { error } = await getSupabase()
+    const { data, error } = await getSupabase()
       .from('tournaments')
       .update({ deleted_at: null })
-      .eq('id', id);
+      .eq('id', id)
+      .select('id');
 
     if (error) {
       console.error('Failed to restore tournament:', error);
       throw new RepositoryError('restore', error.message, error);
     }
+    assertRowAffected(data, 'restore', id);
   }
 
   /**

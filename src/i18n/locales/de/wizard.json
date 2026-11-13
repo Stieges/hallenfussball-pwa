@@ -7,7 +7,8 @@
     "loading": "Turnier wird geladen …",
     "failedTitle": "Das Turnier konnte nicht geladen werden",
     "failedBody": "Es wurde nichts verändert. Prüfe die Verbindung und öffne das Turnier noch einmal von der Startseite.",
-    "back": "Zurück zur Startseite"
+    "back": "Zurück zur Startseite",
+    "offlineHint": "Offline geöffnet – Stand von diesem Gerät."
   },
   "step1": {
     "title": "Sportart & Turniertyp",
