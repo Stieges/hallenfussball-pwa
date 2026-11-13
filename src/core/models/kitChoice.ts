@@ -45,6 +45,29 @@ export function leibchenFarbName(farbe: string): LeibchenFarbName | null {
   return treffer === undefined ? null : treffer[0];
 }
 
+export type TrikotFarbKey = 'white' | 'black' | 'red' | 'blue' | 'green' | 'yellow' | 'orange' | 'purple' | 'pink' | 'teal' | 'gray' | 'brown';
+const TRIKOT_FARB_KEYS: readonly TrikotFarbKey[] = ['white', 'black', 'red', 'blue', 'green', 'yellow', 'orange', 'purple', 'pink', 'teal', 'gray', 'brown'];
+
+/**
+ * Der nächstliegende Name der Trikot-Palette des Assistenten (`palette.jersey`, Namen `tournament:teams.jerseyColorNames.*`) zu einer beliebigen Farbe –
+ * das Blau der Vorlagen (#1565C0) heißt „Blau“. Abstand nach der „Redmean“-Näherung des Farbunterschieds; ohne gültige Farbe `null`.
+ */
+export function naechsterTrikotFarbName(farbe: string | undefined): TrikotFarbKey | null {
+  const hex = normalizeKitColor(farbe);
+  if (hex === undefined) { return null; }
+  const rgb = (h: string): [number, number, number] => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+  const [r, g, b] = rgb(hex);
+  let best: TrikotFarbKey | null = null;
+  let bestAbstand = Number.POSITIVE_INFINITY;
+  for (const key of TRIKOT_FARB_KEYS) {
+    const [r2, g2, b2] = rgb(hexOf(palette.jersey[key]));
+    const mittel = (r + r2) / 2;
+    const abstand = (2 + mittel / 256) * (r - r2) ** 2 + 4 * (g - g2) ** 2 + (2 + (255 - mittel) / 256) * (b - b2) ** 2;
+    if (abstand < bestAbstand) { bestAbstand = abstand; best = key; }
+  }
+  return best;
+}
+
 /** Ohne Doppel, normalisiert, ungültige Werte entfallen. */
 function ohneDoppel(farben: readonly string[]): string[] {
   const out: string[] = [];

@@ -12,7 +12,7 @@ import { useRef, useState, type CSSProperties, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars, iconSizeValues } from '../../../design-tokens';
 import type { KitSide } from '../../../core/models/kit';
-import { kitHinweis, leibchenFarbName, type TrikotFarben } from '../../../core/models/kitChoice';
+import { kitHinweis, leibchenFarbName, naechsterTrikotFarbName, type TrikotFarben } from '../../../core/models/kitChoice';
 import type { KitProposal } from '../../../core/models/kitProposal';
 import { Icons } from '../Icons';
 import { MatchIcons } from '../IconsMatch';
@@ -140,9 +140,9 @@ export function LeibchenKarte(p: LeibchenKarteProps): ReactElement | null {
 
   const keinPassendes = p.vorschlag?.kind === 'keinPassendes' && entwurf === null && !aendern;
   const konflikt = kitHinweis(p.trikot);
-  const trikotName = leibchenFarbName(p.trikot.a ?? '');
-  const grund = konflikt === 'none' ? null : konflikt === 'same' && trikotName !== null && trikotName === leibchenFarbName(p.trikot.b ?? '')
-    ? t('leibchenKarte.grundBeideSpielen', { farbe: t(`anpfiff.farbe.${trikotName}`) }) : t(konflikt === 'same' ? 'anpfiff.hinweisGleich' : 'anpfiff.hinweisAehnlich');
+  const nameA = naechsterTrikotFarbName(p.trikot.a);
+  const grund = konflikt === 'none' ? null : konflikt === 'same' && nameA !== null && nameA === naechsterTrikotFarbName(p.trikot.b)
+    ? t('leibchenKarte.grundBeideSpielen', { farbe: t(`teams.jerseyColorNames.${nameA}`, { ns: 'tournament' }) }) : t(konflikt === 'same' ? 'anpfiff.hinweisGleich' : 'anpfiff.hinweisAehnlich');
   const regelSeite: KitSide = p.vorschlag?.seite ?? 'a';
   const schliesse = (): void => { setAendern(false); setEntwurf(null); setzeOffen(false); };
 

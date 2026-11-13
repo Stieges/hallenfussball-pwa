@@ -382,9 +382,14 @@ describe('@SL-215 Karte im Endstand: „Leibchen für das nächste Spiel · Spie
     expect(byId('grund')).toHaveTextContent('Beide spielen Blau');
   });
 
-  it('@SL-215 eine Trikotfarbe ohne Namen (Blau #1565C0 gleich Blau): „Gleiche Trikotfarbe“', () => {
+  it('@SL-215 das Blau der Vorlagen (#1565C0, kein Palettenname) heißt nach der nächstliegenden Palettenfarbe „Blau“: „Beide spielen Blau“', () => {
     aufbau({ naechstes: true, spielNummer: 3 });
-    expect(byId('grund')).toHaveTextContent('Gleiche Trikotfarbe');
+    expect(byId('grund')).toHaveTextContent('Beide spielen Blau');
+  });
+
+  it('@SL-215 eine andere Palettenfarbe: „Beide spielen Grün“', () => {
+    aufbau({ naechstes: true, spielNummer: 3, trikot: { a: '#2E7D32', b: '#2E7D32' } });
+    expect(byId('grund')).toHaveTextContent('Beide spielen Grün');
   });
 
   it('@SL-215 ähnliche, nicht gleiche Trikotfarben: „Sehr ähnliche Trikotfarben“', () => {
