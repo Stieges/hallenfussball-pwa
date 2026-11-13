@@ -2,8 +2,8 @@
  * Befund C-VERWALTUNG-OEFFNEN-ERZEUGT-SPIELPLAN -- @W5-042 gegen den lokalen Stack. Szenarien: docs/anforderungen/2026-09-27_wizard-nach-dem-anlegen.md.
  *
  * Aufbau wie im echten Ablauf: Das Turnier steht als Entwurf mit 6 Teams ohne Spiele am Server; dieses „Gerät“ öffnet es einmal
- * (lokale Kopie ohne Spiele, keine wartende Änderung). Danach legt die Turnierleitung es anderswo fest (Service-Rolle: 15 Spiele,
- * veröffentlicht). Öffnet das Gerät jetzt die Verwaltung und wartet, zeigt sie den Stand des Servers, am Server ändert sich nichts
+ * (lokale Kopie ohne Spiele, keine wartende Änderung). Danach stellt die Turnierleitung es anderswo fertig (Service-Rolle: 15 Spiele,
+ * neuerer Stand). Öffnet das Gerät jetzt die Verwaltung und wartet, zeigt sie den Stand des Servers, am Server ändert sich nichts
  * (Teams, Spiele, Version, `updated_at`), und auf dem Gerät entsteht keine abgelehnte Änderung. Eigenes Wegwerf-Turnier, Aufräumen im `finally`.
  */
 import { randomUUID } from 'node:crypto';
@@ -29,13 +29,13 @@ async function rest(pathAndQuery: string, init: RequestInit = {}): Promise<Respo
   return response;
 }
 
-interface ServerState { teams: number; matches: number; version: number; updatedAt: string }
+interface ServerState { teams: number; matches: number; version: number; changeRevision: number; updatedAt: string }
 
 async function serverState(id: string): Promise<ServerState> {
   const teams = (await (await rest(`/rest/v1/teams?tournament_id=eq.${id}&select=id`)).json()) as unknown[];
   const matches = (await (await rest(`/rest/v1/matches?tournament_id=eq.${id}&select=id`)).json()) as unknown[];
-  const row = ((await (await rest(`/rest/v1/tournaments?id=eq.${id}&select=updated_at,version`)).json()) as Array<{ updated_at: string; version: number }>)[0];
-  return { teams: teams.length, matches: matches.length, version: row.version, updatedAt: row.updated_at };
+  const row = ((await (await rest(`/rest/v1/tournaments?id=eq.${id}&select=updated_at,version,change_revision`)).json()) as Array<{ updated_at: string; version: number; change_revision: number }>)[0];
+  return { teams: teams.length, matches: matches.length, version: row.version, changeRevision: row.change_revision, updatedAt: row.updated_at };
 }
 
 async function seedDraft(id: string, teamIds: string[]): Promise<void> {
@@ -57,8 +57,12 @@ async function seedDraft(id: string, teamIds: string[]): Promise<void> {
   });
 }
 
-/** „Festlegen“ an anderer Stelle: 15 Spiele (jeder gegen jeden) und der Zustand veröffentlicht. */
-async function publishElsewhere(id: string, teamIds: string[]): Promise<void> {
+/**
+ * Die Turnierleitung stellt das Turnier anderswo fertig: 15 Spiele (jeder gegen jeden) kommen dazu und der Stand am Server wird neuer
+ * (Titel). Den Zustand „festgelegt“ setzt nur der Server (kein direktes Ändern per Service-Rolle); der Entwurf mit erzeugtem Spielplan
+ * ist der Stand, den @W5-042 meint: Server mit 6 Teams und 15 Spielen, die lokale Kopie kennt keine Spiele.
+ */
+async function completeElsewhere(id: string, teamIds: string[]): Promise<void> {
   const rows: Array<ReturnType<typeof createMatchRow>> = [];
   for (let a = 0; a < TEAM_ANZAHL; a++) {
     for (let b = a + 1; b < TEAM_ANZAHL; b++) {
@@ -72,10 +76,7 @@ async function publishElsewhere(id: string, teamIds: string[]): Promise<void> {
   }
   expect(rows).toHaveLength(SPIELE_ANZAHL);
   await rest('/rest/v1/matches', { method: 'POST', body: JSON.stringify(rows) });
-  await rest(`/rest/v1/tournaments?id=eq.${id}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ status: 'published', lifecycle_status: 'fixed', config: { publishedAt: '2026-11-01T08:00:00.000Z' } }),
-  });
+  await rest(`/rest/v1/tournaments?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ title: `W5042 fertig ${id.slice(0, 6)}` }) });
 }
 
 async function openCardOfDraft(page: Page, id: string): Promise<void> {
@@ -105,10 +106,12 @@ test.describe('@W5-042 das Öffnen der Verwaltung ändert nichts am Server und e
       await expect(page.locator('[aria-current="step"]')).toBeVisible({ timeout: 20_000 });
       await page.goto('/#/');
 
-      // 2. Anderswo wird das Turnier festgelegt
-      await publishElsewhere(id, teamIds);
+      // 2. Anderswo wird das Turnier fertiggestellt; der Stand am Server ist jetzt neuer als die Kopie dieses Geräts
+      const alt = await serverState(id);
+      await completeElsewhere(id, teamIds);
       const before = await serverState(id);
       expect(before).toMatchObject({ teams: TEAM_ANZAHL, matches: SPIELE_ANZAHL });
+      expect(before.version !== alt.version || before.changeRevision !== alt.changeRevision, 'der Server-Stand ist neuer als die lokale Kopie').toBe(true);
 
       // 3. Verwaltung öffnen, nichts eingeben, warten
       await page.goto(`/#/tournament/${id}/schedule`);
