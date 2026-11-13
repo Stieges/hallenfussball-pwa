@@ -7,189 +7,22 @@
  * @see docs/concepts/TOURNAMENT-ADMIN-CENTER-KONZEPT-v1.2.md Section 4.2
  */
 
-import { CSSProperties, useState, useRef, useCallback, useMemo, KeyboardEvent } from 'react';
+import { useState, useRef, useCallback, useMemo, KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
+import { styles } from './adminSidebarStyles';
+import { AdminSidebarWarnings } from './AdminSidebarWarnings';
 import type { AdminSidebarProps, AdminCategoryGroup } from '../types/admin.types';
 import {
   ADMIN_CATEGORIES,
   ADMIN_CATEGORY_GROUPS,
   DANGER_ZONE_ITEMS,
-  ADMIN_LAYOUT,
   getCategoriesByGroup,
 } from '../constants/admin.constants';
 
 // =============================================================================
 // STYLES
 // =============================================================================
-
-const styles = {
-  sidebar: {
-    width: ADMIN_LAYOUT.sidebarWidth,
-    minWidth: ADMIN_LAYOUT.sidebarWidth,
-    height: '100%',
-    background: cssVars.colors.surface,
-    borderRight: `1px solid ${cssVars.colors.border}`,
-    display: 'flex',
-    flexDirection: 'column',
-    overflow: 'hidden',
-  } as CSSProperties,
-
-  scrollContainer: {
-    flex: 1,
-    overflowY: 'auto',
-    padding: cssVars.spacing.md,
-    paddingBottom: 0,
-  } as CSSProperties,
-
-  backButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.sm,
-    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
-    marginBottom: cssVars.spacing.md,
-    background: 'transparent',
-    border: 'none',
-    borderRadius: cssVars.borderRadius.md,
-    color: cssVars.colors.textSecondary,
-    fontSize: cssVars.fontSizes.bodySm,
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-    width: '100%',
-    textAlign: 'left',
-    minHeight: ADMIN_LAYOUT.itemHeight, // @OB-022: Tasten mindestens 44 hoch
-  } as CSSProperties,
-
-  groupLabel: {
-    fontSize: cssVars.fontSizes.labelSm,
-    fontWeight: cssVars.fontWeights.semibold,
-    color: cssVars.colors.textSecondary, // Muted erreicht 4,5 : 1 nicht (visual:metrics kontrast.text)
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-    padding: `${cssVars.spacing.md} ${cssVars.spacing.sm}`,
-    paddingBottom: cssVars.spacing.xs,
-  } as CSSProperties,
-
-  categoryItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.sm,
-    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
-    marginBottom: '2px',
-    background: 'transparent',
-    border: 'none',
-    borderRadius: cssVars.borderRadius.md,
-    color: cssVars.colors.textPrimary,
-    fontSize: cssVars.fontSizes.bodyMd,
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-    width: '100%',
-    textAlign: 'left',
-    minHeight: ADMIN_LAYOUT.itemHeight,
-  } as CSSProperties,
-
-  categoryItemActive: {
-    background: cssVars.colors.primarySubtle,
-    color: cssVars.colors.primary,
-    borderLeft: `3px solid ${cssVars.colors.primary}`,
-    marginLeft: '-3px',
-  } as CSSProperties,
-
-  // Schrift in Textfarbe: Error auf der roten Tönung erreicht 4,5 : 1 nicht (visual:metrics kontrast.text);
-  // die Gefahr zeigen Tönung und Symbol
-  categoryItemDanger: {
-    color: cssVars.colors.textPrimary,
-  } as CSSProperties,
-
-  // wie categoryItemDanger: Warnfarbe als Schrift auf der Tönung erreicht 4,5 : 1 nicht
-  categoryItemWarning: {
-    color: cssVars.colors.textPrimary,
-  } as CSSProperties,
-
-  categoryIcon: {
-    fontSize: ADMIN_LAYOUT.iconSize,
-    width: ADMIN_LAYOUT.iconSize,
-    textAlign: 'center',
-  } as CSSProperties,
-
-  categoryLabel: {
-    flex: 1,
-    minWidth: 0,
-    overflowWrap: 'anywhere', // lange Namen umbrechen statt mit Auslassungspunkten zu enden
-  } as CSSProperties,
-
-  badge: {
-    background: cssVars.colors.primary,
-    color: cssVars.colors.onPrimary,
-    fontSize: cssVars.fontSizes.labelSm,
-    fontWeight: cssVars.fontWeights.semibold,
-    padding: '2px 6px',
-    borderRadius: cssVars.borderRadius.full,
-    minWidth: 20,
-    textAlign: 'center',
-  } as CSSProperties,
-
-  separator: {
-    height: 1,
-    background: cssVars.colors.border,
-    margin: `${cssVars.spacing.md} 0`,
-  } as CSSProperties,
-
-  dangerZone: {
-    background: cssVars.colors.dangerSubtle,
-    margin: `0 -${cssVars.spacing.md}`,
-    padding: cssVars.spacing.md,
-    marginTop: cssVars.spacing.sm,
-  } as CSSProperties,
-
-  dangerZoneLabel: {
-    fontSize: cssVars.fontSizes.labelSm,
-    fontWeight: cssVars.fontWeights.semibold,
-    color: cssVars.colors.textPrimary,
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
-    paddingBottom: cssVars.spacing.sm,
-  } as CSSProperties,
-
-  warningsWidget: {
-    background: cssVars.colors.warningSubtle,
-    border: `1px solid ${cssVars.colors.warningBorder}`,
-    borderRadius: cssVars.borderRadius.md,
-    padding: cssVars.spacing.md,
-    margin: cssVars.spacing.md,
-    marginTop: 'auto',
-    position: 'sticky',
-    bottom: cssVars.spacing.md,
-  } as CSSProperties,
-
-  warningsHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.xs,
-    fontSize: cssVars.fontSizes.bodySm,
-    fontWeight: cssVars.fontWeights.semibold,
-    color: cssVars.colors.warning,
-    marginBottom: cssVars.spacing.xs,
-  } as CSSProperties,
-
-  warningItem: {
-    fontSize: cssVars.fontSizes.labelSm,
-    color: cssVars.colors.textSecondary,
-    padding: `${cssVars.spacing.xs} 0`,
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.xs,
-  } as CSSProperties,
-
-  warningsLink: {
-    fontSize: cssVars.fontSizes.labelSm,
-    color: cssVars.colors.primary,
-    cursor: 'pointer',
-    marginTop: cssVars.spacing.xs,
-    display: 'block',
-  } as CSSProperties,
-} as const;
 
 // =============================================================================
 // COMPONENT
@@ -377,36 +210,7 @@ export function AdminSidebar({
         </div>
       </div>
 
-      {/* Warnings Widget */}
-      {warnings.length > 0 && (
-        <div style={styles.warningsWidget}>
-          <div style={styles.warningsHeader}>
-            <span>⚠️</span>
-            <span>{t('sidebar.warnings', { count: warnings.length })}</span>
-          </div>
-          {warnings.slice(0, 2).map((warning) => (
-            <button
-              key={warning.id}
-              style={{
-                ...styles.warningItem,
-                background: 'transparent',
-                border: 'none',
-                cursor: onWarningClick ? 'pointer' : 'default',
-                width: '100%',
-                textAlign: 'left',
-              }}
-              onClick={() => onWarningClick?.(warning)}
-              aria-label={t('sidebar.warningClickAria', { title: warning.title })}
-            >
-              <span>►</span>
-              <span>{warning.title}</span>
-            </button>
-          ))}
-          {warnings.length > 2 && (
-            <span style={styles.warningsLink}>{t('sidebar.showAll')}</span>
-          )}
-        </div>
-      )}
+      <AdminSidebarWarnings warnings={warnings} onWarningClick={onWarningClick} />
     </aside>
   );
 }
