@@ -15,6 +15,7 @@ import { wahlFarben } from '../../../core/models/kitProposal';
 import { ChipButton } from '../atoms/ChipButton';
 import { DialogSurface } from './DialogSurface';
 import { Icons } from '../Icons';
+import styles from './LeibchenWahlFelder.module.css';
 
 export interface LeibchenWahlFelderProps {
   teams: { a: string; b: string };
@@ -119,7 +120,7 @@ export function LeibchenWahlFelder(p: LeibchenWahlFelderProps): ReactElement {
       <button type="button" style={linkTaste} aria-expanded={andere} aria-haspopup={p.andereAlsBlatt === true ? 'dialog' : undefined} onClick={() => { setAndere(!andere); }} data-testid={`${p.testIdPrefix}-andere`}>{t('leibchenKarte.andere')}</button>
       {andere && p.andereAlsBlatt !== true && <div style={reihe} role="group" aria-label={t('leibchenKarte.andere')}>{weitere.map((f) => farbTaste(f, false))}</div>}
       {p.andereAlsBlatt === true && (
-        <DialogSurface isOpen={andere} onClose={() => { setAndere(false); }} placement="sheet" ariaLabel={t('leibchenKarte.andere')} testId={`${p.testIdPrefix}-andere-blatt`}>
+        <DialogSurface isOpen={andere} onClose={() => { setAndere(false); }} placement="sheet" ariaLabel={t('leibchenKarte.andere')} testId={`${p.testIdPrefix}-andere-blatt`} panelClassName={styles.blatt}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm, padding: cssVars.spacing.md }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: cssVars.spacing.sm }}>
               <h2 style={{ fontSize: cssVars.fontSizes.lg, margin: 0 }}>{t('leibchenKarte.andere')}</h2>
