@@ -177,5 +177,8 @@
     "inhalt": "Inhalt",
     "hallenton": "Hallenton",
     "hallenLautsprecher": "Hallen-Lautsprecher"
+  },
+  "equipment": {
+    "bib": "Leibchen"
   }
 }

@@ -64,13 +64,13 @@ describe('A-30a startMatch(…, kit): Anpfiff trägt die getragenen Farben', () 
   it('@SL-138 ohne Farbkonflikt: Anpfiff ohne weiteren Schritt, kit geht ohne Leibchen mit', async () => {
     const teams = [team(SV_SUED, 'SV Süd', ROT), team(TSV_OST, 'TSV Ost', WEISS)];
     const h = makeHarness([], KICKOFF_AT);
-    await h.commands.start(ID, B07_CTX, 'leitung', B07_RULES, kitBeimAnpfiff(spiel(ID, SV_SUED, TSV_OST), teams, undefined));
+    await h.commands.start(ID, B07_CTX, 'leitung', B07_RULES, kitBeimAnpfiff(spiel(ID, SV_SUED, TSV_OST), teams));
     expect(h.stored[0].payload).toEqual({ rules: B07_RULES, kit: { a: ROT, b: WEISS } });
   });
 
   it('@W3-028 auch ohne eingetragene Farben geht kit beim Anpfiff mit (leeres Objekt hält „keine Farbe“ fest)', async () => {
     const h = makeHarness([], KICKOFF_AT);
-    await h.commands.start(ID, B07_CTX, 'leitung', B07_RULES, kitBeimAnpfiff(spiel(ID, SV_SUED, TSV_OST), [], undefined));
+    await h.commands.start(ID, B07_CTX, 'leitung', B07_RULES, kitBeimAnpfiff(spiel(ID, SV_SUED, TSV_OST), []));
     expect(h.stored[0].payload).toEqual({ rules: B07_RULES, kit: {} });
   });
 

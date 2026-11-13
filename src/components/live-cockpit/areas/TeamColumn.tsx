@@ -29,7 +29,6 @@ export interface TeamColumnProps {
   /** Tastenkürzel dieser Seite (@SL-153): Tor `1`/`2`, Foul `F`/`J`; ohne Angabe (Schalter aus, kein Laptop) weder Hinweis noch `aria-keyshortcuts`. */
   taste?: { tor: string; foul: string };
   /** Vor dem Anpfiff im Platz der Tor-Taste: „Leibchen für …“ dieses Teams (@SL-137, @SL-148). */
-  vorAnpfiff?: ReactNode;
   /** Die laufenden Strafen stehen in der Tafel (Handy, Tablet hochkant, K7): keine Marken unter den Tasten. */
   strafenInTafel?: boolean;
 }
@@ -73,7 +72,7 @@ const kbdChipStil = (aufPrimaer: boolean): CSSProperties => ({
   color: aufPrimaer ? cssVars.colors.onPrimary : cssVars.colors.textSecondary,
 });
 
-export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKarte, kompakt = false, breit = false, taste, vorAnpfiff, strafenInTafel = false }: TeamColumnProps): ReactElement {
+export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKarte, kompakt = false, breit = false, taste, strafenInTafel = false }: TeamColumnProps): ReactElement {
   const { t } = useTranslation('cockpit');
   const chips = useFeinerZeiger() && taste !== undefined;
   const { seite, name, fouls, strafen, kartenArten } = model;
@@ -96,7 +95,6 @@ export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKart
       {/* Der Zähler steht im Foul-Knopf (Laptop-Mockup Stand 4); eine eigene Zeile nur ohne Foul-Knopf (Halbzeitpause, Nur-Lesen) */}
       {!knoepfe.foul && !(kompakt && model.vorAnpfiff) && <div style={zaehlerStil} data-testid={`team-fouls-${seite}`}>{foulText}</div>}
       </div>
-      {!knoepfe.tor && vorAnpfiff}
       {knoepfe.tor && (
         <Button size="lg" icon={<MatchIcons.Ball />} style={torStil(breit, kompakt)} data-primary data-testid={`goal-button-${seite}`} onClick={onTor}
           aria-keyshortcuts={taste?.tor} aria-label={t('spalte.aria.tor', { team: name })}>{t('spalte.tor')}{chips && <kbd aria-hidden="true" data-testid={`tor-taste-${seite}`} style={kbdChipStil(true)}>{taste.tor}</kbd>}</Button>

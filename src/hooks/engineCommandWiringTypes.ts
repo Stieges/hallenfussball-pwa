@@ -6,7 +6,6 @@
  * dieser Datei statt einer eigenen, weil `useEngineCommandWiring.ts` (299, Grenzdatei) keine
  * einzige Zeile mehr wachsen darf; der Kickoff nennt diese Datei explizit als Zielort.
  */
-import type { LeibchenWahl } from '../core/models/kitChoice';
 /**
  * A-08d2b: die neun Engine-Handler des Cockpits. B-07 (S4/R4): Befehle liefern die Ereignis-ID
  * (`null` bei Ablehnung oder noop). Kein Fallback mehr -- jede Aktion ohne Engine-Weg
@@ -24,7 +23,7 @@ export interface GoalHandlerOptions {
 
 export interface EngineCommandHandlers {
   /** `leibchen`: Wahl der Anpfiff-Ansicht (@SL-137, @SL-149); ohne Angabe gilt, was Tom auf der Karte getippt hat, und sonst keine Leibchen (@SL-210). */
-  handleStart: (matchId: string, leibchen?: LeibchenWahl) => Promise<boolean>;
+  handleStart: (matchId: string) => Promise<boolean>;
   handlePause: (matchId: string) => Promise<string | null>;
   handleResume: (matchId: string) => Promise<string | null>;
   handleFinish: (matchId: string) => Promise<string | null>;

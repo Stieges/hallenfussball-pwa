@@ -23,7 +23,6 @@ import { buildValidMatches } from './useEngineMatches';
 import { mapCardTypeToEngine, type EngineCommandHandlers, type GoalHandlerOptions } from './engineCommandWiringTypes';
 import { rejectionMessageKey } from './engineCommandWiringHelpers';
 import { kitBeimAnpfiff } from '../core/models/kitAnpfiff';
-import type { LeibchenWahl } from '../core/models/kitChoice';
 
 export type { EngineCommandHandlers } from './engineCommandWiringTypes';
 
@@ -98,7 +97,7 @@ export function useEngineCommandWiring(
   /** Ruft `commands.start` fuer ein Spiel auf, dessen lokale Engine-Kopie bereits existiert
    * (Vorbedingung von `MatchCommands.submit`, sonst "keine lokale Kopie"-Wurf). */
   const startViaCommands = useCallback(
-    async (matchId: string, leibchen?: LeibchenWahl): Promise<boolean> => {
+    async (matchId: string): Promise<boolean> => {
       if (!commands) {
         return false;
       }
@@ -109,7 +108,7 @@ export function useEngineCommandWiring(
       try {
         const match = tournament.matches.find((m) => m.id === matchId);
         // A-30a (F1): kit geht bei jedem Anpfiff mit; ohne Tipp keine Leibchen, keine Vorbelegung (@SL-210, @SL-149)
-        await commands.start(matchId, ctx, actor, serverRulesFor(tournament, match), match && kitBeimAnpfiff(match, tournament.teams, leibchen));
+        await commands.start(matchId, ctx, actor, serverRulesFor(tournament, match), match && kitBeimAnpfiff(match, tournament.teams));
         return true;
       } catch (error) {
         handleEngineError(error);
@@ -120,9 +119,9 @@ export function useEngineCommandWiring(
   );
 
   const handleStart = useCallback(
-    async (matchId: string, leibchen?: LeibchenWahl): Promise<boolean> => {
+    async (matchId: string): Promise<boolean> => {
       if (isEngineMatch(matchId) && commands) {
-        return startViaCommands(matchId, leibchen);
+        return startViaCommands(matchId);
       }
       // P3: engine-bestimmt, aber noch KEINE Engine-Ansicht -- ERST `ensureEngineMatchReady`, DANN
       // `commands.start`. Kein Engine-Weg (kein Engine-Spiel, `null` von `ensureEngineMatchReady`):
@@ -135,7 +134,7 @@ export function useEngineCommandWiring(
       try {
         const ready = await ensureEngineMatchReady(matchId);
         if (ready) {
-          return startViaCommands(matchId, leibchen);
+          return startViaCommands(matchId);
         }
         // W1: `null` ist ein erwartbarer Fall (kein Engine-Spiel / Server noch ohne Ereignisse), kein Fehler.
         await reject();

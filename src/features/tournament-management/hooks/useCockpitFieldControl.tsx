@@ -41,6 +41,8 @@ export interface CockpitFieldControlInput {
 
 export interface CockpitFieldControl {
   kannSteuern: boolean;
+  /** Epoche der Feldsteuerung, solange dieses Gerät das Feld steuert (für `match_kit_set`, @SL-202), sonst `null`. */
+  epoche: number | null;
   steuerung: LiveCockpitLeisteProps['steuerung'];
   /** Vorgänger nach einer Übernahme im laufenden Spiel (`''` = ohne Namen), sonst `null`. */
   uebernahmeVon: string | null;
@@ -132,6 +134,7 @@ export function useCockpitFieldControl(input: CockpitFieldControlInput): Cockpit
 
   return {
     kannSteuern: canPlay && mayControlField(view),
+    epoche: eigeneEpoche,
     steuerung,
     uebernahmeVon: uebernahme !== null && uebernahme.matchId === currentMatch?.id && view.kind === 'mine' ? uebernahme.name : null,
     halter,
