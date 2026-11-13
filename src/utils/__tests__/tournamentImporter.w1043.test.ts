@@ -1,6 +1,6 @@
 /**
  * @W1-043 Der Import übernimmt die Trikotfarben der Teams (docs/anforderungen/2026-09-27_wizard-einstieg-und-fuehrung.md).
- * Befund C-IMPORT-OHNE-TRIKOTFARBEN. Echter Weg: JSON-Text (echte Vorlagen des Nikolaus-Wochenendes) →
+ * Befund C-IMPORT-OHNE-TRIKOTFARBEN. Fixtures = Vorlagen des Turnierwochenendes ohne Kontakt- und Ortsangaben. Echter Weg: JSON-Text (echte Vorlagen des Nikolaus-Wochenendes) →
  * `validateAndParseTournamentImport`. Ein Team ohne Farbe hat KEIN `colors`-Feld, wie im Assistenten angelegt (Step4_Teams).
  */
 import { describe, it, expect } from 'vitest';
@@ -99,6 +99,12 @@ describe('@W1-043 Import übernimmt die Trikotfarben', () => {
     expect(importiere(mitTeam6('blau')).errors[0]).toEqual(
       expect.objectContaining({ code: 'INVALID_TEAM_COLOR', field: 'teams[5].colors' }),
     );
+  });
+
+  it('zweite Farbe ohne erste wird genannt, nicht still verworfen', () => {
+    const result = importiere(mitTeam6({ primary: '', secondary: '#fff' }));
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toEqual([expect.objectContaining({ code: 'INVALID_TEAM_COLOR', field: 'teams[5].colors.secondary' })]);
   });
 
   it('mehrere ungültige Farben: jede wird genannt', () => {

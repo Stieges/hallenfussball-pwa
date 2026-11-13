@@ -42,6 +42,15 @@ export function parseTeamColors(
   const obj = raw as Record<string, unknown>;
   const primary = parseColorValue(obj.primary, `${field}.primary`, teamName, errors);
   const secondary = parseColorValue(obj.secondary, `${field}.secondary`, teamName, errors);
-  if (primary === undefined) { return {}; }
+  if (primary === undefined) {
+    if (secondary !== undefined) {
+      errors.push({
+        code: 'INVALID_TEAM_COLOR',
+        field: `${field}.secondary`,
+        message: `Team „${teamName}“: Die zweite Farbe „${String(obj.secondary)}“ braucht eine erste Farbe (primary)`,
+      });
+    }
+    return {};
+  }
   return { colors: secondary === undefined ? { primary } : { primary, secondary } };
 }

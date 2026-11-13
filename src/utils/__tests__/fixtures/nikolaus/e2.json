@@ -1,17 +1,13 @@
 {
   "title": "E2-Junioren Hallenturnier",
-  "organizer": "TSV 1888 Waging am See",
+  "organizer": "Beispielverein",
   "ageClass": "E2-Junioren",
   "date": "2026-11-29",
   "startDate": "2026-11-29",
   "timeSlot": "12:30",
   "startTime": "12:30",
   "location": {
-    "name": "Bergader SportARENA",
-    "street": "Mühlberger Weg 5",
-    "postalCode": "83329",
-    "city": "Waging am See",
-    "country": "Deutschland"
+    "name": "Beispielhalle"
   },
   "sport": "football",
   "sportId": "football-indoor",
@@ -72,8 +68,5 @@
         "primary": "#2E7D32"
       }
     }
-  ],
-  "contactInfo": {
-    "email": "fussballjugend@tsv-waging.de"
-  }
+  ]
 }

@@ -1,17 +1,13 @@
 {
   "title": "E1-Junioren Hallenturnier",
-  "organizer": "TSV 1888 Waging am See",
+  "organizer": "Beispielverein",
   "ageClass": "E1-Junioren",
   "date": "2026-11-29",
   "startDate": "2026-11-29",
   "timeSlot": "16:00",
   "startTime": "16:00",
   "location": {
-    "name": "Bergader SportARENA",
-    "street": "Mühlberger Weg 5",
-    "postalCode": "83329",
-    "city": "Waging am See",
-    "country": "Deutschland"
+    "name": "Beispielhalle"
   },
   "sport": "football",
   "sportId": "football-indoor",
@@ -72,8 +68,5 @@
         "primary": "#C62828"
       }
     }
-  ],
-  "contactInfo": {
-    "email": "fussballjugend@tsv-waging.de"
-  }
+  ]
 }
