@@ -55,6 +55,9 @@ test('@ZM-208 Gegenbeispiele: bestehende Hash-Adresse bleibt, andere Pfade werde
   await page.goto('/tournament/hallencup-messlauf');
   expect(new URL(page.url()).pathname).toBe('/tournament/hallencup-messlauf');
   expect(new URL(page.url()).hash).not.toContain('live');
+  // Der Auth-Callback wird nicht zur Zuschauer-Seite umgeleitet. Ohne Anmeldecode führt die App ihn selbst weiter
+  // (über `/#/auth/callback` zur Startseite `/#/`); geprüft wird deshalb der Endzustand, nicht die Zwischenadresse.
   await page.goto('/auth/callback');
-  await expect(page).toHaveURL(/\/#\/auth\/callback/);
+  await expect(page).toHaveURL(/\/#\/(auth\/callback)?$/);
+  expect(page.url()).not.toContain('/live');
 });
