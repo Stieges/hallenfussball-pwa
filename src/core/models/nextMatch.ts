@@ -19,7 +19,7 @@ export type NextSource = Pick<Match, 'id' | 'field' | 'matchNumber' | 'slotA' | 
 export function nextCandidateOf(m: NextSource): NextCandidate {
   const hatErgebnis = m.scoreA !== undefined && m.scoreB !== undefined;
   const status = m.matchStatus === 'skipped' || m.matchStatus === 'finished' ? m.matchStatus : hatErgebnis ? 'finished' : (m.matchStatus ?? 'scheduled');
-  return { id: m.id, field: m.field, round: m.round!, slot: m.slot, matchNumber: m.matchNumber, scheduledTime: m.scheduledTime, matchStatus: status, slotA: m.slotA, slotB: m.slotB };
+  return { id: m.id, field: m.field, round: m.round ?? Number.POSITIVE_INFINITY, slot: m.slot, matchNumber: m.matchNumber, scheduledTime: m.scheduledTime, matchStatus: status, slotA: m.slotA, slotB: m.slotB };
 }
 
 const nullsLast = (value: number | undefined): number => value ?? Number.POSITIVE_INFINITY;
