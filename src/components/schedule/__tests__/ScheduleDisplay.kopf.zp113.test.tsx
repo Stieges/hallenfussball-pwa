@@ -50,4 +50,19 @@ describe('@ZP-113 Kopf des Spielplans (ScheduleDisplay)', () => {
     render(<ScheduleDisplay schedule={schedule} showParticipants={false} participantsCollapsed showListHead />);
     expect(screen.queryByTestId('public-participants-toggle')).toBeNull();
   });
+
+  it('@ZP-113 ohne Gruppen steht über den Spielen nur der Listenkopf „Spiele“, nicht zusätzlich die Überschrift „Spielplan“; Gegenbeispiele: mit Gruppen bleibt „Gruppenphase“, ohne Listenkopf bleibt „Spielplan“', () => {
+    const einGruppe = generateFullSchedule(createMockTournament({
+      teams: [1, 2, 3, 4].map((n) => ({ id: testUuid(50 + n), name: `Verein ${String(n)}` })), numberOfTeams: 4, numberOfGroups: 1, numberOfFields: 1, groupSystem: 'roundRobin',
+    }));
+    const { unmount } = render(<ScheduleDisplay schedule={einGruppe} showListHead />);
+    expect(screen.getByRole('heading', { name: 'Spiele' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Spielplan' })).toBeNull();
+    unmount();
+    const { unmount: weg } = render(<ScheduleDisplay schedule={einGruppe} />);
+    expect(screen.getByRole('heading', { name: 'Spielplan' })).toBeTruthy();
+    weg();
+    render(<ScheduleDisplay schedule={schedule} showListHead />);
+    expect(screen.getByRole('heading', { name: 'Gruppenphase' })).toBeTruthy();
+  });
 });

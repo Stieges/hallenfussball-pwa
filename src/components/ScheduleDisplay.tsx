@@ -254,6 +254,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
       {filteredGroupPhaseMatches.length > 0 && (
         <GroupStageSchedule
           liveMatches={liveMatches}
+          showTitle={!showListHead || hasGroups}
           matches={filteredGroupPhaseMatches}
           hasGroups={hasGroups}
           refereeConfig={schedule.refereeConfig}
