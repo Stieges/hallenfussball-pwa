@@ -8,6 +8,7 @@
  * @see supabaseMappers.ts for type conversion logic
  */
 
+import { assertWholeTournament } from './listEntryGuard';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
@@ -256,6 +257,7 @@ export class SupabaseRepository implements ITournamentRepository {
    * Ohne `mustExist` (noch nie in der Cloud, @FU-124) legt die erste Übertragung das Turnier an.
    */
   async save(tournament: Tournament, options: { mustExist?: boolean } = {}): Promise<number> {
+    assertWholeTournament(tournament); // @W5-041: der Voll-Ersatz löscht, was dem Stand fehlt – nie mit einem Listen-Eintrag
     // Get current user for owner_id
     const {
       data: { user },
@@ -839,16 +841,22 @@ export class SupabaseRepository implements ITournamentRepository {
   /**
    * Soft deletes a tournament (moves to trash)
    */
-  async softDelete(id: string): Promise<void> {
+  async softDelete(id: string, at: string = new Date().toISOString()): Promise<void> {
     const { error } = await getSupabase()
       .from('tournaments')
-      .update({ deleted_at: new Date().toISOString() })
+      .update({ deleted_at: at })
       .eq('id', id);
 
     if (error) {
       console.error('Failed to soft delete tournament:', error);
       throw new RepositoryError('softDelete', error.message, error);
     }
+  }
+
+  /** @W5-040: Papierkorb ändert nur die Löschmarke (`deleted_at`), nie Teams oder Spiele. */
+  async setTrashed(id: string, deletedAt: string | null, metadata: Partial<Tournament> = {}): Promise<void> {
+    await (deletedAt === null ? this.restore(id) : this.softDelete(id, deletedAt));
+    if (Object.keys(metadata).length > 0) { await this.updateTournamentMetadata(id, metadata); }
   }
 
   /**

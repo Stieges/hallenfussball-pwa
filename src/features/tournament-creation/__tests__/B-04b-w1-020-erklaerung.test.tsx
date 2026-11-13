@@ -124,6 +124,7 @@ const repositoryMock = (): ITournamentRepository => ({
   updateMatch: vi.fn(() => Promise.resolve()),
   updateMatches: vi.fn(() => Promise.resolve()),
   delete: vi.fn(() => Promise.resolve()),
+  setTrashed: vi.fn(() => Promise.resolve()),
   listForCurrentUser: vi.fn(() => Promise.resolve([])),
   makeTournamentPublic: vi.fn(() => Promise.resolve(null)),
   makeTournamentPrivate: vi.fn(() => Promise.resolve()),

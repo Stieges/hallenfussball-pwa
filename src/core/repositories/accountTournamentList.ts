@@ -43,7 +43,8 @@ type Client = SupabaseClient<Database>;
 type TournamentRow = Database['public']['Tables']['tournaments']['Row'];
 
 function listed(row: TournamentRow, myRole: TournamentListRole): Tournament {
-    return { ...mapTournamentFromSupabase(row, [], []), myRole };
+    // listEntryOnly: Kopfdaten ohne Teams und Spiele, nie als ganzes Turnier speicherbar (@W5-041)
+    return { ...mapTournamentFromSupabase(row, [], []), myRole, listEntryOnly: true };
 }
 
 async function readOwn(client: Client, userId: string): Promise<{ tournaments: Tournament[]; ownIds: Set<string> }> {

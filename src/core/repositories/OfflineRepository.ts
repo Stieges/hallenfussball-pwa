@@ -21,6 +21,7 @@ import { effectiveHostTeamIds } from '../models/hostTeams';
 import { parsePlacementsToPlayOut } from '../standings/playOutPlaces';
 import { mergeAccountList, offlineAccountList, readAccountRoleMemory, writeAccountRoleMemory, type AccountRoleMemory } from './accountListMerge';
 import { checkedVersion, withCheckedVersion } from './confirmedVersion';
+import { assertWholeTournament } from './listEntryGuard';
 import { groupsOfSystem } from './supabaseMappers';
 
 /**
@@ -362,6 +363,7 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
      * 2. Enqueue Mutation (Persistent Background Sync)
      */
     async save(tournament: Tournament): Promise<void> {
+        assertWholeTournament(tournament); // @W5-041: ein Listen-Eintrag ist kein ganzes Turnier – nichts lokal, nichts am Server
         await this.queueGuard.track(tournament.id, async () => { // A-08f3c2: Speichern + Einreihen als Einheit (Regel Q)
             const base = await this.localRepo.save(this.owned(tournament));
             this.serverRevisions.retain(tournament.id, new Set(tournament.matches.map(m => m.id))); // A-08f3b: Neugenerieren
@@ -494,6 +496,22 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         this.serverRevisions.clear(id); // A-08f3b: Ablage leeren
         this._mutationQueue.forgetCloudCopy(id); // @FU-106 (Auflage A1)
         this.mutationQueue.enqueue('DELETE_TOURNAMENT', id);
+    }
+
+    /**
+     * @W5-040: Papierkorb und Wiederherstellen ändern nur die Löschmarke. Mit lokaler Kopie: lokal setzen und als
+     * Änderung der Turnierangaben einreihen. Ohne lokale Kopie (Eintrag nur aus der Cloud-Liste) gibt es nichts
+     * zum Einreihen: die Marke geht sofort an den Server, ein Fehler (z. B. ohne Netz) geht an den Aufrufer.
+     */
+    async setTrashed(id: string, deletedAt: string | null, metadata: Partial<Tournament> = {}): Promise<void> {
+        await this.queueGuard.track(id, async () => {
+            if (!(await this.localRepo.get(id))) {
+                await this.supabaseRepo.setTrashed(id, deletedAt, metadata);
+                return;
+            }
+            await this.localRepo.setTrashed(id, deletedAt, metadata);
+            this.mutationQueue.enqueue('UPDATE_TOURNAMENT_METADATA', { tournamentId: id, metadata, trash: { deletedAt } });
+        });
     }
 
     async updateTournamentMetadata(id: string, metadata: Partial<Tournament>): Promise<void> {

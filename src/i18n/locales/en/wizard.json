@@ -3,6 +3,12 @@
     "back": "Back",
     "next": "Next"
   },
+  "opening": {
+    "loading": "Loading the tournament …",
+    "failedTitle": "The tournament could not be loaded",
+    "failedBody": "Nothing has been changed. Check your connection and open the tournament again from the home page.",
+    "back": "Back to the home page"
+  },
   "step1": {
     "title": "Sport & Tournament Type",
     "sportLabel": "Sport",

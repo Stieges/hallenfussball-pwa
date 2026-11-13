@@ -31,6 +31,13 @@ export interface ITournamentRepository {
     save(tournament: Tournament): Promise<unknown>;
 
     /**
+     * @W5-040: Papierkorb und Wiederherstellen. Ändert NUR die Löschmarke (`deletedAt` = Zeitpunkt, `null` = wiederherstellen),
+     * dazu optional mitgegebene Angaben (z. B. `status`), nie Teams oder Spiele. Ersetzt das Speichern des ganzen Turniers,
+     * das mit einem Listen-Eintrag Teams und Spiele am Server gelöscht hat.
+     */
+    setTrashed(id: string, deletedAt: string | null, metadata?: Partial<Tournament>): Promise<void>;
+
+    /**
      * Updates a specific match.
      * This is atomic/granular to avoid overwriting other matches.
      */

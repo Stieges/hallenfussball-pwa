@@ -3,6 +3,12 @@
     "back": "Zurück",
     "next": "Weiter"
   },
+  "opening": {
+    "loading": "Turnier wird geladen …",
+    "failedTitle": "Das Turnier konnte nicht geladen werden",
+    "failedBody": "Es wurde nichts verändert. Prüfe die Verbindung und öffne das Turnier noch einmal von der Startseite.",
+    "back": "Zurück zur Startseite"
+  },
   "step1": {
     "title": "Sportart & Turniertyp",
     "sportLabel": "Sportart",

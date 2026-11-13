@@ -3,6 +3,7 @@ import { isTournamentClosed } from '../core/services/lifecycle';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Tournament, TRASH_RETENTION_DAYS } from '../types/tournament';
 import { useRepository } from '../hooks/useRepository';
+import { isListEntryOnly } from '../core/repositories/listEntryGuard';
 import { useAuth } from '../features/auth/hooks/useAuth';
 import { filterWithoutGuestEngineEntries } from '../core/match/client/guestEngineEntries';
 import { migrateLocationsToStructured } from '../utils/locationHelpers';
@@ -50,7 +51,8 @@ export const useTournaments = () => {
 
       // If migrations occurred, save them back
       if (hasChanges) {
-        await Promise.all(migrated.map(t => repository.save(t)));
+        // @W5-041: nur die tatsächlich umgestellten Turniere; ein Listen-Eintrag ist kein ganzes Turnier und wird nie gespeichert
+        await Promise.all(migrated.filter((t, idx) => typeof loaded[idx]?.location === 'string' && !isListEntryOnly(t)).map(t => repository.save(t)));
       }
 
       // G7: Turnier-Limit zählt auch ausgeblendete Turniere weiter — daher der
@@ -112,6 +114,17 @@ export const useTournaments = () => {
     }
   }, [repository, loadTournaments]);
 
+  // @W5-040: Papierkorb/Wiederherstellen über die Löschmarke, danach Liste neu laden
+  const setTrashed = useCallback(async (id: string, deletedAt: string | null, metadata?: Partial<Tournament>) => {
+    try {
+      await repository.setTrashed(id, deletedAt, metadata);
+      await loadTournaments();
+    } catch (error) {
+      console.error('Failed to change trash state:', error);
+      throw error;
+    }
+  }, [repository, loadTournaments]);
+
   // Delete tournament (Legacy/Permanent)
   const deleteTournament = useCallback(async (id: string) => {
     try {
@@ -157,14 +170,9 @@ export const useTournaments = () => {
     if (!tournament) { return; }
     if (isTournamentClosed(tournament)) { throw new Error('TOURNAMENT_CLOSED'); } // R3-3: der Server lehnt `deleted_at` mit 55000 ab; der Aufrufer meldet es
 
-    const updated: Tournament = {
-      ...tournament,
-      deletedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    await saveTournament(updated);
-  }, [saveTournament, tournaments]);
+    // @W5-040: nur die Löschmarke, nie das ganze Turnier (die Liste kennt weder Teams noch Spiele)
+    await setTrashed(id, new Date().toISOString());
+  }, [setTrashed, tournaments]);
 
   /**
    * Restore tournament from trash
@@ -178,19 +186,9 @@ export const useTournaments = () => {
     if (!tournament) { return; }
     if (isTournamentClosed(tournament)) { throw new Error('TOURNAMENT_CLOSED'); } // R3-3
 
-    const updated: Tournament = {
-      ...tournament,
-      deletedAt: undefined,
-      updatedAt: new Date().toISOString(),
-    };
-
-    // If restoring as draft, set status
-    if (options?.restoreAs === 'draft') {
-      updated.status = 'draft';
-    }
-
-    await saveTournament(updated);
-  }, [saveTournament, tournaments]);
+    // @W5-040: nur die Löschmarke (und bei Bedarf der Zustand), nie das ganze Turnier
+    await setTrashed(id, null, options?.restoreAs === 'draft' ? { status: 'draft' } : undefined);
+  }, [setTrashed, tournaments]);
 
   /**
    * Permanent Delete: Remove tournament completely (cannot be undone)
