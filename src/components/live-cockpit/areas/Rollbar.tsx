@@ -5,8 +5,8 @@
  */
 import { createElement, useLayoutEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 
-/** Ab so vielen Bildpunkten Überhang endet die Fläche unten mit einer weichen Kante (`data-rollt-viel`), darunter genügt der Tabstopp. */
-const UEBERHANG_VIEL = 24;
+/** Ab so vielen Bildpunkten Überhang (halber Text am Rand) endet die Fläche unten mit einer weichen Kante (`data-rollt-viel`), darunter genügt der Tabstopp. */
+const UEBERHANG_VIEL = 8;
 
 export interface RollbarProps {
   /** Ausgabe-Element */
