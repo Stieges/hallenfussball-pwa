@@ -7,6 +7,7 @@ import { type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars, touchTargets } from '../../../design-tokens';
 import type { RuntimeMatchEvent } from '../../../types/tournament';
+import { bindTrailingNumber, splitProtocolText } from './protocolText';
 import { retractedMarkStyle, retractedRowStyle, formatTime, type ProtocolEntry } from './protocolEntries';
 import { cardKindOf } from '../../../utils/cardKind';
 import { FOUL_SYMBOL } from '../../../utils/eventSymbols';
@@ -121,9 +122,14 @@ export function ProtocolRow({
     minWidth: 0,
   };
 
+  /** Feste Breite: Uhrzeit und Text beginnen in jeder Zeilenart an derselben Stelle (Symbole sind verschieden breit). */
   const iconStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.lg,
     flexShrink: 0,
+    width: cssVars.spacing.lg,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   };
 
   const timeStyle: CSSProperties = {
@@ -232,7 +238,9 @@ export function ProtocolRow({
             <div style={sheetTextStyle}>
               <span style={timeStyle}>{time}</span>
               <span style={descStyle}>
-                {description}
+                {splitProtocolText(bindTrailingNumber(description)).map((part, index) => (
+                  part.keepTogether ? <span key={index} style={{ whiteSpace: 'nowrap' }}>{part.text}</span> : part.text
+                ))}
                 {warning}
                 {mark}
               </span>

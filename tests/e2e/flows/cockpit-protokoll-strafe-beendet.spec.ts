@@ -14,6 +14,7 @@ import { cup, anpfeifen } from '../helpers/laptopCup';
 import { schliesseTorAuswahl, wartePicker } from '../helpers/cockpitNeu';
 
 const BILDER = process.env.PSB_BILDER ?? '';
+const DUNKEL = process.env.PSB_DUNKEL === '1'; // Bilder im dunklen Thema
 const torZeile = (page: Page) => page.locator('[data-event-type="GOAL"]').filter({ visible: true }).first();
 const zusatz = (page: Page) => page.getByTestId('event-penalty-ended-by-goal').filter({ visible: true });
 
@@ -21,7 +22,7 @@ async function bild(page: Page, name: string): Promise<void> {
   if (BILDER === '') { return; }
   await animationenFertig(page);
   mkdirSync(BILDER, { recursive: true });
-  writeFileSync(join(BILDER, `${name}.png`), await page.screenshot());
+  writeFileSync(join(BILDER, `${name}${DUNKEL ? '-dunkel' : ''}.png`), await page.screenshot());
 }
 
 async function strafeFuerNr5(page: Page): Promise<void> {
@@ -77,7 +78,8 @@ async function zeileSauber(page: Page): Promise<void> {
 }
 
 test.describe('@SL-242 Zusatz „beendet durch Tor“ im Ereignisprotokoll des Cockpits', () => {
-  test.beforeEach(async ({ browserName: _b }, testInfo) => {
+  test.beforeEach(async ({ browserName: _b, page }, testInfo) => {
+    if (DUNKEL) { await page.emulateMedia({ colorScheme: 'dark' }); }
     test.skip(testInfo.project.name.includes('iPhone'), 'Safe-Area-Emulation verdeckt Tasten (wie cockpit-zeitstrafe-gegentor.spec.ts)');
   });
 

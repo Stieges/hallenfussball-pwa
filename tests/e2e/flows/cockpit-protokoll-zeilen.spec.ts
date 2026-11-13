@@ -13,12 +13,13 @@ import { cup, anpfeifen, NAME_50, NAMEN } from '../helpers/laptopCup';
 import { schliesseTorAuswahl, tippeKarte, wartePicker } from '../helpers/cockpitNeu';
 
 const BILDER = process.env.PSB_BILDER ?? '';
+const DUNKEL = process.env.PSB_DUNKEL === '1'; // Bilder im dunklen Thema
 
 async function bild(page: Page, name: string): Promise<void> {
   if (BILDER === '') { return; }
   await animationenFertig(page);
   mkdirSync(BILDER, { recursive: true });
-  writeFileSync(join(BILDER, `${name}.png`), await page.screenshot());
+  writeFileSync(join(BILDER, `${name}${DUNKEL ? '-dunkel' : ''}.png`), await page.screenshot());
 }
 
 const marke = (page: Page) => page.getByTestId('scoreboard').getByText(/^#5 [01]:\d{2}$/)
@@ -49,6 +50,7 @@ for (const [fall, namen] of [['normal', NAMEN], ['name50', [NAME_50, ...NAMEN.sl
   test(`@OB-021 @OB-025 Handy-Blatt (${fall}): jede Zeilenart ungekürzt, ohne Überlauf, Taste „Bearbeiten“ erreichbar`, async ({ page, seedIndexedDB }, testInfo) => {
     test.skip((page.viewportSize()?.width ?? 0) >= 1024, 'das Blatt gibt es nur unter 1024 px (darüber steht die Liste daneben)');
     test.skip(testInfo.project.name.includes('iPhone'), 'Safe-Area-Emulation verdeckt Tasten');
+    if (DUNKEL) { await page.emulateMedia({ colorScheme: 'dark' }); }
     await seedIndexedDB({ tournaments: [{ ...cup({ namen }), matchCockpitSettings: { penaltyEndsOnGoal: true, foulLimit: 5 } }] });
     await spieleAlleZeilenarten(page);
     await page.getByTestId('match-event-log-button').click();
@@ -62,6 +64,7 @@ for (const [fall, namen] of [['normal', NAMEN], ['name50', [NAME_50, ...NAMEN.sl
     const breite = page.viewportSize()!.width;
     const arten = await zeilen.evaluateAll((els) => els.map((e) => e.getAttribute('data-event-type')));
     expect([...arten].sort()).toEqual(['FOUL', 'GOAL', 'GOAL', 'TIME_PENALTY', 'YELLOW_CARD']);
+    const zeitLinks: number[] = [];
     for (let i = 0; i < 5; i++) {
       const zeile = zeilen.nth(i);
       const art = arten[i];
@@ -73,6 +76,32 @@ for (const [fall, namen] of [['normal', NAMEN], ['name50', [NAME_50, ...NAMEN.sl
       const ueberlauf = await zeile.evaluate((el) =>
         [el, ...Array.from(el.querySelectorAll('*'))].filter((k) => k.scrollWidth > k.clientWidth + 1).map((k) => k.tagName + ':' + (k.textContent ?? '').slice(0, 20)));
       expect(ueberlauf, `${art}: nichts läuft waagerecht über`).toEqual([]);
+      zeitLinks.push((await zeile.getByText(/^\d{2}:\d{2}$/).boundingBox())!.x);
+      // Zeilen des Textes (ohne Taste): kein Wort eines Teamnamens auf zwei Zeilen, die Nummer nie allein (VISUAL-DESIGN § 2)
+      const zeilenDesTextes = await zeile.evaluate((el) => {
+        const jeZeile = new Map<number, string>();
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        for (let n = walker.nextNode(); n !== null; n = walker.nextNode()) {
+          if (n.parentElement!.closest('button') !== null) { continue; }
+          const text = n.textContent ?? '';
+          const r = document.createRange();
+          for (let k = 0; k < text.length; k++) {
+            r.setStart(n, k); r.setEnd(n, k + 1);
+            const rect = r.getBoundingClientRect();
+            if (rect.width === 0) { continue; }
+            const top = Math.round(rect.top / 4) * 4; // gleiche Zeile trotz Symbol-/Schriftunterschied
+            jeZeile.set(top, (jeZeile.get(top) ?? '') + text[k]);
+          }
+        }
+        return [...jeZeile.entries()].sort((a, b) => a[0] - b[0]).map(([, t]) => t.replace(/\u00a0/g, ' ').trim());
+      });
+      for (const l of zeilenDesTextes) {
+        expect(l, `${art}: keine Zeile endet mit „-“ (${JSON.stringify(zeilenDesTextes)})`).not.toMatch(/-$/);
+        expect(l, `${art}: die Nummer steht nie allein (${JSON.stringify(zeilenDesTextes)})`).not.toMatch(/^#\d+$/);
+      }
+      if (fall === 'name50' && (art === 'TIME_PENALTY' || art === 'YELLOW_CARD')) {
+        expect(zeilenDesTextes.some((l) => l.includes('Nordheim-Süd')), `${art}: „Nordheim-Süd“ in einer Zeile`).toBe(true);
+      }
       const taste = zeile.getByRole('button');
       const t = (await taste.boundingBox())!;
       const z = (await zeile.boundingBox())!;
@@ -86,6 +115,7 @@ for (const [fall, namen] of [['normal', NAMEN], ['name50', [NAME_50, ...NAMEN.sl
       });
       expect(textRechts, `${art}: Text überlappt die Taste nicht`).toBeLessThanOrEqual(t.x + 1);
     }
+    expect(Math.max(...zeitLinks) - Math.min(...zeitLinks), `linke Kante der Uhrzeit in allen Zeilenarten gleich (${zeitLinks.join(', ')})`).toBeLessThanOrEqual(1);
     const zusatz = blatt.getByTestId('event-penalty-ended-by-goal');
     await expect(zusatz).toHaveText(/^beendet durch Tor\s\d{2}:\d{2}$/);
     // Zeit und „Tor“ bleiben auf einer Zeile: die Zeile des Zusatzes hat nie nur die Zeit
