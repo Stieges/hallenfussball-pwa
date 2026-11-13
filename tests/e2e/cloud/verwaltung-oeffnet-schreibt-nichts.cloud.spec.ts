@@ -59,10 +59,10 @@ async function seedDraft(id: string, teamIds: string[]): Promise<void> {
 
 /**
  * Die Turnierleitung stellt das Turnier anderswo fertig: 15 Spiele (jeder gegen jeden) kommen dazu und der Stand am Server wird neuer
- * (Titel). Den Zustand „festgelegt“ setzt nur der Server (kein direktes Ändern per Service-Rolle); der Entwurf mit erzeugtem Spielplan
+ * (Titel, Version +1 wie bei einem Speichern der App; Spiele und Titel allein zählen der Server nicht hoch). Den Zustand „festgelegt“ setzt nur der Server (kein direktes Ändern per Service-Rolle); der Entwurf mit erzeugtem Spielplan
  * ist der Stand, den @W5-042 meint: Server mit 6 Teams und 15 Spielen, die lokale Kopie kennt keine Spiele.
  */
-async function completeElsewhere(id: string, teamIds: string[]): Promise<void> {
+async function completeElsewhere(id: string, teamIds: string[], versionBefore: number): Promise<void> {
   const rows: Array<ReturnType<typeof createMatchRow>> = [];
   for (let a = 0; a < TEAM_ANZAHL; a++) {
     for (let b = a + 1; b < TEAM_ANZAHL; b++) {
@@ -76,7 +76,7 @@ async function completeElsewhere(id: string, teamIds: string[]): Promise<void> {
   }
   expect(rows).toHaveLength(SPIELE_ANZAHL);
   await rest('/rest/v1/matches', { method: 'POST', body: JSON.stringify(rows) });
-  await rest(`/rest/v1/tournaments?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ title: `W5042 fertig ${id.slice(0, 6)}` }) });
+  await rest(`/rest/v1/tournaments?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ title: `W5042 fertig ${id.slice(0, 6)}`, version: versionBefore + 1 }) }); // wie ein Speichern der App: Version +1
 }
 
 async function openCardOfDraft(page: Page, id: string): Promise<void> {
@@ -108,7 +108,7 @@ test.describe('@W5-042 das Öffnen der Verwaltung ändert nichts am Server und e
 
       // 2. Anderswo wird das Turnier fertiggestellt; der Stand am Server ist jetzt neuer als die Kopie dieses Geräts
       const alt = await serverState(id);
-      await completeElsewhere(id, teamIds);
+      await completeElsewhere(id, teamIds, alt.version);
       const before = await serverState(id);
       expect(before).toMatchObject({ teams: TEAM_ANZAHL, matches: SPIELE_ANZAHL });
       expect(before.version !== alt.version || before.changeRevision !== alt.changeRevision, 'der Server-Stand ist neuer als die lokale Kopie').toBe(true);
