@@ -48,10 +48,10 @@ const SPIELE_ANZAHL = 15;
  * Wegwerf-Turnier des Eigentümers mit 6 Teams; festgelegt zusätzlich mit 15 Spielen (Anstoß in der Zukunft, nichts angepfiffen,
  * auf Wunsch das erste Spiel beendet 2:1). Scheitert der Aufbau, wird das Halbfertige gleich wieder entfernt.
  */
-async function seedCup(kind: 'draft' | 'published', mitErgebnis = false): Promise<Cup> {
+async function seedCup(kind: 'draft' | 'published', mitErgebnis = false, mitSpielen = kind === 'published'): Promise<Cup> {
   const cup: Cup = { id: randomUUID(), teamIds: [], matchIds: [] };
   try {
-    await seedInto(cup, kind, mitErgebnis);
+    await seedInto(cup, kind, mitErgebnis, mitSpielen);
   } catch (error) {
     await safeCleanup('W5-039 halber Aufbau', () => dropCup(cup));
     throw error;
@@ -59,7 +59,7 @@ async function seedCup(kind: 'draft' | 'published', mitErgebnis = false): Promis
   return cup;
 }
 
-async function seedInto(cup: Cup, kind: 'draft' | 'published', mitErgebnis: boolean): Promise<void> {
+async function seedInto(cup: Cup, kind: 'draft' | 'published', mitErgebnis: boolean, mitSpielen: boolean): Promise<void> {
   const id = cup.id;
   const owner = await ownerId();
   const published = kind === 'published';
@@ -81,7 +81,7 @@ async function seedInto(cup: Cup, kind: 'draft' | 'published', mitErgebnis: bool
     }))),
   });
   const matchIds = cup.matchIds;
-  if (published) {
+  if (mitSpielen) {
     const paare: Array<[number, number]> = [];
     for (let a = 0; a < TEAM_ANZAHL; a++) { for (let b = a + 1; b < TEAM_ANZAHL; b++) { paare.push([a, b]); } }
     expect(paare).toHaveLength(SPIELE_ANZAHL);
@@ -261,12 +261,14 @@ async function trashAndRestore(browser: Browser, cup: Cup): Promise<void> {
 test.describe('@W5-040 Papierkorb und Wiederherstellen lassen Teams und Spiele unverändert', () => {
   test.describe.configure({ timeout: 90_000 });
 
-  test('festgelegtes Turnier mit 6 Teams und 15 Spielen: in den Papierkorb und zurück, am Server bleibt alles', async ({ browser }) => {
-    const cup = await seedCup('published');
+  // Ein festgelegtes Turnier bietet die Startseite nicht zum Löschen an (@LZ-003, Karte ohne geladene Spiele); der Entwurf mit
+  // erzeugtem Spielplan (6 Teams, 15 Spiele) ist der Weg, auf dem Teams UND Spiele in den Papierkorb gelangen.
+  test('Entwurf mit 6 Teams und 15 Spielen: in den Papierkorb und zurück, am Server bleibt alles', async ({ browser }) => {
+    const cup = await seedCup('draft', false, true);
     try {
       expect(await serverState(cup)).toMatchObject({ teams: TEAM_ANZAHL, matches: SPIELE_ANZAHL });
       await trashAndRestore(browser, cup);
-    } finally { await safeCleanup('W5-040 Papierkorb festgelegt', () => dropCup(cup)); }
+    } finally { await safeCleanup('W5-040 Papierkorb Entwurf mit Spielen', () => dropCup(cup)); }
   });
 
   test('Entwurf mit 6 Teams: in den Papierkorb und zurück, am Server bleiben alle Teams', async ({ browser }) => {
