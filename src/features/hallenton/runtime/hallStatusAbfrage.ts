@@ -116,6 +116,7 @@ export function erzeugeHallStatusAbfrage(d: HallStatusAbfrageDeps): HallStatusAb
         return;
       }
       gestartet = true;
+      melden(); // ein Stand aus einer früheren Einbindung kann inzwischen veraltet sein
       ab.push(d.zeitgeber.wiederholen(abfragen, HALL_STATUS_TAKT_MS));
       abfragen();
     },
