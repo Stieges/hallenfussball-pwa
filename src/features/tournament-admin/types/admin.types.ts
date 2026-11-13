@@ -24,6 +24,7 @@ export type AdminCategoryId =
   | 'visibility'
   | 'notifications'
   | 'match-cockpit'
+  | 'hallenton'
   | 'metadata'
   | 'help'
   | 'danger-zone';
@@ -53,6 +54,7 @@ export interface AdminCategory {
   isWarning?: boolean; // Orange styling
   badge?: number; // Notification count
   isComingSoon?: boolean; // Feature not yet available
+  isNew?: boolean; // Markierung „neu“ (Pille neben dem Namen)
 }
 
 /**
@@ -228,6 +230,8 @@ export interface AdminSidebarProps {
   onBackToTournament: () => void;
   /** Handle warning click for navigation */
   onWarningClick?: (warning: AdminWarning) => void;
+  /** Kategorien, die diese Person nicht angeboten bekommt (@HT-022: „Hallenton“ ohne `manageScreens`). */
+  hiddenCategories?: ReadonlySet<AdminCategoryId>;
 }
 
 /**
@@ -237,6 +241,8 @@ export interface AdminMobileHubProps {
   onNavigate: (category: AdminCategoryId) => void;
   warnings?: AdminWarning[];
   onBackToTournament: () => void;
+  /** Kategorien, die diese Person nicht angeboten bekommt (@HT-022). */
+  hiddenCategories?: ReadonlySet<AdminCategoryId>;
 }
 
 /**
@@ -253,6 +259,8 @@ export interface AdminHeaderProps {
   tournamentId?: string;
   /** Show sync status indicator */
   showSyncStatus?: boolean;
+  /** Im Unterpunkt „Hallenton“ entfällt der Lautsprecher-Eintrag der Statuszeile (er steht dort selbst). */
+  ohneLautsprecherEintrag?: boolean;
 }
 
 // =============================================================================

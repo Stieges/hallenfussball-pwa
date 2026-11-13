@@ -90,10 +90,21 @@ export const ADMIN_CATEGORIES: AdminCategory[] = [
     id: 'match-cockpit',
     label: 'Match Cockpit',
     shortLabel: 'Cockpit',
-    description: 'Timer, Sound, Feedback',
+    description: 'Timer, Feedback',
     icon: '🎮',
     group: 'settings',
     path: 'match-cockpit',
+  },
+  // H4-8 (@HT-022): nur mit `manageScreens` angeboten (Filter im Admin Center)
+  {
+    id: 'hallenton',
+    label: 'Hallenton',
+    shortLabel: 'Hallenton',
+    description: 'Lautsprecher, Abpfiff, Halbzeit',
+    icon: '🔊',
+    group: 'settings',
+    path: 'hallenton',
+    isNew: true,
   },
   {
     id: 'visibility',
