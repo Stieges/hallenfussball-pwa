@@ -81,7 +81,7 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
       : '';
 
   return (
-    <div style={{ padding: cssVars.spacing.lg }} className="group-tables-container">
+    <div style={{ padding: cssVars.spacing.lg, minWidth: 0, maxWidth: '100%' }} className="group-tables-container">
       <div className={`${styles.tablesGrid} ${gridClass}`}>
         {groupStandings.map(({ group, groupStandings: groupTeams }) => (
           <StandingsTable
@@ -164,7 +164,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
       {tieHint}
 
       {/* Breite Ansicht - am Handy per CSS ausgeblendet */}
-      <div className="desktop-view" style={{ overflowX: 'auto' }}>
+      <div className="desktop-view" style={{ overflowX: 'auto', position: 'relative' }}>
         <GroupStandingsDesktopTable
           standings={standings}
           highlights={highlights}

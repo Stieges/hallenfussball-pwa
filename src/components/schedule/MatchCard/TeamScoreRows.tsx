@@ -119,7 +119,8 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
       fontWeight: isWinner ? cssVars.fontWeights.bold : isLoser || status === 'finished' ? cssVars.fontWeights.medium : cssVars.fontWeights.semibold,
       color: isLoser ? cssVars.colors.textSecondary : cssVars.colors.textPrimary,
       // MOBILE-UX: Mannschaftsnamen werden nie abgeschnitten; minWidth 0 lässt den Namen schrumpfen statt über die Torfläche zu laufen
-      overflowWrap: 'break-word',
+      // `anywhere`: ein einzelnes Wort, das länger ist als die Zeile, bricht um (@ZM-207); normale Wörter und der Umbruch nach „/“ bleiben, wie sie sind
+      overflowWrap: 'anywhere',
       minWidth: 0,
     };
     const first = side === 'a';

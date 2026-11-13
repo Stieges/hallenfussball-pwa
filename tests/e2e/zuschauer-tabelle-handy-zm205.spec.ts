@@ -10,7 +10,7 @@ import { test, expect } from '@playwright/test';
 // @ts-expect-error – .mjs ohne Typen; derselbe Lader wie bei `npm run visual:metrics --saat`
 import { installiereSaat, leseSaat } from '../../scripts/visual-metrics/saat/lader.mjs';
 import { messSaat, ZUSCHAUER_CODE } from './helpers/messlaufTaching';
-import { seitenUeberlauf } from './helpers/wortbruch';
+import { namensLagen, seitenUeberlauf } from './helpers/wortbruch';
 import { kontrastVon } from './helpers/kontrast';
 import { animationenFertig } from './helpers/animationenFertig';
 
@@ -111,4 +111,35 @@ test.describe('@ZM-205 Tabelle der Zuschauer-Seite am Handy', () => {
     expect(kopf).toEqual(['#', 'Sp.', 'S', 'U', 'N', 'Diff.', 'Pkt.']);
     await expect(page.locator('.standings-table .desktop-view button')).toHaveCount(0);
   });
+});
+
+test.describe('@ZM-205 Zeilen der Handy-Tabelle bei üblichen Vereinsnamen', () => {
+  for (const breite of [360, 390]) {
+    test(`@ZM-205 ${String(breite)} Pixel: „TSV Fridolfing“ steht einzeilig, „SG Taching/Tengling“ höchstens zweizeilig, gleiche Zeilenhöhen`, async ({ page }) => {
+      test.skip(test.info().project.name !== 'desktop', 'setzt das Fenster selbst');
+      await page.setViewportSize({ width: breite, height: 900 });
+      await installiereSaat(page.context(), messSaat({ kurzeNamen: true }));
+      await page.goto(`/#/live/${ZUSCHAUER_CODE}`);
+      await expect(page.locator('nav[aria-label="Public Navigation"]')).toBeVisible({ timeout: 25000 });
+      await page.locator('nav[aria-label="Public Navigation"] button').nth(1).click();
+      await expect(page.locator('.standings-table .mobile-view').first()).toBeVisible();
+      await animationenFertig(page);
+      const lagen = await namensLagen(page, 'Fridolfing', '.standings-table .mobile-view');
+      expect(lagen.length).toBeGreaterThan(0);
+      expect(lagen[0].zeilen, `„TSV Fridolfing“ in Zeilen ${JSON.stringify(lagen[0].zeilen)}`).toHaveLength(1);
+      const taching = await namensLagen(page, 'Tengling', '.standings-table .mobile-view');
+      expect(taching.length).toBeGreaterThan(0);
+      expect(taching[0].zeilen.length, `„SG Taching/Tengling“ in Zeilen ${JSON.stringify(taching[0].zeilen)}`).toBeLessThanOrEqual(2);
+      expect(taching[0].zerrissen).toEqual([]);
+      // Zeilenhöhen: Zeilen mit einzeiligem Namen sind gleich hoch (±1 Pixel), nichts scrollt
+      const hoehen = await page.locator('.standings-table .mobile-view tbody tr').evaluateAll((l) => l.filter((tr) => tr.querySelectorAll('td').length > 1)
+        .map((tr) => ({ h: Math.round(tr.getBoundingClientRect().height), zeilen: tr.querySelector('[data-teamname]')?.getBoundingClientRect().height ?? 0 })));
+      const einzeilig = hoehen.filter((r) => r.zeilen < 24).map((r) => r.h);
+      expect(einzeilig.length).toBeGreaterThan(3);
+      expect(Math.max(...einzeilig) - Math.min(...einzeilig), `Zeilenhöhen ${JSON.stringify(einzeilig)}`).toBeLessThanOrEqual(1);
+      expect(await page.locator('.standings-table .mobile-view').evaluateAll((l) => l.filter((el) => el.scrollWidth > el.clientWidth + 1).length)).toBe(0);
+      // Zeilen nicht höher als vorher (~45 Pixel; die 44-Pixel-Taste treibt sie nicht auf ~61)
+      expect(Math.max(...einzeilig), `Zeilenhöhen ${JSON.stringify(einzeilig)}`).toBeLessThanOrEqual(50);
+    });
+  }
 });

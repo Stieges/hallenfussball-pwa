@@ -15,6 +15,7 @@ import './styles/global.css';
 import { initInertPolyfill } from './utils/polyfills/inert';
 import { initSentry, captureBootContext } from './lib/sentry';
 import { noteHelperStartEntry } from './features/helpers/helperStartDeps';
+import { shortLiveTarget } from './core/routing/shortLiveRedirect';
 
 /**
  * Global handler for unhandled promise rejections
@@ -81,6 +82,16 @@ window.addEventListener('unhandledrejection', (event) => {
 
     window.location.replace(newUrl);
     return; // Stop execution, page will reload
+  }
+})();
+
+/**
+ * Kurze Zuschauer-Adresse `host/live/CODE` (@ZM-208): vor dem Router auf die Hash-Adresse umleiten, nur diese eine Route.
+ */
+(function redirectShortLiveAddress() {
+  const target = shortLiveTarget(window.location.pathname, window.location.search, window.location.hash);
+  if (target !== null) {
+    window.location.replace(`${window.location.origin}${target}`);
   }
 })();
 

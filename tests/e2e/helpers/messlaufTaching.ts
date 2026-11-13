@@ -15,8 +15,13 @@ export const ZUSCHAUER_CODE = 'MESS26';
 export const SCHRAEGSTRICH_NAME = 'SG Taching/Tengling';
 /** Ein einziges Wort, länger als jede Zeile am Handy (Gegenbeispiel: darf an beliebiger Stelle umbrechen, aber nie überlaufen). */
 export const LANGES_WORT = 'Donaudampfschifffahrtsgesellschaftskapitaensverein';
+/** 30 Zeichen: länger als jede Zeile bei 360 Pixeln, aber ein „übliches“ langes Wort. */
+export const WORT_30 = 'Donaudampfschifffahrtskapitaen';
 
-export interface MessSaatOptionen { vorErstemSpiel?: boolean; langesWort?: boolean }
+export interface MessSaatOptionen { vorErstemSpiel?: boolean; langesWort?: boolean | string; kurzeNamen?: boolean }
+
+/** Kurze, übliche Vereinsnamen (statt der 17-Buchstaben-Wörter der Saat): so sieht die Handy-Tabelle bei echten Turnieren aus. */
+const KURZE_NAMEN = ['TSV Waging', 'TSV Fridolfing', 'DJK Otting', 'TSV Petting', 'SG Taching/Tengling', 'TSV Palling', 'FC Nord', 'SV Süd'];
 
 const ERGEBNISFELDER = ['scoreA', 'scoreB', 'decidedBy', 'finishedAt', 'timerElapsedSeconds', 'timerStartTime', 'timerPausedAt', 'shootout', 'overtimeScoreA', 'overtimeScoreB', 'penaltyScoreA', 'penaltyScoreB'];
 
@@ -26,8 +31,8 @@ export function messSaat(opt: MessSaatOptionen = {}): SaatDatei {
   const turniere = cache?.eintraege.tournaments as Array<Eintrag & { id: string; teams: Array<{ name: string }>; matches: Eintrag[] }> | undefined;
   const turnier = turniere?.find((t) => t.id === TURNIER_ID);
   if (turnier === undefined) { throw new Error('Messlauf-Saat ohne Turnier hallencup-messlauf'); }
-  turnier.teams[3].name = SCHRAEGSTRICH_NAME;
-  if (opt.langesWort === true) { turnier.teams[1].name = LANGES_WORT; }
+  if (opt.kurzeNamen === true) { turnier.teams.forEach((t, i) => { t.name = KURZE_NAMEN[i] ?? t.name; }); } else { turnier.teams[3].name = SCHRAEGSTRICH_NAME; }
+  if (opt.langesWort !== undefined && opt.langesWort !== false) { turnier.teams[1].name = opt.langesWort === true ? LANGES_WORT : opt.langesWort; }
   if (opt.vorErstemSpiel === true) {
     turnier.matches = turnier.matches.map((m) => {
       const rest = Object.fromEntries(Object.entries(m).filter(([feld]) => !ERGEBNISFELDER.includes(feld)));

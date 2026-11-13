@@ -54,8 +54,8 @@ export const ParticipantsAndGroups: React.FC<ParticipantsAndGroupsProps> = ({
 
   const groupsGridStyle: CSSProperties = {
     display: 'grid',
-    // Allow groups to sit side-by-side again to save vertical space
-    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+    // Gruppen nebeneinander, aber nie breiter als die Seite: `min(…, 100%)` verhindert Überlauf bei 360 Pixeln (@ZM-207)
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))',
     gap: cssVars.spacing.lg,
     alignItems: 'start',
   };
@@ -82,7 +82,7 @@ export const ParticipantsAndGroups: React.FC<ParticipantsAndGroupsProps> = ({
     margin: 0,
     display: 'grid',
     // Internal grid: Allow 2 columns even in narrower group boxes (min 140px is safe for avatar + name)
-    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(min(220px, 100%), 1fr))',
     gap: '8px 16px',
   };
 
@@ -110,7 +110,8 @@ export const ParticipantsAndGroups: React.FC<ParticipantsAndGroupsProps> = ({
     fontWeight: cssVars.fontWeights.bold,
     // Der Name darf umbrechen (an Leerzeichen und nach „/“, @ZM-207), damit lange Namen nicht abgeschnitten werden; nur ein zu langes Einzelwort bricht
     lineHeight: 1.3,
-    overflowWrap: 'break-word',
+    // `anywhere`: ein einzelnes Wort, das länger ist als die Zeile, bricht um und lässt Kasten und Seite nicht überlaufen (@ZM-207); normale Wörter bleiben ganz
+    overflowWrap: 'anywhere',
     minWidth: 0,
   };
 

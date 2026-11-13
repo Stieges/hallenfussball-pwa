@@ -1,7 +1,7 @@
 /**
  * @ZM-208 Die Adresse unter dem QR-Code der Monitor-Folie „Zuschauer-QR“ ist aus der Halle lesbar und kurz: mindestens 3 % der Bildhöhe, eine Zeile, ohne „https://“ und
- * so, wie sie beim Eintippen wirklich zur Zuschauer-Seite führt. Die App routet per Hash: ohne „#/“ landet man auf der Startseite der Verwaltung, deshalb bleibt „#/“ stehen
- * (Gegenbeispiel unten belegt es; offene Frage an Daniel: Weiterleitung `/live/CODE` → `/#/live/CODE`). 1920×1080 und 1280×720; nur Profil `desktop`.
+ * so, wie sie beim Eintippen wirklich zur Zuschauer-Seite führt (der Start leitet `/live/CODE` auf `/#/live/CODE` um, `core/routing/shortLiveRedirect`).
+ * Ohne „#/“. 1920×1080 und 1280×720; nur Profil `desktop`.
  */
 import { test, expect } from '@playwright/test';
 // @ts-expect-error – .mjs ohne Typen; derselbe Lader wie bei `npm run visual:metrics --saat`
@@ -31,18 +31,30 @@ for (const { w, h } of [{ w: 1920, h: 1080 }, { w: 1280, h: 720 }]) {
     expect(mass.ueberlauf).toBeLessThanOrEqual(0);
     expect(mass.rechts).toBeLessThanOrEqual(w);
     expect(mass.text).not.toMatch(/^https?:/);
-    expect(mass.text).toBe(`${new URL(page.url()).host}/#/live/${ZUSCHAUER_CODE}`);
+    expect(mass.text).toBe(`${new URL(page.url()).host}/live/${ZUSCHAUER_CODE}`);
   });
 }
 
-test('@ZM-208 die gezeigte Adresse führt beim Eintippen zur Zuschauer-Seite; ohne „#/“ führt sie nicht dorthin (darum bleibt „#/“ stehen)', async ({ page }) => {
+test('@ZM-208 die gezeigte Adresse führt beim Eintippen zur Zuschauer-Seite, auch bei Suche; der QR-Code trägt weiter die Hash-Adresse', async ({ page }) => {
   await installiereSaat(page.context(), messSaat());
   await page.goto(`/#/display/${TURNIER_ID}/mon-qr`);
   const gezeigt = (await page.getByTestId('qr-address').textContent()) ?? '';
+  expect(gezeigt).toBe(`${new URL(page.url()).host}/live/${ZUSCHAUER_CODE}`);
+  expect(gezeigt).not.toContain('#');
   await page.goto(`http://${gezeigt}`);
-  await expect(page.getByText('Hallencup Messlauf').first()).toBeVisible({ timeout: 25000 });
-  await expect(page.locator('nav[aria-label="Public Navigation"]')).toBeVisible();
-  const ohneHash = gezeigt.replace('/#/', '/');
-  await page.goto(`http://${ohneHash}`);
-  await expect(page.locator('nav[aria-label="Public Navigation"]')).toHaveCount(0);
+  await expect(page.locator('nav[aria-label="Public Navigation"]')).toBeVisible({ timeout: 25000 });
+  await expect(page.getByText('Hallencup Messlauf').first()).toBeVisible();
+  expect(page.url()).toContain(`/#/live/${ZUSCHAUER_CODE}`);
+});
+
+test('@ZM-208 Gegenbeispiele: bestehende Hash-Adresse bleibt, andere Pfade werden nicht umgeleitet, der Auth-Callback bleibt unberührt', async ({ page }) => {
+  await installiereSaat(page.context(), messSaat());
+  await page.goto(`/#/live/${ZUSCHAUER_CODE}`);
+  await expect(page.locator('nav[aria-label="Public Navigation"]')).toBeVisible({ timeout: 25000 });
+  expect(page.url()).toMatch(new RegExp(`/#/live/${ZUSCHAUER_CODE}$`));
+  await page.goto('/tournament/hallencup-messlauf');
+  expect(new URL(page.url()).pathname).toBe('/tournament/hallencup-messlauf');
+  expect(new URL(page.url()).hash).not.toContain('live');
+  await page.goto('/auth/callback');
+  await expect(page).toHaveURL(/\/#\/auth\/callback/);
 });

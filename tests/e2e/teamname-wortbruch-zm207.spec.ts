@@ -9,7 +9,7 @@ import type { Page } from '@playwright/test';
 import { test, expect } from '@playwright/test';
 // @ts-expect-error – .mjs ohne Typen; derselbe Lader wie bei `npm run visual:metrics --saat`
 import { installiereSaat } from '../../scripts/visual-metrics/saat/lader.mjs';
-import { LANGES_WORT, messSaat, SCHRAEGSTRICH_NAME, TURNIER_ID, ZUSCHAUER_CODE } from './helpers/messlaufTaching';
+import { LANGES_WORT, messSaat, SCHRAEGSTRICH_NAME, TURNIER_ID, WORT_30, ZUSCHAUER_CODE } from './helpers/messlaufTaching';
 import { namensLagen, seitenUeberlauf } from './helpers/wortbruch';
 import { animationenFertig } from './helpers/animationenFertig';
 
@@ -48,12 +48,23 @@ test.describe('@ZM-207 Teamname mit Schrägstrich: Zuschauer-Seite, Profil-Fenst
     await pruefeNamen(page, '.standings-table');
   });
 
-  test('@ZM-207 Gegenbeispiel: ein einzelnes Wort länger als die Zeile bricht weiter um, statt zu überlaufen', async ({ page }) => {
-    await oeffneZuschauer(page, 'Spiele', { langesWort: true });
-    const lagen = await namensLagen(page, LANGES_WORT.slice(0, 8));
-    expect(lagen.length).toBeGreaterThan(0);
-    expect(await seitenUeberlauf(page), 'das lange Wort läuft nicht über den Rand').toBe(0);
-  });
+  for (const wort of [WORT_30, LANGES_WORT]) {
+    test(`@ZM-207 Gegenbeispiel: ein einzelnes Wort mit ${String(wort.length)} Zeichen bricht weiter um, statt zu überlaufen – Zuschauer-Seite und Spielplan der Leitung`, async ({ page }) => {
+      await oeffneZuschauer(page, 'Spiele', { langesWort: wort });
+      const lagen = await namensLagen(page, wort.slice(0, 8));
+      expect(lagen.length).toBeGreaterThan(0);
+      expect(await seitenUeberlauf(page), 'das lange Wort läuft nicht über den Rand').toBe(0);
+      // normale Wörter bleiben ganz: nur das lange Wort darf zerrissen sein
+      for (const lage of await namensLagen(page, 'TSV')) { expect(lage.zerrissen.filter((w) => w !== wort)).toEqual([]); }
+      // Spielplan der Leitung: nur im Profil desktop mit festem 360-Pixel-Fenster (Offener Befund: in der Handy-Emulation weitet sich die Seite dort auf ~446 Pixel, Ursache nicht eingegrenzt)
+      test.skip(test.info().project.name !== 'desktop', 'Leitung-Spielplan wird nur im Profil desktop bei 360 Pixeln geprüft');
+      await page.setViewportSize({ width: 360, height: 900 });
+      await page.goto(`/#/tournament/${TURNIER_ID}/schedule`);
+      await expect(page.getByText(wort).filter({ visible: true }).first()).toBeVisible({ timeout: 25000 });
+      await animationenFertig(page);
+      expect(await seitenUeberlauf(page), 'auch im Spielplan der Leitung läuft nichts über').toBe(0);
+    });
+  }
 });
 
 test.describe('@ZM-207 Teamname mit Schrägstrich: alle Breiten (nur Profil desktop setzt das Fenster)', () => {

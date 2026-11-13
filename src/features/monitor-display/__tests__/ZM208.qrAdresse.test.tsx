@@ -1,8 +1,7 @@
 /**
  * @ZM-208 Die Adresse unter dem QR-Code der Monitor-Folie „Zuschauer-QR“ ist aus der Halle lesbar und kurz: mindestens 3 % der Bildhöhe,
- * eine Zeile, ohne „https://“. Das „#/“ bleibt stehen, weil die App per Hash routet (`/live/CODE` ohne „#/“ führt zur Startseite der Verwaltung,
- * nicht zur Zuschauer-Seite; im Browser geprüft in `tests/e2e/qr-adresse-zm208.spec.ts`). Die Messung am fertigen Bild (1920×1080 und 1280×720):
- * ebenfalls dort.
+ * eine Zeile, ohne „https://“ und ohne „#/“ (`host/live/CODE`). Der Start leitet diese Adresse auf die Hash-Route um (`shortLiveRedirect.test.ts`), der QR-Code
+ * trägt weiter die Hash-Adresse. Die Messung am fertigen Bild (1920×1080 und 1280×720) und das Eintippen: `tests/e2e/qr-adresse-zm208.spec.ts`.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -19,7 +18,8 @@ describe('@ZM-208 Adresse unter dem QR-Code', () => {
   it('die Adresse steht ohne „https://“ in einer Zeile, mindestens 3 % der Bildhöhe groß; der QR-Code trägt weiter die volle Adresse', () => {
     render(<QrSlide tournament={createMockTournament({ isPublic: true, shareCode: 'ABC123', title: 'Nikolaus-Turnier' })} style={{}} />);
     const adresse = screen.getByTestId('qr-address');
-    expect(adresse.textContent).toBe(`${window.location.host}/#/live/ABC123`);
+    expect(adresse.textContent).toBe(`${window.location.host}/live/ABC123`);
+    expect(adresse.textContent).not.toContain('#');
     expect(adresse.textContent).not.toMatch(/^[a-z]+:\/\//i);
     expect(adresse.style.whiteSpace).toBe('nowrap');
     expect(displayFontSizes.qrAddress).toMatch(/^\d+(\.\d+)?vh$/);
@@ -39,9 +39,9 @@ describe('@ZM-208 Adresse unter dem QR-Code', () => {
     expect(screen.queryByTestId('qr-address')).toBeNull();
   });
 
-  it('qrTypedAddress entfernt nur das Schema, nie „#/“ oder den Pfad', () => {
-    expect(qrTypedAddress('https://halle.example/#/live/ABC123')).toBe('halle.example/#/live/ABC123');
-    expect(qrTypedAddress('http://localhost:3000/#/live/ABC123')).toBe('localhost:3000/#/live/ABC123');
-    expect(qrTypedAddress('halle.example/#/live/ABC123')).toBe('halle.example/#/live/ABC123');
+  it('qrTypedAddress entfernt Schema und „#/“, nie den Pfad oder die Kennung', () => {
+    expect(qrTypedAddress('https://halle.example/#/live/ABC123')).toBe('halle.example/live/ABC123');
+    expect(qrTypedAddress('http://localhost:3000/#/live/ABC123')).toBe('localhost:3000/live/ABC123');
+    expect(qrTypedAddress('halle.example/live/ABC123')).toBe('halle.example/live/ABC123');
   });
 });

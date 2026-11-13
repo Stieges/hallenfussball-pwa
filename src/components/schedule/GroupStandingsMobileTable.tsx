@@ -34,6 +34,8 @@ const toggleStyle: CSSProperties = {
   justifyContent: 'center',
   minWidth: cssVars.touchTargets.minimum,
   minHeight: cssVars.touchTargets.minimum,
+  // Die Tippfläche (44 Pixel) ragt nach links über die schmale Zelle (32 Pixel) in die Zelle „Pkt.“ hinein; rechts schließt sie bündig ab, damit nichts überläuft (@ZM-205)
+  margin: `0 0 0 calc(${cssVars.spacing.xl} - ${cssVars.touchTargets.minimum})`,
   padding: 0,
   background: 'transparent',
   border: 'none',
@@ -66,8 +68,9 @@ export function GroupStandingsMobileTable({ standings, title, highlights, active
   };
 
   return (
+    // position: relative: die nur zum Vorlesen sichtbaren Texte (absolut) werden mit der Tabelle im Kasten beschnitten und weiten die Seite nicht (@ZM-207)
     // overflowX: nur bei sehr langen Wörtern scrollt die Tabelle im Kasten; tabIndex/role/aria-label machen den Bereich per Tastatur erreichbar (axe scrollable-region-focusable)
-    <div className="mobile-view" style={{ overflowX: 'auto' }} tabIndex={0} role="region" aria-label={title}>
+    <div className="mobile-view" style={{ overflowX: 'auto', position: 'relative' }} tabIndex={0} role="region" aria-label={title}>
       <table style={tableStyle}>
         <thead>
           <tr>
@@ -97,14 +100,15 @@ export function GroupStandingsMobileTable({ standings, title, highlights, active
                   </td>
                   <td style={{ ...center, fontWeight: cssVars.fontWeights.semibold }}>{standing.played}</td>
                   <td style={{ ...center, color: goalDiffColor(goalDiff) }}>
-                    <span style={{ fontWeight: cssVars.fontWeights.semibold, fontSize: cssVars.fontSizes.md, ...highlightStyle(highlights.goalDiff), padding: highlights.goalDiff ? `${cssVars.spacing.xs} 0` : '0' }}>
+                    <span style={{ fontWeight: cssVars.fontWeights.semibold, fontSize: cssVars.fontSizes.md, ...highlightStyle(highlights.goalDiff), fontVariantNumeric: 'tabular-nums' }}>
                       {goalDiff > 0 ? '+' : ''}{goalDiff}
                     </span>
                   </td>
                   <td style={center}>
-                    <span style={{ fontWeight: cssVars.fontWeights.bold, fontSize: cssVars.fontSizes.md, ...highlightStyle(highlights.points), padding: highlights.points ? `${cssVars.spacing.xs} 0` : '0' }}>{standing.points}</span>
+                    <span style={{ fontWeight: cssVars.fontWeights.bold, fontSize: cssVars.fontSizes.md, ...highlightStyle(highlights.points), fontVariantNumeric: 'tabular-nums' }}>{standing.points}</span>
                   </td>
-                  <td style={{ ...center, paddingLeft: 0, paddingRight: 0 }}>
+                  {/* ohne Polster: die Taste (44 Pixel) bestimmt die Zeilenhöhe, ohne sie über die bisherigen ~45 Pixel zu treiben */}
+                  <td style={{ ...center, padding: 0 }}>
                     <button
                       type="button"
                       style={toggleStyle}
@@ -113,7 +117,7 @@ export function GroupStandingsMobileTable({ standings, title, highlights, active
                       data-testid={`standing-toggle-${teamKey}`}
                       onClick={(event) => { event.stopPropagation(); toggle(teamKey); }}
                     >
-                      <Chevron size={iconSizeValues.md} />
+                      <Chevron size={iconSizeValues.sm} />
                     </button>
                   </td>
                 </tr>
