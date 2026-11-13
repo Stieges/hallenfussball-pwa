@@ -64,12 +64,13 @@ describe('EventLogBottomSheet -- Gelb-Rot (F3b2)', () => {
 
   it('Gelb-Rot zeigt "Gelb-Rote Karte"', () => {
     renderSheet(redCardEvent('YELLOW_RED'));
-    expect(screen.getByText(/Gelb-Rote Karte Heim/)).toBeInTheDocument();
+    // Wörter mit Bindestrich stehen in einem eigenen nowrap-Element (VISUAL-DESIGN § 2): der Text steht dann über mehrere Elemente
+    expect(document.body.textContent).toMatch(/Gelb-Rote Karte Heim/);
   });
 
   it('Gegenbeispiel: RED_CARD ohne cardType zeigt "Rote Karte"', () => {
     renderSheet(redCardEvent(undefined));
     expect(screen.getByText(/Rote Karte Heim/)).toBeInTheDocument();
-    expect(screen.queryByText(/Gelb-Rote Karte/)).toBeNull();
+    expect(document.body.textContent).not.toMatch(/Gelb-Rote Karte/);
   });
 });

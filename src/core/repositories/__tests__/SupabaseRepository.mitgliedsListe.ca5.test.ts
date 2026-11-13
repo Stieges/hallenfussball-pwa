@@ -166,24 +166,24 @@ describe('CA-5 SupabaseRepository: Startseite zeigt eigene Turniere und aktive M
     expect(cloud.state.queried).not.toContain('tournament_collaborators');
   });
 
-  it('Olli (Eigentümer): eigenes Turnier mit Rolle owner; das im Papierkorb steht nicht in der Liste, zählt aber zu den eigenen', async () => {
+  it('Olli (Eigentümer): eigenes Turnier mit Rolle owner; das im Papierkorb steht mit deletedAt in der Liste (Papierkorb auf jedem Gerät, @W5-040) und zählt zu den eigenen', async () => {
     setCloud([member('nikolaus', MARIA, 'co-admin')], { id: OLLI });
     const result = await new SupabaseRepository().listWithMemberships();
-    expect(result.tournaments.map((t) => [t.id, t.myRole])).toEqual([['nikolaus', 'owner']]);
+    expect(result.tournaments.map((t) => [t.id, t.myRole, t.deletedAt !== undefined])).toEqual([['nikolaus', 'owner', false], ['alt', 'owner', true]]);
     expect([...result.ownIds].sort()).toEqual(['alt', 'nikolaus']);
   });
 
   it('genau einmal: steht der Eigentümer zusätzlich in einer Mitgliedszeile, erscheint sein Turnier nur als eigenes', async () => {
     setCloud([member('nikolaus', OLLI, 'co-admin')], { id: OLLI });
     const list = await new SupabaseRepository().listForCurrentUser();
-    expect(list.map((t) => [t.id, t.myRole])).toEqual([['nikolaus', 'owner']]);
+    expect(list.filter((t) => t.deletedAt === undefined).map((t) => [t.id, t.myRole])).toEqual([['nikolaus', 'owner']]);
   });
 
   it('@FU-100 Mitglieder-Abfrage scheitert: eigene Turniere bleiben sichtbar, Zustand „unbekannt“ mit Fehler', async () => {
     setCloud([member('nikolaus', MARIA, 'co-admin')], { id: OLLI });
     cloud.state.failing.add('tournament_collaborators');
     const result = await new SupabaseRepository().listWithMemberships();
-    expect(titles(result.tournaments)).toEqual(['Nikolaus-Turnier']);
+    expect(titles(result.tournaments.filter((t) => t.deletedAt === undefined))).toEqual(['Nikolaus-Turnier']);
     expect(result.memberships).toBe('unknown');
     expect(result.membershipError?.message).toContain('tournament_collaborators nicht erreichbar');
   });

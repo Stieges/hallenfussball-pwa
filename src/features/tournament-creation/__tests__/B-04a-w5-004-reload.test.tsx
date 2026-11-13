@@ -172,9 +172,10 @@ function changeSomeField(): void {
       return;
     }
   }
-  const radios = screen.queryAllByRole('radio');
-  if (radios.length > 1) {
-    fireEvent.click(radios[1]);
+  // @W5-039: der Assistent speichert erst nach einer echten Änderung -- also einen Wert wählen, der noch nicht gewählt ist
+  const radio = screen.queryAllByRole('radio').find((r) => !(r as HTMLInputElement).checked && r.getAttribute('aria-checked') !== 'true' && !(r as HTMLInputElement).disabled);
+  if (radio) {
+    fireEvent.click(radio);
   }
 }
 
@@ -186,6 +187,7 @@ describe('B-04a @W5-004 — Zwischenspeichern beim Schrittwechsel', () => {
     repoSpies.get.mockImplementation(() => Promise.resolve(initial));
 
     renderWizard(initial);
+    await screen.findAllByRole('radio'); // der Schritt lädt nach (lazy); erst dann gibt es etwas zu ändern
     changeSomeField();
 
     fireEvent.click(screen.getByRole('button', { name: /(weiter|next)/i }));

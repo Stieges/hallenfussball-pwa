@@ -304,6 +304,7 @@
     "assistFormat": "Assist: {{assists}}",
     "editAria": "{{description}} bearbeiten",
     "edit": "Bearbeiten",
+    "penaltyEndedByGoal": "beendet durch Tor {{time}}",
     "retractedMark": "zurückgenommen",
     "discardedMark": "verworfen von {{by}}, {{time}}",
     "discardedByLead": "der Turnierleitung",

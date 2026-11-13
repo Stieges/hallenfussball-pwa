@@ -18,6 +18,7 @@ import type { LiveMatch, MatchStatus, TournamentPhase } from '../../models/LiveM
 import type { RuntimeMatchEvent } from '../../../types/tournament';
 import type { MatchEventTeamRef } from '../../../utils/matchEvents';
 import { viewDurationSeconds } from './viewDuration';
+import { penaltyEndSeconds } from './penaltyEndedByGoal';
 
 export interface LiveMatchMeta {
   id: string;
@@ -74,7 +75,7 @@ export function toLiveMatchView(
       ? undefined
       : new Date(clock.serverNow - clock.offsetMs).toISOString(),
     timerElapsedSeconds: Math.floor(state.clock.elapsedMs / 1000),
-    events: toRuntimeEvents(state, log, ctx),
+    events: toRuntimeEvents(state, log, ctx, elapsedAt(state.clock, clock.serverNow)),
     // C3b-1 (G6): Zurueckgenommenes getrennt -- `events` bleibt ohne (Fouls/Offen-Zaehlung/Export).
     retractedEvents: toRetractedEvents(state, log, ctx),
     tournamentPhase: meta.tournamentPhase,
@@ -251,14 +252,17 @@ export function toRuntimeEvents(
   state: MatchState,
   log: readonly EngineEvent[],
   ctx: MatchContext,
+  elapsedMs: number = Number.POSITIVE_INFINITY,
 ): LiveRuntimeEvent[] {
   const entries = collectEntries(state, log, false);
   let home = effectiveScoreFor(state, ctx.teamAId);
   let away = effectiveScoreFor(state, ctx.teamBId);
   const events: LiveRuntimeEvent[] = new Array<LiveRuntimeEvent>(entries.length);
+  const penaltyEnds = penaltyEndSeconds(state, elapsedMs);
   for (let i = entries.length - 1; i >= 0; i--) {
     const entry = entries[i];
     const open = isOpenEntry(state, entry);
+    const endedBySeconds = entry.type === 'TIME_PENALTY' ? penaltyEnds.get(entry.id) : undefined;
     events[i] = {
       id: entry.id,
       matchId: ctx.matchId,
@@ -268,6 +272,7 @@ export function toRuntimeEvents(
       scoreAfter: { home, away },
       ...(entry.source.section !== null ? { section: entry.source.section } : {}),
       ...(open !== undefined ? { incomplete: open } : {}),
+      ...(endedBySeconds !== undefined ? { endedByGoalSeconds: endedBySeconds } : {}),
     };
     if (entry.source.type === 'GOAL' || entry.source.type === 'OWN_GOAL') {
       const scoringTeamId =

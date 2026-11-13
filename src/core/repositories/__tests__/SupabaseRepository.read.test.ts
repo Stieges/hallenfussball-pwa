@@ -215,9 +215,10 @@ describe('SupabaseRepository – Verwaltungsmethoden', () => {
 
   it('delete/softDelete/restore: Erfolg und Fehler', async () => {
     enqueue('tournaments',
-      { error: null }, { error: { message: 'd' } },
-      { error: null }, { error: { message: 's' } },
-      { error: null }, { error: { message: 'r' } });
+      { data: [{ id: 't' }], error: null }, { error: { message: 'd' } },
+      { data: [{ id: 't' }], error: null }, { error: { message: 's' } },
+      { data: [{ id: 't' }], error: null }, { error: { message: 'r' } },
+      { data: [], error: null }, { data: [], error: null }, { data: [], error: null });
     const repo = new SupabaseRepository();
 
     await expect(repo.delete('t')).resolves.toBeUndefined();
@@ -226,6 +227,10 @@ describe('SupabaseRepository – Verwaltungsmethoden', () => {
     await expect(repo.softDelete('t')).rejects.toThrow('s');
     await expect(repo.restore('t')).resolves.toBeUndefined();
     await expect(repo.restore('t')).rejects.toThrow('r');
+    // Y2 (@W5-040): lehnt die Zeilen-Sicherheit ab, ändert das Update 0 Zeilen ohne Fehler -- das scheitert laut
+    await expect(repo.softDelete('t')).rejects.toThrow(/keine Zeile geändert/);
+    await expect(repo.restore('t')).rejects.toThrow(/keine Zeile geändert/);
+    await expect(repo.delete('t')).rejects.toThrow(/keine Zeile geändert/);
   });
 
   it('listForCurrentUser(): ohne Nutzer leer, sonst Turniere ohne Spiele; Fehler wirft', async () => {
