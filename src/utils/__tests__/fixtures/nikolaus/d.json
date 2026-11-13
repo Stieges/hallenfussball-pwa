@@ -1,0 +1,72 @@
+{
+  "title": "D-Junioren Hallenturnier",
+  "organizer": "Beispielverein",
+  "ageClass": "D-Junioren",
+  "date": "2026-11-28",
+  "startDate": "2026-11-28",
+  "timeSlot": "16:30",
+  "startTime": "16:30",
+  "location": {
+    "name": "Beispielhalle"
+  },
+  "sport": "football",
+  "sportId": "football-indoor",
+  "tournamentType": "classic",
+  "mode": "classic",
+  "numberOfFields": 1,
+  "groupSystem": "roundRobin",
+  "numberOfGroups": 1,
+  "groupPhaseGameDuration": 9,
+  "groupPhaseBreakDuration": 1,
+  "gamePeriods": 1,
+  "finalsConfig": {
+    "preset": "none"
+  },
+  "matchCockpitSettings": {
+    "timePenaltyDurationSeconds": 120
+  },
+  "teams": [
+    {
+      "id": "t1",
+      "name": "Waging 1",
+      "colors": {
+        "primary": "#1565C0"
+      }
+    },
+    {
+      "id": "t2",
+      "name": "Waging 2",
+      "colors": {
+        "primary": "#C62828"
+      }
+    },
+    {
+      "id": "t3",
+      "name": "Kammer",
+      "colors": {
+        "primary": "#2E7D32"
+      }
+    },
+    {
+      "id": "t4",
+      "name": "Otting",
+      "colors": {
+        "primary": "#C62828"
+      }
+    },
+    {
+      "id": "t5",
+      "name": "Petting",
+      "colors": {
+        "primary": "#4FC3F7"
+      }
+    },
+    {
+      "id": "t6",
+      "name": "Fridolfing",
+      "colors": {
+        "primary": "#1565C0"
+      }
+    }
+  ]
+}
