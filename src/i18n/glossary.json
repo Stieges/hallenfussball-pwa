@@ -448,6 +448,15 @@
       "reason": "Daniel 06.11.2026 (Record Veranstaltung, A1): mehrere Turniere eines Kontos unter einem Link, eigene Ebene über den Turnieren (später darüber die Turnierserie). Nicht verwechseln mit „Veranstalter“ (Feld organizer, die Person oder der Verein, der ein Turnier ausrichtet). In Datenbank und Code heißt sie gathering, weil „event“ im Bestand das Ereignis im Spiel ist (match_events, correctEvents).",
       "i18nKey": "tournament.gathering"
     },
+    "bib": {
+      "de": "Leibchen",
+      "en": "bib",
+      "forbidden_de": [],
+      "reason": "Daniel 2026-11-09: „Leibchen“ ist der Begriff der App; „Markierungshemd“ ist ein gleichbedeutendes, erlaubtes Wort (Synonym, kein verbotenes). „Weste“ ist nur der interne Name der Darstellung im Ergebniskasten und steht in keinem sichtbaren Text. Englisch „bib“. kuerzel:true und tsLint:false nur, damit die Lint-Regel das alltägliche Wort in Code-Kennungen und Kommentaren (data-testid, Dateinamen) nicht als hartkodierten Begriff meldet; geprüft werden die Sprachdateien.",
+      "i18nKey": "equipment.bib",
+      "kuerzel": true,
+      "tsLint": false
+    },
     "hallDevice": {
       "de": "Gerät",
       "en": "device",

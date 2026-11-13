@@ -4,7 +4,7 @@
  * @SL-216 (offline wartend). Server-Antworten laut `supabase/migrations/20261124_002_leibchen_schritt2.sql` (Kopfkommentar, Antwortformen).
  */
 import { describe, expect, it, vi } from 'vitest';
-import { sendMatchKitSet, type MatchKitSetArgs } from '../matchKitSetRpc';
+import { loadMatchKickoffStates, sendMatchKitSet, type MatchKitSetArgs } from '../matchKitSetRpc';
 
 const ARGS: MatchKitSetArgs = {
   matchId: '00000000-0000-4000-8000-0000000000b1',
@@ -102,5 +102,24 @@ describe('sendMatchKitSet: Antworten', () => {
     const c = client({ data: { status: 'saved' } });
     expect((await sendMatchKitSet(c.client, ARGS)).kind).toBe('error');
     expect((await sendMatchKitSet(client({ data: { status: 'rejected', code: 'ALIEN' } }).client, ARGS)).kind).toBe('error');
+  });
+});
+
+describe('loadMatchKickoffStates: frischer Stand „angepfiffen?“ (@SL-229 Zeile 1)', () => {
+  const lesen = (antwort: { data?: unknown; error?: unknown } | Error) => {
+    const inFn = vi.fn(() => (antwort instanceof Error ? Promise.reject(antwort) : Promise.resolve({ data: antwort.data ?? null, error: antwort.error ?? null })));
+    return { inFn, client: { from: () => ({ select: () => ({ in: inFn }) }) } as never };
+  };
+
+  it('running und paused gelten als angepfiffen, scheduled nicht', async () => {
+    const c = lesen({ data: [{ id: 'a', match_status: 'running' }, { id: 'b', match_status: 'paused' }, { id: 'c', match_status: 'scheduled' }] });
+    const m = await loadMatchKickoffStates(c.client, ['a', 'b', 'c']);
+    expect([m?.get('a')?.kickedOff, m?.get('b')?.kickedOff, m?.get('c')?.kickedOff]).toEqual([true, true, false]);
+  });
+
+  it('Gegenbeispiel: Fehler, Wurf und fehlender Client geben null (nie ein Wurf)', async () => {
+    expect(await loadMatchKickoffStates(lesen({ error: { message: 'x' } }).client, ['a'])).toBeNull();
+    expect(await loadMatchKickoffStates(lesen(new Error('netz')).client, ['a'])).toBeNull();
+    expect(await loadMatchKickoffStates(null, ['a'])).toBeNull();
   });
 });

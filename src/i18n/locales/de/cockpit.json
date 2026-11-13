@@ -90,6 +90,11 @@
       "strafstoss": "nach $t(sport:events.penaltyShootout)"
     },
     "quittung": "Abgepfiffen · {{links}}:{{rechts}} gespeichert",
+    "quittungZusatz": {
+      "gespielt": "gespielt {{zeit}}",
+      "gespieltVon": "gespielt {{zeit}} von {{geplant}}",
+      "strafstoss": "$t(sport:events.penaltyShootout) {{ergebnis}}"
+    },
     "keinWeiteresSpiel": "Kein weiteres Spiel",
     "uebernahmePruefen": "Spielzeit beruht auf {{name}}s Gerät – bitte prüfen",
     "uebernahmePruefenOhneName": "Spielzeit beruht auf dem vorigen Gerät – bitte prüfen",
@@ -103,7 +108,8 @@
       "wartetOffline": "Dein Gerät hat kein Netz – dein Stand kann veraltet sein. Die Besetzung steht am Server vielleicht schon fest.",
       "wartetAuf": "Wartet auf: {{grund}}",
       "abschnitteMal": "{{anzahl}} ×",
-      "anstossSpielFeld": "Anstoß {{zeit}} · {{spielFeld}}"
+      "anstossSpielFeld": "Anstoß {{zeit}} · {{spielFeld}}",
+      "zeileMitSpielzeit": "{{zeile}} · Spielzeit {{spielzeit}}"
     },
     "wachhaltenSymbol": "Bildschirm kann sich sperren, die Uhr läuft trotzdem",
     "tonAus": "Ton aus",
@@ -610,8 +616,7 @@
     "nurZusehen_other": "Du kannst nur noch zusehen – {{count}} Einträge an die Turnierleitung übergeben",
     "tasteLeertaste": "Leertaste",
     "tasteRueckgaengigStrg": "Strg+Z",
-    "tasteRueckgaengigCmd": "Cmd+Z",
-    "ohneLeibchen": "Ohne Leibchen anpfeifen"
+    "tasteRueckgaengigCmd": "Cmd+Z"
   },
   "abpfiff": {
     "label": "Abpfiff",
@@ -706,10 +711,6 @@
   "anpfiff": {
     "hinweisGleich": "Gleiche Trikotfarbe",
     "hinweisAehnlich": "Sehr ähnliche Trikotfarben",
-    "festlegen": "Leibchen festlegen",
-    "leibchenFuer": "Leibchen für {{team}}",
-    "farbeLabel": "Leibchen: {{farbe}}",
-    "ohneAnpfeifen": "Ohne Leibchen anpfeifen",
     "farbe": {
       "gelb": "Gelb",
       "orange": "Orange",
@@ -726,8 +727,52 @@
       "braun": "Braun",
       "turnier": "Farbe des Turniers"
     },
-    "leibchen": "Leibchen",
-    "farbeZuAehnlich": "{{farbe}} – zu ähnlich wie das Trikot von {{gegner}}",
-    "gegnerAehnlichKurz": "Leibchen zu ähnlich wie der Gegner"
+    "farbeZuAehnlich": "{{farbe}} – zu ähnlich wie das Trikot von {{gegner}}"
+  },
+  "leibchenKarte": {
+    "zieht": "{{team}} zieht {{farbe}}",
+    "aendernVorschlag": "Leibchen ändern",
+    "bestaetigen": "Bestätigen",
+    "keine": "Keine Leibchen",
+    "aendern": "Ändern",
+    "andere": "Andere Farbe …",
+    "keinPassendes": "Kein passendes Leibchen vorhanden",
+    "festlegen": "Leibchen festlegen",
+    "wieTrikot": "Wie Trikot",
+    "aehnlichWieTrikot": "Ähnlich wie Trikot",
+    "gleichHell": "Gleich hell",
+    "wieGegner": "Wie Gegner",
+    "warnungEigenesTrikot": "Leibchen sieht aus wie das eigene Trikot",
+    "gesendet": "gesendet",
+    "wirdGesendet": "wird gesendet",
+    "team": "Team",
+    "farbe": "Farbe",
+    "uebernehmen": "Feld übernehmen",
+    "nurLesen": "Nur das steuernde Gerät kann Leibchen bestätigen.",
+    "nachtragen": "Leibchen nachtragen",
+    "nachtragenTitel": "Leibchen im laufenden Spiel",
+    "schliessen": "Schließen",
+    "speichern": "Speichern",
+    "entfernen": "Leibchen entfernen",
+    "gruppeAria": "Leibchen für das nächste Spiel",
+    "farbeAria": "{{farbe}}",
+    "farbeWarnAria": "{{farbe}} – {{warnung}}",
+    "meldung": {
+      "nichtUebernommen": "Leibchen nicht übernommen, bitte neu bestätigen",
+      "anderesGeraet": "Leibchen wurde von einem anderen Gerät geändert",
+      "zurueckgenommen": "Leibchen zurückgenommen, bitte neu bestätigen",
+      "nurSteuerndes": "Nur das steuernde Gerät kann Leibchen bestätigen.",
+      "zuSpaet": "Das Spiel wurde schon angepfiffen, Leibchen nicht übernommen",
+      "alsNachtrag": "Das Spiel lief schon – Leibchen als Nachtrag übernommen. Ändern unter „Mehr“.",
+      "fehlgeschlagen": "Leibchen nicht übernommen"
+    },
+    "eigenesTrikotVon": "{{farbe}} – sieht aus wie das eigene Trikot von {{team}}",
+    "gleichHellVon": "{{farbe}} – gleich hell wie das eigene Trikot von {{team}}",
+    "teamFrage": "Wer zieht die Leibchen an?",
+    "ueberschrift": "Leibchen für dieses Spiel · Spiel {{nummer}}",
+    "ueberschriftOhneNummer": "Leibchen für dieses Spiel",
+    "ueberschriftNaechstes": "Leibchen für das nächste Spiel · Spiel {{nummer}}",
+    "ueberschriftNaechstesOhneNummer": "Leibchen für das nächste Spiel",
+    "grundBeideSpielen": "Beide spielen {{farbe}}"
   }
 }

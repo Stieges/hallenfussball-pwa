@@ -22,6 +22,11 @@ export interface KitChoiceInput {
   teams?: { a: string; b: string } | undefined;
   deviceId?: string | undefined;
   controlEpoch?: number | null | undefined;
+  /**
+   * Zustand des Spiels beim Tippen: `before` = noch nicht angepfiffen, `live` = Nachtrag im laufenden Spiel (@SL-150). Eine Wahl vor dem Anpfiff darf nach
+   * einem Anpfiff nicht mehr als Nachtrag beim Server ankommen und das Leibchen des Anpfiffs überschreiben (@SL-229 Zeile 1). Fehlt es: `before`.
+   */
+  phase?: 'before' | 'live' | undefined;
 }
 
 export type KitChoiceStatus = 'pending' | 'sent';
@@ -40,12 +45,20 @@ export interface KitRowState {
   bibSide?: KitSide | undefined;
   bibColor?: string | undefined;
   teams?: { a: string | undefined; b: string | undefined } | undefined;
+  /** Die Zeile zeigt das Spiel als angepfiffen (`running`/`paused`). */
+  kickedOff?: boolean | undefined;
 }
 
 type KitChoiceNoticeBody =
-  | { matchId: string; kind: 'rejected'; code: MatchKitRejectionCode; reason?: string }
+  | { matchId: string; kind: 'rejected'; code: MatchKitRejectionCode; reason?: string; hadControl?: boolean }
   | { matchId: string; kind: 'failed' }
-  | { matchId: string; kind: 'changedElsewhere' };
+  | { matchId: string; kind: 'changedElsewhere' }
+  /** Das Spiel wurde angepfiffen, bevor die Wahl den Server erreichte (@SL-229 Zeile 1). */
+  | { matchId: string; kind: 'tooLate' }
+  /** Das Spiel lief schon, als die alte Wahl ankam: der Server hat sie als Nachtrag ins laufende Spiel übernommen (@SL-229 Zeile 1, Restfenster). */
+  | { matchId: string; kind: 'lateSaved' }
+  /** Der Server hat die Wahl zurückgenommen, weil ein anderes Team auf eine Seite kam (@SL-212, @SL-235). */
+  | { matchId: string; kind: 'withdrawn' };
 
 /** Meldung, die stehen bleibt, bis sie weggetippt oder die Wahl neu getroffen wird (@SL-228, @SL-229). */
 export type KitChoiceNotice = KitChoiceNoticeBody & { id: string };
@@ -57,6 +70,11 @@ export interface KitChoiceStorage {
 
 export interface KitChoiceDeps {
   send: (args: MatchKitSetArgs) => Promise<MatchKitSetResult>;
+  /**
+   * Frischer Stand der Zeilen vom Server (nur `kickedOff`) – vor dem Senden einer Wahl „vor dem Anpfiff“ geladen, nicht aus der alten Turnierkopie
+   * (@SL-229 Zeile 1). `null` = nicht ladbar (kein Netz): dann wird gesendet bzw. wartet die Wahl wie bisher.
+   */
+  fresh?: (matchIds: readonly string[]) => Promise<ReadonlyMap<string, { kickedOff: boolean }> | null>;
   storage: KitChoiceStorage;
   /** Konto (und Gerät) im Speicherschlüssel: ein Kontowechsel sieht fremde Einträge nicht. */
   storageKey: string;
@@ -88,6 +106,8 @@ export class KitChoiceQueue {
   private seq = 0;
   private noticeSeq = 0;
   private flushing = false;
+  private readonly seenDecision = new Map<string, { a: string | undefined; b: string | undefined } | undefined>();
+  private localStarts: ReadonlySet<string> = new Set();
   private readonly listeners = new Set<() => void>();
 
   constructor(private readonly deps: KitChoiceDeps) {
@@ -120,14 +140,31 @@ export class KitChoiceQueue {
     this.changed();
   }
 
-  /** Alle wartenden Einträge senden. Ohne Netz bleibt der Rest liegen; es läuft nie zweimal gleichzeitig. */
+  /**
+   * Alle wartenden Einträge senden, bis nichts mehr wartet (auch eine Wahl, die während einer Sendung dazukommt, @SL-202, @SL-230). Ohne Netz bleibt der
+   * Rest liegen; es läuft nie zweimal gleichzeitig.
+   */
   async flush(): Promise<void> {
     if (this.flushing) {
       return;
     }
     this.flushing = true;
     try {
-      for (const entry of this.list.filter((e) => e.status === 'pending').sort((a, b) => a.seq - b.seq)) {
+      for (;;) {
+        const entry = this.list.filter((e) => e.status === 'pending').sort((a, b) => a.seq - b.seq)[0];
+        if (entry === undefined) {
+          return;
+        }
+        if ((entry.phase ?? 'before') === 'before' && this.deps.fresh !== undefined) {
+          const rows = await this.deps.fresh([entry.matchId]);
+          if (rows?.get(entry.matchId)?.kickedOff === true && !this.localStarts.has(entry.matchId) && this.list.some((e) => e.seq === entry.seq)) {
+            // ein anderes Gerät hat angepfiffen: die alte Wahl ginge als Nachtrag ins laufende Spiel – nicht senden, verwerfen und es sagen
+            this.remove(entry);
+            this.notify({ matchId: entry.matchId, kind: 'tooLate' });
+            this.changed();
+            continue;
+          }
+        }
         const result = await this.deps.send(this.toArgs(entry));
         if (result.kind === 'offline') {
           return;
@@ -151,7 +188,12 @@ export class KitChoiceQueue {
       if (row === undefined) {
         continue;
       }
-      if (entry.teams !== undefined && row.teams !== undefined && (row.teams.a !== entry.teams.a || row.teams.b !== entry.teams.b)) {
+      if (entry.status === 'pending' && (entry.phase ?? 'before') === 'before' && row.kickedOff === true && !this.localStarts.has(entry.matchId)) {
+        // @SL-229 Zeile 1: ein anderes Gerät hat angepfiffen; unsere alte Wahl käme als Nachtrag an und überschriebe das Leibchen des Anpfiffs
+        this.remove(entry);
+        this.notify({ matchId: entry.matchId, kind: 'tooLate' });
+        geaendert = true;
+      } else if (entry.teams !== undefined && row.teams !== undefined && (row.teams.a !== entry.teams.a || row.teams.b !== entry.teams.b)) {
         this.remove(entry);
         this.notify({ matchId: entry.matchId, kind: 'rejected', code: 'TEAMS_CHANGED' });
         geaendert = true;
@@ -172,15 +214,55 @@ export class KitChoiceQueue {
   }
 
   /**
-   * Das Spiel ist lokal angepfiffen: ein wartender Eintrag entfällt, denn der Anpfiff trägt die Wahl im `kit` (`kitBeimAnpfiff`, @SL-202) – sonst
-   * käme die Wahl als Nachtrag im laufenden Spiel beim Server an und würde dort als „nur Turnierleitung“ abgewiesen (@SL-150).
+   * Spiele, die dieses Gerät lokal angepfiffen hat und noch angepfiffen sind (nach „Anpfiff rückgängig“ nicht mehr, @SL-214): ein wartender Eintrag vor
+   * dem Anpfiff entfällt still, denn der Anpfiff trägt die Wahl im `kit` (`kitBeimAnpfiff`, @SL-202) – sonst käme sie als Nachtrag beim Server an und
+   * würde als „nur Turnierleitung“ abgewiesen (@SL-150). Entscheidend ist der Zustand jetzt, nicht ob je ein Anpfiff im Log stand.
    */
   discardStarted(matchIds: ReadonlySet<string>): void {
-    const rest = this.list.filter((entry) => !(entry.status === 'pending' && matchIds.has(entry.matchId)));
+    this.localStarts = new Set(matchIds);
+    const rest = this.list.filter((entry) => !(entry.status === 'pending' && (entry.phase ?? 'before') === 'before' && matchIds.has(entry.matchId)));
     if (rest.length !== this.list.length) {
       this.list = rest;
       this.changed();
     }
+  }
+
+  /**
+   * Die Zeilen (Server) aller Spiele mit Wahl: war eine Wahl da und ist nun weg, ohne dass dieses Gerät sie aufgegeben hat und ohne Anpfiff, hat der Server sie
+   * zurückgenommen (anderes Team auf einer Seite, @SL-212): die Meldung „Leibchen zurückgenommen, bitte neu bestätigen“ steht da, statt dass die Karte still wiederkommt.
+   */
+  observeRows(rows: ReadonlyMap<string, KitRowState>): void {
+    let neu = false;
+    for (const [matchId, row] of rows) {
+      if (row.decision !== undefined) {
+        this.seenDecision.set(matchId, row.teams);
+      } else if (this.seenDecision.has(matchId)) {
+        const vorher = this.seenDecision.get(matchId);
+        this.seenDecision.delete(matchId);
+        // „zurückgenommen“ nur mit Beleg: auf den Seiten stehen andere Teams als bei der Wahl (@SL-212). Ein Anpfiff rückgängig, eine ältere Kopie ohne `kitDecision`
+        // oder ein lokales Laden zeigen die Wahl auch als leer, sind aber keine Zurücknahme – dann bleibt es still.
+        const andereTeams = vorher !== undefined && row.teams !== undefined && (row.teams.a !== vorher.a || row.teams.b !== vorher.b);
+        if (andereTeams && row.kickedOff !== true && !this.list.some((e) => e.matchId === matchId)) {
+          this.notify({ matchId, kind: 'withdrawn' });
+          neu = true;
+        }
+      }
+    }
+    if (neu) { this.changed(); }
+  }
+
+  /** Spiele, deren Wahl zuletzt bekannt war (für `observeRows`). */
+  decidedMatchIds(): readonly string[] {
+    return [...this.seenDecision.keys()];
+  }
+
+  /** Alles verwerfen (Abmelden, Tests): Einträge, Meldungen und das Gemerkte. */
+  reset(): void {
+    this.list = [];
+    this.noticeList = [];
+    this.seenDecision.clear();
+    this.localStarts = new Set();
+    this.changed();
   }
 
   dismissNotice(id: string): void {
@@ -207,10 +289,14 @@ export class KitChoiceQueue {
     }
     if (result.kind === 'saved') {
       this.list = this.list.map((e) => (e.seq === entry.seq ? { ...e, status: 'sent' as const } : e));
+      if (result.phase === 'live' && (entry.phase ?? 'before') === 'before') {
+        // @SL-229 Zeile 1 (Restfenster): der Server hat die alte Wahl als Nachtrag ins laufende Spiel genommen – wahrheitsgemäß sagen, nicht „nicht übernommen“
+        this.notify({ matchId: entry.matchId, kind: 'lateSaved' });
+      }
     } else {
       this.remove(entry);
       this.notify(result.kind === 'rejected'
-        ? { matchId: entry.matchId, kind: 'rejected', code: result.code, ...(result.reason === undefined ? {} : { reason: result.reason }) }
+        ? { matchId: entry.matchId, kind: 'rejected', code: result.code, ...(result.reason === undefined ? {} : { reason: result.reason }), hadControl: entry.controlEpoch !== undefined && entry.controlEpoch !== null }
         : { matchId: entry.matchId, kind: 'failed' });
     }
     this.changed();

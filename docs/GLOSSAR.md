@@ -117,9 +117,7 @@ Meldungen aber „Leibchen“ – wie die Verbandsregeln, die die Recherche zu d
 immer freiwillig. „Weste“ ist nur der interne Name der Darstellung im Ergebniskasten (Mitte in Leibchenfarbe, Streifen links und
 rechts in Trikotfarbe, dazu das Leibchen-Zeichen) und steht in keinem sichtbaren Text; ein Text „in Leibchen“ unter dem Teamnamen
 entfällt. Nicht verwechseln mit dem Trikot (dem Spielhemd, dessen Farbe je Team im Assistenten steht) und mit dem „Ausweichtrikot“
-(einer zweiten Trikotfarbe je Team, MVP+). Glossar-Eintrag: noch nicht in `src/i18n/glossary.json` angelegt (de „Leibchen“, en „bib“,
-Synonym „Markierungshemd“); die Anlage mit Schlüssel in `sport.json` ist eine eigene Aufgabe, bei Widerspruch gilt dann
-`glossary.json`.
+(einer zweiten Trikotfarbe je Team, MVP+). Glossar-Eintrag: `bib` (de „Leibchen“, en „bib“, Schlüssel `equipment.bib` in `sport.json`); bei Widerspruch gilt `glossary.json`.
 
 ## Hallenton, Hallen-Lautsprecher, Gerät, Ausgang, Inhalt
 
