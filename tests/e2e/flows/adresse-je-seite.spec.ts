@@ -12,9 +12,13 @@ import { neuLaden } from '../helpers/neuLaden';
 
 const TURNIER = 'hallencup-messlauf';
 const DESKTOP = { width: 1280, height: 900 };
+// Die Saat trägt das feste Turnierdatum 14.11.2026. Der Test hält die Uhr des Browsers davor an,
+// sonst hängt die Einordnung auf der Startseite („Läuft“ oder „Heute“) am Tag, an dem der Test läuft.
+const TESTZEIT = new Date('2026-11-10T10:00:00+01:00');
 
 async function oeffne(page: Page, route: string) {
   await page.setViewportSize(DESKTOP);
+  await page.clock.setFixedTime(TESTZEIT);
   await installiereSaat(page.context(), leseSaat(TURNIER));
   await page.goto(route);
 }
