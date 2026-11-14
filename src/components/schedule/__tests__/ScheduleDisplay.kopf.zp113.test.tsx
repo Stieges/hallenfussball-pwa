@@ -28,7 +28,8 @@ describe('@ZP-113 Kopf des Spielplans (ScheduleDisplay)', () => {
     expect(screen.queryByText('Veranstaltungsort:')).toBeNull();
     expect(screen.queryByText(/Ende \(ca\.\)/)).toBeNull();
     expect(screen.getByTestId('schedule-list-head')).toBeTruthy();
-    expect(screen.getByTestId('schedule-list-times')).toHaveTextContent(/^Beginn \d{2}:\d{2} Uhr · Ende etwa \d{2}:\d{2} Uhr$/);
+    expect(screen.getByTestId('schedule-list-start')).toHaveTextContent(/^Beginn \d{2}:\d{2} Uhr$/);
+    expect(screen.getByTestId('schedule-list-end')).toHaveTextContent(/^Ende etwa \d{2}:\d{2} Uhr$/);
     const toggle = screen.getByTestId('public-participants-toggle');
     expect(toggle).toHaveTextContent('Teilnehmer (8)');
     expect(toggle).toHaveAttribute('aria-expanded', 'false');

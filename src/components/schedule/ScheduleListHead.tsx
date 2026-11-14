@@ -1,7 +1,7 @@
 /**
  * ScheduleListHead – Listenkopf über den Spielen der Turnierleitung (@ZP-113): „Spiele“ links, „Beginn 09:00 Uhr · Ende etwa 11:30 Uhr · 10 Minuten je Spiel“ rechts (die Spielzeit fiel mit der Eckdaten-Karte weg, Mockup Runde 4).
  * Ersetzt am Handy die Eckdaten-Karte mit acht Zeilen. Die Uhrzeiten sind die Wanduhr des Turniers (`kickoffLocal`, wie im übrigen Spielplan),
- * nie die Gerätezeit; reicht die Breite nicht, rutscht die Zeitangabe in die zweite Zeile (nichts wird abgeschnitten).
+ * nie die Gerätezeit; reicht die Breite nicht, rutscht die nächste Angabe in die nächste Zeile; ist selbst eine Angabe breiter als die Zeile, bricht sie um (nichts wird abgeschnitten).
  */
 import type { CSSProperties, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -40,7 +40,8 @@ export function ScheduleListHead({ schedule }: ScheduleListHeadProps): ReactElem
         // Trenner kommen aus dem Stylesheet (nie als Textknoten): bricht eine Angabe um, steht kein Trenner lose in der Zeile
         <p className={styles.rahmen} style={timesStyle}>
           <span className={styles.reihe}>
-            <span className={styles.teil} data-testid="schedule-list-times">{t('scheduleHead.times', { start, end })}</span>
+            <span className={styles.teil} data-testid="schedule-list-start">{t('scheduleHead.start', { start })}</span>
+            <span className={styles.teil} data-testid="schedule-list-end">{t('scheduleHead.end', { end })}</span>
             {minutes > 0 && (
               <span className={styles.teil} data-testid="schedule-list-duration">{t('scheduleHead.duration', { count: minutes })}</span>
             )}

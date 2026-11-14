@@ -1,8 +1,9 @@
 /*
- * Zeitangaben im Listenkopf (@ZP-113): „Beginn … · Ende etwa … · 10 Minuten je Spiel“.
+ * Angaben im Listenkopf (@ZP-113): „Beginn … · Ende etwa … · 10 Minuten je Spiel“ – drei eigene Teile.
  * Jede Angabe trägt links einen Streifen in Trennerbreite; der Trenner „·“ sitzt als Pseudoelement in diesem Streifen.
  * Die Reihe ist um genau diese Breite nach links gezogen, der äußere Rahmen schneidet ab: die erste Angabe jeder Zeile
  * (auch nach einem Umbruch) hat ihren Trenner außerhalb, also steht nie ein Trenner am Zeilenanfang oder -ende.
+ * Abgeschnitten wird nur dieser Streifen; Text nie: ein Teil darf umbrechen, wenn er allein breiter als die Zeile ist.
  */
 .rahmen {
   margin: 0;
@@ -12,13 +13,17 @@
 .reihe {
   display: flex;
   flex-wrap: wrap;
+  /* MUSS „start“ bleiben: bei space-between/center würde der Trenner am Zeilenanfang wieder sichtbar */
+  justify-content: start;
   margin-left: calc(-1 * var(--spacing-md));
 }
 
 .teil {
   position: relative;
   padding-left: var(--spacing-md);
-  white-space: nowrap;
+  /* kein nowrap: eine Angabe, die allein breiter als die Zeile ist (sehr große Schrift, 320 px), bricht um statt abgeschnitten zu werden */
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .teil + .teil::before {

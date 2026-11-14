@@ -799,7 +799,8 @@
   },
   "scheduleHead": {
     "title": "Matches",
-    "times": "Start {{start}} · End about {{end}}",
+    "start": "Start {{start}}",
+    "end": "End about {{end}}",
     "duration_one": "{{count}} minute per match",
     "duration_other": "{{count}} minutes per match"
   },

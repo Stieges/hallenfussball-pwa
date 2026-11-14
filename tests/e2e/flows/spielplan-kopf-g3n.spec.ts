@@ -2,7 +2,7 @@
  * E2E (G3-N N1b, Regel T2-UI): der Kopf des Spielplans der Turnierleitung (@ZP-113) und der Kopf-Überlauf am Tablet
  * (C-KOPF-UEBERLAUF-TABLET-LANGTEXT), offline (Gast = Turnierleitung, Wegwerf-Turnier im lokalen Speicher).
  *
- * @ZP-113 Eckdaten nicht als Karte mit acht Zeilen, über der Liste „Spiele · Beginn … Uhr · Ende etwa … Uhr“, Teilnehmer eingeklappt als
+ * @ZP-113 Eckdaten nicht als Karte mit acht Zeilen, über der Liste „Spiele“ mit „Beginn … Uhr“ und „Ende etwa … Uhr“, Teilnehmer eingeklappt als
  * „Teilnehmer (4)“ und mit einem Tipp aufgeklappt, am Laptop ohne Wischen erreichbar; die erste Spielzeile liegt nach höchstens einmal Wischen
  * ganz im Bild. Befund: bei 768 Bildpunkten Breite und 30 % längeren Texten wächst die Seite nicht über das Fenster hinaus (Kopf bricht um).
  */
@@ -56,7 +56,8 @@ test.describe('@ZP-113 Kopf des Spielplans der Turnierleitung', () => {
     await expect(page.getByText('Veranstaltungsort')).toHaveCount(0);
     await expect(page.getByText('Ende (ca.):')).toHaveCount(0);
     await expect(page.getByTestId('schedule-list-head')).toContainText(/^Spiele/);
-    await expect(page.getByTestId('schedule-list-times')).toHaveText(/^Beginn \d{2}:\d{2} Uhr · Ende etwa \d{2}:\d{2} Uhr$/);
+    await expect(page.getByTestId('schedule-list-start')).toHaveText(/^Beginn \d{2}:\d{2} Uhr$/);
+    await expect(page.getByTestId('schedule-list-end')).toHaveText(/^Ende etwa \d{2}:\d{2} Uhr$/);
     const toggle = page.getByTestId('public-participants-toggle');
     await expect(toggle).toHaveText(/Teilnehmer \(4\)/);
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
@@ -171,50 +172,54 @@ test.describe('@ZP-113 Kopf der Turnierleitung mit eigener Saat', () => {
     await expect(page.getByTestId('public-participants-list').locator('li')).toHaveCount(6);
   });
 
-  test('@ZP-113 Listenkopf: breit eine Zeile mit beiden Trennern; schmal steht die Spielzeit in eigener Zeile ohne losen Trenner davor oder dahinter (360×640, 390×844, 1280×720)', async ({ page }) => {
+  /** Misst die Teile des Listenkopfs (Beginn, Ende, Spielzeit) gegen ihren Rahmen */
+  const messen = (page: Page) => page.evaluate(() => {
+    const rahmen = document.querySelector('[data-testid="schedule-list-head"] p')!;
+    const rr = rahmen.getBoundingClientRect();
+    const teile = Array.from(rahmen.querySelectorAll(':scope > span > span'));
+    const boxen = teile.map((e) => e.getBoundingClientRect());
+    const einzug = teile.map((e) => parseFloat(getComputedStyle(e).paddingLeft));
+    return {
+      anzahl: teile.length,
+      textknoten: Array.from(rahmen.querySelectorAll('span')).flatMap((e) => Array.from(e.childNodes)).filter((n) => n.nodeType === Node.TEXT_NODE && (n.textContent ?? '').includes('·')).length,
+      // Zeilenanfang: erste Angabe oder tiefer als die vorige; dort muss der Streifen mit dem Trenner außerhalb des Rahmens liegen
+      zeilenAnfang: boxen.map((b, i) => i === 0 || b.top > boxen[i - 1].top + 2),
+      streifenAussen: boxen.map((b) => b.left <= rr.left - 0.5),
+      // Text (ohne Streifen) liegt ganz im Rahmen – nichts abgeschnitten
+      textLinksImRahmen: boxen.map((b, i) => b.left + einzug[i] >= rr.left - 0.5),
+      textRechtsImRahmen: boxen.map((b) => b.right <= rr.right + 0.5),
+      teilBreiterAlsInhalt: teile.map((e) => e.scrollWidth > e.clientWidth + 1),
+      zeilen: new Set(boxen.map((b) => Math.round(b.top))).size,
+      breiter: document.documentElement.scrollWidth > window.innerWidth,
+    };
+  });
+
+  test('@ZP-113 Listenkopf: breit eine Zeile mit allen Trennern; schmal und bei großer Schrift bricht er um, nichts wird abgeschnitten, nie ein Trenner am Zeilenanfang oder -ende (1280×720, 390×844, 360×640, 320×640, 360×640 mit Schrift 130 %, 320×640 mit Schrift 150 %)', async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-12-05T10:00:00+01:00'));
     await installiereSaat(page.context(), leseSaat('nikolaus-vor-anpfiff'));
-    const messen = () => page.evaluate(() => {
-      const kopf = document.querySelector('[data-testid="schedule-list-times"]')!;
-      const dauer = document.querySelector('[data-testid="schedule-list-duration"]')!;
-      const rahmen = kopf.closest('p')!;
-      const r = (e: Element) => e.getBoundingClientRect();
-      // Trenner als Textknoten (nur im alten Aufbau): lose Zeichen im Absatz
-      const textknoten = Array.from(rahmen.childNodes).filter((n) => n.nodeType === Node.TEXT_NODE && (n.textContent ?? '').includes('·')).length;
-      return {
-        gleicheZeile: Math.abs(r(dauer).top - r(kopf).top) < 2,
-        // Der Trenner einer Angabe liegt in deren linkem Streifen (links von ihrer Textkante); er ist sichtbar nur, wenn dieser Streifen im Rahmen liegt
-        dauerStreifenImRahmen: r(dauer).left >= r(rahmen).left - 0.5,
-        kopfStreifenImRahmen: r(kopf).left >= r(rahmen).left - 0.5,
-        dauerTrenner: getComputedStyle(dauer, '::before').content,
-        kopfTrenner: getComputedStyle(kopf, '::before').content,
-        textknoten,
-        breiter: document.documentElement.scrollWidth > window.innerWidth,
-        abgeschnitten: r(dauer).right > r(rahmen).right + 0.5 || r(kopf).right > r(rahmen).right + 0.5,
-      };
-    });
-    for (const [w, h, eineZeile] of [[1280, 720, true], [390, 844, false], [360, 640, false]] as const) {
+    // Die Schriftgrößen der App sind rem-basiert (fontSizes in typography.ts): die Systemschrift/der Text-Zoom wirkt über die Grundschrift der Seite
+    const faelle = [[1280, 720, 100], [390, 844, 100], [360, 640, 100], [320, 640, 100], [360, 640, 130], [320, 640, 150]] as const;
+    for (const [w, h, schriftProzent] of faelle) {
+      const name = `${String(w)}×${String(h)} bei Schrift ${String(schriftProzent)} %`;
       await page.setViewportSize({ width: w, height: h });
       await page.goto('about:blank');
       await page.goto('/#/tournament/nikolaus-vor-anpfiff/schedule');
       await expect(page.getByTestId('schedule-list-duration')).toBeVisible({ timeout: 25_000 });
+      if (schriftProzent !== 100) { await page.addStyleTag({ content: `html { font-size: ${String(schriftProzent)}% !important; }` }); }
       await animationenFertig(page);
-      // Frisch geladen je Breite (kein Rest der vorigen Breite); die Seitenbreite braucht nach dem Laden einen Augenblick
-      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), { message: `${String(w)} px: kein waagerechtes Scrollen (Seite nicht breiter als das Fenster)` }).toBe(true);
-      const m = await messen();
-      expect(m.textknoten, `${String(w)} px: kein Trenner als loser Text`).toBe(0);
-      expect(m.breiter, `${String(w)} px: kein waagerechtes Scrollen`).toBe(false);
-      expect(m.abgeschnitten, `${String(w)} px: nichts abgeschnitten`).toBe(false);
-      expect(m.kopfStreifenImRahmen, `${String(w)} px: vor „Beginn“ steht nie ein Trenner`).toBe(false);
-      expect(m.kopfTrenner, `${String(w)} px: „Beginn“ hat keinen Trenner`).not.toContain('·');
-      if (eineZeile) {
-        expect(m.gleicheZeile, `${String(w)} px: eine Zeile`).toBe(true);
-        expect(m.dauerStreifenImRahmen, `${String(w)} px: Trenner vor der Spielzeit sichtbar`).toBe(true);
-        expect(m.dauerTrenner).toContain('·');
-      } else {
-        expect(m.gleicheZeile, `${String(w)} px: Spielzeit in eigener Zeile`).toBe(false);
-        expect(m.dauerStreifenImRahmen, `${String(w)} px: am Zeilenanfang der Spielzeit ist der Trenner abgeschnitten`).toBe(false);
-      }
+      // Frisch geladen je Fall (kein Rest des vorigen); die Seitenbreite braucht nach dem Laden einen Augenblick
+      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), { message: `${name}: kein waagerechtes Scrollen` }).toBe(true);
+      const m = await messen(page);
+      expect(m.textknoten, `${name}: kein Trenner als loser Text`).toBe(0);
+      expect(m.breiter, `${name}: kein waagerechtes Scrollen`).toBe(false);
+      expect(m.textRechtsImRahmen.every(Boolean), `${name}: kein Teil rechts abgeschnitten`).toBe(true);
+      expect(m.textLinksImRahmen.every(Boolean), `${name}: kein Teil links abgeschnitten`).toBe(true);
+      expect(m.teilBreiterAlsInhalt.some(Boolean), `${name}: kein Teil mit verstecktem Text`).toBe(false);
+      expect(m.anzahl, `${name}: Beginn, Ende, Spielzeit als drei Teile`).toBe(3);
+      // Trenner: nur dort sichtbar, wo eine Angabe nicht am Zeilenanfang steht
+      expect(m.streifenAussen, `${name}: der Streifen mit dem Trenner liegt genau am Zeilenanfang außerhalb`).toEqual(m.zeilenAnfang);
+      if (w === 1280) { expect(m.zeilen, `${name}: eine Zeile`).toBe(1); }
+      if (w === 360 && schriftProzent === 100) { expect(m.zeilen, `${name}: Spielzeit in eigener Zeile`).toBeGreaterThan(1); }
     }
   });
 
