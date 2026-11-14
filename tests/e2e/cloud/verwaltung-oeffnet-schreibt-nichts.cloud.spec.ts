@@ -119,7 +119,7 @@ test.describe('@W5-042 das Öffnen der Verwaltung ändert nichts am Server und e
 
       // 4. Sie zeigt den Stand des Servers; am Server ist nichts geändert; keine abgelehnte Änderung auf dem Gerät
       await expect(page.locator('[data-testid="schedule-missing-notice"]')).toHaveCount(0);
-      await expect.poll(() => page.locator('[data-match-card]').count(), { timeout: 20_000, message: 'die Verwaltung zeigt die 15 Spiele des Servers' }).toBe(SPIELE_ANZAHL);
+      await expect.poll(() => page.locator('[data-match-card]:visible').count(), { timeout: 20_000, message: 'die Verwaltung zeigt die 15 Spiele des Servers' }).toBe(SPIELE_ANZAHL);
       expect(await serverState(id)).toEqual(before);
       await expect(page.locator('[data-testid="outbox-rejected-panel"]')).toHaveCount(0);
       await expect(page.locator('[data-testid="sync-status-rejected"]')).toHaveCount(0);
