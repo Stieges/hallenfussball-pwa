@@ -5,6 +5,7 @@
  * - Belegt ein anderes Gerät das Feld, kommt die Rückfrage „Ablösen?“ (@HT-015); ist dieses Gerät schon Lautsprecher für ein anderes
  *   Turnier, davor „Wechseln?“ (@HT-056, Name aus dem lokalen Turnier). Abbrechen ändert nichts.
  * - Ohne `darfAendern` (nach dem Turnierende) ist nichts änderbar; der Abschnitt bleibt lesbar (@HT-046).
+ * - H4-10: die Regler „Lautstärke dieses Geräts“ (nur als Lautsprecher) und „App war angehalten“ bestätigen.
  * - „Ton aktivieren“ in der Fußleiste, solange der Browser noch einen Klick braucht („Ton nicht aktiv“, „schlafen gelegt“).
  */
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
@@ -16,12 +17,16 @@ import { abonniereInstallAngebot, installAngebotVorhanden, installiereApp, start
 import { baueGeraetBanner, type GeraetBanner } from './geraetBanner';
 import { gespeicherterGeraetename, istHandy, laeuftAlsApp, speichereGeraetename } from './geraeteArt';
 import type { AbloesenFrage, WechselFrage } from './GeraetRueckfragen';
+import type { LautstaerkeReglerProps } from './LautstaerkeRegler';
+import type { AnhoerenZustand } from './useAnhoeren';
 
 export interface GeraetAbschnittEingabe {
   daten: HallentonDaten;
   felderAnzahl: number;
   /** `useCan('manageScreens')` ohne Ausnahme: nach dem Turnierende falsch. */
   darfAendern: boolean;
+  /** „Anhören“ mit Rückfrage bei laufendem Spiel (`useAnhoeren`). */
+  anhoeren: AnhoerenZustand;
 }
 
 export type GeraetModus = 'einrichtung' | 'abschnitt';
@@ -32,6 +37,10 @@ export interface GeraetAbschnitt {
   oben: boolean;
   banner: readonly GeraetBanner[];
   verstanden: () => void;
+  /** „App war angehalten“ bestätigen (@HT-014). */
+  angehaltenBestaetigen: () => void;
+  /** Regler „Lautstärke dieses Geräts“ (@HT-023): nur, wenn dieses Gerät Lautsprecher ist; sonst `null`. */
+  regler: LautstaerkeReglerProps | null;
   felder: readonly number[];
   gewaehlt: readonly number[];
   an: boolean;
@@ -69,7 +78,7 @@ export function waehleModus(e: { istLautsprecher: boolean; keinLautsprecherImTur
 interface OffeneAbloesung { felder: readonly number[]; belegt: AbloesenFrage['belegt']; wechsel: boolean }
 interface OffenerWechsel { felder: readonly number[]; turnierName: string | null }
 
-export function useGeraetAbschnitt({ daten, felderAnzahl, darfAendern }: GeraetAbschnittEingabe): GeraetAbschnitt {
+export function useGeraetAbschnitt({ daten, felderAnzahl, darfAendern, anhoeren }: GeraetAbschnittEingabe): GeraetAbschnitt {
   const { t } = useTranslation('hallenton');
   const { lautsprecher, anzeige, karten, status, keinLautsprecherImTurnier } = daten;
   const standardName = istHandy() ? t('geraet.standardNameHandy') : t('geraet.standardNameLaptop');
@@ -183,15 +192,18 @@ export function useGeraetAbschnitt({ daten, felderAnzahl, darfAendern }: GeraetA
 
   const banner = useMemo(() => baueGeraetBanner({
     rolle: lautsprecher.rolle, felder: lautsprecher.felder, name: lautsprecher.name, abgeloest: lautsprecher.abgeloest,
-    eigeneAnzeige, karten, sprecherName, t,
-  }), [lautsprecher.rolle, lautsprecher.felder, lautsprecher.name, lautsprecher.abgeloest, eigeneAnzeige, karten, sprecherName, t]);
+    eigeneAnzeige, karten, sprecherName, angehalten: lautsprecher.laufzeit?.warAngehalten ?? false, stumm: lautsprecher.stumm, t,
+  }), [lautsprecher.rolle, lautsprecher.felder, lautsprecher.name, lautsprecher.abgeloest, lautsprecher.laufzeit?.warAngehalten, lautsprecher.stumm, eigeneAnzeige, karten, sprecherName, t]);
 
   const tonNoetig = darfAendern && istLautsprecher && eigeneAnzeige.some((f) => f.anzeige.art === 'tonNichtAktiv' || f.anzeige.art === 'schlafenGelegt');
   const modus = waehleModus({ istLautsprecher, keinLautsprecherImTurnier, standAktuell: status.stand === 'aktuell', abgeloest: lautsprecher.abgeloest !== null });
-  const { tonAktivieren: aktivieren, abgeloestVerstanden } = lautsprecher;
+  const { tonAktivieren: aktivieren, abgeloestVerstanden, angehaltenBestaetigen, lautstaerke, stumm, setzeLautstaerke, setzeStumm } = lautsprecher;
 
   return {
-    modus, oben: modus === 'einrichtung' || istLautsprecher, banner, verstanden: abgeloestVerstanden,
+    modus, oben: modus === 'einrichtung' || istLautsprecher, banner, verstanden: abgeloestVerstanden, angehaltenBestaetigen,
+    regler: istLautsprecher
+      ? { lautstaerke, stumm, gesperrt: !darfAendern, onLautstaerke: setzeLautstaerke, onStumm: setzeStumm, onAnhoeren: anhoeren.anhoeren, hinweis: anhoeren.hinweis }
+      : null,
     felder, gewaehlt, an: istLautsprecher || vorgemerkt, name, setzeName: setName, nameVerlassen, schalterUmlegen, feldUmschalten,
     beschaeftigt, fehler, handy: istHandy(), installiert: laeuftAlsApp(), installAngebot, installieren: () => { void installiereApp(); },
     schalterErledigt: istLautsprecher, tonErledigt: istLautsprecher && eigeneAnzeige.some((f) => f.anzeige.art === 'bereit'),

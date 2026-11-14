@@ -2,8 +2,8 @@
  * TesttonAbschnitt – „Testton“ im Unterpunkt „Hallenton“ (H4-8; @HT-017, @HT-041, @HT-046): „Hier anhören“ spielt auf diesem Gerät,
  * „Testton in der Halle“ am Hallen-Lautsprecher des Felds, danach die Quittung „gespielt 14:02“ (vom Server) oder der Grund. Ohne
  * aktuellen Stand kein Aufruf: „Kein Testton: kein Netz“. Ist der Lautsprecher nicht bereit oder meldet er sich nicht, geht gar kein
- * Auftrag raus (ein spätes Nachholen in der Halle wäre schlimmer als die Auskunft). Die Rückfrage „Auf Feld 1 läuft Spiel 11 …“ kommt
- * mit H4-10. Der ganze Abschnitt steht nur, wo geändert werden darf (nach dem Turnierende nicht, @HT-046).
+ * Auftrag raus (ein spätes Nachholen in der Halle wäre schlimmer als die Auskunft). Läuft auf dem Feld ein Spiel, fragt zuerst die
+ * Rückfrage „Auf Feld 1 läuft Spiel 11. Testton trotzdem in der Halle spielen?“ (H4-10, @HT-017); ohne Bestätigen geht nichts raus. Der ganze Abschnitt steht nur, wo geändert werden darf (nach dem Turnierende nicht, @HT-046).
  */
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,6 +16,7 @@ import type { HallFehlerGrund, HallStatusAntwort } from '../../../core/repositor
 import type { FeldKarte } from './feldKarten';
 import { echterZeitgeber } from '../runtime/zeitgeber';
 import { formatUhrzeit } from './uhrzeit';
+import type { AnhoerenRueckfrage } from './useAnhoerenRueckfrage';
 
 /** So lange wartet die Anzeige auf die Quittung, bevor sie „keine Antwort“ sagt (der Lautsprecher meldet alle 5 s). */
 export const QUITTUNG_WARTEN_MS = 15_000;
@@ -29,6 +30,8 @@ export interface TesttonAbschnittProps {
   /** „Hier anhören“: spielt den Abpfiff-Ton auf diesem Gerät. */
   hierAnhoeren: () => void;
   geraetName: string | null;
+  /** Rückfrage bei laufendem Spiel auf dem Feld (@HT-017). */
+  rueckfrage: AnhoerenRueckfrage;
 }
 
 const abschnittStil: CSSProperties = { display: 'flex', flexDirection: 'column', gap: cssVars.spacing.md };
@@ -65,7 +68,7 @@ function gespielteZeit(antwort: HallStatusAntwort | null, feld: number, sprache:
   return test.testId === testId ? formatUhrzeit(gespielt, sprache) : null;
 }
 
-export function TesttonAbschnitt({ karten, status, hierAnhoeren, geraetName }: TesttonAbschnittProps): ReactElement {
+export function TesttonAbschnitt({ karten, status, hierAnhoeren, geraetName, rueckfrage }: TesttonAbschnittProps): ReactElement {
   const { t, i18n } = useTranslation('hallenton');
   const [ergebnisse, setErgebnisse] = useState<Readonly<Record<number, Ergebnis>>>({});
   const setze = useCallback((feld: number, e: Ergebnis) => setErgebnisse((alt) => ({ ...alt, [feld]: e })), []);
@@ -101,7 +104,18 @@ export function TesttonAbschnitt({ karten, status, hierAnhoeren, geraetName }: T
     return () => timers.forEach((timer) => window.clearTimeout(timer));
   }, [fristen, t]);
 
-  const ausloesen = async (karte: FeldKarte): Promise<void> => {
+  const anfordern = async (karte: FeldKarte): Promise<void> => {
+    const antwort = await status.testtonAnfordern(karte.feld);
+    if (!antwort.ok) {
+      setze(karte.feld, { art: 'text', text: t(FEHLER_TEXT[antwort.grund]), warn: true });
+    } else if (antwort.status === 'requested') {
+      setze(karte.feld, { art: 'laeuft', testId: antwort.testId, seit: echterZeitgeber.jetzt() });
+    } else {
+      setze(karte.feld, { art: 'text', text: antwort.status === 'too_soon' ? t('testton.zuFrueh') : t('testton.keinLautsprecher'), warn: true });
+    }
+  };
+
+  const ausloesen = (karte: FeldKarte): void => {
     const grund = nichtGespielt(karte, t);
     if (status.stand === 'laedt') {
       return; // die erste Antwort steht noch aus: kein „kein Netz“, die Taste ist bis dahin aus
@@ -111,14 +125,7 @@ export function TesttonAbschnitt({ karten, status, hierAnhoeren, geraetName }: T
     } else if (grund !== null) {
       setze(karte.feld, { art: 'text', text: grund, warn: true });
     } else {
-      const antwort = await status.testtonAnfordern(karte.feld);
-      if (!antwort.ok) {
-        setze(karte.feld, { art: 'text', text: t(FEHLER_TEXT[antwort.grund]), warn: true });
-      } else if (antwort.status === 'requested') {
-        setze(karte.feld, { art: 'laeuft', testId: antwort.testId, seit: echterZeitgeber.jetzt() });
-      } else {
-        setze(karte.feld, { art: 'text', text: antwort.status === 'too_soon' ? t('testton.zuFrueh') : t('testton.keinLautsprecher'), warn: true });
-      }
+      rueckfrage.fragen('testton', [karte.feld], () => { void anfordern(karte); }); // läuft ein Spiel auf dem Feld, erst die Rückfrage (@HT-017)
     }
   };
 
@@ -146,7 +153,7 @@ export function TesttonAbschnitt({ karten, status, hierAnhoeren, geraetName }: T
                 <p style={textStil}>{kein || karte.geraet === undefined ? t('testton.keinLautsprecherKein') : t('testton.lautsprecher', { name: karte.geraet.name })}</p>
               </div>
               {kein ? null : (
-                <Button variant="secondary" icon={<Icons.Speaker size={iconSizeValues.sm} />} disabled={status.stand === 'laedt'} onClick={() => { void ausloesen(karte); }} data-testid={`testton-halle-${karte.feld}`}>{t('testton.halle')}</Button>
+                <Button variant="secondary" icon={<Icons.Speaker size={iconSizeValues.sm} />} disabled={status.stand === 'laedt'} onClick={() => ausloesen(karte)} data-testid={`testton-halle-${karte.feld}`}>{t('testton.halle')}</Button>
               )}
               {zeile === null ? null : (
                 <p style={{ ...quittungStil, flexBasis: '100%' }} role="status" data-testid={`testton-feld-${karte.feld}-ergebnis`}>

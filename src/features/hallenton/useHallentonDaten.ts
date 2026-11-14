@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { hallAnzeige, type HallAnzeige } from './hallAnzeige';
-import { useAngepfiffeneFelder } from './useAngepfiffeneFelder';
+import { useLaufendeSpiele } from './useLaufendeSpiele';
 import { useAnderesFensterTont } from './useAnderesFensterTont';
 import { useHallLautsprecher, type HallLautsprecher } from './useHallLautsprecher';
 import { useHallStatus, type HallStatus } from './useHallStatus';
@@ -21,6 +21,8 @@ export interface HallentonDaten {
   karten: readonly FeldKarte[];
   /** Im Turnier ist (auch zuletzt) kein Lautsprecher bekannt. */
   keinLautsprecherImTurnier: boolean;
+  /** Feld → Nummer des angepfiffenen Spiels (@HT-017: Rückfrage vor „Anhören“ und „Testton in der Halle“). */
+  laufendeSpiele: ReadonlyMap<number, number>;
 }
 
 export function useHallentonDaten(tournamentId: string, felderAnzahl: number): HallentonDaten {
@@ -33,7 +35,8 @@ export function useHallentonDaten(tournamentId: string, felderAnzahl: number): H
     [laufzeit, felder],
   );
   const anderesFenster = useAnderesFensterTont(lokal);
-  const angepfiffen = useAngepfiffeneFelder(tournamentId, status.antwort);
+  const laufendeSpiele = useLaufendeSpiele(tournamentId, status.antwort);
+  const angepfiffen = useMemo(() => new Set(laufendeSpiele.keys()), [laufendeSpiele]);
 
   const [sprecher, setSprecher] = useState<readonly SprecherInfo[]>([]);
   useEffect(() => {
@@ -60,5 +63,5 @@ export function useHallentonDaten(tournamentId: string, felderAnzahl: number): H
     [felderAnzahl, anzeige, status.felder, sprecher, name, laufzeit, sprache],
   );
   const keinLautsprecherImTurnier = karten.every((k) => k.zustand.art === 'keinLautsprecher');
-  return { status, lautsprecher, anzeige, karten, keinLautsprecherImTurnier };
+  return { status, lautsprecher, anzeige, karten, keinLautsprecherImTurnier, laufendeSpiele };
 }

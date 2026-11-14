@@ -33,6 +33,8 @@ vi.mock('../../../../hooks/useTournamentClosed', () => ({ useTournamentClosed: (
 vi.mock('../../useHallStatus', () => ({ useHallStatus: () => doppel.status }));
 vi.mock('../../useHallLautsprecher', () => ({ useHallLautsprecher: () => doppel.lautsprecher }));
 vi.mock('../../useAngepfiffeneFelder', () => ({ useAngepfiffeneFelder: () => new Set<number>() }));
+const laufendDoppel = vi.hoisted(() => ({ spiele: new Map<number, number>() }));
+vi.mock('../../useLaufendeSpiele', () => ({ useLaufendeSpiele: () => laufendDoppel.spiele }));
 
 import { HallentonSeite } from '../HallentonSeite';
 
@@ -61,7 +63,7 @@ const anfordern = (): ReturnType<typeof vi.fn> => doppel.status.testtonAnfordern
 
 beforeEach(() => {
   doppel.darf = true; doppel.abgeschlossen = false;
-  doppel.lautsprecher = { rolle: 'keiner', felder: [], name: null, laufzeit: null, abgeloest: null, anderesTurnier: null, hierAnhoeren: vi.fn(() => Promise.resolve(true)) } as unknown as HallLautsprecher;
+  doppel.lautsprecher = { rolle: 'keiner', felder: [], name: null, laufzeit: null, abgeloest: null, anderesTurnier: null, hierAnhoeren: vi.fn(() => Promise.resolve(true)), lautstaerke: { abpfiff: 100, halbzeit: 100, tor: 100 }, stumm: false } as unknown as HallLautsprecher;
   setzeStatus(voll({ state: 'ready', ageMs: 3000 }));
 });
 afterEach(() => vi.useRealTimers());

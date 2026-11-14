@@ -69,6 +69,8 @@ export interface HallLautsprecher {
    */
   abgeloest: { felder: readonly FeldVerlust[]; um: number } | null;
   abgeloestVerstanden(): void;
+  /** @HT-014: „App war angehalten – Töne können gefehlt haben“ (`laufzeit.warAngehalten`) bestätigen. */
+  angehaltenBestaetigen(): void;
   /** Ein „still“ nach dreimal `kein_recht` beenden und neu melden (auch aus einem anderen Tab des Geräts). */
   erneutVersuchen(): void;
 }
@@ -168,6 +170,6 @@ export function useHallLautsprecher(tid: string): HallLautsprecher {
     stumm: spieler.stumm(), setzeStumm,
     lebenszeichenFehler: rolle === 'diesesTurnier' ? lebenszeichenFehler : null,
     abgeloest: abgeloest?.turnierId === tid ? { felder: abgeloest.felder, um: abgeloest.um } : null,
-    abgeloestVerstanden, erneutVersuchen: () => erneutVersuchen(),
+    abgeloestVerstanden, angehaltenBestaetigen: () => geraetStand().laufzeit?.angehaltenBestaetigen(), erneutVersuchen: () => erneutVersuchen(),
   };
 }

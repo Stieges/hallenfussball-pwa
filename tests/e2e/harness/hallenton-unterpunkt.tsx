@@ -5,6 +5,7 @@
  * Aufruf: `?fall=bereit|nicht-bereit|meldet-sich-nicht|status-unbekannt|testton|gesperrt|leer`.
  */
 import ReactDOM from 'react-dom/client';
+import { useAnhoerenRueckfrage } from '../../../src/features/hallenton/ui/useAnhoerenRueckfrage';
 import { HashRouter } from 'react-router-dom';
 import '../../../src/i18n';
 import '@fontsource-variable/inter';
@@ -47,6 +48,8 @@ const FAELLE: Record<string, Fall> = {
   leer: { stand: 'aktuell', antwort: { ...antwort('ready', 3000), speakers: [] } },
 };
 
+const KEIN_SPIEL: ReadonlyMap<number, number> = new Map();
+
 export function Seite() {
   const fall = new URLSearchParams(window.location.search).get('fall') ?? 'bereit';
   const f = FAELLE[fall] ?? FAELLE.bereit;
@@ -61,6 +64,7 @@ export function Seite() {
     sprecher: f.antwort?.speakers.map((s) => ({ field: s.field, deviceName: s.deviceName })) ?? [],
   });
   const status: Pick<HallStatus, 'stand' | 'antwort' | 'testtonAnfordern'> = { stand: f.stand, antwort: aktuell, testtonAnfordern: () => Promise.resolve({ ok: false, grund: 'netz' }) };
+  const rueckfrage = useAnhoerenRueckfrage(KEIN_SPIEL);
   const breit = window.innerWidth >= 768;
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: cssVars.colors.background, color: cssVars.colors.textPrimary }}>
@@ -69,7 +73,7 @@ export function Seite() {
         <CategoryPage icon="🔊" title="Hallenton" description="Lautsprecher, Abpfiff, Halbzeit">
           <HallentonSeiteAnsicht
             karten={karten} keinLautsprecherImTurnier={karten.every((k) => k.zustand.art === 'keinLautsprecher')} status={status}
-            darfAendern={f.darf ?? true} abgeschlossen={f.abgeschlossen ?? false} hierAnhoeren={() => undefined} geraetName="Laptop Turnierleitung"
+            darfAendern={f.darf ?? true} abgeschlossen={f.abgeschlossen ?? false} hierAnhoeren={() => undefined} geraetName="Laptop Turnierleitung" rueckfrage={rueckfrage}
           />
         </CategoryPage>
       </main>

@@ -6,49 +6,11 @@
  * jede Taste ≥ 44 px (Haupttaste ≥ 56), kein HART-Befund der Messung von `npm run visual:metrics`.
  * Bilder: Ordner aus H49_BILDER (sonst Testausgabe). Läuft nur im Projekt `desktop` am Dev-Server (setzt das Fenster selbst).
  */
-import { mkdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import type { Page } from '@playwright/test';
 import { test, expect } from './helpers/test-fixtures';
-// @ts-expect-error – .mjs ohne Typen; die echte Messfunktion von `npm run visual:metrics`
-import { messeSeite } from '../../scripts/visual-metrics/browser-messung.mjs';
+import { GERAETE, hartBefunde, speichereBild } from './helpers/hallentonPruefstand';
 
-const GERAETE = [
-  { name: '360x640', width: 360, height: 640, art: 'handy', schmal: true },
-  { name: '1280x720', width: 1280, height: 720, art: 'desktop', schmal: false },
-] as const;
-
-interface Grenzwert { id: string; typ: string; wert: unknown; geltung: string[]; typJeArt?: Record<string, string> }
-const GW = JSON.parse(readFileSync(join(process.cwd(), 'scripts/visual-metrics/grenzwerte.json'), 'utf8')) as { grenzwerte: Grenzwert[] };
-
-function grenzen(art: string): { g: Record<string, unknown>; hart: Set<string> } {
-  const g: Record<string, unknown> = {};
-  const hart = new Set<string>();
-  for (const e of GW.grenzwerte) {
-    if (!e.geltung.includes(art) || e.id.startsWith('gate.') || e.id.startsWith('langtext.') || e.id.startsWith('monitor.') || e.id.startsWith('overscan.')) {continue;}
-    g[e.id] = e.wert;
-    if ((e.typJeArt?.[art] ?? e.typ) === 'HART') {hart.add(e.id);}
-  }
-  return { g, hart };
-}
-
-async function hartBefunde(page: Page, art: string): Promise<string[]> {
-  const { g, hart } = grenzen(art);
-  await page.evaluate(() => document.fonts.ready.then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))));
-  const m: { befunde: { metrik: string; selektor: string; ist: string }[] } = await page.evaluate(messeSeite, {
-    art, g, randPx: 0, monitorSchrift: null, ebuPruefen: false, extraInhalte: [],
-    primarySelektor: '[data-primary], [data-variant="primary"]',
-  });
-  // Die Anmelde-Tasten (`auth-*`, AuthSection) gehören nicht zu H4-9: ihr bestehender Befund (Avatar 40×40 px am Handy) steht im Bericht
-  return m.befunde.filter((b) => hart.has(b.metrik) && !b.selektor.includes('data-testid="auth-')).map((b) => `${b.metrik} ${b.selektor} ${b.ist}`);
-}
-
-async function bild(page: Page, outputDir: string, name: string) {
-  const ordner = process.env.H49_BILDER ?? outputDir;
-  mkdirSync(ordner, { recursive: true });
-  await page.screenshot({ path: join(ordner, `${name}.png`), fullPage: true });
-}
-
+const bild = (page: Page, outputDir: string, name: string): Promise<void> => speichereBild(page, outputDir, 'H49_BILDER', name);
 
 const FAELLE = ['leer', 'eingerichtet', 'bereit', 'abloesen', 'abgeloest', 'anleitung', 'wechseln'] as const;
 type Fall = (typeof FAELLE)[number];
@@ -69,7 +31,7 @@ async function pruefeWortlaute(page: Page, fall: Fall): Promise<void> {
       await expect(taste).toHaveText('Ton aktivieren');
       expect((await taste.boundingBox())?.height ?? 0, 'Haupttaste ≥ 56 px').toBeGreaterThanOrEqual(56);
       await expect(page.locator('[data-primary]')).toHaveCount(1);
-      await expect(page.getByTestId('geraet-banner-nichtBereit')).toContainText('Ton nicht aktiv');
+      await expect(page.getByTestId('geraet-banner-tonNichtAktiv')).toContainText('Grund: Ton nicht aktiviert'); // H4-10: großer Zustand statt des kleinen Banners
       break;
     }
     case 'bereit':
@@ -128,6 +90,7 @@ test.describe('@HT-001 @HT-002 @HT-015 @HT-043 @HT-056 H4-9 „Dieses Gerät“ 
             const leiste = await page.getByTestId('hallenton-fussleiste').boundingBox();
             expect(Math.round((leiste?.y ?? 0) + (leiste?.height ?? 0)), 'Fußleiste am unteren Rand').toBe(g.height);
           }
+          await page.evaluate(() => window.scrollTo(0, 0)); // die Anleitung öffnen scrollt die längere Seite (Regler seit H4-10); gemessen wird vom Seitenanfang
           await page.waitForTimeout(400);
           for (const b of await hartBefunde(page, g.art)) {
             testInfo.annotations.push({ type: 'befund-gesamt', description: b });

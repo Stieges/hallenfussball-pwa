@@ -35,6 +35,8 @@ vi.mock('../../../../hooks/useTournamentClosed', () => ({ useTournamentClosed: (
 vi.mock('../../useHallStatus', () => ({ useHallStatus: () => doppel.status }));
 vi.mock('../../useHallLautsprecher', () => ({ useHallLautsprecher: () => doppel.lautsprecher }));
 vi.mock('../../useAngepfiffeneFelder', () => ({ useAngepfiffeneFelder: () => new Set<number>() }));
+const laufendDoppel = vi.hoisted(() => ({ spiele: new Map<number, number>() }));
+vi.mock('../../useLaufendeSpiele', () => ({ useLaufendeSpiele: () => laufendDoppel.spiele }));
 vi.mock('../../lokalesTurnier', () => ({ ladeTurnierLokal: () => Promise.resolve(null) }));
 
 import { HallentonSeite } from '../HallentonSeite';
@@ -66,6 +68,7 @@ function lautsprecherDoppel(teil: Partial<HallLautsprecher> = {}): HallLautsprec
     ausschalten: vi.fn(() => Promise.resolve({ ok: true as const, status: 'released' as const, fields: [1] })),
     tonAktivieren: vi.fn(() => Promise.resolve(true)),
     abgeloestVerstanden: vi.fn(), hierAnhoeren: vi.fn(() => Promise.resolve(true)),
+    lautstaerke: { abpfiff: 100, halbzeit: 100, tor: 100 }, stumm: false, setzeLautstaerke: vi.fn(), setzeStumm: vi.fn(), angehaltenBestaetigen: vi.fn(),
     ...teil,
   } as unknown as HallLautsprecher;
 }
@@ -145,7 +148,7 @@ describe('@HT-001 Der Rechner der Turnierleitung wird Hallen-Lautsprecher für F
     const leiste = screen.getByTestId('hallenton-fussleiste');
     expect(within(leiste).getByTestId('ton-aktivieren')).toHaveTextContent('Ton aktivieren');
     expect(document.querySelectorAll('[data-primary]')).toHaveLength(1);
-    expect(screen.getByTestId('geraet-banner-nichtBereit')).toHaveTextContent('Ton nicht aktiv');
+    expect(screen.getByTestId('geraet-banner-tonNichtAktiv')).toHaveTextContent('Grund: Ton nicht aktiviert');
     await klick('ton-aktivieren');
     expect(doppel.lautsprecher.tonAktivieren).toHaveBeenCalledTimes(1);
   });
@@ -335,7 +338,7 @@ describe('@HT-046 nach dem Turnierende: lesbar, nichts änderbar', () => {
     doppel.lautsprecher = eigenerLautsprecher([1], 'not_activated');
     render(seite());
     expect(screen.getByTestId('geraet-gesperrt')).toHaveTextContent('Nach dem Turnierende lässt sich dieses Gerät nicht mehr zum Hallen-Lautsprecher machen.');
-    expect(screen.queryByRole('switch')).toBeNull();
+    expect(screen.queryByTestId('geraet-schalter-taste')).toBeNull(); // der Schalter „Hallen-Lautsprecher“ (der Schalter „Stumm“ der Regler bleibt lesbar, aber gesperrt)
     expect(screen.queryByTestId('geraet-feld-1')).toBeNull();
     expect(screen.queryByTestId('geraet-name')).toBeNull();
     expect(screen.queryByTestId('hallenton-fussleiste')).toBeNull();
@@ -343,7 +346,7 @@ describe('@HT-046 nach dem Turnierende: lesbar, nichts änderbar', () => {
   it('Gegenbeispiel: laufendes Turnier mit Recht → Schalter da', () => {
     doppel.darf = true; doppel.abgeschlossen = false;
     render(seite());
-    expect(screen.getByRole('switch')).toBeInTheDocument();
+    expect(screen.getByTestId('geraet-schalter-taste')).toBeInTheDocument();
   });
 });
 

@@ -2,7 +2,7 @@
  * DiesesGeraetAbschnitt – „Dieses Gerät“ im Unterpunkt „Hallenton“ (H4-9; @HT-001, @HT-002, @HT-015, @HT-021, @HT-026, @HT-043, @HT-056). Nur Darstellung
  * des Zustands aus `useGeraetAbschnitt` (am Prüfstand der Bilder mit Hand-Daten gefüttert):
  * - Einrichtung (kein Hallen-Lautsprecher im Turnier): die vier Schritte, der Schalter steht in Schritt 2.
- * - Sonst der Abschnitt: Banner (Stand dieses Geräts, Spur „von einem anderen Gerät übernommen“), Gerätename, Schalter, Feldwahl, „Läuft als“.
+ * - Sonst der Abschnitt: großer Stand dieses Geräts (`GeraetZustand`, H4-10), Hinweise (Spur „von einem anderen Gerät übernommen“), Gerätename, Schalter, Feldwahl, „Läuft als“, Regler „Lautstärke dieses Geräts“.
  * - Danach die Anleitung gegen das Schlafenlegen; unten die feste Fußleiste „Ton aktivieren“, solange der Browser noch einen Klick braucht.
  * Nach dem Turnierende (`darfAendern` falsch): lesbar, kein Schalter (@HT-046).
  */
@@ -16,6 +16,8 @@ import { AnleitungSchlafenlegen } from './AnleitungSchlafenlegen';
 import { erkenneBrowser } from './browserErkennung';
 import { EinrichtungSchritte } from './EinrichtungSchritte';
 import { GeraetRueckfragen } from './GeraetRueckfragen';
+import { GeraetZustand } from './GeraetZustand';
+import { LautstaerkeRegler } from './LautstaerkeRegler';
 import { GeraetSchalter } from './GeraetSchalter';
 import { LEISTE_PLATZ, TonAktivierenLeiste } from './TonAktivierenLeiste';
 
@@ -39,17 +41,25 @@ function Banner({ abschnitt }: { abschnitt: GeraetAbschnitt }): ReactElement {
   const { t } = useTranslation('hallenton');
   return (
     <>
-      {abschnitt.banner.map((b) => (
-        <InlineNotice
-          key={b.art}
-          tone={b.ton}
-          data-testid={`geraet-banner-${b.art}`}
-          footer={b.verstehen ? <div><Button variant="secondary" size="sm" onClick={abschnitt.verstanden} data-testid="geraet-verstanden">{t('geraet.verstanden')}</Button></div> : undefined}
-        >
-          <strong>{b.titel}</strong>
-          <span>{b.text}</span>
-        </InlineNotice>
-      ))}
+      {abschnitt.banner.map((b) => {
+        if (b.gross) {
+          return <GeraetZustand key={b.art} banner={b} />;
+        }
+        const taste = b.aktion === 'bestaetigen' ? abschnitt.angehaltenBestaetigen : abschnitt.verstanden;
+        return (
+          <InlineNotice
+            key={b.art}
+            tone={b.ton}
+            data-testid={`geraet-banner-${b.art}`}
+            footer={b.aktion === null ? undefined : (
+              <div><Button variant="secondary" size="sm" onClick={taste} data-testid={b.aktion === 'bestaetigen' ? 'geraet-angehalten-bestaetigen' : 'geraet-verstanden'}>{b.aktion === 'bestaetigen' ? t('geraet.bestaetigen') : t('geraet.verstanden')}</Button></div>
+            )}
+          >
+            <strong>{b.titel}</strong>
+            {b.text === '' ? null : <span>{b.text}</span>}
+          </InlineNotice>
+        );
+      })}
     </>
   );
 }
@@ -104,6 +114,7 @@ export function DiesesGeraetAbschnitt({ abschnitt: a, darfAendern, leisteLinks =
             <Banner abschnitt={{ ...a, banner: sichtbareBanner }} />
             {darfAendern ? schalter(true) : <p style={textStil} data-testid="geraet-gesperrt">{t('geraet.gesperrt')}</p>}
             <LaeuftAls installiert={a.installiert} />
+            {a.regler === null ? null : <LautstaerkeRegler {...a.regler} />}
           </div>
           {anleitung}
         </section>
