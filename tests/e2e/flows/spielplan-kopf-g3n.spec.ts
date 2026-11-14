@@ -195,9 +195,12 @@ test.describe('@ZP-113 Kopf der Turnierleitung mit eigener Saat', () => {
     });
     for (const [w, h, eineZeile] of [[1280, 720, true], [390, 844, false], [360, 640, false]] as const) {
       await page.setViewportSize({ width: w, height: h });
+      await page.goto('about:blank');
       await page.goto('/#/tournament/nikolaus-vor-anpfiff/schedule');
       await expect(page.getByTestId('schedule-list-duration')).toBeVisible({ timeout: 25_000 });
       await animationenFertig(page);
+      // Frisch geladen je Breite (kein Rest der vorigen Breite); die Seitenbreite braucht nach dem Laden einen Augenblick
+      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), { message: `${String(w)} px: kein waagerechtes Scrollen (Seite nicht breiter als das Fenster)` }).toBe(true);
       const m = await messen();
       expect(m.textknoten, `${String(w)} px: kein Trenner als loser Text`).toBe(0);
       expect(m.breiter, `${String(w)} px: kein waagerechtes Scrollen`).toBe(false);
