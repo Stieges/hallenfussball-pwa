@@ -163,6 +163,17 @@ export function generateLiveUrl(shareCode: string, baseUrl?: string): string {
 }
 
 /**
+ * Kurze Zuschauer-Adresse ohne „#/“ (`https://<host>/live/CODE`), @OB-085/@ZM-208.
+ * Die App führt sie beim Start auf die Hash-Route um (`shortLiveRedirect`); `vercel.json` und der Service Worker
+ * liefern `/live/CODE` an `index.html` aus. Die Adresse im PDF bleibt `generateLiveUrl`.
+ */
+export function generateShortLiveUrl(shareCode: string, baseUrl?: string): string {
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty baseUrl should use window.location.origin
+  const origin = baseUrl || (typeof window !== 'undefined' ? window.location.origin : '');
+  return `${origin}/live/${shareCode}`;
+}
+
+/**
  * Generate tournament URL
  *
  * @param tournamentId - Tournament ID
