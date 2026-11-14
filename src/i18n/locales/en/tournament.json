@@ -1257,7 +1257,7 @@
     "notLoadedText": "The schedule could not be loaded. Check your connection and try again.",
     "reloadAction": "Reload",
     "reloading": "Loading …",
-    "stillEmpty": "The server has not delivered a schedule yet."
+    "stillEmpty": "Still no schedule. If in doubt, ask the tournament management."
   },
   "rights": {
     "leadOnlyHint": "Only the tournament management can change this",

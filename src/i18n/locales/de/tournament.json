@@ -1257,7 +1257,7 @@
     "notLoadedText": "Der Spielplan konnte nicht geladen werden. Prüfe die Verbindung und lade erneut.",
     "reloadAction": "Erneut laden",
     "reloading": "Wird geladen …",
-    "stillEmpty": "Der Server hat noch keinen Spielplan geliefert."
+    "stillEmpty": "Weiterhin kein Spielplan da. Frag im Zweifel die Turnierleitung."
   },
   "rights": {
     "leadOnlyHint": "Ändern nur durch die Turnierleitung",
