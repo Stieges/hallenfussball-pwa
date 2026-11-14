@@ -151,7 +151,10 @@ export function useTournamentWizard(
   const [visitedSteps, setVisitedSteps] = useState<Set<number>>(initialVisitedSteps);
   const [stepErrors, setStepErrors] = useState<Record<number, string[]>>({});
   const [scheduleError, setScheduleError] = useState<string | null>(null);
-  const lastSavedDataRef = useRef<string>('');
+  // @W5-039: ein geöffnetes Turnier gilt als gespeichert, bis etwas geändert wird -- Öffnen, „Weiter“ ohne Änderung und
+  // Schließen des Tabs erzeugen keinen Schreibauftrag. Ein neues Turnier (nichts geöffnet) beginnt leer und speichert beim ersten Inhalt.
+  const [openedSnapshot] = useState(() => (existingTournament ? JSON.stringify(existingTournament) : ''));
+  const lastSavedDataRef = useRef<string>(openedSnapshot);
 
   // Check if tournament has results
   const hasResults = useMemo(() => {

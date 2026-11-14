@@ -105,7 +105,7 @@ describe('@W3-030 es gibt genau einen Kopierweg (Dashboard, Admin Center und Pro
     const users = files.filter((file) => readFileSync(file, 'utf8').includes('buildCopiedTournament('));
 
     expect(users.map((file) => file.slice(SRC.length + 1))).toEqual(['hooks/useCopyTournament.ts']);
-  });
+  }, 30_000); // Quelltext-Scan: unter Rechnerlast über der Vorgabe von 5 s (Commit-Prüfung 13.11. zweimal daran gescheitert), wie die übrigen Wächter (@TA-021)
 
   it.each(['App.tsx', 'features/tournament-admin/categories/Settings/index.tsx'])('@W3-030 %s kopiert über useCopyTournament', (file) => {
     expect(readFileSync(join(SRC, file), 'utf8')).toContain('useCopyTournament(');

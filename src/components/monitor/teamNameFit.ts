@@ -143,7 +143,8 @@ export function useTeamNameFit(
 
     const passt = (text: string, px: number): boolean => {
       messfeld.style.fontSize = `${px}px`;
-      messfeld.textContent = text;
+      // Umbruchstelle nach „/“ wie in der Anzeige (`SlashBreaks`, @ZM-207): sonst misst das Feld breiter als die Zeile
+      messfeld.textContent = text.replace(/\/(?=[^\s/])/g, '/\u200b');
       const zeilenHoehe = px * TEAM_NAME_ZEILENHOEHE;
       return messfeld.offsetHeight <= TEAM_NAME_MAX_ZEILEN * zeilenHoehe + 1
         && messfeld.scrollWidth <= messfeld.clientWidth + 1;

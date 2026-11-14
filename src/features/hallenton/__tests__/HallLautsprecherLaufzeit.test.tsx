@@ -204,7 +204,7 @@ describe('useHallLautsprecher(tid) – Schnittstelle für H4', () => {
     expect(result.current.felder).toEqual([]);
   });
 
-  it('@HT-023 hierAnhoeren spielt den Ton nur auf diesem Gerät; Lautstärke und Stumm bleiben auf dem Gerät', async () => {
+  it('@HT-023 hierAnhoeren spielt den Ton nur auf diesem Gerät; Die Lautstärke bleibt auf dem Gerät', async () => {
     const { result } = renderHook(() => useHallLautsprecher(TID));
     act(() => { result.current.setzeLautstaerke('halbzeit', 50); });
     expect(result.current.lautstaerke).toEqual({ abpfiff: 100, halbzeit: 50, tor: 100 }); // @HT-023: Regler Torhymne seit 07.11.
@@ -214,8 +214,6 @@ describe('useHallLautsprecher(tid) – Schnittstelle für H4', () => {
     expect(kontext.quellen).toHaveLength(1);
     expect(kontext.gains[0].gain.value).toBe(0.5);
     expect(worker.erzeugt).toBe(0);
-    act(() => { result.current.setzeStumm(true); });
-    expect(result.current.stumm).toBe(true);
     expect(JSON.parse(localStorage.getItem('hallenton:lautstaerke') ?? '{}')).toEqual({ abpfiff: 100, halbzeit: 50, tor: 100 });
   });
 

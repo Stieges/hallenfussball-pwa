@@ -5,7 +5,9 @@
  *  1. nur mit Netz (@FU-117: sonst „Geht nur mit Netz“, nichts vorgemerkt -- ein verspätet gesendeter Eintrag könnte ein
  *     weiterlaufendes Spiel beenden),
  *  2. Hinweis, wenn ein anderes Gerät das Feld steuert (@FU-115, `field_control_state`), in der Rückfrage oben,
- *  3. Rückfrage mit Restzeit bzw. „Spielzeit abgelaufen“ (@FU-112/@FU-114); „Nein“ ändert nichts,
+ *  3. Rückfrage mit Restzeit bzw. „Spielzeit abgelaufen“ (@FU-112/@FU-114); „Nein“ ändert nichts. Weicht der Eintrag von den im
+ *     Cockpit gebuchten Toren ab, steht darin zusätzlich die Warnung (@FU-139, `bookedScoreMismatch`); gespeichert wird bei „Beenden“ der Eintrag,
+ *     die gebuchten Tore bleiben im Protokoll,
  *  4. K.-o.-Unentschieden: Strafstoßergebnis wie beim Direkteintrag (@FU-094),
  *  5. vor dem Senden erneut abgleichen: hat sich der Stand inzwischen geändert (Tor aus dem Cockpit), wird nichts
  *     gespeichert, und die Turnierleitung sieht „inzwischen von Tom geändert (jetzt 3:1)“ (@FU-116); der Server prüft
@@ -20,7 +22,7 @@
  *     → Update-Hinweis. Scheitert der Abgleich nach der Annahme, keine Fehlermeldung (das Spiel ist beendet).
  * Rein bis auf die übergebenen Abhängigkeiten (kein React).
  */
-import { effectiveScoreFor, type ErrorCode, type MatchState } from '../../../core/match';
+import { bookedScoreMismatch, effectiveScoreFor, type ErrorCode, type MatchState } from '../../../core/match';
 import { MatchCommandRejectedError, type MatchCommands, type MatchEngine, type OutboxSender } from '../../../core/match/client';
 import { buildEndWithResultEvent } from '../../../core/match/client/matchCommandsEnd';
 import { isClientOutdated } from '../../../core/repositories/appendMatchEventsRpc';
@@ -37,6 +39,8 @@ export interface EndPrompt {
   controlledBy: ControlledBy | null;
   /** @FU-081 (B-49): zusätzlich „Spielleitung übernehmen“ anbieten (Antwort `'takeover'`). */
   takeOver?: boolean;
+  /** @FU-139: die aus den im Cockpit gebuchten Toren berechnete Stand („1:0“), wenn er vom eingetragenen abweicht; sonst `null`. */
+  bookedScore?: string;
 }
 
 /** Halter für die Anzeige: Feldnummer und Text wie `fieldHolderText` („Tom (Handy)“, ohne Namen `null`). */
@@ -92,12 +96,14 @@ export async function endMatchFromSchedule(input: EndMatchInput): Promise<string
   const basedOn = state.lastScoreEventId;
   const holder = input.field !== null ? await input.readHolder(input.field) : null;
   const restSeconds = endPromptRestSeconds(state, engine.serverNow());
+  const booked = bookedScoreMismatch(state, entry.ctx, input.entered);
   const answer = await input.ask({
     kind: 'end',
     matchNumber: entry.meta.number,
     score: `${input.entered.home}:${input.entered.away}`,
     rest: restSeconds === null ? null : formatRest(restSeconds),
     controlledBy: holder ? { field: holder.field, holder: holder.holder } : null,
+    ...(booked === null ? {} : { bookedScore: booked }),
   });
   if (answer === null) {
     return null; // „Nein“: Spiel läuft unverändert weiter

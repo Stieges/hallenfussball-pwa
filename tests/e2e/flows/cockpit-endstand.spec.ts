@@ -60,11 +60,16 @@ async function pfeifeAb(page: Page): Promise<void> {
   await abpfiffHalten(page);
 }
 
+/** Handy = unter 768 px Breite (derselbe Bruch wie `useBreakpoint().isMobile`). */
+const amHandy = (page: Page): boolean => (page.viewportSize()?.width ?? 1024) < 768;
+
 async function pruefeEndstand(page: Page): Promise<void> {
   await expect(page.getByTestId('scoreboard-state')).toContainText('Ende');
   await expect(page.getByTestId('team-name-home')).toHaveText('FC Nord');
   await expect(page.getByTestId('scoreboard-score')).toHaveText('1:0');
-  await expect(page.getByTestId('scoreboard-quittung')).toHaveText('Abgepfiffen · 1:0 gespeichert');
+  // @SL-240: am Handy (unter 768 px) steht die Angabe des Uhr-Bereichs („gespielt 0:02 von 12:00“) immer in der Quittungszeile; sonst bleibt sie wie in @SL-152
+  if (amHandy(page)) { await expect(page.getByTestId('scoreboard-quittung')).toHaveText(/^Abgepfiffen · 1:0 gespeichert · gespielt \d+:\d{2} von 12:00$/); }
+  else { await expect(page.getByTestId('scoreboard-quittung')).toHaveText('Abgepfiffen · 1:0 gespeichert'); }
   // nie die Anstoßzeit oder 0:0 des nächsten Spiels neben „Ende“
   await expect(page.getByTestId('scoreboard-clock')).not.toContainText('Anstoß');
   await expect(page.getByTestId('scoreboard-box-links')).toHaveText('1');
@@ -118,8 +123,14 @@ test.describe('Cockpit: Endstand nach dem Abpfiff (B-10a)', () => {
     await pruefeEndstand(page);
     // @SL-169: kein Abschnitt neben „Ende“, „Gespielt“ statt „Spielzeit“, vorzeitig mit „von 12:00“ (zwei Abschnitte zu 6 Minuten)
     await expect(page.getByTestId('scoreboard')).not.toContainText(/Halbzeit/);
-    await expect(page.getByTestId('scoreboard-clock')).toContainText('Gespielt');
-    await expect(page.getByTestId('scoreboard-clock-sub')).toHaveText('von 12:00');
+    if (amHandy(page)) {
+      // @SL-240: am Handy kein Uhr-Bereich, die Angabe steht in der Quittungszeile
+      await expect(page.getByTestId('scoreboard-clock-rest')).toHaveCount(0);
+      await expect(page.getByTestId('scoreboard-quittung')).toContainText('gespielt');
+    } else {
+      await expect(page.getByTestId('scoreboard-clock')).toContainText('Gespielt');
+      await expect(page.getByTestId('scoreboard-clock-sub')).toHaveText('von 12:00');
+    }
     // @SL-048: Zusammenfassung statt Tasten
     await expect(page.getByTestId('team-summary-home')).toContainText('Tore (1)');
     await expect(page.getByTestId('team-summary-away')).toContainText('Tore (0): keine');

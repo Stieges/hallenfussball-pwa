@@ -32,6 +32,10 @@ import {
   E2E_ZWEITES_TURNIER_ID,
   E2E_ZWEITES_TURNIER_TITLE,
   ENGINE_CUP_SEED_NOW_START_OFFSET_MS,
+  E2E_LEIBCHEN_SHARE_CODES,
+  E2E_LEIBCHEN_TRIKOT,
+  leibchenMonitorId,
+  type LeibchenCupSlug,
   engineCupIds,
   engineEventId,
   legacyCupIds,
@@ -245,7 +249,29 @@ async function seedOneEngineCup(
   if (cup.slug === 'MONZEITSTRAFE') {
     tournament.publishedAt = new Date().toISOString(); // Backstop von make_tournament_public()
   }
+  if (cup.slug in E2E_LEIBCHEN_SHARE_CODES) {
+    // Leibchen 2b-2 (leibchen.cloud.spec.ts): gleiche Trikotfarbe, Feld-Monitor mit Live-Folie, Zuschauer-Seite über festen Share-Code
+    const slug = cup.slug as LeibchenCupSlug;
+    const nowIso = new Date().toISOString();
+    tournament.teams = tournament.teams.map((team) => ({ ...team, colors: { primary: E2E_LEIBCHEN_TRIKOT } }));
+    tournament.publishedAt = nowIso;
+    tournament.monitors = [{
+      id: leibchenMonitorId(slug), name: 'Feld 1', defaultSlideDuration: 15, transition: 'none', transitionDuration: 0, theme: 'dark', performanceMode: 'high',
+      slides: [{ id: e2eUuid(`${leibchenMonitorId(slug)}:slide:live-field-1`), type: 'live', config: { fieldId: 'field-1' }, duration: null, order: 0 }],
+      createdAt: nowIso, updatedAt: nowIso,
+    }];
+  }
   await ownerRepo.save(tournament);
+  if (cup.slug in E2E_LEIBCHEN_SHARE_CODES) {
+    const { error: publicError } = await deps.ownerClient.rpc('make_tournament_public', { tournament_id: tournament.id });
+    if (publicError) {
+      throw new Error(`make_tournament_public(${cup.slug}): ${publicError.message}`);
+    }
+    const { error: codeError } = await deps.admin.from('tournaments').update({ share_code: E2E_LEIBCHEN_SHARE_CODES[cup.slug as LeibchenCupSlug] }).eq('id', tournament.id);
+    if (codeError) {
+      throw new Error(`Fester Share-Code ${cup.slug}: ${codeError.message}`);
+    }
+  }
   if (cup.slug === 'MONZEITSTRAFE') {
     // @ZM-184: Zuschauer-Seite über einen festen Share-Code (Muster Turniertag-Cup)
     const { error: publicError } = await deps.ownerClient.rpc('make_tournament_public', { tournament_id: tournament.id });

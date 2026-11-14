@@ -45,6 +45,7 @@ vi.mock('../../features/tournament-management/MonitorEditor', () => ({ MonitorEd
 // Der Vorschlag „Turnier abschließen“ im Spielplan (@LZ-007) braucht den Datenzugang; dieser Test prüft ihn nicht
 vi.mock('../../features/tournament-finish/components/FinishTournamentSection', () => ({ FinishTournamentSection: () => null }));
 vi.mock('../../features/tournament-management/ScheduleTab', () => ({ ScheduleTab: () => <div data-testid="schedule-stub" /> }));
+vi.mock('../../features/auth/hooks/useCan', () => ({ useCan: () => true })); // der Hinweis „Spielplan fehlt“ fragt das Recht; hier nicht Gegenstand
 vi.mock('../../components/layout/AuthSection', () => ({ AuthSection: () => <div data-testid="auth-stub" /> }));
 vi.mock('../../features/tournament-management/components/EngineOutboxHeaderStatus', () => ({ EngineOutboxHeaderStatus: () => null }));
 vi.mock('../../features/klaerungsliste/KlaerungslisteEinstieg', () => ({ KlaerungslisteEinstieg: () => null })); // B-50: braucht AuthProvider, hier nicht Gegenstand

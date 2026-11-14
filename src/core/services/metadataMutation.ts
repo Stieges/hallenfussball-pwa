@@ -14,13 +14,19 @@ export interface MetadataMutationPayload {
     metadata: Partial<Tournament>;
     /** Teilen-Rückfall: nur schreiben, wenn die Cloud noch keinen Freigabe-Code hat. */
     onlyIfUnshared?: boolean;
+    /** @W5-040: Papierkorb (`deletedAt` = Zeitpunkt) oder Wiederherstellen (`null`); ändert nur die Löschmarke. `null` überlebt die Warteschlange, ein fehlender Schlüssel nicht. */
+    trash?: { deletedAt: string | null };
 }
 
 export async function executeMetadataMutation(
     supabaseRepo: SupabaseRepository,
     localRepo: LocalStorageRepository,
-    { tournamentId, metadata, onlyIfUnshared }: MetadataMutationPayload,
+    { tournamentId, metadata, onlyIfUnshared, trash }: MetadataMutationPayload,
 ): Promise<void> {
+    if (trash !== undefined) {
+        await supabaseRepo.setTrashed(tournamentId, trash.deletedAt, metadata);
+        return;
+    }
     if (onlyIfUnshared !== true || typeof metadata.shareCode !== 'string') {
         await supabaseRepo.updateTournamentMetadata(tournamentId, metadata);
         return;
@@ -51,5 +57,6 @@ export function mergeMetadataPayloads(existing: MetadataMutationPayload, incomin
     const location = existing.metadata.location && incoming.metadata.location
         ? { location: { ...existing.metadata.location, ...incoming.metadata.location } }
         : {};
-    return { ...incoming, metadata: { ...existing.metadata, ...incoming.metadata, ...location } };
+    const trash = incoming.trash ?? existing.trash;
+    return { ...incoming, ...(trash === undefined ? {} : { trash }), metadata: { ...existing.metadata, ...incoming.metadata, ...location } };
 }

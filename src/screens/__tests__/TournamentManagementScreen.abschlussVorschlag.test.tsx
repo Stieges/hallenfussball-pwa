@@ -10,7 +10,7 @@ import { ToastProvider } from '../../components/ui/Toast';
 vi.mock('../../hooks/useAutoRecompletion', () => ({ useAutoRecompletion: () => undefined }));
 vi.mock('../../hooks/useTournamentManager', () => ({
   useTournamentManager: () => ({
-    tournament: { id: 't1', name: 'Wintercup', teams: [], matches: [], groups: [], numberOfGroups: 1 },
+    tournament: { id: 't1', name: 'Wintercup', teams: [], matches: [{ id: 'm1' }], groups: [], numberOfGroups: 1 },
     schedule: { allMatches: [], rounds: [] }, currentStandings: [], isLoading: false, loadingError: null,
     handleTournamentUpdate: vi.fn(), applyRemote: vi.fn(), scheduleService: {},
   }),

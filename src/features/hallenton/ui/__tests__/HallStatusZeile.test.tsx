@@ -37,7 +37,15 @@ const doppel = vi.hoisted(() => ({
 vi.mock('../../../auth/hooks/useCan', () => ({ useCan: () => doppel.darf }));
 vi.mock('../../../../hooks/useKioskRoute', () => ({ useKioskRoute: () => doppel.kiosk }));
 vi.mock('../../useHallStatus', () => ({ useHallStatus: () => { doppel.statusAufrufe += 1; return doppel.status; } }));
-vi.mock('../../useAngepfiffeneFelder', () => ({ useAngepfiffeneFelder: () => doppel.angepfiffen }));
+const laufendAusFeldern = vi.hoisted(() => {
+  const zwischenspeicher = new WeakMap<ReadonlySet<number>, ReadonlyMap<number, number>>();
+  return (felder: ReadonlySet<number>): ReadonlyMap<number, number> => {
+    const gemerkt = zwischenspeicher.get(felder) ?? new Map([...felder].map((feld) => [feld, 1] as const));
+    zwischenspeicher.set(felder, gemerkt);
+    return gemerkt;
+  };
+});
+vi.mock('../../useLaufendeSpiele', () => ({ useLaufendeSpiele: () => laufendAusFeldern(doppel.angepfiffen) }));
 vi.mock('../../useHallLautsprecher', () => ({ useHallLautsprecher: () => doppel.lautsprecher }));
 const geraet = vi.hoisted(() => ({ einschaltung: null as { turnierId: string; felder: number[]; name: string } | null }));
 vi.mock('../../lautsprecherGeraet', () => ({
@@ -138,17 +146,17 @@ describe('R2 @HT-035 der Adapter gibt die angepfiffenen Felder an hallAnzeige we
   });
 });
 
-describe('G1 das Ziel der Pillen ist bis H4-8 kein toter Klick', () => {
+describe('G1 H4-8 das Ziel der Pillen ist der Unterpunkt „Hallenton“', () => {
   const Ort = () => <span data-testid="ort">{useLocation().pathname}</span>;
-  it('das Ziel ist eine echte Route (Admin-Hub des Turniers), nicht eine unbekannte Kategorie', () => {
-    expect(hallentonZiel('t1')).toBe('/tournament/t1/admin');
-    expect(matchRoute(hallentonZiel('t1'))).toMatchObject({ name: 'admin', params: { tournamentId: 't1' } });
+  it('das Ziel zeigt auf den Unterpunkt „Hallenton“ (echte Route /admin/:category)', () => {
+    expect(hallentonZiel('t1')).toBe('/tournament/t1/admin/hallenton');
+    expect(matchRoute(hallentonZiel('t1'))).toMatchObject({ name: 'admin', params: { tournamentId: 't1', category: 'hallenton' } });
   });
-  it('ein Klick auf „Lautsprecher Feld 1 nicht bereit“ wechselt die Adresse zum Hub', () => {
+  it('ein Klick auf „Lautsprecher Feld 1 nicht bereit“ wechselt die Adresse zum Unterpunkt „Hallenton“', () => {
     doppel.status = status({ 1: { art: 'nichtBereit', grund: 'background', pruefen: false } });
     zeige(<><HallStatusZeile tournamentId="t1" /><Ort /></>);
     fireEvent.click(screen.getByRole('button', { name: 'Lautsprecher Feld 1 nicht bereit' }));
-    expect(screen.getByTestId('ort').textContent).toBe('/tournament/t1/admin');
+    expect(screen.getByTestId('ort').textContent).toBe('/tournament/t1/admin/hallenton');
   });
 });
 

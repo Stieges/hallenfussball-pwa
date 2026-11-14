@@ -10,6 +10,7 @@ import { getGroupDisplayName } from '../../utils/displayNames';
 import { generateTeamId } from '../../utils/idGenerator';
 import { sanitizeTeamName } from '../../core/utils/textSanitizer';
 import { activeTeams } from './utils/replanTeams';
+import { BibColorsSettings } from './components/BibColorsSettings';
 import styles from './Step4_Teams.module.css';
 
 interface Step4Props {
@@ -222,6 +223,8 @@ export const Step4_Teams: React.FC<Step4Props> = ({
       <h2 style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.xl, margin: '0 0 24px 0' }}>
         {t('step4.title')}
       </h2>
+
+      <BibColorsSettings formData={formData} onUpdate={onUpdate} />
 
       <div className={styles.buttonRow}>
         <Button onClick={onAddTeam} icon={<Icons.Plus />} variant="secondary" data-testid="wizard-add-team">

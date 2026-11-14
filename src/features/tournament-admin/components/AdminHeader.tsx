@@ -127,6 +127,7 @@ export function AdminHeader({
   onSearch,
   tournamentId,
   showSyncStatus = false,
+  ohneLautsprecherEintrag = false,
 }: AdminHeaderProps) {
   const { t } = useTranslation('admin');
   const { showError: showToastError } = useToast();
@@ -268,7 +269,7 @@ export function AdminHeader({
       <AwaitingServerCopyLine tournamentId={tournamentId} stickyTop={ADMIN_LAYOUT.headerHeight} zIndex={cssVars.zIndex.raised} />
     )}
     {/* H4-5 (@HT-045): Statuszeile des Hallentons unter dem Kopf, nur mit Recht manageScreens und nur mit Lautsprecher */}
-    {tournamentId && <HallStatusZeile tournamentId={tournamentId} />}
+    {tournamentId && <HallStatusZeile tournamentId={tournamentId} ohneLautsprecher={ohneLautsprecherEintrag} />}
     </>
   );
 }

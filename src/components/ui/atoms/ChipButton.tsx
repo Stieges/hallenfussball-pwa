@@ -23,6 +23,8 @@ export interface ChipButtonProps {
   borderSelected?: 'thin' | 'medium';
   /** Schriftstärke des ungewählten Chips (gewählt immer fett) */
   idleWeight?: 'normal' | 'medium';
+  /** Gesperrt (nicht antippbar, `aria-disabled`, gedämpft; die Sperre sagt der Aufrufer in Worten). */
+  disabled?: boolean;
   ref?: Ref<HTMLButtonElement>;
   'aria-label'?: string;
   'data-testid'?: string;
@@ -54,7 +56,7 @@ function style(p: Required<Pick<ChipButtonProps, 'selected' | 'look' | 'radius' 
 }
 
 export function ChipButton({
-  selected, onClick, children, look = 'tint', radius = 'md', size = 'comfortable', padX = 'md', fontSize = 'md', borderSelected = 'thin', idleWeight = 'medium', ref, ...rest
+  selected, onClick, children, look = 'tint', radius = 'md', size = 'comfortable', padX = 'md', fontSize = 'md', borderSelected = 'thin', idleWeight = 'medium', disabled = false, ref, ...rest
 }: ChipButtonProps) {
   return (
     <button
@@ -64,7 +66,8 @@ export function ChipButton({
       aria-label={rest['aria-label']}
       data-testid={rest['data-testid']}
       data-overlap-ok={rest['data-overlap-ok']}
-      style={style({ selected, look, radius, size, padX, fontSize, borderSelected, idleWeight })}
+      style={{ ...style({ selected, look, radius, size, padX, fontSize, borderSelected, idleWeight }), ...(disabled ? { opacity: cssVars.opacity.disabled, cursor: 'not-allowed' } : {}) }}
+      disabled={disabled}
       onClick={onClick}
     >
       {look === 'tint' && selected ? <Icons.Check size={iconSizeValues.sm} color={cssVars.colors.primary} /> : null}

@@ -26,6 +26,7 @@ vi.mock('../../hooks/useTournamentManager', () => ({
 vi.mock('../../features/tournament-management/standings/StandingTieProvider', () => ({ StandingTieProvider: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 vi.mock('../../features/tournament-management/group-completion/GroupCompletionProvider', () => ({ GroupCompletionProvider: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 vi.mock('../../hooks/useIsMobile', () => ({ useIsMobile: () => geraet.mobil }));
+vi.mock('../../features/auth/hooks/useCan', () => ({ useCan: () => true })); // der Hinweis „Spielplan fehlt“ fragt das Recht; hier nicht Gegenstand
 vi.mock('../../components/layout/AuthSection', () => ({ AuthSection: () => null }));
 vi.mock('../../features/klaerungsliste/KlaerungslisteEinstieg', () => ({ KlaerungslisteEinstieg: () => null })); // B-50: braucht AuthProvider, hier nicht Gegenstand
 // Der Vorschlag „Turnier abschließen“ im Spielplan (@LZ-007) braucht den Datenzugang; dieser Test prüft ihn nicht

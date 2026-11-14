@@ -17,7 +17,7 @@ import { installiereSaat, leseSaat } from '../../../scripts/visual-metrics/saat/
 
 const BILDER = process.env.ZM088_BILDER;
 const PHASE = process.env.ZM088_PHASE ?? 'nachher';
-const NAME_ZELLE = '.standings-table .mobile-view tbody tr td:nth-child(2) > div';
+const NAME_ZELLE = '.standings-table .mobile-view tbody tr td:nth-child(2) > div > span[data-teamname]';
 
 interface Messung {
   namen: number;
@@ -79,7 +79,7 @@ async function messe(page: Page): Promise<Messung> {
         }
         out.breitestesWort = Math.max(out.breitestesWort, r.getBoundingClientRect().width);
       }
-      const td = div.parentElement!;
+      const td = div.closest('td')!;
       const textBreite = div.getBoundingClientRect().width;
       out.teamspalte.push(Math.round(td.getBoundingClientRect().width));
       if (textBreite < 1) { out.zu_schmal.push(roh.trim()); }
@@ -158,7 +158,7 @@ const VOLL = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921';
 
 test('@ZM-169 Handy 360: Gruppentabelle zeigt „SG FF Nordheim-Süd 1921“ und „TSV Ost“, Spielkarten denselben Namen voll (Ausnahme zu @ZM-148)', async ({ page }) => {
   await oeffne(page, 360, 'MESS26');
-  const namen = await page.locator('.standings-table .mobile-view tbody tr td:nth-child(2) > div').evaluateAll(
+  const namen = await page.locator('.standings-table .mobile-view tbody tr td:nth-child(2) > div > span[data-teamname]').evaluateAll(
     (l) => l.map((e) => Array.from(e.childNodes).filter((n) => n.nodeType === Node.TEXT_NODE).map((n) => n.textContent ?? '').join('').trim()),
   );
   expect(namen).toContain('SG FF Nordheim-Süd 1921');

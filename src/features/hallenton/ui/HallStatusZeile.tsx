@@ -13,7 +13,8 @@ import { AuthContext } from '../../auth/context/authContextInstance';
 import { useCan } from '../../auth/hooks/useCan';
 import { hallAnzeige, type HallAnzeige } from '../hallAnzeige';
 import { useHallLautsprecher } from '../useHallLautsprecher';
-import { useAngepfiffeneFelder } from '../useAngepfiffeneFelder';
+import { useLaufendeSpiele } from '../useLaufendeSpiele';
+import { useAnderesFensterTont } from '../useAnderesFensterTont';
 import { useHallStatus } from '../useHallStatus';
 import { baueStatusEintraege, hallentonZiel } from './hallStatusEintraege';
 import { useStatusZeileHost } from './StatusZeileOrt';
@@ -76,14 +77,17 @@ function HallStatusZeileMitRecht({ tournamentId, ohneLautsprecher = false, probe
     () => (laufzeit === null ? null : { felder, rolle: laufzeit.rolle, zustandJeFeld: laufzeit.zustandJeFeld }),
     [laufzeit, felder],
   );
+  const anderesFenster = useAnderesFensterTont(lokal);
   // „Ein Lautsprecher war bekannt“ gilt je Turnier für die Sitzung (`useHallStatus`) oder wenn dieses Gerät selbst Lautsprecher ist (@HT-041, @HT-038)
-  const angepfiffen = useAngepfiffeneFelder(tournamentId, status.antwort);
+  const laufendeSpiele = useLaufendeSpiele(tournamentId, status.antwort);
+  const angepfiffen = useMemo(() => new Set(laufendeSpiele.keys()), [laufendeSpiele]);
   const anzeige = useMemo(
     () => hallAnzeige({
       server: { stand: status.stand, felder: status.felder, antwort: status.antwort }, lokal, angepfiffen,
       lautsprecherBekannt: status.lautsprecherBekannt || (lokal !== null && lokal.felder.length > 0),
+      anderesFensterTont: anderesFenster,
     }),
-    [status.stand, status.felder, status.antwort, status.lautsprecherBekannt, lokal, angepfiffen],
+    [status.stand, status.felder, status.antwort, status.lautsprecherBekannt, lokal, angepfiffen, anderesFenster],
   );
   const aktivieren = useCallback(() => { void tonAktivieren(); }, [tonAktivieren]);
   return <HallStatusZeileAnsicht anzeige={anzeige} tournamentId={tournamentId} tonAktivieren={aktivieren} ohneLautsprecher={ohneLautsprecher} probe={probe} />;

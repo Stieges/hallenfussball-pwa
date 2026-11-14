@@ -296,6 +296,7 @@ export const cssColors = {
   // Management & Ranking Colors
   // ---------------------------------------------------------------------------
   rankingHighlightBg: 'var(--color-ranking-highlight-bg)',
+  rankingNegativeText: 'var(--color-ranking-negative-text)',
   rankingPlacementBg: 'var(--color-ranking-placement-bg)',
   rankingExpandedBg: 'var(--color-ranking-expanded-bg)',
 

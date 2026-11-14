@@ -14,6 +14,7 @@ export {
   type EventResult,
   type ReduceResult,
 } from './reduceMatch';
+export { bookedScoreMismatch } from './bookedScore';
 export { toServerState, type ServerMatchState } from './serverState';
 export {
   activePenalties, elapsedAt, ergaenzenTeams, penaltyRemainingMs, penaltyStatuses, resolvePenalties, runningPenalties,

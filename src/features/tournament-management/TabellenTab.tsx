@@ -35,6 +35,8 @@ import { GroupStateDetails, GroupStateMarks } from './group-completion/GroupStat
 import { istEineTabelle, medalForRank, type Medal, tabellenAnsichtVorgabe, type TabellenAnsicht } from './tabellenAnsicht';
 import { FinalStandingsPanel } from '../tournament-finish/components/FinalStandingsPanel';
 import { ShortLabel } from '../../components/ui/atoms';
+import { goalDiffLabel } from '../../core/standings/goalDiffLabel';
+import { goalDiffColor } from '../../components/schedule/groupTablesStyle';
 
 export interface TabellenTabProps {
   tournament: Tournament;
@@ -535,10 +537,10 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
                     <td style={{
                       ...tdStyle,
                       textAlign: 'center',
-                      color: goalDiff > 0 ? cssVars.colors.primary : goalDiff < 0 ? cssVars.colors.error : cssVars.colors.textSecondary,
+                      color: goalDiffColor(goalDiff),
                     }}>
                       <HighlightedCell highlight={highlightGoalDiff} baseWeight="semibold">
-                        {standing ? (goalDiff > 0 ? '+' : '') + goalDiff : '-'}
+                        {standing ? goalDiffLabel(goalDiff) : '-'}
                       </HighlightedCell>
                     </td>
                     <td style={{ ...tdStyle, textAlign: 'center' }}>
@@ -613,10 +615,10 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
                       <td style={{
                         ...tdStyle,
                         textAlign: 'center',
-                        color: goalDiff > 0 ? cssVars.colors.primary : goalDiff < 0 ? cssVars.colors.error : cssVars.colors.textSecondary,
+                        color: goalDiffColor(goalDiff),
                       }}>
                         <HighlightedCell highlight={highlightGoalDiff} baseWeight="semibold" fontSize="md">
-                          {standing ? (goalDiff > 0 ? '+' : '') + goalDiff : '-'}
+                          {standing ? goalDiffLabel(goalDiff) : '-'}
                         </HighlightedCell>
                       </td>
                       <td style={{ ...tdStyle, textAlign: 'center', padding: '10px 4px' }}>
@@ -716,7 +718,8 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
         </button>
       )}
 
-      <Card>
+      {/* Handy: schmales Polster der Karte (statt xl), damit der Tabelle Breite für Name, Sp., Diff., Pkt. und Taste bleibt (@ZM-205) */}
+      <Card style={isMobile ? { padding: cssVars.spacing.sm } : undefined}>
         {/* GA4 A-13c: Zustand der Phasen und Vorschlag „Gruppe abschließen“ (nur Turnierleitung), nicht im Verwaltungskopf */}
         <GroupCompletionTop />
         {/* Segment Control */}

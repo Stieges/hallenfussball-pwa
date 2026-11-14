@@ -325,9 +325,10 @@ export function messeSeite(opt) {
         while (i < t.length) {
           if (/\s/.test(t[i])) { pruefe(); i++; continue }
           let j = i
-          while (j < t.length && !/\s/.test(t[j])) j++
+          // Nach einem Schraegstrich zwischen Buchstaben darf umbrochen werden (@ZM-207, "SG Taching/Tengling"): dort endet das Wort; "Ten-gling" bleibt ein Wortbruch
+          while (j < t.length && !/\s/.test(t[j]) && !(j > i && t[j - 1] === '/' && t[j] !== '/')) j++
           wort.push([n, i, j])
-          if (j < t.length) pruefe()
+          if (j < t.length || t[j - 1] === '/') pruefe()
           i = j
         }
       }

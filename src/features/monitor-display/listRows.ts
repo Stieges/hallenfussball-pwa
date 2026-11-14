@@ -94,8 +94,8 @@ function breakParts(text: string, perLine: number): { len: number; space: boolea
   for (const m of text.matchAll(/(\s+)|([^\s]+)/g)) {
     if (m[1] !== undefined) { space = true; continue; }
     const word = m[2];
-    const stays = hyphenWordStaysTogether(word, perLine);
-    const pieces = stays ? [word] : word.match(/[^-]+-?|-/g) ?? [];
+    // Nach „/“ ist eine Umbruchstelle (@ZM-207, `SlashBreaks`); darin bleiben Bindestrich-Wörter zusammen, solange sie in eine Zeile passen
+    const pieces = (word.match(/[^/]+\/?|\//g) ?? [word]).flatMap((teil) => (hyphenWordStaysTogether(teil, perLine) ? [teil] : teil.match(/[^-]+-?|-/g) ?? []));
     pieces.forEach((piece, i) => { parts.push({ len: [...piece].length, space: i === 0 && space && parts.length > 0 }); });
     space = false;
   }

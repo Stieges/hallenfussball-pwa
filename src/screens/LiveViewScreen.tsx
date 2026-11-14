@@ -201,7 +201,6 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
         {tab === 'settings' && (
           <PublicInfoTab
             tournament={tournament}
-            shareCode={shareCode}
             theme={theme}
             setTheme={setTheme}
             resolvedTheme={resolvedTheme}

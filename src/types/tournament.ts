@@ -455,7 +455,9 @@ export interface Tournament {
   location: LocationDetails;
   organizer?: string; // Veranstalter-Name (optional)
   rulebook?: string; // Regelwerk-Text für den Ausdruck, höchstens 80 Zeichen (@DR-016)
-  bibColor?: string; // A-30a @W3-029: Leibchenfarbe des Turniers (#RRGGBB), ohne Einstellung Gelb
+  bibColor?: string; // A-30a @W3-029: erste Leibchenfarbe des Turniers (#RRGGBB, = bibColors[0]), ohne Einstellung Gelb
+  bibColors?: string[]; // Leibchen 2b-2 @W3-029: Hallenfarben, bis zu zwei, in der Reihenfolge der Eintragung (config-JSONB)
+  bibRule?: 'home' | 'away'; // Leibchen 2b-2 @W3-041: bei gleicher Farbe zieht die erstgenannte (home, Vorgabe) oder die Gast-Mannschaft (config-JSONB)
   spectatorDisplay?: import('../core/models/spectatorDisplay').SpectatorDisplaySettings; // Spielanzeige 2.1 @ZM-152: „Anzeige für Zuschauer“ (config-JSONB), ohne Eintrag Vorbelegung
   contactInfo?: ContactInfo; // Kontaktinformationen (optional)
 
@@ -506,6 +508,12 @@ export interface Tournament {
   anyMatchStarted?: boolean;
   /** Nur Listen aus der Cloud (ohne Spiele): Ende des letzten Spiels, wenn jedes Spiel entschieden ist (@LZ-005, Hinweis auf der Startseite). Nie gespeichert. */
   lastMatchEndedAt?: string;
+  /**
+   * @W5-041 (Befund C-ENTWURF-WIEDEROEFFNEN-LOESCHT-TEAMS): nur Listen-Einträge aus der Cloud (Kopfdaten ohne Teams und Spiele).
+   * Ein so gekennzeichneter Stand ist kein ganzes Turnier: die Datenschicht lehnt `save` ab, weil der Voll-Ersatz am Server
+   * sonst Teams und Spiele löschen würde, die dem Eintrag fehlen. Nie gespeichert.
+   */
+  listEntryOnly?: true;
 
   // Dashboard Soft Delete (Papierkorb)
   /** ISO Date when moved to trash. Undefined = not deleted */
@@ -1039,6 +1047,8 @@ export interface RuntimeMatchEvent {
   clockMs?: number;
   /** Event was recorded without details - needs completion */
   incomplete?: boolean;
+  /** Zeitstrafe, die ein Gegentor beendet hat: Spielsekunde dieses Tores (abgeleitet, nur Cockpit-Protokoll, @SL-242). */
+  endedByGoalSeconds?: number;
 }
 
 /**

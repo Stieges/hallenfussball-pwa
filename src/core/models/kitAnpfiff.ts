@@ -5,10 +5,9 @@
  * - bestätigt (`kitDecision` `bib`, Leibchen-Seite und -Farbe im Spiel): Leibchenfarbe auf der Leibchen-Seite, Trikot auf der anderen, Seite genannt;
  * - „Keine Leibchen“ (`none`): ausdrücklich `bibSide: null`;
  * - offen (nichts getippt): kein Schlüssel `bibSide` – der Server lässt die Wahl, wie sie war (NULL), keine Leibchen (@SL-210).
- * Eine ausdrückliche Wahl der alten Anpfiff-Ansicht (`wahl`) gilt bis zur Karte (Schritt 2b-2) weiter.
  */
 import { compactKit, normalizeKitColor, type KitSide, type StartKit } from './kit';
-import { kitAusWahl, trikotFarben, type LeibchenWahl, type TrikotFarben } from './kitChoice';
+import { trikotFarben, type TrikotFarben } from './kitChoice';
 import type { Match, Team } from '../../types/tournament';
 
 type AnpfiffSpiel = Pick<Match, 'slotA' | 'slotB' | 'kit' | 'kitDecision'>;
@@ -22,11 +21,8 @@ function bestaetigt(spiel: AnpfiffSpiel, farben: TrikotFarben): StartKit | null 
   return compactKit({ a: seite === 'a' ? farbe : farben.a, b: seite === 'b' ? farbe : farben.b, bibSide: seite });
 }
 
-export function kitBeimAnpfiff(spiel: AnpfiffSpiel, teams: readonly Pick<Team, 'id' | 'colors'>[], wahl: LeibchenWahl | undefined): StartKit {
+export function kitBeimAnpfiff(spiel: AnpfiffSpiel, teams: readonly Pick<Team, 'id' | 'colors'>[]): StartKit {
   const farben = trikotFarben(spiel, teams);
-  if (wahl !== undefined) {
-    return kitAusWahl(farben, wahl);
-  }
   const gewaehlt = bestaetigt(spiel, farben);
   if (gewaehlt !== null) {
     return gewaehlt;

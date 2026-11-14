@@ -1,0 +1,31 @@
+/* Regler je Ton: Beschriftung, dann Schieber | Wert | „Anhören“ in einer Zeile; am Handy (bis 480 px, Breakpoint `mobile`) wie im Mockup:
+   Schieber über die Breite mit dem Wert daneben, „Anhören“ darunter. Media-Queries nehmen keine Variablen, 480 = `breakpoints.mobile`. */
+.regler {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content auto;
+  gap: var(--spacing-sm) var(--spacing-md);
+  align-items: center;
+}
+
+.wert {
+  white-space: nowrap; /* „100 %“ bricht nie um */
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.beschriftung,
+.hinweis {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+@media (max-width: 480px) {
+  .regler {
+    grid-template-columns: minmax(0, 1fr) max-content;
+  }
+
+  .anhoeren {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}

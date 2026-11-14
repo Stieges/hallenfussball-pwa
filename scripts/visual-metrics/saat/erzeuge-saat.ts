@@ -169,7 +169,7 @@ function baueEreignisse(ctx: MatchContext, rules: MatchRules, plan: EreignisPlan
 const sortiere = (log: EngineEvent[]): EngineEvent[] => [...log].sort((x, y) => x.at - y.at)
 
 /** Lokale Engine-Kopie des Gastkontos (Form `MatchCopy`, Format 2), Ereignisse lokal bestaetigt (V14). */
-interface EngineKopie {
+export interface EngineKopie {
   formatVersion: number
   accountId: string
   matchId: string
@@ -184,10 +184,10 @@ interface EngineKopie {
   updatedAt: number | string
 }
 
-interface MatchMitKopie { match: Match; kopie: EngineKopie }
+export interface MatchMitKopie { match: Match; kopie: EngineKopie }
 
 /** Setzt die Spalten eines Spiels aus dem Ergebnis der echten Engine. Wirft, wenn ein Ereignis abgelehnt wird. */
-function wendeEngineAn(t: Tournament, match: Match, teamA: string, teamB: string, plan: EreignisPlan, start: number): MatchMitKopie {
+export function wendeEngineAn(t: Tournament, match: Match, teamA: string, teamB: string, plan: EreignisPlan, start: number): MatchMitKopie {
   const ctx: MatchContext = { matchId: match.id, teamAId: teamA, teamBId: teamB }
   const rules = regelnFuer(t, match.phase ?? 'groupStage')
   const ereignisse = baueEreignisse(ctx, rules, plan, start)

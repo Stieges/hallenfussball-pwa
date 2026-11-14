@@ -19,6 +19,7 @@ import type { ScheduleConflict } from '../../features/schedule-editor/types';
 import type { RefereeChoice } from './refereeChoices';
 import { SwapWithButton } from './SwapWithButton';
 import { Versus } from '../ui/atoms';
+import { SlashBreaks } from '../ui/atoms/TeamName';
 
 /** Auswahl-Eintrag (Schiedsrichter aus `refereeChoices`, Feld) */
 type SelectOption = RefereeChoice;
@@ -241,8 +242,7 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
     fontSize: cssVars.fontSizes.md,
     fontWeight: cssVars.fontWeights.bold,
     color: cssVars.colors.textPrimary,
-    // MOBILE-UX: No truncation - team names must be fully visible
-    wordBreak: 'break-word',
+    // MOBILE-UX: keine Kürzung; Umbruch an Leerzeichen und nach „/“, nie mitten im Wort (@ZM-207, `TeamName`); nur ein zu langes Einzelwort bricht
     overflowWrap: 'break-word',
   };
 
@@ -308,13 +308,13 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
           <div style={timeStyle}>{isDragging ? '↕️' : match.time}</div>
 
           {/* Home Team */}
-          <div style={{ ...teamNameStyle, textAlign: 'right' }}>{sideName(match, 'A', sides)}</div>
+          <div style={{ ...teamNameStyle, textAlign: 'right' }} data-teamname><SlashBreaks text={sideName(match, 'A', sides)} /></div>
 
           {/* VS */}
           <div style={vsStyle}><Versus /></div>
 
           {/* Away Team */}
-          <div style={teamNameStyle}>{sideName(match, 'B', sides)}</div>
+          <div style={teamNameStyle} data-teamname><SlashBreaks text={sideName(match, 'B', sides)} /></div>
 
           {/* Field Selector */}
           {showFields && onFieldChange && (

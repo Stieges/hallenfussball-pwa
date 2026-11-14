@@ -58,19 +58,20 @@ describe('EventLogBottomSheet -- Gelb-Rot-Label (Fixrunde 2)', () => {
 
   it('DE: Gelb-Rot zeigt "Gelb-Rote Karte", Gegenbeispiel Rot zeigt "Rote Karte"', () => {
     renderSheet(redCard('YELLOW_RED'));
-    expect(screen.getByText(/Gelb-Rote Karte Heim/)).toBeInTheDocument();
+    // Wörter mit Bindestrich stehen in einem eigenen nowrap-Element (VISUAL-DESIGN § 2): der Text steht dann über mehrere Elemente
+    expect(document.body.textContent).toMatch(/Gelb-Rote Karte Heim/);
   });
 
   it('DE Gegenbeispiel: RED_CARD ohne cardType zeigt "Rote Karte"', () => {
     renderSheet(redCard());
     expect(screen.getByText(/Rote Karte Heim/)).toBeInTheDocument();
-    expect(screen.queryByText(/Gelb-Rote Karte/)).toBeNull();
+    expect(document.body.textContent).not.toMatch(/Gelb-Rote Karte/);
   });
 
   it('EN: Gelb-Rot heisst "Yellow-Red Card" (nicht "Second yellow card")', () => {
     locale.current = 'en';
     renderSheet(redCard('YELLOW_RED'));
-    expect(screen.getByText(/Yellow-Red Card Heim/)).toBeInTheDocument();
+    expect(document.body.textContent).toMatch(/Yellow-Red Card Heim/);
     expect(screen.queryByText(/Second yellow card/i)).toBeNull();
   });
 });

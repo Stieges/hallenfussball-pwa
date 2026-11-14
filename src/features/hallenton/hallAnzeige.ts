@@ -60,11 +60,21 @@ export interface HallAnzeigeEingabe {
   angepfiffen: ReadonlySet<number>;
   /** Es war in dieser Sitzung schon ein Lautsprecher im Turnier bekannt (sonst bleibt „Status unbekannt“ aus, @HT-038). */
   lautsprecherBekannt: boolean;
+  /**
+   * Ein anderes Fenster dieses Geräts hält die Sperre `hallenton` (`navigator.locks.query`, H4-8, @HT-033 Zeile 8, Nachtrag 13.11.): dieses
+   * Fenster zeigt dann gleich den ruhigen Hinweis „läuft schon in einem anderen Fenster“ statt „Ton nicht aktiv – hier klicken“.
+   */
+  anderesFensterTont?: boolean;
 }
 
-function lokaleAnzeige(zustand: FeldZustand | undefined, rolle: LaufzeitRolle, pruefen: boolean): FeldAnzeigeArt {
+/** Dieses Gerät steht auf „Ton nicht aktiv“ (die einzige Lage, in der ein anderes Fenster gefragt werden muss). */
+export function tonNichtAktivLokal(lokal: LokaleLage | null): boolean {
+  return lokal !== null && lokal.rolle === 'wartet' && lokal.felder.some((feld) => lokal.zustandJeFeld[`field-${feld}`] === 'not_activated');
+}
+
+function lokaleAnzeige(zustand: FeldZustand | undefined, rolle: LaufzeitRolle, pruefen: boolean, anderesFenster: boolean): FeldAnzeigeArt {
   switch (zustand) {
-    case 'not_activated': return { art: 'tonNichtAktiv' };
+    case 'not_activated': return anderesFenster ? { art: 'anderesFenster' } : { art: 'tonNichtAktiv' };
     case 'slept': return { art: 'schlafenGelegt' };
     case 'keineVerbindung': return { art: 'keineVerbindung' };
     case 'ready':
@@ -86,7 +96,7 @@ function serverAnzeige(lage: LautsprecherLage): FeldAnzeigeArt | null {
   }
 }
 
-export function hallAnzeige({ server, lokal, angepfiffen, lautsprecherBekannt }: HallAnzeigeEingabe): HallAnzeige {
+export function hallAnzeige({ server, lokal, angepfiffen, lautsprecherBekannt, anderesFensterTont = false }: HallAnzeigeEingabe): HallAnzeige {
   const jeFeld = new Map<number, FeldAnzeige>();
   for (const [schluessel, lage] of Object.entries(server.felder)) {
     const anzeige = serverAnzeige(lage);
@@ -99,7 +109,7 @@ export function hallAnzeige({ server, lokal, angepfiffen, lautsprecherBekannt }:
     for (const feld of lokal.felder) {
       const amServer = server.felder[feld];
       const pruefen = amServer?.art === 'bereit' && amServer.pruefen;
-      jeFeld.set(feld, { feld, anzeige: lokaleAnzeige(lokal.zustandJeFeld[`field-${feld}`], lokal.rolle, pruefen), eigenesGeraet: true });
+      jeFeld.set(feld, { feld, anzeige: lokaleAnzeige(lokal.zustandJeFeld[`field-${feld}`], lokal.rolle, pruefen, anderesFensterTont), eigenesGeraet: true });
     }
   }
   const handyOhneNetz: number[] = [];

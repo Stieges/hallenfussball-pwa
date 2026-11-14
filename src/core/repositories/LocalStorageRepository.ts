@@ -188,6 +188,11 @@ export class LocalStorageRepository implements ITournamentRepository {
         });
     }
 
+    /** @W5-040: Papierkorb ändert nur die Löschmarke (und die mitgegebenen Angaben), nie Teams oder Spiele. */
+    setTrashed(id: string, deletedAt: string | null, metadata: Partial<Tournament> = {}): Promise<void> {
+        return this.updateTournamentMetadata(id, { ...metadata, deletedAt: deletedAt ?? undefined });
+    }
+
     /**
      * GA4 A-13b-C: Entscheidung eintragen/zurücknehmen (lokal, Versionsprüfung wie die Cloud; Konflikt → `rejected STALE`).
      * Rechenregeln in `localGroupCompletion.ts`; Person und Zeit gibt es lokal nicht.
