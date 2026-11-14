@@ -11,6 +11,13 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import type { Tournament } from '../../../types/tournament';
 import { touchTargets } from '../../../design-tokens';
 
+vi.unmock('i18next');
+vi.unmock('react-i18next');
+
+import { initRealDeI18n } from '../../../test/realDeI18n';
+
+await initRealDeI18n(); // echte Texte: Titel und „Schließen“ kommen aus den Übersetzungen, nicht fest aus dem Bildschirm
+
 const spies = vi.hoisted(() => ({
   publishTournament: vi.fn<(override?: unknown) => Promise<Tournament>>(),
   saveTournament: vi.fn<(t: Tournament) => Promise<void>>(),
@@ -214,6 +221,7 @@ describe('@OB-087 Zeile 6 – „Erneut versuchen“ beim gescheiterten Veröffe
     const hinweis = screen.getByTestId('publish-error-notice');
     expect(hinweis).toHaveTextContent('Turnier konnte nicht veröffentlicht werden');
     expect(hinweis).toHaveTextContent('Speichern fehlgeschlagen: Server nicht erreichbar');
+    expect(screen.getByTestId('publish-error-close')).toHaveTextContent('Schließen');
     const taste = screen.getByTestId('publish-error-retry');
     expect(taste).toHaveStyle({ minHeight: touchTargets.minimum });
     expect(spies.publishTournament).toHaveBeenCalledTimes(1);

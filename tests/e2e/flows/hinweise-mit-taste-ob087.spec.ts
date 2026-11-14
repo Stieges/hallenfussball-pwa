@@ -128,6 +128,21 @@ test.describe('@OB-087 @OB-088 Hinweise mit Taste (Prüfstände)', () => {
       await pruefeTaste(page, taste);
       await taste.click();
       expect(await lies(page, 'aktualisiert')).toBe(1);
+      // nach dem Tipp bleibt der Hinweis stehen: die Taste ist gesperrt und zeigt die Arbeitsanzeige; ein zweiter Tipp löst nichts doppelt aus
+      await expect(page.getByTestId('toast-action')).toBeDisabled();
+      await expect(page.getByTestId('toast-action')).toHaveText('Lade...');
+      await expect(page.getByRole('alert')).toHaveCount(1);
+    });
+
+    test(`@OB-087 Zeile 4 ${g.name}: ist das Gerät bereiter Hallen-Lautsprecher, steht nach dem Tipp der Grund statt der Arbeitsanzeige`, async ({ page }) => {
+      await richteEin(page, g, 'light');
+      await page.goto(`${HINWEISE}?fall=aktualisieren&tor=blockiert`);
+      await animationenFertig(page);
+      await page.getByRole('button', { name: 'Jetzt aktualisieren' }).click();
+      await expect(page.getByTestId('toast-action-note')).toContainText('Hallen-Lautsprecher');
+      await expect(page.getByTestId('toast-action')).toBeEnabled();
+      await expect(page.getByTestId('toast-action')).toHaveText('Jetzt aktualisieren');
+      await expect(page.getByRole('alert')).toHaveCount(1);
     });
 
     for (const [fall, testid, zeile] of [['veroeffentlichen', 'publish-error-retry', 6], ['sichtbarkeit', 'visibility-error-retry', 7]] as const) {

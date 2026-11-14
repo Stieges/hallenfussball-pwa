@@ -20,6 +20,7 @@ import { Icons } from '../../../components/ui/Icons';
 import { ArbeitsTaste } from '../../../components/ui/molecules/ArbeitsTaste';
 import { useSperreAktion } from '../../../hooks/useSperreAktion';
 import { cockpitHallZeile, cockpitHallZeileAusServer, type CockpitHallZeile } from '../cockpitHallZeile';
+import { tontAufDiesemGeraet } from '../hallAnzeige';
 import { feldNummer } from '../runtime/hallStatusAuswertung';
 import { VerbindenTaste } from '../../match-engine/VerbindenTaste';
 import { useHallCockpitHinweis } from '../useHallCockpitHinweis';
@@ -59,15 +60,16 @@ export function CockpitHallKasten({ symbol, titel, grund, ruhig = false, testid,
 
 /**
  * „Ton aktivieren“ (@OB-087 Zeile 5): nur wenn DIESES Gerät selbst der Hallen-Lautsprecher des Felds ist – ein Browser lässt den Ton nur per Tipp
- * am Gerät selbst zu (@HT-012), fernbedienen geht nicht. Auf jedem anderen Gerät steht der Kasten ohne Taste. Meldet das Gerät das Feld
- * schon als bereit, steht der Server-Stand nur noch nicht nach: der Kasten tritt zurück.
+ * am Gerät selbst zu (@HT-012), fernbedienen geht nicht. Auf jedem anderen Gerät steht der Kasten ohne Taste. Tönt das Gerät für das Feld
+ * wirklich (`tontAufDiesemGeraet`: Laufzeit läuft, kein anderes Fenster, Feld bereit), steht der Server-Stand nur noch nicht nach: der Kasten tritt zurück.
  */
 function AusKastenMitTon({ tournamentId, feld, grund }: { tournamentId: string; feld: number; grund: string }): ReactElement | null {
   const { t } = useTranslation('hallenton');
   const lautsprecher = useHallLautsprecher(tournamentId);
   const { starte, laeuft } = useSperreAktion(() => lautsprecher.tonAktivieren());
+  const laufzeit = lautsprecher.laufzeit;
   const eigenes = lautsprecher.rolle === 'diesesTurnier' && lautsprecher.felder.includes(feld);
-  if (eigenes && lautsprecher.laufzeit?.zustandJeFeld[`field-${feld}`] === 'ready') {
+  if (eigenes && tontAufDiesemGeraet(laufzeit === null ? null : { felder: lautsprecher.felder, rolle: laufzeit.rolle, zustandJeFeld: laufzeit.zustandJeFeld }, feld)) {
     return null;
   }
   const taste = eigenes

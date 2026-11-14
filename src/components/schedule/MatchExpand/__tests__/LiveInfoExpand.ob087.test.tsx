@@ -1,7 +1,10 @@
 /**
- * @OB-087 Zeile 8: Olli klappt im Spielplan ein Spiel auf, das gerade läuft. Am aufgeklappten Spiel steht „Zum Cockpit“ (≥ 44 px); ein Tipp öffnet das
- * Cockpit dieses Spiels. Gegenbeispiel: wer das Spiel nur ansehen darf (kein Weg ins Cockpit), bekommt die Taste nicht.
- * Stand der Prüfung: die Taste war schon da (`onNavigateToCockpit`, Aktionsauswahl und aufgeklapptes Spiel); der Test hält sie fest.
+ * @OB-087 Zeile 8 („Zum Cockpit“, ohne Hinweistext): Olli klappt im Spielplan ein Spiel auf, das gerade läuft. Am aufgeklappten Spiel steht die Taste
+ * „Zum Cockpit“ (≥ 44 px); ein Tipp öffnet das Cockpit dieses Spiels. Gegenbeispiel: wer das Spiel nur ansehen darf (kein Weg ins Cockpit), bekommt
+ * die Taste nicht.
+ * FESTSCHREIBUNG DES BESTANDS: die Taste war schon da (`onNavigateToCockpit`, Aktionsauswahl und aufgeklapptes Spiel); der Test hält sie fest und
+ * ist kein Nachweis einer Änderung. Die Zeile nennt keinen Hinweistext mehr (der frühere Text „Dieses Spiel läuft gerade LIVE“ entfiel), darum
+ * erwartet der Test auch keinen.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';

@@ -8,15 +8,17 @@
 
 import { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
 import { ToastContainer } from './ToastContainer';
-import { ToastType, ToastProps } from './Toast';
+import { ToastType, ToastProps, ToastActionResult } from './Toast';
 
 export interface ToastOptions {
+  /** Feste Kennung: gibt es schon einen Hinweis mit dieser Kennung, wird keiner zweiter geöffnet (@OB-087). */
+  id?: string;
   /** Auto-dismiss duration in ms (default: 4000, 0 = no auto-dismiss) */
   duration?: number;
   /** Optional action button */
   action?: {
     label: string;
-    onClick: () => void;
+    onClick: () => ToastActionResult;
   };
 }
 
@@ -51,7 +53,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children, suppress
 
   const addToast = useCallback((type: ToastType, message: string, options?: ToastOptions): string => {
     if (suppressedRef.current) { return ''; }
-    const id = `toast-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+    const id = options?.id ?? `toast-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 
     const toast: ToastData = {
       id,
@@ -61,7 +63,8 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children, suppress
       action: options?.action,
     };
 
-    setToasts((prev) => [...prev, toast]);
+    // feste Kennung: schon vorhanden = nicht doppelt öffnen
+    setToasts((prev) => (prev.some((existing) => existing.id === id) ? prev : [...prev, toast]));
 
     return id;
   }, []);

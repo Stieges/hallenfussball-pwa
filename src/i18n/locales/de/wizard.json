@@ -670,6 +670,7 @@
     "explanationLocal": "Der Spielplan steht dann fest. Das Turnier bleibt nur auf diesem Gerät.",
     "explanationChangeable": "Teamnamen und Ergebnisse kannst du danach noch ändern, die Struktur nur bis zum ersten Anpfiff.",
     "explanationOffline": "Der Spielplan steht dann fest. Ohne Netz bleibt das Turnier vorerst auf diesem Gerät.",
+    "failedTitle": "Turnier konnte nicht veröffentlicht werden",
     "shareFailed": "Das Turnier ist fertiggestellt, aber der Zuschauer-Link steht noch nicht. Hol das Teilen im Admin Center unter Sichtbarkeit nach."
   },
   "preview": {

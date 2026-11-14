@@ -33,7 +33,7 @@ import { routeForStatus } from './scoreChangeHelpers';
 import { useResultEntryAck } from './useResultEntryAck';
 import { readEventAuthorNames } from '../../../core/repositories/eventAuthorNamesRpc';
 import { supabase } from '../../../lib/supabase';
-import { requestUrgentReload } from '../../../lib/swRegistration';
+import { aktualisiereJetzt } from '../../../lib/jetztAktualisieren';
 import type { ToastOptions } from '../../../components/ui/Toast';
 import { readForeignFieldHolder } from '../../../core/repositories/fieldControlStateRpc';
 import { getDeviceId } from '../../../core/device/deviceId';
@@ -173,10 +173,20 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
     }
   }, [t, tCommon]);
 
-  /** @OB-087 Zeile 4: der Hinweis „App aktualisieren“ trägt „Jetzt aktualisieren“ (wie im Cockpit, `requestUrgentReload`); bleibt stehen, bis die Person tippt oder ihn schließt. */
+  /**
+   * @OB-087 Zeile 4: der Hinweis „App aktualisieren“ trägt „Jetzt aktualisieren“ (Eilpfad des Neulade-Wegs, `aktualisiereJetzt`;
+   * das Cockpit dagegen ruft `window.location.reload()`). Er steht nur einmal da (feste Kennung) und bleibt stehen: nach dem
+   * Tipp mit Arbeitsanzeige, bis die App neu lädt; blockiert das Tor (Gerät ist Hallen-Lautsprecher), mit dem Grund.
+   */
   const updateAction = useCallback((): ToastOptions => ({
+    id: 'app-veraltet',
     duration: 0,
-    action: { label: tCommon('outbox.notice.reloadNow'), onClick: requestUrgentReload },
+    action: {
+      label: tCommon('outbox.notice.reloadNow'),
+      onClick: () => (aktualisiereJetzt() === 'blockiert'
+        ? { note: tCommon('outbox.notice.reloadBlocked') }
+        : { busyLabel: tCommon('loading.generic') }),
+    },
   }), [tCommon]);
 
   const rejectionText = useCallback(async (error: unknown, entry: ValidMatchEntry): Promise<string> => {

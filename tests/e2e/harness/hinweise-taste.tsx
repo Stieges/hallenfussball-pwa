@@ -2,7 +2,8 @@
  * Prüfstand für „Hinweise tragen die Taste, die das Problem löst“ (@OB-087, @OB-088): die ECHTEN Bausteine, die es auch im Stand vor der Änderung
  * gibt (so entstehen die Bilder „vorher“ und „nachher“ mit gleichen Daten): die Zuschauer-Fehleransicht mit dem echten `usePublicTournament` und einer
  * gestellten Quelle, der Ausgangs-Hinweis „Bitte neu anmelden“ und der Hinweis „App aktualisieren“ als Meldung. Nur Testumgebung, nicht Teil des Builds.
- * Aufruf: `?fall=zuschauer|anmelden|aktualisieren` (+ `&lang=en`, `&phase=vorher` für den Stand ohne Taste, wo der Baustein es kennt).
+ * Aufruf: `?fall=zuschauer|anmelden|aktualisieren` (+ `&lang=en`, `&phase=vorher` für den Stand ohne Taste, wo der Baustein es kennt; bei `aktualisieren`
+ *   `&tor=blockiert` für ein Gerät, das bereiter Hallen-Lautsprecher ist – das Neulade-Tor blockt). „Jetzt aktualisieren“ ruft die ECHTE `aktualisiereJetzt`.
  * - zuschauer: die Quelle scheitert, bis `hin.netz` auf `true` steht (und danach `online` kommt oder die Taste getippt wird);
  *   `hin.abrufe` zählt die Abrufe. Die Seite wird nie neu geladen (Marke in `window`).
  */
@@ -17,6 +18,8 @@ import { ToastProvider, useToast } from '../../../src/components/ui/Toast';
 import { cssVars } from '../../../src/design-tokens';
 import { OutboxNotice } from '../../../src/features/collaboration/outbox/OutboxNotice';
 import { emptyOutboxStatus } from '../../../src/core/match/client/outboxTypes';
+import { aktualisiereJetzt } from '../../../src/lib/jetztAktualisieren';
+import { attachReloadGate } from '../../../src/lib/swRegistration';
 import { usePublicTournament } from '../../../src/features/public-view/usePublicTournament';
 import { PublicErrorView } from '../../../src/features/public-view/components/PublicStatusViews';
 import type { PublicTournamentSource } from '../../../src/features/public-view/publicSource';
@@ -62,7 +65,17 @@ export function Aktualisieren() {
   useEffect(() => {
     const text = i18n.t('common:outbox.notice.clientOutdated');
     if (vorher) { showWarning(text, { duration: 0 }); return; }
-    showWarning(text, { duration: 0, action: { label: i18n.t('common:outbox.notice.reloadNow'), onClick: () => { hin.aktualisiert += 1; } } });
+    if (query.get('tor') === 'blockiert') { attachReloadGate({ allowsReload: () => false, blocksUrgent: true }); }
+    showWarning(text, {
+      id: 'app-veraltet', duration: 0,
+      action: {
+        label: i18n.t('common:outbox.notice.reloadNow'),
+        onClick: () => {
+          hin.aktualisiert += 1;
+          return aktualisiereJetzt() === 'blockiert' ? { note: i18n.t('common:outbox.notice.reloadBlocked') } : { busyLabel: i18n.t('common:loading.generic') };
+        },
+      },
+    });
   }, [showWarning]);
   return <p style={{ padding: cssVars.spacing.lg, color: cssVars.colors.textPrimary }}>Spielplan</p>;
 }

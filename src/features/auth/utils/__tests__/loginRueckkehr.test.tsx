@@ -68,3 +68,27 @@ describe('@HT-026 Rücksprung in den Unterpunkt „Hallenton“', () => {
     expect(holeRueckkehr()).toBeNull();
   });
 });
+
+describe('@OB-087 Zeile 3 Rückkehr ins Cockpit des Felds', () => {
+  const COCKPIT = '/tournament/hallencup-nord/live';
+  it('das Cockpit des Turniers (mit Feld und Spiel) wird gemerkt und nach der Anmeldung zurückgegeben', () => {
+    for (const ziel of [COCKPIT, `${COCKPIT}?f=2`, `${COCKPIT}?matchId=m-11`, `${COCKPIT}?f=2&matchId=m-11`]) {
+      merkeRueckkehr(ziel);
+      expect(holeRueckkehr(), ziel).toBe(ziel);
+    }
+  });
+  it('Gegenbeispiele: manipulierte oder fremde Ziele werden nicht gemerkt und nicht befolgt', () => {
+    const schlecht = [
+      `${COCKPIT}?next=https://evil.example`, `${COCKPIT}?f=2&next=/x`, `${COCKPIT}?f=abc`, `${COCKPIT}?f=2&f=3`, `${COCKPIT}?matchId=a/b`,
+      `${COCKPIT}?matchId=`, `${COCKPIT}?f=2?x=1`, `${COCKPIT}?redirect=//evil.example`, `${COCKPIT}#/evil`, `${COCKPIT}/extra`,
+      `//evil.example${COCKPIT}`, `https://evil.example${COCKPIT}`, `/tournament/hallencup-nord/schedule`, `/tournament/hallencup-nord/standings?f=2`,
+      '/tournament/new', `/tournament/x/admin?f=2`, `${COCKPIT}\\..\\x`,
+    ];
+    for (const ziel of schlecht) {
+      expect(istRueckkehrZiel(ziel), ziel).toBe(false);
+      merkeRueckkehr(ziel);
+      expect(window.localStorage.getItem(RUECKKEHR_SCHLUESSEL), ziel).toBeNull();
+    }
+  });
+});
+

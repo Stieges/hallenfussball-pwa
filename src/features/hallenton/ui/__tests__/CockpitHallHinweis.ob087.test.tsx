@@ -33,7 +33,7 @@ const verbinden = vi.hoisted(() => ({ reconnect: vi.fn(), resync: vi.fn() }));
 vi.mock('../../../auth/hooks/useAuth', () => ({ useAuth: () => ({ reconnect: verbinden.reconnect }) }));
 vi.mock('../../../match-engine/useResyncNow', () => ({ useResyncNow: () => verbinden.resync }));
 const geraet = vi.hoisted(() => ({
-  wert: { rolle: 'keiner', felder: [] as number[], laufzeit: null as null | { zustandJeFeld: Record<string, string> }, tonAktivieren: vi.fn() },
+  wert: { rolle: 'keiner', felder: [] as number[], laufzeit: null as null | { rolle: string; zustandJeFeld: Record<string, string> }, tonAktivieren: vi.fn() },
 }));
 vi.mock('../../useHallLautsprecher', () => ({ useHallLautsprecher: () => geraet.wert }));
 
@@ -180,8 +180,31 @@ describe('@OB-087 Zeile 5 – „Ton aktivieren“ am Kasten „Hallen-Lautsprec
     setzeLeitung(leitung(stand('not_activated')));
     const { rerender } = zeige();
     expect(screen.getByTestId('cockpit-hall-aus')).toBeInTheDocument();
-    geraet.wert = { ...geraet.wert, laufzeit: { zustandJeFeld: { 'field-1': 'ready' } } };
+    geraet.wert = { ...geraet.wert, laufzeit: { rolle: 'toent', zustandJeFeld: { 'field-1': 'ready' } } };
     rerender(<CockpitHallHinweis tournamentId={TID} feldId="field-1" zustand="laeuft" kannSteuern />);
     expect(screen.queryByTestId('cockpit-hall-aus')).toBeNull();
+  });
+
+  // Gegenbeispiele: nur wenn dieses Gerät wirklich tönt, tritt der Kasten zurück (Review 🟡2)
+  it.each([
+    ['still', 'stehengebliebenes ready bei Rolle still'],
+    ['aus', 'Laufzeit aus'],
+    ['andererTab', 'ein anderes Fenster tönt, dieses nicht'],
+  ])('@OB-087 Zeile 5 Gegenbeispiel: Rolle %s (%s) – der Kasten „Ende selbst anzeigen“ bleibt', (rolle) => {
+    geraet.wert.rolle = 'diesesTurnier';
+    geraet.wert.felder = [1];
+    geraet.wert.laufzeit = { rolle, zustandJeFeld: { 'field-1': 'ready' } };
+    setzeLeitung(leitung(stand('not_activated')));
+    zeige();
+    expect(screen.getByTestId('cockpit-hall-aus')).toBeInTheDocument();
+  });
+
+  it('@OB-087 Zeile 5 Gegenbeispiel: ready, aber nur für ein anderes Feld des Geräts – der Kasten bleibt', () => {
+    geraet.wert.rolle = 'diesesTurnier';
+    geraet.wert.felder = [1, 2];
+    geraet.wert.laufzeit = { rolle: 'toent', zustandJeFeld: { 'field-2': 'ready', 'field-1': 'not_activated' } };
+    setzeLeitung(leitung(stand('not_activated')));
+    zeige();
+    expect(screen.getByTestId('cockpit-hall-aus')).toBeInTheDocument();
   });
 });

@@ -136,6 +136,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
 }) => {
   const { showSuccess, showWarning } = useToast();
   const { t } = useTranslation('wizard');
+  const { t: tCommon } = useTranslation('common');
   const repository = useRepository();
   const authUser = useContext(AuthContext)?.user ?? null;
   const isOnline = useIsOnline();
@@ -741,9 +742,9 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
               <>
                 {scheduleError && (
                   <PublishErrorNotice
-                    title="Turnier konnte nicht veröffentlicht werden"
+                    title={t('publish.failedTitle')}
                     message={scheduleError}
-                    closeLabel="Schließen"
+                    closeLabel={tCommon('actions.close')}
                     onRetry={() => void handlePublish(lastPublishOverrideRef.current)}
                     onClose={() => setScheduleError(null)}
                     retrying={isPublishing}

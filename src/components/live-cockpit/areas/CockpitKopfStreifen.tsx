@@ -4,8 +4,9 @@
  */
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useInRouterContext, useNavigate } from 'react-router-dom';
+import { useInRouterContext, useLocation, useNavigate } from 'react-router-dom';
 import { AwaitingServerCopyLine } from '../../../features/collaboration';
+import { merkeRueckkehr } from '../../../features/auth/utils/loginRueckkehr';
 import { OutboxNotice } from '../../../features/collaboration/outbox/OutboxNotice';
 import type { OutboxStatus } from '../../../core/match/client/outboxTypes';
 import { CockpitHallHinweis } from '../../../features/hallenton/ui/CockpitHallHinweis';
@@ -29,10 +30,14 @@ export interface CockpitKopfStreifenProps {
 
 type AusgangsHinweisProps = Pick<React.ComponentProps<typeof OutboxNotice>, 'status' | 'matchId' | 'onReload'>;
 
-/** Der Ausgangs-Hinweis mit „Anmelden“ (@OB-087 Zeile 3): in der App führt die Taste zur Anmeldung; ohne Router (einzelne Prüfstände, Tests) bleibt es beim Text. */
+/**
+ * Der Ausgangs-Hinweis mit „Anmelden“ (@OB-087 Zeile 3): in der App führt die Taste zur Anmeldung und merkt vorher das Cockpit dieses Felds
+ * (`merkeRueckkehr`), damit die Person nach der Anmeldung wieder dort steht; ohne Router (einzelne Prüfstände, Tests) bleibt es beim Text.
+ */
 function AusgangsHinweisMitAnmelden(props: AusgangsHinweisProps): ReactElement {
   const navigate = useNavigate();
-  return <OutboxNotice {...props} onLogin={() => { void navigate('/login'); }} />;
+  const { pathname, search } = useLocation();
+  return <OutboxNotice {...props} onLogin={() => { merkeRueckkehr(`${pathname}${search}`); void navigate('/login'); }} />;
 }
 
 function AusgangsHinweis(props: AusgangsHinweisProps): ReactElement {

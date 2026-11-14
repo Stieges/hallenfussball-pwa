@@ -1104,7 +1104,6 @@
     "fieldsAlreadyOptimal": "Fields already optimally distributed",
     "matchesSwapped": "Matches {{match1}} and {{match2}} swapped",
     "matchAlreadyFinished": "This match is already finished. Use \"Correct result\".",
-    "liveMatchWarning": "WARNING: This match is currently LIVE in tournament management!\n\nIf you change the result here, it will overwrite the live management.\n\nDo you want to continue anyway?",
     "changesSaved": "Schedule changes saved",
     "refereesRedistributed_one": "Referee of {{count}} match redistributed",
     "refereesRedistributed_other": "Referees of {{count}} matches redistributed",

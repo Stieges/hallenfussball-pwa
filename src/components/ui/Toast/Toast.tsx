@@ -12,6 +12,13 @@ import styles from './Toast.module.css';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
+/**
+ * Was die Aktion nach dem Tipp meldet (@OB-087): nichts = Hinweis schließt wie bisher; `busyLabel` = Hinweis bleibt stehen,
+ * die Taste ist gesperrt und zeigt die Arbeitsanzeige; `note` = Hinweis bleibt stehen und nennt in einem Satz, warum jetzt
+ * nichts geschieht (die Taste bleibt bedienbar).
+ */
+export type ToastActionResult = { busyLabel: string } | { note: string } | undefined;
+
 export interface ToastProps {
   id: string;
   type: ToastType;
@@ -20,7 +27,7 @@ export interface ToastProps {
   duration?: number;
   action?: {
     label: string;
-    onClick: () => void;
+    onClick: () => ToastActionResult;
   };
 }
 
@@ -58,8 +65,21 @@ export const Toast: React.FC<ToastProps> = ({
     setTimeout(() => onDismiss(id), 300);
   };
 
+  const [busyLabel, setBusyLabel] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+
   const handleAction = () => {
-    action?.onClick();
+    if (busyLabel !== null) { return; }
+    const result = action?.onClick();
+    if (result && 'busyLabel' in result) {
+      setNote(null);
+      setBusyLabel(result.busyLabel);
+      return;
+    }
+    if (result && 'note' in result) {
+      setNote(result.note);
+      return;
+    }
     handleDismiss();
   };
 
@@ -77,9 +97,12 @@ export const Toast: React.FC<ToastProps> = ({
         <button
           className={styles.actionButton}
           onClick={handleAction}
+          disabled={busyLabel !== null}
+          aria-busy={busyLabel !== null}
+          data-testid="toast-action"
           type="button"
         >
-          {action.label}
+          {busyLabel ?? action.label}
         </button>
       )}
       <button
@@ -90,6 +113,7 @@ export const Toast: React.FC<ToastProps> = ({
       >
         <Icons.X size={16} />
       </button>
+      {note !== null && <span className={styles.note} data-testid="toast-action-note">{note}</span>}
     </div>
   );
 };
