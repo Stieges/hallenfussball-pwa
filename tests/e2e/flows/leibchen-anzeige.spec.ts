@@ -251,18 +251,14 @@ test.describe('Leibchen-Anzeige Zuschauer-Seite 390', () => {
     await bild(page, 'z-laeuft');
   });
 
-  test('@ZM-158 @ZM-195 Als Nächstes: Kästen mit „0“ in der echten Trikotfarbe statt Strich (Rot gegen Rot: beide Rot, keine Ausweichfarbe, @ZM-159 Fall D2)', async ({ page }) => {
+  test('@ZM-209 Als Nächstes: vor dem Anpfiff ohne bestätigte Leibchen „–“ bei beiden Teams, keine Kästen, kein „0 : 0“ (der Hallenmonitor zeigt sie weiter, @ZM-195)', async ({ page }) => {
     await oeffneZuschauer(page, 'vor-gleiche-farbe');
-    // Das nächste Spiel steht im Kopfblock und als Karte im Spielplan; gemessen wird die Karte, der Kopf trägt dieselben Farben
     const plan = page.locator('.mobile-view');
-    await expect(page.getByTestId('public-current').getByTestId(/^match-box-.*-away$/)).toHaveAttribute('data-color', ROT);
-    await expect(plan.getByTestId(/^match-box-.*-home-digits$/)).toHaveText('0');
-    await expect(plan.getByTestId(/^match-box-.*-home$/)).toHaveAttribute('data-color', ROT);
-    await expect(plan.getByTestId(/^match-box-.*-away$/)).toHaveAttribute('data-color', ROT);
-    await expect(plan.getByTestId(/^match-box-.*-away$/)).toHaveAttribute('data-fill', 'solid');
-    // Gegenbeispiel: Spiel 5 (später, Weiß gegen Grün) ist nicht das nächste Spiel des Felds → Zahl ohne Kasten wie bisher
-    await expect(page.locator('.mobile-view [data-testid^="match-box-"][data-testid$="-home"]')).toHaveCount(1);
-    await expect(page.locator('.mobile-view [data-testid^="match-goals-"]').first()).toBeVisible();
+    await expect(page.getByTestId('public-current').getByTestId(/^match-goals-kopf-.*-home$/)).toHaveText('–');
+    await expect(page.getByTestId('public-current').getByTestId(/^match-goals-kopf-.*-away$/)).toHaveText('–');
+    await expect(page.getByTestId('public-current').getByTestId(/^match-box-/)).toHaveCount(0);
+    await expect(plan.getByTestId(/^match-box-/)).toHaveCount(0);
+    await expect(plan.getByTestId(/^match-goals-.*-home$/).first()).toHaveText('–');
     await bild(page, 'z-vor');
   });
 

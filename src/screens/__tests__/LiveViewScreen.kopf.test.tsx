@@ -90,14 +90,15 @@ describe('@ZM-141 Lage „Spiel 7 läuft“ / „Spiel 7 ist angehalten“: oben
 });
 
 describe('@ZM-141 Lage „kein Spiel läuft, Spiel 9 beginnt um 14:40“: Spiel 9 als nächstes Spiel mit Uhrzeit', () => {
-  it('@ZM-141 @ZM-195 Überschrift „Als Nächstes“, Spiel 9 um 14:40, Kästen mit 0 vor dem Anpfiff, ohne Uhr', async () => {
+  it('@ZM-141 @ZM-209 Überschrift „Als Nächstes“, Spiel 9 um 14:40, vor dem Anpfiff „–“ bei beiden Teams (kein „0“, kein Kasten), ohne Uhr', async () => {
     const cup = await fZEIT();
     await zeige(cup.tournament);
     expect(within(kopf()).getByRole('heading', { name: 'Als Nächstes' })).toBeInTheDocument();
     const id9 = idOf(cup.tournament, GAME[9]);
     expect(within(kopf()).getByTestId(`public-current-badge-${id9}`).textContent).toBe('14:40');
     expect(within(kopf()).getByText(/Spiel 9/)).toBeInTheDocument();
-    expect(imKopf(id9, 'home').textContent).toContain('0');
+    expect(imKopf(id9, 'home').textContent).toBe('–');
+    expect(imKopf(id9, 'away').textContent).toBe('–');
     expect(within(kopf()).queryByRole('heading', { name: 'Läuft gerade' })).toBeNull();
     expect(kopf().querySelector('[data-testid^="public-current-clock-"]')).toBeNull();
   });
@@ -183,10 +184,25 @@ describe('@ZM-158 @ZM-161 Ergebniskästen im Kopf', () => {
     expect(within(kopf()).getByTestId(`match-box-kopf-${id7}-away`)).toBeInTheDocument();
   });
 
-  it('@ZM-158 nächstes Spiel: Kästen auch vor dem Anpfiff (@ZM-195)', async () => {
+  it('@ZM-209 nächstes Spiel vor dem Anpfiff, keine Leibchen bestätigt: weder im Kopf noch im Spielplan ein Kasten oder „0 : 0“ (alle Spiele „–“)', async () => {
     const cup = await fZEIT();
-    await zeige(cup.tournament);
-    expect(within(kopf()).getByTestId(`match-box-kopf-${idOf(cup.tournament, GAME[9])}-home`)).toBeInTheDocument();
+    const c = await zeige(cup.tournament);
+    const id9 = idOf(cup.tournament, GAME[9]);
+    expect(kopf().querySelector('[data-testid^="match-box-kopf-"]')).toBeNull();
+    expect(c.querySelector(`[data-testid="match-box-${id9}-home"]`)).toBeNull();
+    expect(c.querySelector('[data-testid^="match-box-"]')).toBeNull();
+    expect(c.querySelector(`[data-testid="match-goals-${id9}-home"]`)?.textContent).toBe('–');
+  });
+
+  it('@ZM-209 Ausnahme: ist für das nächste Spiel ein Leibchen bestätigt, bleiben die Kästen mit Weste und „0“ im Kopf und im Spielplan (@ZM-161)', async () => {
+    const cup = await fZEIT();
+    const id9 = idOf(cup.tournament, GAME[9]);
+    const mitLeibchen = { ...cup.tournament, matches: cup.tournament.matches.map((m) => (m.id === id9 ? { ...m, kitDecision: 'bib' as const, kit: { a: '#FFCC00', bibSide: 'a' as const } } : m)) };
+    const c = await zeige(mitLeibchen);
+    expect(within(kopf()).getByTestId(`match-box-kopf-${id9}-home`)).toBeInTheDocument();
+    expect(within(kopf()).getByTestId(`match-box-kopf-${id9}-home-bib`)).toBeInTheDocument();
+    expect(within(kopf()).getByTestId(`match-box-kopf-${id9}-home-digits`)).toHaveTextContent('0');
+    expect(c.querySelector(`[data-testid="match-box-${id9}-home"]`)).not.toBeNull();
   });
 
   it('@ZM-158 @OB-064 Gegenbeispiel: im Kindermodus (Ergebnisse aus) kein Kasten, auch nicht bei laufendem und nächstem Spiel', async () => {

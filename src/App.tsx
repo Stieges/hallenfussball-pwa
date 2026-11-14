@@ -16,6 +16,7 @@ import { useSwAutoReload } from './hooks/useSwAutoReload';
 import { useMatchProtectionNotices } from './hooks/useMatchProtectionNotices';
 import { useGuestTournamentNotices } from './hooks/useGuestTournamentNotices';
 import { useRouteMatch } from './hooks/useRouteMatch';
+import { useBackOrHome } from './hooks/useBackOrHome';
 import { matchRoute } from './core/routing';
 import { AuthProvider } from './features/auth/context/AuthContext';
 import { useAuth } from './features/auth/hooks/useAuth';
@@ -143,6 +144,7 @@ function AppContent() {
   const { showError } = useToast();
   const { isGuest } = useAuth();
   const navigate = useNavigate();
+  const backOrHome = useBackOrHome(); // Impressum/Datenschutz: nie aus der App heraus (@RE-005)
   const location = useLocation();
 
   // QW-002: Show toast if auth initialization timed out
@@ -300,16 +302,15 @@ function AppContent() {
   // @LZ-094 (Papierkorb leeren) und @W1-041 (Import): Aktionen der Startseite, siehe useDashboardActions
   const dashboardActions = useDashboardActions({ saveTournament, emptyTrash });
   const [screen, setScreen] = useState<ScreenType>('dashboard');
-  const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
   // @W5-039: der Assistent bekommt nur das vollständig geladene Turnier, nie den Listen-Eintrag der Startseite
-  const wizardLoad = useWizardTournament(isEditWizardPath ? editingTournamentId : null, selectedTournament);
+  const wizardLoad = useWizardTournament(isEditWizardPath ? editingTournamentId : null, null);
   const wizardTournament = wizardLoad.status === 'ready' ? wizardLoad.tournament : undefined;
   const [liveShareCode, setLiveShareCode] = useState<string | null>(null);
   const [quickEditMode, setQuickEditMode] = useState(false); // Für schnelles Bearbeiten & Zurück
   // Wer den Assistenten verlässt (auch per Browser-Zurück), lässt keinen gehaltenen Stand zurück: sonst schriebe ein späteres
   // „Abbrechen“ eines anderen Assistenten den Stand vom ersten Öffnen als Voll-Ersatz zurück
   useEffect(() => {
-    if (!isEditWizardPath) { setSelectedTournament(null); setQuickEditMode(false); }
+    if (!isEditWizardPath) { setQuickEditMode(false); }
   }, [isEditWizardPath]);
 
   // MON-KONF-01: Monitor Display Route params (now using URL-based detection above)
@@ -442,30 +443,16 @@ function AppContent() {
   };
 
   // Handler for editing a published tournament in the wizard
-  const handleEditInWizard = async (tournament: Tournament, targetStep?: number) => {
+  const handleEditInWizard = (tournament: Tournament, targetStep?: number) => {
     if (isTournamentClosed(tournament)) {
       showError(tTournament('rights.closedHint')); // R3-3: zweite Linie, die Verwaltung bietet den Einstieg nicht an
       return;
     }
-    try {
-      // Update lastVisitedStep if targetStep is provided
-      const tournamentToEdit = targetStep
-        ? { ...tournament, lastVisitedStep: targetStep }
-        : tournament;
-
-      // Der Zustand bleibt, wie er ist (@W5-004, @LZ-001): kein Setzen auf Entwurf und, beim Abbrechen, kein Setzen auf festgelegt
-      await saveTournament(tournamentToEdit);
-
-      // Enable quick edit mode and navigate to wizard via URL
-      setQuickEditMode(true);
-      setSelectedTournament(tournamentToEdit);
-      const stepParam = targetStep ? `?step=${targetStep}` : '';
-      void navigate(`/tournament/${tournament.id}/edit${stepParam}`);
-    } catch (error) {
-      console.error('[App] Failed to open tournament in wizard:', error);
-      if (error instanceof Error) { captureFeatureError(error, 'tournament', 'editInWizard'); }
-      showError(t('errors.editInWizard'));
-    }
+    // @W5-039: Öffnen speichert nichts. Der Assistent lädt das Turnier selbst frisch (useWizardTournament); die Kopie der
+    // Verwaltung geht nicht an ihn (sie kann älter sein als der Server). Der Zielschritt steht nur in der Adresse.
+    setQuickEditMode(true);
+    const stepParam = targetStep ? `?step=${targetStep}` : '';
+    void navigate(`/tournament/${tournament.id}/edit${stepParam}`);
   };
 
   return (
@@ -573,9 +560,9 @@ function AppContent() {
             onBack={() => {
               // Abbrechen im Wizard-Bearbeiten stellt den Stand von vorher wieder her – mit dem Zustand von vorher
               // (C-ENTWURF-KIPPT-BEIM-ABBRECHEN: ein Entwurf wurde sonst „festgelegt“ gespeichert)
-              if (quickEditMode && selectedTournament?.id === editingTournamentId && selectedTournament !== null) {
+              if (quickEditMode && wizardTournament?.id === editingTournamentId) {
                 const restoredTournament: Tournament = {
-                  ...selectedTournament,
+                  ...wizardTournament,
                   updatedAt: new Date().toISOString(),
                 };
                 // Fire-and-forget: Don't await, just trigger the save
@@ -585,13 +572,11 @@ function AppContent() {
                     if (err instanceof Error) { captureFeatureError(err, 'tournament', 'restoreStatus'); }
                   });
               }
-              setSelectedTournament(null); // Clear selection when going back
               setQuickEditMode(false); // Reset quick edit mode
               void navigate('/');
             }}
             onSave={async (tournament) => {
               await saveTournament(tournament);
-              setSelectedTournament(null); // Clear selection after save
               setQuickEditMode(false); // Reset quick edit mode
               // Small delay to ensure state updates propagate
               await new Promise(resolve => setTimeout(resolve, 200));
@@ -624,7 +609,7 @@ function AppContent() {
           <TournamentManagementScreen
             tournamentId={tournamentIdFromUrl}
             onBack={() => void navigate('/')}
-            onEditInWizard={(tournament, step) => void handleEditInWizard(tournament, step)}
+            onEditInWizard={handleEditInWizard}
             onNavigateToLogin={() => void navigate('/login')}
             onNavigateToRegister={() => void navigate('/register')}
             onNavigateToProfile={() => void navigate('/profile')}
@@ -648,17 +633,11 @@ function AppContent() {
 
         {/* Legal Screens */}
         {(screen === 'impressum' || isLegalPath && location.pathname === '/impressum') && (
-          <ImpressumScreen onBack={() => {
-            void navigate(-1); // Go back to previous page
-          }} />
+          <ImpressumScreen onBack={backOrHome} />
         )}
 
         {(screen === 'datenschutz' || isLegalPath && location.pathname === '/datenschutz') && (
-          <DatenschutzScreen
-            onBack={() => {
-              void navigate(-1); // Go back to previous page
-            }}
-          />
+          <DatenschutzScreen onBack={backOrHome} />
         )}
 
         {/* 404 Not Found */}

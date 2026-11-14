@@ -253,11 +253,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
     if (confirmWizard && onEditInWizard) {
       // @W5-004/@LZ-004: Bearbeiten setzt ein Turnier NIE auf Entwurf zurück.
-      const wizardTournament: Tournament = {
-        ...tournament,
-        lastVisitedStep: targetStep,
-      };
-      onEditInWizard(wizardTournament, targetStep);
+      // @W5-039: nichts wird gespeichert, der Zielschritt steht in der Adresse; der Assistent lädt das Turnier selbst frisch.
+      onEditInWizard(tournament, targetStep);
     }
   };
 
