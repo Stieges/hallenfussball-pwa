@@ -9,6 +9,7 @@ import { Standing } from '../../types/tournament';
 import type { ScheduleSource } from './scheduleSource';
 import { getGroupDisplayName } from '../../utils/displayNames';
 import { TeamAvatar } from '../ui/TeamAvatar';
+import { SlashBreaks } from '../ui/atoms/TeamName';
 
 interface ParticipantsAndGroupsProps {
   teams: Array<{ id: string; name: string; group?: string }>;
@@ -53,8 +54,8 @@ export const ParticipantsAndGroups: React.FC<ParticipantsAndGroupsProps> = ({
 
   const groupsGridStyle: CSSProperties = {
     display: 'grid',
-    // Allow groups to sit side-by-side again to save vertical space
-    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+    // Gruppen nebeneinander, aber nie breiter als die Seite: `min(…, 100%)` verhindert Überlauf bei 360 Pixeln (@ZM-207)
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))',
     gap: cssVars.spacing.lg,
     alignItems: 'start',
   };
@@ -81,7 +82,7 @@ export const ParticipantsAndGroups: React.FC<ParticipantsAndGroupsProps> = ({
     margin: 0,
     display: 'grid',
     // Internal grid: Allow 2 columns even in narrower group boxes (min 140px is safe for avatar + name)
-    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(min(220px, 100%), 1fr))',
     gap: '8px 16px',
   };
 
@@ -107,8 +108,11 @@ export const ParticipantsAndGroups: React.FC<ParticipantsAndGroupsProps> = ({
     fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.textPrimary,
     fontWeight: cssVars.fontWeights.bold,
-    // Allow text to wrap so long names are not cut off
+    // Der Name darf umbrechen (an Leerzeichen und nach „/“, @ZM-207), damit lange Namen nicht abgeschnitten werden; nur ein zu langes Einzelwort bricht
     lineHeight: 1.3,
+    // `anywhere`: ein einzelnes Wort, das länger ist als die Zeile, bricht um und lässt Kasten und Seite nicht überlaufen (@ZM-207); normale Wörter bleiben ganz
+    overflowWrap: 'anywhere',
+    minWidth: 0,
   };
 
   // Special case: Only 1 group - hide group title
@@ -132,7 +136,7 @@ export const ParticipantsAndGroups: React.FC<ParticipantsAndGroupsProps> = ({
                     size="sm" // Small avatar (32px)
                     showColorRing={false}
                   />
-                  <span style={nameStyle}>{standing.team.name}</span>
+                  <span style={nameStyle} data-teamname><SlashBreaks text={standing.team.name} /></span>
                 </li>
               ))}
             </ul>

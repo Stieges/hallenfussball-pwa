@@ -15,6 +15,7 @@ import './styles/global.css';
 import { initInertPolyfill } from './utils/polyfills/inert';
 import { initSentry, captureBootContext } from './lib/sentry';
 import { noteHelperStartEntry } from './features/helpers/helperStartDeps';
+import { shortLiveTarget } from './core/routing/shortLiveRedirect';
 
 /**
  * Global handler for unhandled promise rejections
@@ -84,33 +85,46 @@ window.addEventListener('unhandledrejection', (event) => {
   }
 })();
 
-// Initialize inert polyfill for Safari <15.5 compatibility
-// Must run before React renders to ensure dialogs work correctly
-initInertPolyfill().catch((error) => {
-  console.error('Failed to initialize inert polyfill:', error);
-});
+/**
+ * Kurze Zuschauer-Adresse `host/live/CODE` (@ZM-208): vor dem Router auf die Hash-Adresse umleiten, nur diese eine Route.
+ * Wird umgeleitet, startet diese Seite nichts mehr (kein Sentry, kein Rendern): sonst blitzte kurz die Startseite der Verwaltung auf.
+ */
+const redirectsToShortLive = ((): boolean => {
+  const target = shortLiveTarget(window.location.pathname, window.location.search, window.location.hash);
+  if (target === null) { return false; }
+  window.location.replace(`${window.location.origin}${target}`);
+  return true;
+})();
 
-// Initialize Sentry error tracking (only in production; switchable in settings, @RE-002)
-// Must be called early to catch all errors
-initSentry();
+if (!redirectsToShortLive) {
+  // Initialize inert polyfill for Safari <15.5 compatibility
+  // Must run before React renders to ensure dialogs work correctly
+  initInertPolyfill().catch((error) => {
+    console.error('Failed to initialize inert polyfill:', error);
+  });
 
-// Telemetry snapshot of the client state at boot (build hash, SW state, cache
-// keys, navigator.onLine). Lets us correlate auth/cache bugs with specific
-// deploys and surface the stale-precache class of issues. Async, fire-and-forget.
-void captureBootContext();
+  // Initialize Sentry error tracking (only in production; switchable in settings, @RE-002)
+  // Must be called early to catch all errors
+  initSentry();
 
-// Start-Weiche für Helfer-Geräte: nur entscheiden, wenn die Startseite die erste Adresse ist (@HE-096, @HE-110)
-noteHelperStartEntry(window.location.hash);
+  // Telemetry snapshot of the client state at boot (build hash, SW state, cache
+  // keys, navigator.onLine). Lets us correlate auth/cache bugs with specific
+  // deploys and surface the stale-precache class of issues. Async, fire-and-forget.
+  void captureBootContext();
 
-const rootElement = document.getElementById('root');
-if (!rootElement) {
-  throw new Error('Root element not found');
+  // Start-Weiche für Helfer-Geräte: nur entscheiden, wenn die Startseite die erste Adresse ist (@HE-096, @HE-110)
+  noteHelperStartEntry(window.location.hash);
+
+  const rootElement = document.getElementById('root');
+  if (!rootElement) {
+    throw new Error('Root element not found');
+  }
+
+  ReactDOM.createRoot(rootElement).render(
+    <React.StrictMode>
+      <HashRouter>
+        <App />
+      </HashRouter>
+    </React.StrictMode>
+  );
 }
-
-ReactDOM.createRoot(rootElement).render(
-  <React.StrictMode>
-    <HashRouter>
-      <App />
-    </HashRouter>
-  </React.StrictMode>
-);

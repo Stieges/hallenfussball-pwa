@@ -12,8 +12,17 @@
 
 import React, { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../../design-tokens';
+import { cssVars, iconSizeValues } from '../../../design-tokens';
+import { Icons } from '../../../components/ui/Icons';
 import { BaseTheme, BASE_THEME_LABELS } from '../types/settings.types';
+
+/** Symbole der App statt Emoji (@ZM-206): System = Bildschirm, Hell = Sonne, Dunkel = Mond, Hoher Kontrast = halb gefüllter Kreis. */
+const THEME_ICONS: Record<BaseTheme, typeof Icons.Sun> = {
+  system: Icons.Monitor,
+  light: Icons.Sun,
+  dark: Icons.Moon,
+  'high-contrast': Icons.Contrast,
+};
 
 // =============================================================================
 // Types
@@ -43,7 +52,8 @@ export const BaseThemeSelector: React.FC<BaseThemeSelectorProps> = ({
   return (
     <div style={styles.container} role="radiogroup" aria-label={t('baseTheme.selectLabel')}>
       {themes.map((theme) => {
-        const { label, description, icon } = BASE_THEME_LABELS[theme];
+        const { label, description } = BASE_THEME_LABELS[theme];
+        const ThemeIcon = THEME_ICONS[theme];
         const isSelected = value === theme;
         const isSystem = theme === 'system';
 
@@ -59,7 +69,7 @@ export const BaseThemeSelector: React.FC<BaseThemeSelectorProps> = ({
               ...(isSelected ? styles.optionSelected : {}),
             }}
           >
-            <span style={styles.icon}>{icon}</span>
+            <span style={styles.icon} aria-hidden="true"><ThemeIcon size={iconSizeValues.md} /></span>
             <div style={styles.textContainer}>
               <span style={styles.label}>{label}</span>
               <span style={styles.description}>
@@ -111,10 +121,12 @@ const styles: Record<string, CSSProperties> = {
     borderColor: cssVars.colors.primaryBorder,
   },
   icon: {
-    fontSize: cssVars.fontSizes.xl,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     flexShrink: 0,
-    width: '32px',
-    textAlign: 'center',
+    width: cssVars.spacing.xl,
+    color: cssVars.colors.textPrimary,
   },
   textContainer: {
     display: 'flex',
@@ -132,8 +144,9 @@ const styles: Record<string, CSSProperties> = {
     fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.textSecondary,
   },
+  // Zusatz „(aktuell: Hell)“: Schriftfarbe zweiter Ordnung wie die Beschreibung, mindestens 4,5 : 1 auch auf der gewählten Zeile (@ZM-206)
   resolvedHint: {
-    color: cssVars.colors.textTertiary,
+    color: cssVars.colors.textSecondary,
     fontStyle: 'italic',
   },
   radioOuter: {

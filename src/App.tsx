@@ -22,7 +22,7 @@ import { useAuth } from './features/auth/hooks/useAuth';
 import { ThemeProvider } from './hooks/useTheme';
 import {
   GuestBanner,
-  LoginScreen,
+  LoginRoute,
   RegisterScreen,
   UserProfileScreen,
   AuthCallback,
@@ -496,13 +496,7 @@ function AppContent() {
       <Suspense fallback={<ScreenLoader />}>
         {/* Auth Screens */}
         {screen === 'login' && (
-          <LoginScreen
-            onSuccess={() => void navigate('/')}
-            onNavigateToRegister={() => void navigate('/register')}
-            onBack={() => void navigate(-1)}
-            onContinueAsGuest={() => void navigate('/')}
-            onNavigateToLegal={(path) => void navigate(path)}
-          />
+          <LoginRoute />
         )}
 
         {screen === 'register' && (

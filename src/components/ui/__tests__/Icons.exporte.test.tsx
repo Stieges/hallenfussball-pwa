@@ -14,7 +14,7 @@ const BESTAND = [
 ] as const;
 
 /** Seit H4-4 (Hallenton): Lautsprecher, Geräte, Zustände. */
-const NEU = ['Speaker', 'SpeakerQuestion', 'CheckCircle', 'MinusCircle', 'SpeakerLow', 'SpeakerOff', 'Phone', 'Flask', 'Laptop', 'Moon', 'QuestionMark', 'HelpCircle', 'Swap'] as const;
+const NEU = ['Speaker', 'SpeakerQuestion', 'CheckCircle', 'MinusCircle', 'SpeakerLow', 'SpeakerOff', 'Phone', 'Flask', 'Laptop', 'Moon', 'QuestionMark', 'HelpCircle', 'Swap', 'Sun', 'Contrast'] as const;
 const ALLE = [...BESTAND, ...NEU] as const;
 
 describe('Icons: Sammel-Export', () => {

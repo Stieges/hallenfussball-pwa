@@ -7,7 +7,7 @@
  * @see docs/concepts/TOURNAMENT-ADMIN-CENTER-KONZEPT-v1.2.md
  */
 
-import { useState, useEffect, lazy, Suspense, CSSProperties, useCallback } from 'react';
+import { useState, useEffect, useMemo, Suspense, CSSProperties, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { useNavigate } from 'react-router-dom';
@@ -19,54 +19,14 @@ import { useToast } from '../../components/ui/Toast';
 import type { AdminCategoryId, AdminWarning } from './types/admin.types';
 import { ADMIN_LAYOUT, getAdminCategory } from './constants/admin.constants';
 import { CategoryRightGate } from './components/CategoryRightGate';
+import { useCan } from '../auth/hooks/useCan';
 
 // Components
 import { AdminSidebar } from './components/AdminSidebar';
 import { AdminMobileHub } from './components/AdminMobileHub';
 import { AdminHeader } from './components/AdminHeader';
 import { CategorySkeleton } from './components/CategorySkeleton';
-
-// =============================================================================
-// LAZY LOADED CATEGORIES
-// =============================================================================
-
-// Dashboard
-const DashboardCategory = lazy(() =>
-  import('./categories/Dashboard').then((m) => ({ default: m.DashboardCategory }))
-);
-
-// Management
-const ActivityLogCategory = lazy(() =>
-  import('./categories/ActivityLog').then((m) => ({ default: m.ActivityLogCategory }))
-);
-const ExportsCategory = lazy(() =>
-  import('./categories/Exports').then((m) => ({ default: m.ExportsCategory }))
-);
-const TeamHelpersCategory = lazy(() =>
-  import('./categories/TeamHelpers').then((m) => ({ default: m.TeamHelpersCategory }))
-);
-const SponsorsCategory = lazy(() =>
-  import('./categories/Sponsors').then((m) => ({ default: m.SponsorsCategory }))
-);
-
-// Settings
-const SettingsCategory = lazy(() =>
-  import('./categories/Settings').then((m) => ({ default: m.SettingsCategory }))
-);
-const MatchCockpitCategory = lazy(() =>
-  import('./categories/MatchCockpit').then((m) => ({ default: m.MatchCockpitCategory }))
-);
-const VisibilityCategory = lazy(() =>
-  import('./categories/Visibility').then((m) => ({ default: m.VisibilityCategory }))
-);
-const MetadataCategory = lazy(() =>
-  import('./categories/Metadata').then((m) => ({ default: m.MetadataCategory }))
-);
-
-// Danger Zone
-const DangerZoneCategory = lazy(() =>
-  import('./categories/DangerZone').then((m) => ({ default: m.DangerZoneCategory }))
-);
+import { AdminCategoryContent } from './components/AdminCategoryContent';
 
 // =============================================================================
 // STYLES
@@ -108,6 +68,10 @@ const styles = {
   } as CSSProperties,
 } as const;
 
+/** @HT-022: „Hallenton“ wird ohne `manageScreens` nicht angeboten (direkte Adresse → Hinweis im `CategoryRightGate`). */
+const OHNE_HALLENTON: ReadonlySet<AdminCategoryId> = new Set<AdminCategoryId>(['hallenton']);
+const NICHTS_VERSTECKT: ReadonlySet<AdminCategoryId> = new Set<AdminCategoryId>();
+
 // =============================================================================
 // PROPS
 // =============================================================================
@@ -135,6 +99,9 @@ export function TournamentAdminCenter({
   // A4 (C-SYNC): AdminHeader schaltet SyncStatusIndicator frei, das intern selbst nichts rendert
   // außerhalb des Cloud-Modus (isCloudSyncAvailable in useSyncStatus) -- kein Auth-Check hier nötig.
   const showSyncStatus = true;
+  // @HT-046: der Menüpunkt bleibt nach dem Turnierende zum Lesen (wie das Gate); Ändern sperrt jede Taste selbst
+  const darfHallenton = useCan('manageScreens', tournamentId, { openAfterClose: true });
+  const hiddenCategories = useMemo(() => (darfHallenton ? NICHTS_VERSTECKT : OHNE_HALLENTON), [darfHallenton]);
 
   // Category from URL is now passed as prop from App.tsx (single source of truth)
   const categoryFromUrl = initialCategory;
@@ -229,31 +196,7 @@ export function TournamentAdminCenter({
       onReload: () => reload({ fresh: true }),
     };
 
-    switch (activeCategory) {
-      case 'dashboard':
-        return <DashboardCategory {...categoryProps} />;
-      case 'activity-log':
-        return <ActivityLogCategory {...categoryProps} />;
-      case 'exports':
-        return <ExportsCategory {...categoryProps} />;
-      // @OB-005: „Team & Helfer" bleibt vorbereitet — sichtbar erst mit dem Einstieg per QR-Code.
-      case 'team-helpers':
-        return <TeamHelpersCategory {...categoryProps} />;
-      case 'sponsors':
-        return <SponsorsCategory {...categoryProps} />;
-      case 'settings':
-        return <SettingsCategory {...categoryProps} />;
-      case 'match-cockpit':
-        return <MatchCockpitCategory {...categoryProps} />;
-      case 'visibility':
-        return <VisibilityCategory {...categoryProps} />;
-      case 'metadata':
-        return <MetadataCategory {...categoryProps} />;
-      case 'danger-zone':
-        return <DangerZoneCategory {...categoryProps} />;
-      default:
-        return <DashboardCategory {...categoryProps} />;
-    }
+    return <AdminCategoryContent category={activeCategory} {...categoryProps} />;
   };
 
   // Get category title for header
@@ -282,6 +225,7 @@ export function TournamentAdminCenter({
           onNavigate={handleNavigate}
           warnings={warnings}
           onBackToTournament={onBackToTournament}
+          hiddenCategories={hiddenCategories}
         />
       );
     }
@@ -297,6 +241,7 @@ export function TournamentAdminCenter({
             onBackToTournament={onBackToTournament}
             tournamentId={tournamentId}
             showSyncStatus={showSyncStatus}
+            ohneLautsprecherEintrag={activeCategory === 'hallenton'}
           />
           <div style={{ ...styles.contentArea, ...styles.contentAreaMobile }}>
             <ErrorBoundary onReset={handleErrorReset}>
@@ -323,6 +268,7 @@ export function TournamentAdminCenter({
         warnings={warnings}
         onBackToTournament={onBackToTournament}
         onWarningClick={handleWarningClick}
+        hiddenCategories={hiddenCategories}
       />
 
       {/* Main Content */}
@@ -333,6 +279,7 @@ export function TournamentAdminCenter({
           onBackToTournament={onBackToTournament}
           tournamentId={tournamentId}
           showSyncStatus={showSyncStatus}
+          ohneLautsprecherEintrag={activeCategory === 'hallenton'}
         />
         <div style={styles.contentArea}>
           <ErrorBoundary onReset={handleErrorReset}>
