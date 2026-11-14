@@ -44,6 +44,7 @@ describe('@HT-030 Ton fürs Spielende wählen', () => {
   it('„Ton aus“ → „Hupe 2“: Ton ist an und Hupe 2 gewählt', () => {
     const { container } = render(<Einbindung start={{ soundEnabled: false, soundId: null }} />);
     fireEvent.change(tonSelect(container), { target: { value: 'horn-2' } });
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Altfeld, wird weiter mitgeschrieben (Entscheidung 9)
     expect(aktuell.soundEnabled).toBe(true);
     expect(aktuell.soundId).toBe('horn-2');
   });
@@ -51,6 +52,7 @@ describe('@HT-030 Ton fürs Spielende wählen', () => {
   it('Gegenbeispiel: „Hupe 2“ → „Ton aus“: Ton ist aus', () => {
     const { container } = render(<Einbindung start={{ soundEnabled: true, soundId: 'horn-2' }} />);
     fireEvent.change(tonSelect(container), { target: { value: 'none' } });
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Altfeld, wird weiter mitgeschrieben (Entscheidung 9)
     expect(aktuell.soundEnabled).toBe(false);
     expect(aktuell.soundId).toBeNull();
   });

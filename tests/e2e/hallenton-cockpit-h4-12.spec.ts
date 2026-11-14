@@ -99,6 +99,11 @@ test.describe('@HT-009 @HT-034 @HT-036 @HT-039 @HT-040 @HT-050 H4-12 Cockpit-Hin
           expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'kein waagerechtes Scrollen').toBe(true);
           const ueberlauf = await page.evaluate(() => Array.from(document.querySelectorAll('[data-testid="cockpit-hall-hinweise"] *')).filter((el) => el.scrollWidth - el.clientWidth > 1).map((el) => el.textContent));
           expect(ueberlauf, 'kein Überlauf im Kasten').toEqual([]);
+          if (fall === 'halbzeit') {
+            // K-a: das Bild zeigt den Stand der Leitung in der Pause (mindestens zwei Antworten), nicht den Rückfall auf den Server-Stand
+            await page.waitForFunction(() => ((window as unknown as { __hallentonPruefstand?: { leitungAntworten: number } }).__hallentonPruefstand?.leitungAntworten ?? 0) >= 2, undefined, { timeout: 15_000 });
+            await expect(kasten).toBeVisible();
+          }
           await animationenFertig(page);
           for (const b of await hartBefunde(page, g.art)) {
             testInfo.annotations.push({ type: 'befund-gesamt', description: b });
@@ -149,6 +154,12 @@ test.describe('@HT-009 @HT-034 @HT-036 @HT-039 @HT-040 @HT-050 H4-12 Cockpit-Hin
         const eigene = await rechteck(page, 'cockpit-geraet-ton');
         expect(davor).not.toBeNull();
         expect(eigene.y - ((davor as Rechteck).y + (davor as Rechteck).height), 'Abstand zwischen den Karten').toBeGreaterThanOrEqual(16);
+        // „Fertig“ steht im Fuß der Fläche und liegt ohne Scrollen im Sichtbereich (nur der Inhalt scrollt), Haupttaste ≥ 56 px
+        const fertig = await rechteck(page, 'cockpit-settings-fertig');
+        expect(fertig.y + fertig.height, '„Fertig“ liegt im Sichtbereich').toBeLessThanOrEqual(g.height);
+        expect(fertig.y, '„Fertig“ liegt im Sichtbereich').toBeGreaterThanOrEqual(0);
+        expect(fertig.height, 'Haupttaste ≥ 56 px').toBeGreaterThanOrEqual(56);
+        await expect(page.getByTestId('cockpit-settings-fertig')).toHaveAttribute('data-primary', '');
         await speichereBild(page, testInfo.outputDir, 'H412_BILDER', `h4-12-cockpit-dialog-${g.name}-${thema}`, false); // der Dialog liegt über dem Fenster und scrollt in sich: nur der sichtbare Ausschnitt
         // ausschalten gilt nur auf diesem Gerät: der Regler verschwindet, der Wert steht im Speicher dieses Geräts
         await page.getByTestId('cockpit-ton-schalter').click();
