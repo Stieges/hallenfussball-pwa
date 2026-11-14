@@ -142,6 +142,11 @@ export interface MatchView {
    * Turnier-Einstellung „Anzeige für Zuschauer“. Alle Flächen lesen die Kastenfarbe nur von hier.
    */
   boxes: { home: SideBox; away: SideBox };
+  /**
+   * Zeigt die Fläche die Kästen (@ZM-209)? Nur die Zuschauer-Seite (`viewer`) zeigt vor dem Anpfiff keine – „–“ wie bei allen
+   * geplanten Spielen –, außer ein Leibchen ist für das Spiel bestätigt. Hallenmonitor (`screen`) und Verwaltung zeigen immer (@ZM-195).
+   */
+  showBoxes: boolean;
 }
 
 export interface CurrentView {
