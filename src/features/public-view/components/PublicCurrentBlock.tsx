@@ -66,11 +66,11 @@ const clockStyle: CSSProperties = { padding: `0 ${cssVars.spacing.sm} ${cssVars.
 /**
  * Kästen in Teamfarbe (Weste bei Leibchen, @ZM-158, @ZM-161) – nur mit sichtbaren Ergebnissen (Kindermodus: keine). Ein laufendes Spiel
  * zeigt sie nur bei eingeschaltetem Live-Stand (sonst „laufendes Spiel ohne Stand“, Zone 1 „Beim Öffnen“, @ZM-116), das nächste Spiel
- * mit 0 : 0 (@ZM-195), das zuletzt beendete mit Ring beim Sieger und Pokal in der Finalrunde (@ZM-158, @OB-064).
+ * nur mit bestätigtem Leibchen (@ZM-209, `showBoxes`; der Hallenmonitor zeigt es immer mit 0 : 0, @ZM-195), das zuletzt beendete mit Ring beim Sieger und Pokal in der Finalrunde (@ZM-158, @OB-064).
  */
 function kastenOf(mv: MatchView, view: TournamentView): MatchView['boxes'] | undefined {
   const { results, liveScore } = view.rules;
-  return results && (!mv.isLive || liveScore) ? mv.boxes : undefined;
+  return results && (!mv.isLive || liveScore) && mv.showBoxes ? mv.boxes : undefined;
 }
 
 const HEADING_KEY = { live: 'current.live', next: 'current.next', last: 'current.last' } as const;

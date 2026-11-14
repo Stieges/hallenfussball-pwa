@@ -81,5 +81,18 @@
     "toggle": "Participants ({{n}})",
     "collapsedSr": "collapsed",
     "expandedSr": "expanded"
+  },
+  "head": {
+    "from": "from {{time}}",
+    "toggleLabel": "Tournament details",
+    "ageClass": "Age group",
+    "location": "Venue",
+    "duration_one": "{{count}} minute per match",
+    "duration_other": "{{count}} minutes per match",
+    "durationLabel": "Match length",
+    "teamsLabel": "Teams",
+    "teams_one": "{{count}} team",
+    "teams_other": "{{count}} teams",
+    "organizer": "Organiser"
   }
 }
