@@ -95,7 +95,7 @@ export function MonitorSettingsSection({ monitor, nameError, onUpdateSettings }:
             onChange={(e) => onUpdateSettings({ defaultSlideDuration: Number(e.target.value) })}
           >
             {DURATION_PRESETS.map(d => (
-              <option key={d} value={d}>{d}s</option>
+              <option key={d} value={d}>{t('monitorEditor.settings.durationValue', { seconds: d })}</option>
             ))}
           </select>
         </div>

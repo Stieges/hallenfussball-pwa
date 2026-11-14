@@ -4,6 +4,7 @@ import { cssVars } from '../../../design-tokens';
 import { MonitorSlide, SlideConfig, QrTargetType, ColorScheme, DEFAULT_SLIDE_CONFIG } from '../../../types/monitor';
 import { TournamentField, TournamentGroup } from '../../../types/tournament';
 import { validateSlideConfig } from '../../../core/models/schemas/SlideConfigSchema';
+import { slideTypeLabel } from './monitor-editor/slideTypeLabels';
 
 // =============================================================================
 // CONSTANTS
@@ -131,10 +132,10 @@ export function SlideConfigEditor({
         <div
             style={styles.slideConfigStyle}
             role="group"
-            aria-label={t('slideEditor.configAria', { type })}
+            aria-label={t('slideEditor.configAria', { type: slideTypeLabel(t, type) })}
         >
-            {/* === Feld-Auswahl für live, schedule-field === */}
-            {(type === 'live' || type === 'schedule-field') && (
+            {/* === Feld-Auswahl für live, schedule-field; bei genau einem Feld und gesetztem Feld entfällt sie (@ME-075) === */}
+            {(type === 'live' || type === 'schedule-field') && (fields.length > 1 || !fields.some(f => f.id === config.fieldId)) && (
                 <div style={styles.inputGroupStyle}>
                     <label style={styles.labelStyle} htmlFor={`${idPrefix}-fieldId`}>
                         {t('slideEditor.field')} <span style={requiredMarkerStyle}>*</span>
@@ -158,7 +159,7 @@ export function SlideConfigEditor({
                     </select>
                     {hasError('fieldId') && (
                         <span id={getErrorId('fieldId')} role="alert" style={errorStyle}>
-                            {errors.fieldId}
+                            {t('monitorEditor.setupProblem.field')}
                         </span>
                     )}
                 </div>
@@ -242,7 +243,7 @@ export function SlideConfigEditor({
                         onChange={(e) => handleConfigChange('numberOfPlayers', Number(e.target.value))}
                     >
                         {[5, 10, 15, 20].map(n => (
-                            <option key={n} value={n}>Top {n}</option>
+                            <option key={n} value={n}>{t('slideEditor.topN', { count: n })}</option>
                         ))}
                     </select>
                 </div>
@@ -274,7 +275,7 @@ export function SlideConfigEditor({
                         </select>
                         {hasError('sponsorId') && (
                             <span id={getErrorId('sponsorId')} role="alert" style={errorStyle}>
-                                {errors.sponsorId}
+                                {t('monitorEditor.setupProblem.sponsor')}
                             </span>
                         )}
                     </div>
@@ -367,7 +368,7 @@ export function SlideConfigEditor({
                         />
                         {hasError('headline') && (
                             <span id={getErrorId('headline')} role="alert" style={errorStyle}>
-                                {errors.headline}
+                                {t('monitorEditor.setupProblem.headline')}
                             </span>
                         )}
                     </div>

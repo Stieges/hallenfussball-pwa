@@ -3,7 +3,7 @@
  * „Speichern“; Schließen mit Änderungen fragt „Änderungen verwerfen?“.
  */
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { dialogWidths } from '../../../../design-tokens';
 import type { Tournament } from '../../../../types/tournament';
@@ -16,7 +16,9 @@ import { ConfirmDialog } from '../../../../components/ui/ConfirmDialog';
 import { useOptionalToast } from '../../../../components/ui/Toast';
 import { useSlotFields } from '../../hooks/useSlotFields';
 import { useMonitorEditorDraft } from '../../hooks/useMonitorEditorDraft';
-import { buildEditorGroups } from './monitorEditorHelpers';
+import { buildEditorGroups, slideSetupProblem } from './monitorEditorHelpers';
+import { validateMonitorName } from './validateMonitorName';
+import { UnreadySlidesDialog, type UnreadySlide } from './UnreadySlidesDialog';
 import { MonitorSettingsSection } from './MonitorSettingsSection';
 import { MonitorSlideList } from './MonitorSlideList';
 import type { SlideActions, SlideContext } from './monitorEditorTypes';
@@ -47,6 +49,9 @@ export function MonitorEditorDialog({ tournament, stored, onTournamentUpdate, on
   const [editingSlideId, setEditingSlideId] = useState<string | null>(null);
   const [isAddingSlide, setIsAddingSlide] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [unreadyOpen, setUnreadyOpen] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
+  const [scrollToId, setScrollToId] = useState<string | null>(null);
   const clickGuard = useRef(false);
 
   const titleId = `monitor-editor-title-${stored.id}`;
@@ -60,7 +65,16 @@ export function MonitorEditorDialog({ tournament, stored, onTournamentUpdate, on
     }
   }, [isDirty, onClose]);
 
-  const handleSave = useCallback(async () => {
+  // Folien, die noch nicht eingerichtet sind und am Monitor nicht erscheinen (@ME-076)
+  const unready = useMemo<UnreadySlide[]>(
+    () => draft.slides.flatMap(slide => {
+      const problem = slideSetupProblem(slide, sponsors);
+      return problem ? [{ slide, problem }] : [];
+    }),
+    [draft.slides, sponsors]
+  );
+
+  const doSave = useCallback(async () => {
     if (clickGuard.current) {return;}
     clickGuard.current = true;
     try {
@@ -77,13 +91,40 @@ export function MonitorEditorDialog({ tournament, stored, onTournamentUpdate, on
     }
   }, [editor, toast, t, onClose]);
 
+  // „Speichern“: mit nicht eingerichteten Folien erst fragen; bei ungültigem Namen zeigt `save()` den Hinweis am Feld
+  const handleSave = useCallback(() => {
+    setShowErrors(true);
+    if (isDirty && unready.length > 0 && validateMonitorName(draft.name, otherNames) === null) {
+      setUnreadyOpen(true);
+      return;
+    }
+    void doSave();
+  }, [isDirty, unready.length, draft.name, otherNames, doSave]);
+
+  const handleBackToEditor = useCallback(() => {
+    setUnreadyOpen(false);
+    if (unready[0]) {
+      setEditingSlideId(unready[0].slide.id);
+      setScrollToId(unready[0].slide.id);
+    }
+  }, [unready]);
+
+  useEffect(() => {
+    if (!scrollToId) {return;}
+    const row = document.querySelector(`[data-testid="monitor-slide-row-${scrollToId}"]`);
+    if (row && typeof row.scrollIntoView === 'function') {row.scrollIntoView({ block: 'center' });}
+    setScrollToId(null);
+  }, [scrollToId]);
+
   const handleAddSlide = useCallback((type: SlideType) => {
-    const slide = editor.addSlide(type, type === 'live' && fields[0] ? { fieldId: fields[0].id } : undefined); // @ME-066
+    // Feld vorbelegen: erstes Feld für jede Folie mit Feld (@ME-066, @ME-075)
+    const hasField = type === 'live' || type === 'schedule-field';
+    const slide = editor.addSlide(type, hasField && fields[0] ? { fieldId: fields[0].id } : undefined);
     setEditingSlideId(slide.id);
     setIsAddingSlide(false);
   }, [editor, fields]);
 
-  const slideContext: SlideContext = { tournament, fields, groups, sponsors, slotTargets, getFieldDisplayName };
+  const slideContext: SlideContext = { tournament, fields, groups, sponsors, slotTargets, getFieldDisplayName, showErrors };
   const slideActions: SlideActions = {
     onMoveSlide: editor.moveSlide,
     onRemoveSlide: (slideId) => {
@@ -99,7 +140,7 @@ export function MonitorEditorDialog({ tournament, stored, onTournamentUpdate, on
       <DialogSurface
         isOpen
         onClose={requestClose}
-        dismissible={!confirmOpen}
+        dismissible={!confirmOpen && !unreadyOpen}
         maxWidth={dialogWidths.lg}
         labelledBy={titleId}
         header={
@@ -115,7 +156,7 @@ export function MonitorEditorDialog({ tournament, stored, onTournamentUpdate, on
             )}
             <DialogActions
               secondary={[{ label: t('monitorEditor.cancel'), onClick: onClose, disabled: isSaving, 'data-testid': 'monitor-editor-cancel' }]}
-              primary={{ label: t('monitorEditor.save'), onClick: () => void handleSave(), disabled: isSaving, 'data-testid': 'monitor-editor-save' }}
+              primary={{ label: t('monitorEditor.save'), onClick: handleSave, disabled: isSaving, 'data-testid': 'monitor-editor-save' }}
             />
           </div>
         }
@@ -133,6 +174,12 @@ export function MonitorEditorDialog({ tournament, stored, onTournamentUpdate, on
           />
         </div>
       </DialogSurface>
+      <UnreadySlidesDialog
+        isOpen={unreadyOpen}
+        slides={unready}
+        onBack={handleBackToEditor}
+        onSaveAnyway={() => { setUnreadyOpen(false); void doSave(); }}
+      />
       <ConfirmDialog
         isOpen={confirmOpen}
         variant="danger"

@@ -7,8 +7,9 @@
  * - Liste aller konfigurierten Monitore
  * - Neuen Monitor erstellen
  * - Monitor bearbeiten, löschen, duplizieren
- * - Display-URL kopieren
- * - Quick Preview der Slides
+ * - Adresse des Monitors kopieren
+ * - Kurzüberblick über die Folien
+ * - Leerer Reiter: Vorlage „Hallen-Standard“ als erstes Angebot (@ME-074)
  *
  * @see MONITOR-KONFIGURATOR-UMSETZUNGSPLAN-v2.md P1-04
  */
@@ -18,10 +19,16 @@ import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
 import type { Tournament } from '../../types/tournament';
 import { SLIDE_TYPES } from '../../types/monitor';
+import { buildHallenStandardMonitors } from '../../core/services/monitorConfigTransfer';
+import { tournamentFieldList } from '../../core/services/monitorConfigTransferChecks';
 import { useMonitors } from '../../hooks';
 import { useMonitorHeartbeats } from '../../hooks/useMonitorHeartbeats';
 import { useCan } from '../auth/hooks/useCan';
 import { MonitorCard } from './components/MonitorCard';
+import { MonitorCreateForm } from './components/MonitorCreateForm';
+import { MonitorEmptyStart } from './components/MonitorEmptyStart';
+import { newId } from './components/monitorTransferHelpers';
+import { slideTypeLabel } from './components/monitor-editor/slideTypeLabels';
 import { validateMonitorName } from './components/monitor-editor/validateMonitorName';
 import { MonitorTransferSheet } from './MonitorTransferSheet';
 import { downloadMonitorConfig } from './monitorConfigDownload';
@@ -130,6 +137,29 @@ export function MonitorsConfigTab({
     }
   };
 
+  // @ME-074: Vorlage „Hallen-Standard“ mit einem Tipp anlegen; die Liste zeigt den Monitor, der Editor bleibt zu
+  const handleHallenStandard = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const created = buildHallenStandardMonitors(
+        t('monitors.transfer.templateMonitorName'),
+        tournamentFieldList(tournament)[0]?.id,
+        {
+          sponsors: tournament.sponsors ?? [],
+          existingNames: monitors.map(m => m.name),
+          generateId: newId,
+          now: new Date().toISOString(),
+        }
+      );
+      await addMonitors(created);
+    } catch {
+      setError(t('monitors.errors.createFailed'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleEdit = (monitorId: string) => {
     if (onEditMonitor) {
       onEditMonitor(monitorId);
@@ -164,7 +194,7 @@ export function MonitorsConfigTab({
     setError(null);
 
     try {
-      await duplicateMonitor(id);
+      await duplicateMonitor(id, t('monitors.copyName', { name: monitors.find(m => m.id === id)?.name ?? '' }));
     } catch (err) {
       setError(err instanceof Error ? err.message : t('monitors.errors.duplicateFailed'));
     } finally {
@@ -201,10 +231,7 @@ export function MonitorsConfigTab({
   // HELPERS
   // ==========================================================================
 
-  const getSlideTypeLabel = (type: string): string => {
-    const meta = SLIDE_TYPES.find(s => s.type === type);
-    return meta?.label ?? type;
-  };
+  const getSlideTypeLabel = (type: string): string => slideTypeLabel(t, type);
 
   const getSlideTypeIcon = (type: string): string => {
     const meta = SLIDE_TYPES.find(s => s.type === type);
@@ -212,7 +239,7 @@ export function MonitorsConfigTab({
   };
 
   const formatDuration = (seconds: number): string => {
-    if (seconds < 60) {return `${seconds}s`;}
+    if (seconds < 60) {return `${seconds} s`;}
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
@@ -256,8 +283,9 @@ export function MonitorsConfigTab({
   };
 
   const addButtonStyle: CSSProperties = {
-    minWidth: '44px',
-    minHeight: '44px',
+    minWidth: cssVars.touchTargets.minimum,
+    minHeight: cssVars.touchTargets.primary, // Haupttaste: 56 px
+
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.lg}`,
     borderRadius: cssVars.borderRadius.md,
     background: cssVars.colors.primary,
@@ -354,34 +382,6 @@ export function MonitorsConfigTab({
     gap: cssVars.spacing.xs,
   });
 
-  const createFormStyle: CSSProperties = {
-    padding: cssVars.spacing.lg,
-    background: cssVars.colors.surface,
-    borderRadius: cssVars.borderRadius.lg,
-    border: `1px solid ${cssVars.colors.primary}`,
-    marginBottom: cssVars.spacing.lg,
-  };
-
-  const inputStyle: CSSProperties = {
-    width: '100%',
-    padding: cssVars.spacing.md,
-    borderRadius: cssVars.borderRadius.md,
-    border: `1px solid ${cssVars.colors.borderControl}`,
-    background: cssVars.colors.background,
-    color: cssVars.colors.textPrimary,
-    fontSize: cssVars.fontSizes.md,
-    marginBottom: cssVars.spacing.md,
-  };
-
-  const emptyStateStyle: CSSProperties = {
-    padding: cssVars.spacing.xxl,
-    textAlign: 'center',
-    color: cssVars.colors.textSecondary,
-    background: cssVars.colors.surfaceLight,
-    borderRadius: cssVars.borderRadius.lg,
-    border: `1px dashed ${cssVars.colors.border}`,
-  };
-
   const errorStyle: CSSProperties = {
     padding: cssVars.spacing.sm,
     background: `${cssVars.colors.error}22`,
@@ -417,7 +417,7 @@ export function MonitorsConfigTab({
               {t('monitors.subtitle')}
             </p>
           </div>
-          {!isCreating && (
+          {!isCreating && monitors.length > 0 && (
             <div style={{ display: 'flex', gap: cssVars.spacing.sm, flexWrap: 'wrap' }}>
               {canTransfer && (
                 <button
@@ -428,7 +428,7 @@ export function MonitorsConfigTab({
                   {t('monitors.transfer.openButton')}
                 </button>
               )}
-              {canTransfer && monitors.length > 0 && (
+              {canTransfer && (
                 <button
                   style={actionButtonStyle('secondary')}
                   onClick={() => downloadMonitorConfig(tournament)}
@@ -450,48 +450,24 @@ export function MonitorsConfigTab({
 
         {/* Create Form */}
         {isCreating && (
-          <div style={createFormStyle}>
-            <h3 style={{ margin: `0 0 ${cssVars.spacing.md}`, color: cssVars.colors.textPrimary }}>
-              {t('monitors.createTitle')}
-            </h3>
-            <input
-              type="text"
-              style={inputStyle}
-              placeholder={t('monitors.namePlaceholder')}
-              value={newMonitorName}
-              onChange={(e) => setNewMonitorName(e.target.value)}
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {void handleCreate();}
-                if (e.key === 'Escape') {handleCancelCreate();}
-              }}
-            />
-            <div style={{ display: 'flex', gap: cssVars.spacing.sm, justifyContent: 'flex-end' }}>
-              <button style={actionButtonStyle('secondary')} onClick={handleCancelCreate}>
-                {t('monitors.cancel')}
-              </button>
-              <button
-                style={actionButtonStyle('primary')}
-                onClick={() => void handleCreate()}
-                disabled={isLoading}
-              >
-                {isLoading ? t('monitors.creating') : t('monitors.createAndEdit')}
-              </button>
-            </div>
-          </div>
+          <MonitorCreateForm
+            name={newMonitorName}
+            isLoading={isLoading}
+            onNameChange={setNewMonitorName}
+            onCancel={handleCancelCreate}
+            onSubmit={() => void handleCreate()}
+          />
         )}
 
         {/* Monitors List */}
         {monitors.length === 0 ? (
-          <div style={emptyStateStyle}>
-            <div style={{ fontSize: '48px', marginBottom: cssVars.spacing.md }}>📺</div>
-            <h3 style={{ margin: 0, color: cssVars.colors.textPrimary }}>
-              {t('monitors.emptyState')}
-            </h3>
-            <p style={{ margin: `${cssVars.spacing.sm} 0 0`, maxWidth: '400px', marginInline: 'auto' }}>
-              {t('monitors.emptyStateHint')}
-            </p>
-          </div>
+          <MonitorEmptyStart
+            canManage={canTransfer && !isCreating}
+            isLoading={isLoading}
+            onHallenStandard={() => void handleHallenStandard()}
+            onCreateEmpty={handleStartCreate}
+            onTransfer={() => setIsTransferOpen(true)}
+          />
         ) : (
           <div style={listStyle}>
             {monitors.map((monitor) => (

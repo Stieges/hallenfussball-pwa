@@ -49,9 +49,34 @@ export function buildEditorGroups(tournament: Tournament, t: TFunction<'tourname
   }));
 }
 
+/** Was an einer Folie noch fehlt, damit der Monitor sie zeigen kann (@ME-076) */
+export type SlideSetupProblem = 'sponsor' | 'headline' | 'field';
+
+/**
+ * Ist die Folie eingerichtet? `null` = ja. Sponsor-Folie braucht einen vorhandenen Sponsor, „Eigener Text“ eine
+ * Überschrift, Folien mit Feld ein Feld (@ME-075, @ME-076). Gruppe ist immer optional („Alle Gruppen“).
+ */
+export function slideSetupProblem(slide: MonitorSlide, sponsors: readonly { id: string }[]): SlideSetupProblem | null {
+  const { type, config } = slide;
+  switch (type) {
+    case 'live':
+    case 'schedule-field':
+      return config.fieldId ? null : 'field';
+    case 'sponsor':
+      return config.sponsorId && sponsors.some(s => s.id === config.sponsorId) ? null : 'sponsor';
+    case 'custom-text':
+      return config.headline?.trim() ? null : 'headline';
+    default:
+      return null;
+  }
+}
+
 export function getSlideDescription(slide: MonitorSlide, deps: SlideDescriptionDeps): string {
   const { type, config } = slide;
   const { groups, sponsors, getFieldDisplayName, t } = deps;
+
+  const problem = slideSetupProblem(slide, sponsors);
+  if (problem) {return t(`monitorEditor.setupProblem.${problem}`);}
 
   switch (type) {
     case 'live':
@@ -60,23 +85,22 @@ export function getSlideDescription(slide: MonitorSlide, deps: SlideDescriptionD
     }
     case 'standings':
     case 'schedule-group': {
+      // Ohne Auswahl: bei nur einer Gruppe „Alle Teams“, sonst „Alle Gruppen“ (@ME-075)
+      if (!config.groupId) {
+        return groups.length <= 1 ? t('monitorEditor.allTeams') : t('slideEditor.allGroups');
+      }
       const group = groups.find(g => g.id === config.groupId);
       const customName = group?.customName;
       if (customName) {return customName;}
-      const letterName = t('monitorEditor.groupLabel', { letter: config.groupId });
-      if (letterName) {return letterName;}
-      return t('monitorEditor.notConfigured');
+      return t('monitorEditor.groupLabel', { letter: config.groupId });
     }
     case 'sponsor': {
-      const sponsor = sponsors.find(s => s.id === config.sponsorId);
-      const sponsorName = sponsor?.name;
-      if (sponsorName) {return sponsorName;}
-      return t('monitorEditor.notConfigured');
+      const sponsorName = sponsors.find(s => s.id === config.sponsorId)?.name;
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- leerer Name soll den Ersatztext zeigen
+      return sponsorName || t('monitorEditor.notConfigured');
     }
     case 'custom-text': {
-      const headline = config.headline;
-      if (headline) {return headline;}
-      return t('monitorEditor.customText');
+      return config.headline?.trim() ? config.headline : t('monitorEditor.customText');
     }
     default:
       return '';

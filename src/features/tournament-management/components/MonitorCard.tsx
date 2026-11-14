@@ -87,7 +87,7 @@ function MonitorCard({
             <span>•</span>
             <span>{t('monitors.perSlide', { duration: formatDuration(monitor.defaultSlideDuration) })}</span>
             <span>•</span>
-            <span>{monitor.transition}</span>
+            <span>{t(`monitorEditor.settings.transitions.${monitor.transition}`)}</span>
           </div>
         </div>
       </div>
@@ -97,7 +97,7 @@ function MonitorCard({
         <div style={styles.slidesPreviewStyle as CSSProperties}>
           {monitor.slides.slice(0, 8).map((slide) => (
             <span key={slide.id} style={styles.slideChipStyle as CSSProperties}>
-              <span>{getSlideTypeIcon(slide.type)}</span>
+              <span aria-hidden="true">{getSlideTypeIcon(slide.type)}</span>
               <span>{getSlideTypeLabel(slide.type)}</span>
             </span>
           ))}
@@ -117,7 +117,7 @@ function MonitorCard({
             onClick={onEdit}
             aria-label={t('monitors.editAria', { name: monitor.name })}
           >
-            ✏️ {t('monitors.edit')}
+            <span aria-hidden="true">✏️</span> {t('monitors.edit')}
           </button>
         )}
         <button
@@ -125,7 +125,7 @@ function MonitorCard({
           onClick={onOpenDisplay}
           aria-label={t('monitors.openAria', { name: monitor.name })}
         >
-          🖥️ {t('monitors.open')}
+          <span aria-hidden="true">🖥️</span> {t('monitors.open')}
         </button>
         <button
           style={actionButtonStyle()}
@@ -140,7 +140,7 @@ function MonitorCard({
             onClick={onDuplicate}
             aria-label={t('monitors.duplicateAria', { name: monitor.name })}
           >
-            📋 {t('monitors.duplicate')}
+            <span aria-hidden="true">📋</span> {t('monitors.duplicate')}
           </button>
         )}
         {onDelete && (
@@ -149,7 +149,7 @@ function MonitorCard({
             onClick={onDelete}
             aria-label={isDeleting ? t('monitors.confirmDeleteAria', { name: monitor.name }) : t('monitors.deleteAria', { name: monitor.name })}
           >
-            🗑️ {isDeleting ? t('monitors.confirm') : t('monitors.delete')}
+            <span aria-hidden="true">🗑️</span> {isDeleting ? t('monitors.confirm') : t('monitors.delete')}
           </button>
         )}
       </div>

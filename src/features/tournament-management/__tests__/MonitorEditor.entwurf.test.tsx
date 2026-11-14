@@ -53,7 +53,7 @@ function oeffnen(m: TournamentMonitor = monitor(), onUpdate = vi.fn().mockResolv
 describe('@ME-071 Änderungen gelten erst mit „Speichern“', () => {
   it('Folienzeit 30 s und „Abbrechen“: nichts gespeichert, ohne Rückfrage geschlossen', async () => {
     const { user, onUpdate, onClose } = oeffnen();
-    await user.selectOptions(screen.getByLabelText('Slide-Dauer (Sek.)'), '30');
+    await user.selectOptions(screen.getByLabelText('Folienzeit'), '30');
     await user.click(screen.getByTestId('monitor-editor-cancel'));
     expect(onUpdate).not.toHaveBeenCalled();
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -62,7 +62,7 @@ describe('@ME-071 Änderungen gelten erst mit „Speichern“', () => {
 
   it('Folienzeit 30 s und „Speichern“: „Gespeichert“, Wert gilt, Dialog schließt', async () => {
     const { user, onClose, speichern, gespeichert } = oeffnen();
-    await user.selectOptions(screen.getByLabelText('Slide-Dauer (Sek.)'), '30');
+    await user.selectOptions(screen.getByLabelText('Folienzeit'), '30');
     await speichern();
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
     expect(gespeichert().defaultSlideDuration).toBe(30);
@@ -79,7 +79,7 @@ describe('@ME-071 Änderungen gelten erst mit „Speichern“', () => {
 
   it('✕ mit Änderung: Rückfrage „Änderungen verwerfen?“, Fokus auf „Weiter bearbeiten“; „Verwerfen“ schließt', async () => {
     const { user, onUpdate, onClose } = oeffnen();
-    await user.selectOptions(screen.getByLabelText('Slide-Dauer (Sek.)'), '30');
+    await user.selectOptions(screen.getByLabelText('Folienzeit'), '30');
     await user.click(screen.getByTestId('monitor-editor-close'));
     expect(await screen.findByText('Änderungen verwerfen?')).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
@@ -91,17 +91,17 @@ describe('@ME-071 Änderungen gelten erst mit „Speichern“', () => {
 
   it('✕ mit Änderung und „Weiter bearbeiten“: Rückfrage weg, Eingabe bleibt', async () => {
     const { user, onClose } = oeffnen();
-    await user.selectOptions(screen.getByLabelText('Slide-Dauer (Sek.)'), '30');
+    await user.selectOptions(screen.getByLabelText('Folienzeit'), '30');
     await user.click(screen.getByTestId('monitor-editor-close'));
     await user.click(await screen.findByRole('button', { name: 'Weiter bearbeiten' }));
     expect(screen.queryByText('Änderungen verwerfen?')).toBeNull();
     expect(onClose).not.toHaveBeenCalled();
-    expect(screen.getByLabelText<HTMLSelectElement>('Slide-Dauer (Sek.)').value).toBe('30');
+    expect(screen.getByLabelText<HTMLSelectElement>('Folienzeit').value).toBe('30');
   });
 
   it('Esc mit Änderung fragt ebenfalls', async () => {
     const { user, onClose } = oeffnen();
-    await user.selectOptions(screen.getByLabelText('Slide-Dauer (Sek.)'), '30');
+    await user.selectOptions(screen.getByLabelText('Folienzeit'), '30');
     await user.keyboard('{Escape}');
     expect(await screen.findByText('Änderungen verwerfen?')).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
@@ -116,7 +116,7 @@ describe('@ME-071 Änderungen gelten erst mit „Speichern“', () => {
 
   it('Zurück-Taste mit Änderung: genau eine Rückfrage; „Weiter bearbeiten“; erneut Zurück: wieder genau eine', async () => {
     const { user, onClose } = oeffnen();
-    await user.selectOptions(screen.getByLabelText('Slide-Dauer (Sek.)'), '30');
+    await user.selectOptions(screen.getByLabelText('Folienzeit'), '30');
     act(() => { window.history.back(); });
     expect(await screen.findByText('Änderungen verwerfen?')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Weiter bearbeiten' }));
@@ -124,12 +124,12 @@ describe('@ME-071 Änderungen gelten erst mit „Speichern“', () => {
     act(() => { window.history.back(); });
     expect(await screen.findByText('Änderungen verwerfen?')).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
-    expect(screen.getByLabelText<HTMLSelectElement>('Slide-Dauer (Sek.)').value).toBe('30');
+    expect(screen.getByLabelText<HTMLSelectElement>('Folienzeit').value).toBe('30');
   });
 
   it('Klick auf die Abdunkelung mit Änderung: Rückfrage; Gegenbeispiel ohne Änderung schließt sofort', async () => {
     const mit = oeffnen();
-    await mit.user.selectOptions(screen.getByLabelText('Slide-Dauer (Sek.)'), '30');
+    await mit.user.selectOptions(screen.getByLabelText('Folienzeit'), '30');
     fireEvent.click(document.querySelector('.dialog-surface-scrim')!);
     expect(await screen.findByText('Änderungen verwerfen?')).toBeInTheDocument();
     expect(mit.onClose).not.toHaveBeenCalled();
@@ -144,7 +144,7 @@ describe('@ME-071 Änderungen gelten erst mit „Speichern“', () => {
 
   it('Folie anlegen, dann „Abbrechen“: nichts gespeichert', async () => {
     const { user, onUpdate, onClose } = oeffnen();
-    await user.click(screen.getByRole('button', { name: /Slide hinzufügen/ }));
+    await user.click(screen.getByRole('button', { name: /Folie hinzufügen/ }));
     await user.click(screen.getByRole('button', { name: /Nächste Spiele/ }));
     await user.click(screen.getByTestId('monitor-editor-cancel'));
     expect(onUpdate).not.toHaveBeenCalled();
@@ -153,18 +153,18 @@ describe('@ME-071 Änderungen gelten erst mit „Speichern“', () => {
 
   it('Speichern scheitert: Meldung im Fuß, Dialog und Eingabe bleiben', async () => {
     const { user, onClose, speichern } = oeffnen(monitor(), vi.fn().mockRejectedValue(new Error('offline')));
-    await user.selectOptions(screen.getByLabelText('Slide-Dauer (Sek.)'), '30');
+    await user.selectOptions(screen.getByLabelText('Folienzeit'), '30');
     await speichern();
     expect(await screen.findByText('Fehler beim Speichern')).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
-    expect(screen.getByLabelText<HTMLSelectElement>('Slide-Dauer (Sek.)').value).toBe('30');
+    expect(screen.getByLabelText<HTMLSelectElement>('Folienzeit').value).toBe('30');
   });
 
   it('Doppelklick auf „Speichern“: genau ein Speichern', async () => {
     let fertig: () => void = () => undefined;
     const langsam = vi.fn(() => new Promise<void>(res => { fertig = res; }));
     const { user, onUpdate, onClose } = oeffnen(monitor(), langsam);
-    await user.selectOptions(screen.getByLabelText('Slide-Dauer (Sek.)'), '30');
+    await user.selectOptions(screen.getByLabelText('Folienzeit'), '30');
     await user.dblClick(screen.getByTestId('monitor-editor-save'));
     expect(onUpdate).toHaveBeenCalledTimes(1);
     fertig();
@@ -241,7 +241,7 @@ describe('@ME-072 Name mit Leerzeichen und Prüfung beim Speichern', () => {
 
   it('Gegenbeispiel: der eigene Name „Haupthalle“ gilt nicht als doppelt', async () => {
     const { user, speichern, gespeichert } = oeffnen();
-    await user.selectOptions(screen.getByLabelText('Slide-Dauer (Sek.)'), '20');
+    await user.selectOptions(screen.getByLabelText('Folienzeit'), '20');
     await speichern();
     await waitFor(() => expect(gespeichert().name).toBe('Haupthalle'));
   });

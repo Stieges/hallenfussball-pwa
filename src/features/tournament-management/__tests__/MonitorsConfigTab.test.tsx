@@ -137,7 +137,7 @@ describe('MonitorsConfigTab', () => {
         />
       );
 
-      await user.click(screen.getByText(/monitors\.addMonitor/));
+      await user.click(screen.getByTestId('monitors-start-empty')); // @ME-074: im leeren Reiter heißt der Weg „Leer anlegen“
 
       expect(screen.getByText('tournament:monitors.createTitle')).toBeInTheDocument();
       expect(screen.getByPlaceholderText(/monitors\.namePlaceholder/)).toBeInTheDocument();
@@ -154,7 +154,7 @@ describe('MonitorsConfigTab', () => {
         />
       );
 
-      await user.click(screen.getByText(/monitors\.addMonitor/));
+      await user.click(screen.getByTestId('monitors-start-empty')); // @ME-074: im leeren Reiter heißt der Weg „Leer anlegen“
 
       expect(screen.queryByRole('button', { name: /monitors\.addMonitor/ })).not.toBeInTheDocument();
     });
@@ -173,7 +173,7 @@ describe('MonitorsConfigTab', () => {
         />
       );
 
-      await user.click(screen.getByText(/monitors\.addMonitor/));
+      await user.click(screen.getByTestId('monitors-start-empty')); // @ME-074: im leeren Reiter heißt der Weg „Leer anlegen“
       await user.type(screen.getByPlaceholderText(/monitors\.namePlaceholder/), 'Neuer Test Monitor');
       await user.click(screen.getByText(/monitors\.createAndEdit/));
 
@@ -194,7 +194,7 @@ describe('MonitorsConfigTab', () => {
         />
       );
 
-      await user.click(screen.getByText(/monitors\.addMonitor/));
+      await user.click(screen.getByTestId('monitors-start-empty')); // @ME-074: im leeren Reiter heißt der Weg „Leer anlegen“
       await user.type(screen.getByPlaceholderText(/monitors\.namePlaceholder/), 'Test');
       await user.click(screen.getByText(/monitors\.createAndEdit/));
 
@@ -214,7 +214,7 @@ describe('MonitorsConfigTab', () => {
         />
       );
 
-      await user.click(screen.getByText(/monitors\.addMonitor/));
+      await user.click(screen.getByTestId('monitors-start-empty')); // @ME-074: im leeren Reiter heißt der Weg „Leer anlegen“
       await user.click(screen.getByText('tournament:monitors.cancel'));
 
       expect(screen.queryByText('tournament:monitors.createTitle')).not.toBeInTheDocument();
@@ -231,7 +231,7 @@ describe('MonitorsConfigTab', () => {
         />
       );
 
-      await user.click(screen.getByText(/monitors\.addMonitor/));
+      await user.click(screen.getByTestId('monitors-start-empty')); // @ME-074: im leeren Reiter heißt der Weg „Leer anlegen“
       await user.keyboard('{Escape}');
 
       expect(screen.queryByText('tournament:monitors.createTitle')).not.toBeInTheDocument();
@@ -250,7 +250,7 @@ describe('MonitorsConfigTab', () => {
         />
       );
 
-      await user.click(screen.getByText(/monitors\.addMonitor/));
+      await user.click(screen.getByTestId('monitors-start-empty')); // @ME-074: im leeren Reiter heißt der Weg „Leer anlegen“
       await user.type(screen.getByPlaceholderText(/monitors\.namePlaceholder/), 'Test{Enter}');
 
       expect(mockCreateMonitor).toHaveBeenCalledWith('Test');
@@ -272,7 +272,7 @@ describe('MonitorsConfigTab', () => {
         />
       );
 
-      await user.click(screen.getByText(/monitors\.addMonitor/));
+      await user.click(screen.getByTestId('monitors-start-empty')); // @ME-074: im leeren Reiter heißt der Weg „Leer anlegen“
       await user.click(screen.getByText(/monitors\.createAndEdit/));
 
       expect(screen.getByText('tournament:monitors.errors.nameRequired')).toBeInTheDocument();
@@ -289,7 +289,7 @@ describe('MonitorsConfigTab', () => {
         />
       );
 
-      await user.click(screen.getByText(/monitors\.addMonitor/));
+      await user.click(screen.getByTestId('monitors-start-empty')); // @ME-074: im leeren Reiter heißt der Weg „Leer anlegen“
       await user.type(
         screen.getByPlaceholderText(/monitors\.namePlaceholder/),
         'A'.repeat(51)

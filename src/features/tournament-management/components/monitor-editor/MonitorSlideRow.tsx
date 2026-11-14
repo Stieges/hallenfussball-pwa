@@ -9,7 +9,8 @@ import { SLIDE_TYPES } from '../../../../types/monitor';
 import { SlideConfigEditor } from '../SlideConfigEditor';
 import { SlidePreview } from '../SlidePreview';
 import { SlideReferenceWarning } from '../SlideReferenceWarning';
-import { getSlideDescription } from './monitorEditorHelpers';
+import { getSlideDescription, slideSetupProblem } from './monitorEditorHelpers';
+import { slideTypeLabel } from './slideTypeLabels';
 import type { SlideActions, SlideContext } from './monitorEditorTypes';
 import {
   iconButtonStyle,
@@ -23,6 +24,7 @@ import {
   slideIconStyle,
   slideInfoStyle,
   slideItemStyle,
+  slideProblemStyle,
   slidePreviewWrapStyle,
   slideTypeStyle,
 } from './monitorEditorStyles';
@@ -41,21 +43,28 @@ interface MonitorSlideRowProps {
 }
 
 export function MonitorSlideRow({ slide, index, slideCount, isEditing, slideContext, slideActions }: MonitorSlideRowProps) {
-  const { tournament, fields, groups, sponsors, slotTargets, getFieldDisplayName } = slideContext;
+  const { tournament, fields, groups, sponsors, slotTargets, getFieldDisplayName, showErrors } = slideContext;
   const { onMoveSlide, onRemoveSlide, onUpdateSlide, onToggleEditSlide } = slideActions;
   const { t } = useTranslation('tournament');
   const meta = getSlideTypeMeta(slide.type);
+  const label = slideTypeLabel(t, slide.type);
+  const problem = slideSetupProblem(slide, sponsors);
 
   return (
-    <div>
+    <div data-testid={`monitor-slide-row-${slide.id}`}>
       <div style={slideItemStyle(isEditing)}>
-        {/* Icon */}
-        <div style={slideIconStyle}>{meta?.icon ?? '📄'}</div>
+        {/* Icon: rein dekorativ */}
+        <div style={slideIconStyle} aria-hidden="true">{meta?.icon ?? '📄'}</div>
 
-        {/* Info */}
+        {/* Info; fehlt etwas, steht es in Warnfarbe und ungekürzt da (@ME-076) */}
         <div style={slideInfoStyle}>
-          <div style={slideTypeStyle}>{meta?.label ?? slide.type}</div>
-          <div style={slideDescStyle}>{getSlideDescription(slide, { groups, sponsors, getFieldDisplayName, t })}</div>
+          <div style={slideTypeStyle}>{label}</div>
+          <div
+            style={problem ? slideProblemStyle : slideDescStyle}
+            data-testid={problem ? 'monitor-slide-problem' : 'monitor-slide-desc'}
+          >
+            {getSlideDescription(slide, { groups, sponsors, getFieldDisplayName, t })}
+          </div>
         </div>
 
         {/* Actions */}
@@ -65,6 +74,7 @@ export function MonitorSlideRow({ slide, index, slideCount, isEditing, slideCont
             onClick={() => onMoveSlide(slide.id, 'up')}
             disabled={index === 0}
             title={t('monitorEditor.slides.moveUp')}
+            aria-label={t('monitorEditor.slides.moveUpAria', { slide: label })}
           >
             ↑
           </button>
@@ -73,6 +83,7 @@ export function MonitorSlideRow({ slide, index, slideCount, isEditing, slideCont
             onClick={() => onMoveSlide(slide.id, 'down')}
             disabled={index === slideCount - 1}
             title={t('monitorEditor.slides.moveDown')}
+            aria-label={t('monitorEditor.slides.moveDownAria', { slide: label })}
           >
             ↓
           </button>
@@ -80,15 +91,19 @@ export function MonitorSlideRow({ slide, index, slideCount, isEditing, slideCont
             style={iconButtonStyle}
             onClick={() => onToggleEditSlide(slide.id)}
             title={t('monitorEditor.slides.edit')}
+            aria-label={t('monitorEditor.slides.editAria', { slide: label })}
+            aria-expanded={isEditing}
+            data-testid={`monitor-slide-edit-${slide.id}`}
           >
-            ✏️
+            <span aria-hidden="true">✏️</span>
           </button>
           <button
             style={iconButtonStyle}
             onClick={() => onRemoveSlide(slide.id)}
             title={t('monitorEditor.slides.remove')}
+            aria-label={t('monitorEditor.slides.removeAria', { slide: label })}
           >
-            🗑️
+            <span aria-hidden="true">🗑️</span>
           </button>
         </div>
       </div>
@@ -108,6 +123,7 @@ export function MonitorSlideRow({ slide, index, slideCount, isEditing, slideCont
           sponsors={sponsors}
           onUpdate={(config, duration) => onUpdateSlide(slide.id, { config, duration })}
           getFieldDisplayName={getFieldDisplayName}
+          showErrors={showErrors}
           styles={{ slideConfigStyle, inputGroupStyle, labelStyle, selectStyle, inputStyle }}
         />
       )}
