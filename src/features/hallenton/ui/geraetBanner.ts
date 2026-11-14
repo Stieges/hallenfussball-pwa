@@ -38,8 +38,6 @@ export interface GeraetBannerEingabe {
   sprecherName: (feld: number) => string | undefined;
   /** Der Takt hatte ausgesetzt, bis bestätigt (`LaufzeitSnapshot.warAngehalten`). */
   angehalten: boolean;
-  /** Dieses Gerät ist stumm geschaltet (gleicher Grund wie Lautstärke 0 %, aber anderer Satz). */
-  stumm: boolean;
   t: TFunction<'hallenton'>;
 }
 
@@ -52,7 +50,7 @@ function ersterNichtBereit(eigene: readonly FeldAnzeige[]): FeldAnzeige | undefi
 const grosserStand = (art: GeraetBannerArt, ton: GeraetBanner['ton'], titel: string, text: string): GeraetBanner => ({ art, ton, titel, text, gross: true, aktion: null });
 
 /** Der große Stand dieses Geräts (G7): bereit, Ton nicht aktiviert, keine Verbindung, schlafen gelegt, Lautstärke 0 %, anderes Fenster, sonst „nicht bereit“ mit Grund. */
-function eigenerStand({ felder, name, eigeneAnzeige, karten, stumm, t }: GeraetBannerEingabe): GeraetBanner {
+function eigenerStand({ felder, name, eigeneAnzeige, karten, t }: GeraetBannerEingabe): GeraetBanner {
   const feld = feldListe(felder);
   const wo = t('geraet.bereitText', { feld, name: name ?? '' });
   const offen = ersterNichtBereit(eigeneAnzeige);
@@ -69,7 +67,7 @@ function eigenerStand({ felder, name, eigeneAnzeige, karten, stumm, t }: GeraetB
   }
   const zustand = karten.find((k) => k.feld === offen.feld)?.zustand;
   if (zustand?.art === 'nichtBereit' && zustand.grund === 'lautstaerkeNull') {
-    return grosserStand('lautstaerkeNull', 'warn', stumm ? t('geraet.stumm') : t('geraet.lautstaerkeNull'), t('geraet.lautstaerkeNullText', { feld }));
+    return grosserStand('lautstaerkeNull', 'warn', t('geraet.lautstaerkeNull'), t('geraet.lautstaerkeNullText', { feld }));
   }
   return grosserStand('nichtBereit', 'warn', t('geraet.nichtBereit'), zustand?.art === 'nichtBereit' ? grund(t(`feld.grund.${zustand.grund}`)) : wo);
 }

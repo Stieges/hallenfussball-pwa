@@ -35,7 +35,6 @@ vi.mock('../../../auth/hooks/useCan', () => ({ useCan: () => doppel.darf }));
 vi.mock('../../../../hooks/useTournamentClosed', () => ({ useTournamentClosed: () => doppel.abgeschlossen }));
 vi.mock('../../useHallStatus', () => ({ useHallStatus: () => doppel.status }));
 vi.mock('../../useHallLautsprecher', () => ({ useHallLautsprecher: () => doppel.lautsprecher }));
-vi.mock('../../useAngepfiffeneFelder', () => ({ useAngepfiffeneFelder: () => new Set<number>() }));
 vi.mock('../../useLaufendeSpiele', () => ({ useLaufendeSpiele: () => doppel.laufend }));
 vi.mock('../../lokalesTurnier', () => ({ ladeTurnierLokal: () => Promise.resolve(null) }));
 
@@ -64,7 +63,7 @@ function lautsprecherDoppel(teil: Partial<HallLautsprecher> = {}): HallLautsprec
   return {
     rolle: 'keiner', felder: [], name: null, laufzeit: null, abgeloest: null, anderesTurnier: null,
     tonAktivieren: vi.fn(() => Promise.resolve(true)), abgeloestVerstanden: vi.fn(), angehaltenBestaetigen: vi.fn(),
-    hierAnhoeren: vi.fn(() => Promise.resolve(true)), lautstaerke: VOLL, stumm: false, setzeLautstaerke: vi.fn(), setzeStumm: vi.fn(),
+    hierAnhoeren: vi.fn(() => Promise.resolve(true)), lautstaerke: VOLL, setzeLautstaerke: vi.fn(),
     ...teil,
   } as unknown as HallLautsprecher;
 }
@@ -236,13 +235,11 @@ describe('@HT-023 die Lautstärke ist je Lautsprecher-Gerät einstellbar', () =>
     render(seite());
     expect(screen.queryByTestId('geraet-lautstaerke')).toBeNull();
   });
-  it('Stumm schaltet dieses Gerät stumm; der Zustand sagt es ruhig dazu', async () => {
-    doppel.lautsprecher = eigenerLautsprecher('volume_zero', 'toent', { stumm: true });
+  it('Gegenbeispiel: es gibt keine eigene Stumm-Taste, der Regler auf 0 % deckt den Fall ab', () => {
+    doppel.lautsprecher = eigenerLautsprecher('ready');
     render(seite());
-    expect(zustandsBanner()).toHaveTextContent('Dieses Gerät ist stumm');
-    expect(screen.getByTestId('regler-stumm')).toHaveAttribute('aria-checked', 'true');
-    await klick('regler-stumm');
-    expect(doppel.lautsprecher.setzeStumm).toHaveBeenCalledWith(false);
+    expect(screen.queryByTestId('regler-stumm')).toBeNull();
+    expect(screen.queryByText('Stumm')).toBeNull();
   });
   it('nach dem Turnierende: Werte lesbar, nichts änderbar', () => {
     doppel.darf = false; doppel.abgeschlossen = true;
@@ -251,7 +248,6 @@ describe('@HT-023 die Lautstärke ist je Lautsprecher-Gerät einstellbar', () =>
     expect(screen.getByTestId('regler-abpfiff-wert')).toHaveTextContent('80 %');
     expect(screen.getByTestId('regler-abpfiff-schieber')).toBeDisabled();
     expect(screen.getByTestId('regler-halbzeit-anhoeren')).toBeDisabled();
-    expect(screen.getByTestId('regler-stumm')).toBeDisabled();
   });
 });
 
@@ -371,5 +367,38 @@ describe('@HT-017 Rückfrage bei „Testton in der Halle“, wenn auf dem Feld e
     expect(screen.queryByText(/Testton trotzdem/)).toBeNull();
     expect(testtonAnfordern).not.toHaveBeenCalled();
     expect(screen.getByTestId('testton-feld-1-ergebnis')).toHaveTextContent('nicht bereit – Ton nicht aktiviert');
+  });
+});
+
+describe('@HT-017 der Satz unter „Hier anhören“ stimmt zum Gerät', () => {
+  it('Lautsprecher-Gerät: sagt, dass der Ton auch in der Halle zu hören ist, nie „In der Halle ist dabei nichts zu hören“', () => {
+    doppel.lautsprecher = eigenerLautsprecher('ready');
+    render(seite());
+    const text = screen.getByTestId('hallenton-testton').textContent ?? '';
+    expect(text).toContain('Dieses Gerät ist Hallen-Lautsprecher: der Ton ist auch in der Halle zu hören.');
+    expect(text).not.toContain('In der Halle ist dabei nichts zu hören');
+  });
+  it('Gegenbeispiel: ein Gerät ohne Lautsprecher-Funktion behält den Satz „In der Halle ist dabei nichts zu hören“', () => {
+    render(seite());
+    const text = screen.getByTestId('hallenton-testton').textContent ?? '';
+    expect(text).toContain('In der Halle ist dabei nichts zu hören.');
+    expect(text).not.toContain('auch in der Halle zu hören');
+  });
+});
+
+describe('@HT-023 jede Taste hat ihre eigene Zeile', () => {
+  it('„Hier anhören“ bei 0 % meldet unter „Hier anhören“, nicht unter dem Abpfiff-Regler', async () => {
+    doppel.lautsprecher = eigenerLautsprecher('volume_zero', 'toent', { lautstaerke: { abpfiff: 0, halbzeit: 50, tor: 100 }, hierAnhoeren: vi.fn(() => Promise.resolve(false)) });
+    render(seite());
+    await klick('testton-hier-anhoeren');
+    expect(screen.getByTestId('testton-hier-hinweis')).toHaveTextContent('Bei 0 % ist nichts zu hören.');
+    expect(screen.queryByTestId('regler-abpfiff-hinweis')).toBeNull();
+  });
+  it('Gegenbeispiel: der Regler meldet unter dem Regler, nicht unter „Hier anhören“', async () => {
+    doppel.lautsprecher = eigenerLautsprecher('volume_zero', 'toent', { lautstaerke: { abpfiff: 0, halbzeit: 50, tor: 100 }, hierAnhoeren: vi.fn(() => Promise.resolve(false)) });
+    render(seite());
+    await klick('regler-abpfiff-anhoeren');
+    expect(screen.getByTestId('regler-abpfiff-hinweis')).toBeInTheDocument();
+    expect(screen.queryByTestId('testton-hier-hinweis')).toBeNull();
   });
 });

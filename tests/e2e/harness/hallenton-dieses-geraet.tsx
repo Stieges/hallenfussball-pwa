@@ -93,7 +93,7 @@ export function Seite() {
   const banner = baueGeraetBanner({
     rolle: istLautsprecher ? 'diesesTurnier' : 'keiner', felder: istLautsprecher ? [1] : [], name: istLautsprecher ? EIGEN : null, abgeloest,
     eigeneAnzeige: anzeige.felder.filter((f) => f.eigenesGeraet), karten,
-    sprecherName: (feld) => server.speakers.find((s) => s.field === feld && !s.isThisDevice)?.deviceName, angehalten: fall === 'angehalten', stumm: false, t,
+    sprecherName: (feld) => server.speakers.find((s) => s.field === feld && !s.isThisDevice)?.deviceName, angehalten: fall === 'angehalten', t,
   });
   // Modus wie im echten Hook (`waehleModus`), nicht von Hand (B8): „wechseln“ ist ein Turnier ohne Lautsprecher, also die Einrichtung
   const modus = waehleModus({ istLautsprecher, keinLautsprecherImTurnier: karten.every((k) => k.zustand.art === 'keinLautsprecher'), standAktuell: true, abgeloest: abgeloest !== null });
@@ -109,7 +109,7 @@ export function Seite() {
   }, [fall, fragen]);
   const abschnitt: GeraetAbschnitt = {
     modus, alteAbmeldung: null, oben: einrichtung || istLautsprecher, banner, verstanden: aus, angehaltenBestaetigen: aus,
-    regler: istLautsprecher ? { lautstaerke: { abpfiff: fall === 'lautstaerke0' ? 0 : 80, halbzeit: 50, tor: 40 }, stumm: false, gesperrt: fall === 'gesperrt', onLautstaerke: aus, onStumm: aus, onAnhoeren: aus, hinweis: null } : null,
+    regler: istLautsprecher ? { lautstaerke: { abpfiff: fall === 'lautstaerke0' ? 0 : 80, halbzeit: 50, tor: 40 }, gesperrt: fall === 'gesperrt', onLautstaerke: aus, onAnhoeren: aus, hinweis: null } : null,
     felder: [1, 2], gewaehlt: istLautsprecher ? [1] : [], an: istLautsprecher || fall === 'abloesen' || fall === 'wechseln', name: EIGEN, setzeName: aus, nameVerlassen: aus,
     schalterUmlegen: aus, feldUmschalten: aus, beschaeftigt: false, fehler: null, handy: false, installiert: fall !== 'leer', installAngebot: false, installieren: aus,
     schalterErledigt: istLautsprecher, tonErledigt: fall === 'bereit' || fall === 'anleitung' || fall === 'angehalten', tonNoetig: fall === 'eingerichtet' || fall === 'schlafen', tonAktivieren: aus,

@@ -76,6 +76,7 @@ async function pruefeWortlaute(page: Page, fall: Fall): Promise<void> {
       await expect(page.getByTestId('testton-feld-1-ergebnis')).toContainText('Kein Testton: kein Netz');
       break;
     case 'testton':
+      await page.getByTestId('testton-halle-1').click(); // der eigene Auftrag; erst seine Quittung zählt (@HT-017)
       await expect(page.getByTestId('testton-feld-1-ergebnis')).toContainText('gespielt 14:02');
       break;
     case 'gesperrt':
@@ -115,6 +116,7 @@ test.describe('@HT-016 @HT-017 @HT-041 @HT-046 H4-8 Unterpunkt „Hallenton“ (
           expect(ueberlauf, 'kein Überlauf').toEqual([]);
           // Die Seitenleiste ist bestehender Code (H4-8 fügt nur den Eintrag „Hallenton“ mit der Pille „neu“ ein): ihre Befunde stehen als
           // Anmerkung im Bericht, die Seite selbst muss ohne HART-Befund sein. Farbübergänge (0,15 s) vorher abwarten.
+          await page.evaluate(() => window.scrollTo(0, 0)); // der Klick im Fall „testton“ scrollt die Seite; gemessen wird vom Seitenanfang
           await page.waitForTimeout(400);
           for (const b of await hartBefunde(page, g.art)) {
             testInfo.annotations.push({ type: 'befund-gesamt', description: b });

@@ -1,6 +1,6 @@
 /**
  * H4-10 (@HT-017): „Auf Feld 1 läuft Spiel 11“ – welche Spielnummer läuft auf welchem Feld, und welche Felder die Rückfrage betrifft.
- * Rein; der Hook darüber ist `useLaufendeSpiele` (gleiche Quelle wie `useAngepfiffeneFelder`, dort getestet).
+ * Rein; der Hook darüber ist `useLaufendeSpiele` (getestet in `angepfiffeneFelder.test.tsx`).
  */
 import { describe, expect, it } from 'vitest';
 import type { PlanSpiel } from '../runtime/feldStandSpiele';

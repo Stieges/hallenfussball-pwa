@@ -66,6 +66,20 @@ async function pruefeWortlaute(page: Page, fall: Fall): Promise<void> {
   await expect(page.getByTestId('regler-tor-wert')).toHaveText('40 %');
 }
 
+/** Anordnung der Regler: am Handy wie im Mockup (Schieber über die Breite, „Anhören“ darunter), am Rechner in einer Zeile. */
+async function pruefeReglerAnordnung(page: Page, schmal: boolean): Promise<void> {
+  const schieber = await page.getByTestId('regler-abpfiff-schieber').boundingBox();
+  const taste = await page.getByTestId('regler-abpfiff-anhoeren').boundingBox();
+  expect(schieber && taste).toBeTruthy();
+  if (schieber === null || taste === null) { return; }
+  if (schmal) {
+    expect(taste.y, 'Handy: „Anhören“ steht unter dem Schieber').toBeGreaterThanOrEqual(schieber.y + schieber.height);
+    expect(schieber.width, 'Handy: der Schieber ist breit genug zum Einstellen').toBeGreaterThan(150);
+  } else {
+    expect(Math.abs((taste.y + taste.height / 2) - (schieber.y + schieber.height / 2)), 'Rechner: Schieber und „Anhören“ in einer Zeile').toBeLessThan(taste.height);
+  }
+}
+
 test.describe('@HT-011 @HT-013 @HT-014 @HT-023 @HT-033 @HT-037 @HT-017 H4-10 „Dieses Gerät“ b (Prüfstand)', () => {
   test.beforeEach(({ browserName }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop' || browserName !== 'chromium', 'setzt Fenstergröße selbst');
@@ -81,6 +95,7 @@ test.describe('@HT-011 @HT-013 @HT-014 @HT-023 @HT-033 @HT-037 @HT-017 H4-10 „
           await page.goto(`/tests/e2e/harness/hallenton-dieses-geraet.html?fall=${fall}`);
           await expect(page.getByTestId('hallenton-seite')).toBeVisible();
           await pruefeWortlaute(page, fall);
+          await pruefeReglerAnordnung(page, g.schmal);
           const wortGroesse = await page.locator('[data-zustand][data-ton] p').first().evaluate((el) => getComputedStyle(el).fontSize);
           expect(wortGroesse, 'Statuswort: 28 px am Handy, 48 px am Rechner').toBe(g.schmal ? '28px' : '48px');
           const tasten = fall === 'anhoerenFrage' ? page.locator('button') : page.locator('[data-testid="hallenton-seite"] button');

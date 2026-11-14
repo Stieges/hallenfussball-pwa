@@ -192,17 +192,17 @@ export function useGeraetAbschnitt({ daten, felderAnzahl, darfAendern, anhoeren 
 
   const banner = useMemo(() => baueGeraetBanner({
     rolle: lautsprecher.rolle, felder: lautsprecher.felder, name: lautsprecher.name, abgeloest: lautsprecher.abgeloest,
-    eigeneAnzeige, karten, sprecherName, angehalten: lautsprecher.laufzeit?.warAngehalten ?? false, stumm: lautsprecher.stumm, t,
-  }), [lautsprecher.rolle, lautsprecher.felder, lautsprecher.name, lautsprecher.abgeloest, lautsprecher.laufzeit?.warAngehalten, lautsprecher.stumm, eigeneAnzeige, karten, sprecherName, t]);
+    eigeneAnzeige, karten, sprecherName, angehalten: lautsprecher.laufzeit?.warAngehalten ?? false, t,
+  }), [lautsprecher.rolle, lautsprecher.felder, lautsprecher.name, lautsprecher.abgeloest, lautsprecher.laufzeit?.warAngehalten, eigeneAnzeige, karten, sprecherName, t]);
 
   const tonNoetig = darfAendern && istLautsprecher && eigeneAnzeige.some((f) => f.anzeige.art === 'tonNichtAktiv' || f.anzeige.art === 'schlafenGelegt');
   const modus = waehleModus({ istLautsprecher, keinLautsprecherImTurnier, standAktuell: status.stand === 'aktuell', abgeloest: lautsprecher.abgeloest !== null });
-  const { tonAktivieren: aktivieren, abgeloestVerstanden, angehaltenBestaetigen, lautstaerke, stumm, setzeLautstaerke, setzeStumm } = lautsprecher;
+  const { tonAktivieren: aktivieren, abgeloestVerstanden, angehaltenBestaetigen, lautstaerke, setzeLautstaerke } = lautsprecher;
 
   return {
     modus, oben: modus === 'einrichtung' || istLautsprecher, banner, verstanden: abgeloestVerstanden, angehaltenBestaetigen,
     regler: istLautsprecher
-      ? { lautstaerke, stumm, gesperrt: !darfAendern, onLautstaerke: setzeLautstaerke, onStumm: setzeStumm, onAnhoeren: anhoeren.anhoeren, hinweis: anhoeren.hinweis }
+      ? { lautstaerke, gesperrt: !darfAendern, onLautstaerke: setzeLautstaerke, onAnhoeren: (art) => anhoeren.anhoeren(art, 'regler'), hinweis: anhoeren.hinweis }
       : null,
     felder, gewaehlt, an: istLautsprecher || vorgemerkt, name, setzeName: setName, nameVerlassen, schalterUmlegen, feldUmschalten,
     beschaeftigt, fehler, handy: istHandy(), installiert: laeuftAlsApp(), installAngebot, installieren: () => { void installiereApp(); },

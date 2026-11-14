@@ -34,7 +34,6 @@ vi.mock('../../../auth/hooks/useCan', () => ({ useCan: () => doppel.darf }));
 vi.mock('../../../../hooks/useTournamentClosed', () => ({ useTournamentClosed: () => doppel.abgeschlossen }));
 vi.mock('../../useHallStatus', () => ({ useHallStatus: () => doppel.status }));
 vi.mock('../../useHallLautsprecher', () => ({ useHallLautsprecher: () => doppel.lautsprecher }));
-vi.mock('../../useAngepfiffeneFelder', () => ({ useAngepfiffeneFelder: () => new Set<number>() }));
 const laufendDoppel = vi.hoisted(() => ({ spiele: new Map<number, number>() }));
 vi.mock('../../useLaufendeSpiele', () => ({ useLaufendeSpiele: () => laufendDoppel.spiele }));
 vi.mock('../../lokalesTurnier', () => ({ ladeTurnierLokal: () => Promise.resolve(null) }));
@@ -68,7 +67,7 @@ function lautsprecherDoppel(teil: Partial<HallLautsprecher> = {}): HallLautsprec
     ausschalten: vi.fn(() => Promise.resolve({ ok: true as const, status: 'released' as const, fields: [1] })),
     tonAktivieren: vi.fn(() => Promise.resolve(true)),
     abgeloestVerstanden: vi.fn(), hierAnhoeren: vi.fn(() => Promise.resolve(true)),
-    lautstaerke: { abpfiff: 100, halbzeit: 100, tor: 100 }, stumm: false, setzeLautstaerke: vi.fn(), setzeStumm: vi.fn(), angehaltenBestaetigen: vi.fn(),
+    lautstaerke: { abpfiff: 100, halbzeit: 100, tor: 100 }, setzeLautstaerke: vi.fn(), angehaltenBestaetigen: vi.fn(),
     ...teil,
   } as unknown as HallLautsprecher;
 }

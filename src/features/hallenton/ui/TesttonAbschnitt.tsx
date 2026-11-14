@@ -29,6 +29,8 @@ export interface TesttonAbschnittProps {
   status: Pick<HallStatus, 'stand' | 'antwort' | 'testtonAnfordern'>;
   /** „Hier anhören“: spielt den Abpfiff-Ton auf diesem Gerät. */
   hierAnhoeren: () => void;
+  /** Was „Hier anhören“ nicht gespielt hat (z. B. bei 0 %), unter der Taste. */
+  hierHinweis?: string | null;
   geraetName: string | null;
   /** Rückfrage bei laufendem Spiel auf dem Feld (@HT-017). */
   rueckfrage: AnhoerenRueckfrage;
@@ -68,7 +70,7 @@ function gespielteZeit(antwort: HallStatusAntwort | null, feld: number, sprache:
   return test.testId === testId ? formatUhrzeit(gespielt, sprache) : null;
 }
 
-export function TesttonAbschnitt({ karten, status, hierAnhoeren, geraetName, rueckfrage }: TesttonAbschnittProps): ReactElement {
+export function TesttonAbschnitt({ karten, status, hierAnhoeren, hierHinweis = null, geraetName, rueckfrage }: TesttonAbschnittProps): ReactElement {
   const { t, i18n } = useTranslation('hallenton');
   const [ergebnisse, setErgebnisse] = useState<Readonly<Record<number, Ergebnis>>>({});
   const setze = useCallback((feld: number, e: Ergebnis) => setErgebnisse((alt) => ({ ...alt, [feld]: e })), []);
@@ -138,6 +140,7 @@ export function TesttonAbschnitt({ karten, status, hierAnhoeren, geraetName, rue
         <div>
           <Button variant="secondary" icon={<Icons.SpeakerLow size={iconSizeValues.sm} />} onClick={hierAnhoeren} data-testid="testton-hier-anhoeren">{t('testton.anhoeren')}</Button>
         </div>
+        {hierHinweis === null ? null : <p style={textStil} role="status" data-testid="testton-hier-hinweis">{hierHinweis}</p>}
         <h3 style={titelStil}>{t('testton.halleTitel')}</h3>
         <p style={textStil}>{t('testton.halleText')}</p>
         {karten.map((karte) => {

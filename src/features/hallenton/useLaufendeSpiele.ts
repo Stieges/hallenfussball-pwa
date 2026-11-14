@@ -1,5 +1,5 @@
 /**
- * useLaufendeSpiele(tid) – Feld → Nummer des angepfiffenen Spiels (H4-10: Rückfrage „Auf Feld 1 läuft Spiel 11“, @HT-017); `useAngepfiffeneFelder` (Datei daneben) gibt nur die Felder. Felder des Turniers mit angepfiffenem Spiel, für die Anzeige „Feld N: Handy ohne Netz“ (@HT-035).
+ * useLaufendeSpiele(tid) – Feld → Nummer des angepfiffenen Spiels (H4-10: Rückfrage „Auf Feld 1 läuft Spiel 11“, @HT-017); die Schlüssel sind die Felder mit angepfiffenem Spiel, für die Anzeige „Feld N: Handy ohne Netz“ (@HT-035).
  * Plan aus der lokalen Turnierkopie (nur lokal gelesen, alle 30 s und bei jeder Änderung der eigenen Engine), Status zuerst nach der
  * Engine, sonst nach der Kopie (`angepfiffeneFelder.ts`); `nachlesen` (die letzte Status-Antwort) liest die Kopie zusätzlich neu (R1). Ohne Engine (kein Konto) zählt nur die Kopie.
  */

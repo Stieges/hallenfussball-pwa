@@ -37,7 +37,15 @@ const doppel = vi.hoisted(() => ({
 vi.mock('../../../auth/hooks/useCan', () => ({ useCan: () => doppel.darf }));
 vi.mock('../../../../hooks/useKioskRoute', () => ({ useKioskRoute: () => doppel.kiosk }));
 vi.mock('../../useHallStatus', () => ({ useHallStatus: () => { doppel.statusAufrufe += 1; return doppel.status; } }));
-vi.mock('../../useAngepfiffeneFelder', () => ({ useAngepfiffeneFelder: () => doppel.angepfiffen }));
+const laufendAusFeldern = vi.hoisted(() => {
+  const zwischenspeicher = new WeakMap<ReadonlySet<number>, ReadonlyMap<number, number>>();
+  return (felder: ReadonlySet<number>): ReadonlyMap<number, number> => {
+    const gemerkt = zwischenspeicher.get(felder) ?? new Map([...felder].map((feld) => [feld, 1] as const));
+    zwischenspeicher.set(felder, gemerkt);
+    return gemerkt;
+  };
+});
+vi.mock('../../useLaufendeSpiele', () => ({ useLaufendeSpiele: () => laufendAusFeldern(doppel.angepfiffen) }));
 vi.mock('../../useHallLautsprecher', () => ({ useHallLautsprecher: () => doppel.lautsprecher }));
 const geraet = vi.hoisted(() => ({ einschaltung: null as { turnierId: string; felder: number[]; name: string } | null }));
 vi.mock('../../lautsprecherGeraet', () => ({

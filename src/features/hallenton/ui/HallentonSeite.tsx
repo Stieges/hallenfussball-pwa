@@ -50,7 +50,8 @@ export function HallentonSeite({ tournamentId, felderAnzahl, seitenleisteBreite 
       status={status}
       darfAendern={darfAendern}
       abgeschlossen={abgeschlossen}
-      hierAnhoeren={() => anhoeren.anhoeren('abpfiff')}
+      hierAnhoeren={() => anhoeren.anhoeren('abpfiff', 'hier')}
+      hierHinweis={anhoeren.hierHinweis}
       rueckfrage={rueckfrage}
       geraetName={lautsprecher.name}
       geraet={<DiesesGeraetAbschnitt abschnitt={geraet} darfAendern={darfAendern} leisteLinks={seitenleisteBreite} />}
@@ -67,6 +68,8 @@ export interface HallentonSeiteAnsichtProps {
   darfAendern: boolean;
   abgeschlossen: boolean;
   hierAnhoeren: () => void;
+  /** Was „Hier anhören“ nicht gespielt hat (Zeile unter der Taste), sonst `null`. */
+  hierHinweis?: string | null;
   geraetName: string | null;
   /** Rückfrage bei laufendem Spiel (H4-10, @HT-017): vor „Anhören“ auf einem Lautsprecher-Gerät und vor „Testton in der Halle“. */
   rueckfrage: AnhoerenRueckfrage;
@@ -77,7 +80,7 @@ export interface HallentonSeiteAnsichtProps {
 }
 
 /** Nur Darstellung (auch am Prüfstand der Bilder verwendet): Hinweise oben, „Dieses Gerät“ (oben oder unten), Karten je Feld, Testton. */
-export function HallentonSeiteAnsicht({ karten, keinLautsprecherImTurnier, status, darfAendern, abgeschlossen, hierAnhoeren, geraetName, rueckfrage, geraet = null, geraetOben = false }: HallentonSeiteAnsichtProps): ReactElement {
+export function HallentonSeiteAnsicht({ karten, keinLautsprecherImTurnier, status, darfAendern, abgeschlossen, hierAnhoeren, hierHinweis = null, geraetName, rueckfrage, geraet = null, geraetOben = false }: HallentonSeiteAnsichtProps): ReactElement {
   const { t } = useTranslation('hallenton');
   const keinNetz = status.stand === 'unbekannt';
   return (
@@ -91,7 +94,7 @@ export function HallentonSeiteAnsicht({ karten, keinLautsprecherImTurnier, statu
       ) : null}
       {geraetOben ? geraet : null}
       <FeldKartenAbschnitt karten={karten} keinLautsprecherImTurnier={keinLautsprecherImTurnier && status.stand === 'aktuell'} />
-      {darfAendern ? <TesttonAbschnitt karten={karten} status={status} hierAnhoeren={hierAnhoeren} geraetName={geraetName} rueckfrage={rueckfrage} /> : null}
+      {darfAendern ? <TesttonAbschnitt karten={karten} status={status} hierAnhoeren={hierAnhoeren} hierHinweis={hierHinweis} geraetName={geraetName} rueckfrage={rueckfrage} /> : null}
       {geraetOben ? null : geraet}
       <AnhoerenRueckfrageDialog frage={rueckfrage.frage} onJa={rueckfrage.ja} onNein={rueckfrage.nein} />
     </div>
