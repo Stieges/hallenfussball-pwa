@@ -407,7 +407,12 @@
     "foulLimitEnable": "Foul-Grenze einschalten",
     "foulLimitValue": "Grenze: Foul je Halbzeit",
     "foulLimitDesc": "Ausgeschaltet zählt das Cockpit die Fouls trotzdem und zeigt nur die Zahl. Eingeschaltet meldet es ab dem eingestellten Foul je Halbzeit (vorgeschlagen: das 5.).",
-    "foulLimitInvalid": "Gültig ist eine ganze Zahl von {{min}} bis {{max}} – der Wert wurde nicht übernommen"
+    "foulLimitInvalid": "Gültig ist eine ganze Zahl von {{min}} bis {{max}} – der Wert wurde nicht übernommen",
+    "deviceTitle": "Ton dieses Geräts",
+    "deviceSwitch": "Ton für das Spielende",
+    "deviceSwitchDesc": "Gilt nur für dieses Gerät, nicht für das ganze Turnier.",
+    "deviceSwitchAria": "Ton auf diesem Gerät",
+    "deviceVolumeDesc": "Lautstärke dieses Geräts: {{percent}} %"
   },
   "editScore": {
     "title": "Ergebnis korrigieren",

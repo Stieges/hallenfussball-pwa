@@ -1,9 +1,12 @@
 import { CSSProperties } from 'react';
-import { cssVars, dialogWidths } from '../../../../design-tokens';
+import { cssVars, dialogWidths, iconSizeValues } from '../../../../design-tokens';
+import { Icons } from '../../../ui/Icons';
+import { DialogActions } from '../../../ui/molecules/DialogActions';
 import { DialogSurface } from '../../../ui/molecules/DialogSurface';
 import { MatchCockpitSettingsPanel } from '../../../match-settings/MatchCockpitSettingsPanel';
 import type { MatchCockpitSettings } from '../../../../types/tournament';
 import { TastenkuerzelSchalter } from './TastenkuerzelSchalter';
+import { GeraetTonAbschnitt } from './GeraetTonAbschnitt';
 
 interface SettingsDialogProps {
     isOpen: boolean;
@@ -30,17 +33,14 @@ export function SettingsDialog({
 
     if (!isOpen) {return null;}
 
-    const dialogStyle: CSSProperties = {
-        display: 'flex',
-        flexDirection: 'column',
-    };
-
+    // Kopf und Fuß liegen in den Slots der Fläche: nur der Inhalt scrollt, „Fertig“ bleibt im Bild (S1, @OB-062)
     const headerStyle: CSSProperties = {
-        padding: cssVars.spacing.lg,
-        borderBottom: `1px solid ${cssVars.colors.border}`,
+        padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm} ${cssVars.spacing.xs} ${cssVars.spacing.lg}`,
+        borderBottom: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        minHeight: cssVars.touchTargets.primary,
     };
 
     const titleStyle: CSSProperties = {
@@ -53,41 +53,34 @@ export function SettingsDialog({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        width: '44px',
-        height: '44px',
-        minWidth: '44px',
-        minHeight: '44px',
+        width: cssVars.touchTargets.minimum,
+        height: cssVars.touchTargets.minimum,
+        minWidth: cssVars.touchTargets.minimum,
+        minHeight: cssVars.touchTargets.minimum,
         background: 'transparent',
         border: 'none',
-        fontSize: '24px',
         cursor: 'pointer',
         color: cssVars.colors.textSecondary,
         padding: 0,
-        lineHeight: 1,
         borderRadius: cssVars.borderRadius.sm,
     };
 
     const contentStyle: CSSProperties = {
         padding: cssVars.spacing.lg,
-        overflowY: 'auto',
     };
 
-    const footerStyle: CSSProperties = {
-        padding: cssVars.spacing.md,
-        borderTop: `1px solid ${cssVars.colors.border}`,
-        textAlign: 'right',
-    };
+    const header = (
+        <div style={headerStyle}>
+            <h2 id="cockpit-settings-dialog-title" style={titleStyle}>Cockpit Einstellungen</h2>
+            <button style={closeButtonStyle} onClick={onClose} aria-label="Schließen">
+                <Icons.X size={iconSizeValues.md} />
+            </button>
+        </div>
+    );
 
-    const okButtonStyle: CSSProperties = {
-        padding: `${cssVars.spacing.sm} ${cssVars.spacing.lg}`,
-        background: cssVars.colors.primary,
-        color: cssVars.colors.onPrimary,
-        border: 'none',
-        borderRadius: cssVars.borderRadius.md,
-        fontSize: cssVars.fontSizes.md,
-        fontWeight: cssVars.fontWeights.medium,
-        cursor: 'pointer',
-    };
+    const footer = (
+        <DialogActions primary={{ label: 'Fertig', onClick: onClose, 'data-testid': 'cockpit-settings-fertig' }} />
+    );
 
     return (
         <DialogSurface
@@ -95,31 +88,20 @@ export function SettingsDialog({
             onClose={onClose}
             maxWidth={dialogWidths.md}
             labelledBy="cockpit-settings-dialog-title"
+            header={header}
+            footer={footer}
         >
-            <div style={dialogStyle}>
-                <div style={headerStyle}>
-                    <h2 id="cockpit-settings-dialog-title" style={titleStyle}>Cockpit Einstellungen</h2>
-                    <button style={closeButtonStyle} onClick={onClose} aria-label="Schließen">
-                        ×
-                    </button>
-                </div>
-
-                <div style={contentStyle}>
-                    <MatchCockpitSettingsPanel
-                        settings={settings}
-                        onChange={onChange}
-                        tournamentId={tournamentId}
-                        onTestSound={onTestSound}
-                        readOnly={readOnly}
-                    />
-                    <TastenkuerzelSchalter />
-                </div>
-
-                <div style={footerStyle}>
-                    <button style={okButtonStyle} onClick={onClose}>
-                        Fertig
-                    </button>
-                </div>
+            <div style={contentStyle}>
+                <MatchCockpitSettingsPanel
+                    settings={settings}
+                    onChange={onChange}
+                    tournamentId={tournamentId}
+                    onTestSound={onTestSound}
+                    readOnly={readOnly}
+                    ohneTonwahl
+                />
+                <GeraetTonAbschnitt onTestSound={onTestSound} />
+                <TastenkuerzelSchalter />
             </div>
         </DialogSurface>
     );

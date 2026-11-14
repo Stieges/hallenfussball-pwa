@@ -56,6 +56,7 @@ export function useCockpitClock(args: CockpitClockArgs): CockpitClock {
       playSound();
     }
   }, [tournamentId, feldId, playSound, serverNow]);
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- trägt hier den Ton dieses Geräts (Gerätewert), nicht mehr die Turnier-Einstellung
   const whistle = useWhistle({ soundEnabled: settings.soundEnabled, hapticEnabled: settings.hapticEnabled, play: tonAnlass });
 
   const onEnded = useCallback((ended: SectionEnded) => {

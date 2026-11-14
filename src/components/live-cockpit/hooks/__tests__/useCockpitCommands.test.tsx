@@ -36,7 +36,7 @@ function setup(options: { offen?: OffenerEintrag | null; props?: Partial<LiveCoc
   const melde = vi.fn();
   const sound = { play: vi.fn(), activate: vi.fn().mockResolvedValue(undefined), isActivated: true };
   const hook = renderHook(() =>
-    useCockpitCommands({ props, settings: { ...DEFAULT_MATCH_COCKPIT_SETTINGS, ...options.settings }, sound, flows, sides, melde, engineView: options.engineView ?? null }),
+    useCockpitCommands({ props, settings: { ...DEFAULT_MATCH_COCKPIT_SETTINGS, ...options.settings }, tonAn: true, sound, flows, sides, melde, engineView: options.engineView ?? null }),
   );
   return { hook, props, flows, sides, melde };
 }
@@ -260,7 +260,7 @@ describe('useCockpitCommands – Zeitstrafen nach dem automatischen Abpfiff (Eng
       const wert = { engine: spiel.a.engine, store: spiel.store, sender: { kick: vi.fn().mockResolvedValue(undefined) }, accountId: spiel.accountId } as unknown as MatchEngineContextValue;
       const wrapper = ({ children }: { children: ReactNode }) => <MatchEngineContext.Provider value={wert}>{children}</MatchEngineContext.Provider>;
       const hook = renderHook(
-        ({ engineView }: { engineView: PhaseView }) => useCockpitCommands({ props, settings: DEFAULT_MATCH_COCKPIT_SETTINGS, sound, flows, sides, melde, engineView }),
+        ({ engineView }: { engineView: PhaseView }) => useCockpitCommands({ props, settings: DEFAULT_MATCH_COCKPIT_SETTINGS, tonAn: true, sound, flows, sides, melde, engineView }),
         { wrapper, initialProps: { engineView: sicht() } },
       );
       expect(hook.result.current.activePenalties).toHaveLength(1);

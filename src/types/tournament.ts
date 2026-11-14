@@ -683,11 +683,17 @@ export interface MatchCockpitSettings {
   finalPhaseMinutes: number;
 
   // Sound Settings
-  /** Enable end-of-match horn sound. Default: true (@W2A-038, Vorbelegung des Turniers) */
+  /**
+   * Enable end-of-match horn sound. Default: true (@W2A-038, Vorbelegung des Turniers)
+   * @deprecated seit H4-12 nicht mehr gelesen; Ein/Aus und Lautstärke je Gerät über `useCockpitTon` (@HT-009)
+   */
   soundEnabled: boolean;
   /** Sound preset ID or 'custom' for uploaded sound. Default: 'horn-1' */
   soundId: MatchSoundPreset | null;
-  /** Sound volume (0-100). Default: 80 */
+  /**
+   * Sound volume (0-100). Default: 80
+   * @deprecated seit H4-12 nicht mehr gelesen; Ein/Aus und Lautstärke je Gerät über `useCockpitTon` (@HT-009)
+   */
   soundVolume: number;
   /** Whether a custom sound has been uploaded. Default: false */
   hasCustomSound: boolean;
@@ -812,11 +818,17 @@ export interface MatchCockpitOverrides {
   nettoWarningEnabled?: boolean;
   /** Override auto-finish for this match */
   autoFinishEnabled?: boolean;
-  /** Override sound enabled for this match */
+  /**
+   * Override sound enabled for this match
+   * @deprecated seit H4-12 nicht mehr gelesen; Ein/Aus und Lautstärke je Gerät über `useCockpitTon` (@HT-009)
+   */
   soundEnabled?: boolean;
   /** Override sound preset for this match */
   soundId?: MatchSoundPreset | null;
-  /** Override volume for this match */
+  /**
+   * Override volume for this match
+   * @deprecated seit H4-12 nicht mehr gelesen; Ein/Aus und Lautstärke je Gerät über `useCockpitTon` (@HT-009)
+   */
   soundVolume?: number;
   /** Enable golden goal for this final (overrides tournament default) */
   goldenGoalEnabled?: boolean;

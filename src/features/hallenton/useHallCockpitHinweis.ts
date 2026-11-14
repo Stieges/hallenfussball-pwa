@@ -31,5 +31,5 @@ export function useHallCockpitHinweis(tid: string, feldId: string): CockpitHinwe
     return () => window.clearInterval(takt);
   }, [mitStand]);
 
-  return cockpitHinweisAusLeitung(stand, leitung?.jetzt() ?? 0);
+  return cockpitHinweisAusLeitung(stand, leitung?.jetzt() ?? 0, feld !== null && (leitung?.versuchGescheitert(tid, feld) ?? false));
 }

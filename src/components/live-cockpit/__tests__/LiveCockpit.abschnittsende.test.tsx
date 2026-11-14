@@ -12,6 +12,8 @@ import { initRealDeI18n } from '../../../test/realDeI18n';
 import { Harness } from './engineHarness';
 import { anpfiff, halte, warteSperre } from './engineHarnessSupport';
 import { T0 } from './enginePhaseFixture';
+import { installiereGeraet } from '../../../test/geraetSpeicher';
+import { COCKPIT_TON_SCHLUESSEL, __setzeCockpitTonFuerTests } from '../hooks/useCockpitTon';
 
 vi.unmock('i18next');
 vi.unmock('react-i18next');
@@ -34,12 +36,13 @@ vi.mock('../../../components/ui/Toast/ToastContext', () => ({
 
 // Spiel 11: 2 x 6 Minuten, 1 Minute Halbzeitpause.
 const ZWEI_ABSCHNITTE = { groupPhaseGameDuration: 12, gamePeriods: 2, halftimeBreak: 1 };
-const TON_AUS = { soundEnabled: false };
 const vibrate = vi.fn();
 
 const zu = (ms: number): void => { vi.setSystemTime(T0 + ms); };
 
 beforeEach(() => {
+  installiereGeraet();
+  __setzeCockpitTonFuerTests();
   ton.play.mockClear();
   vibrate.mockClear();
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -189,7 +192,10 @@ describe('LiveCockpit: Abpfiff mit Ton und Vibration, genau einmal (B-08c)', () 
 
   it('@SL-063 Gegenbeispiel: mit ausgeschaltetem Abpfiff-Ton bleibt es beim Abpfiff still, die Vibration kommt trotzdem', async () => {
     const user = userEvent.setup();
-    render(<Harness turnier={{ groupPhaseGameDuration: 10, gamePeriods: 1 }} einstellungen={TON_AUS} />);
+    // H4-12 (@HT-009, @SL-125): „Ton aus“ gilt je Gerät – Tom schaltet ihn auf seinem Gerät aus, nicht im Turnier
+    window.localStorage.setItem(COCKPIT_TON_SCHLUESSEL, JSON.stringify({ an: false, lautstaerke: 100 }));
+    __setzeCockpitTonFuerTests();
+    render(<Harness turnier={{ groupPhaseGameDuration: 10, gamePeriods: 1 }} />);
     await anpfiff(user);
     await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
     zu(600_000);

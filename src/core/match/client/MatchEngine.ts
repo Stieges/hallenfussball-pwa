@@ -293,6 +293,11 @@ export class MatchEngine {
     return this.deps.clock.serverNow();
   }
 
+  /** Die Uhr dieses Geräts wurde schon einmal mit dem Server abgeglichen (H4-12, @HT-036); nur lesend. */
+  clockSynced(): boolean {
+    return this.deps.clock.isKnown;
+  }
+
   private statusFor(matchId: string): EngineMatchStatus {
     return this.statusByMatch.get(matchId) ?? engineMatchStatus();
   }
