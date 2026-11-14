@@ -27,7 +27,8 @@ vi.mock('../../../auth/hooks/useCan', () => ({ useCan: () => true }));
 vi.mock('../../useHallStatus', () => ({
   useHallStatus: (): HallStatus => ({ stand: 'laedt', antwort: null, felder: {}, lautsprecherBekannt: false, testtonAnfordern: vi.fn(), gehoert: vi.fn() }),
 }));
-vi.mock('../../useAngepfiffeneFelder', () => ({ useAngepfiffeneFelder: () => new Set<number>() }));
+const keinSpiel = vi.hoisted(() => new Map<number, number>());
+vi.mock('../../useLaufendeSpiele', () => ({ useLaufendeSpiele: () => keinSpiel }));
 vi.mock('../../useHallLautsprecher', () => ({ useHallLautsprecher: () => doppel.lautsprecher }));
 
 import { AuthContext } from '../../../auth/context/authContextInstance';

@@ -1,0 +1,16 @@
+/* Statuswort des Geräts: 28 px am Handy, 48 px ab Laptopbreite (Mockup „statusgroesse“, @HT-011: „groß“). Schriftgrößen nur über die Tokens. */
+.wort {
+  margin: 0;
+  font-size: var(--font-size-display-sm);
+  line-height: var(--line-height-display-sm);
+  font-weight: var(--font-weight-bold);
+  overflow-wrap: break-word;
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .wort {
+    font-size: var(--font-size-display-lg);
+    line-height: var(--line-height-display-lg);
+  }
+}

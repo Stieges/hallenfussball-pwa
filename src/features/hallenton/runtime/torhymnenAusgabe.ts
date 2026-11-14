@@ -52,7 +52,7 @@ export interface TorhymnenAusgabeDeps {
   kontext: () => AudioKontext;
   begrenzer: () => KompressorKnoten;
   dekodiere: (url: string) => Promise<AudioPuffer | null>;
-  /** Darf jetzt etwas erklingen (aktiviert, nicht stumm, Regler `tor` über 0)? */
+  /** Darf jetzt etwas erklingen (aktiviert, Regler `tor` über 0)? */
   darf: () => boolean;
   /** Regler `tor` in Prozent. */
   lautstaerke: () => number;

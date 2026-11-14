@@ -159,7 +159,7 @@ describe('@HT-023 Anhören der Hupen folgt derselben Regel', () => {
     expect(letzterStop(echter)).toBe(106); // der echte Ton wird nicht verkürzt
   });
 
-  it('Anhören der Hupe: stumm oder 0 % → false (kein „belegt“); der Regler wirkt auf ein laufendes Anhören', async () => {
+  it('Anhören der Hupe: 0 % → false (kein „belegt“); der Regler wirkt auf ein laufendes Anhören', async () => {
     const { kontext, spieler } = await bereit();
     spieler.anhoeren('abpfiff');
     spieler.setzeLautstaerke('abpfiff', 30);

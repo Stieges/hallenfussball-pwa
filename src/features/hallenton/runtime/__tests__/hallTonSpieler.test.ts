@@ -14,6 +14,7 @@ function speicher(start: Record<string, string> = {}): Speicher & { daten: Recor
     daten,
     getItem: (k) => daten[k] ?? null,
     setItem: (k, v) => { daten[k] = v; },
+    removeItem: (k) => { Reflect.deleteProperty(daten, k); },
   };
 }
 
@@ -173,29 +174,39 @@ describe('hallTonSpieler', () => {
   });
 
   it('@HT-023 die Einstellung bleibt nach dem Neuladen der App erhalten (neuer Spieler, gleicher Speicher)', async () => {
-    const lokal = speicher({ 'hallenton:lautstaerke': JSON.stringify({ abpfiff: 80, halbzeit: 50 }), 'hallenton:stumm': 'false' });
+    const lokal = speicher({ 'hallenton:lautstaerke': JSON.stringify({ abpfiff: 80, halbzeit: 50 }) });
     const { spieler } = aufbau({ speicher: lokal });
     expect(spieler.lautstaerke('abpfiff')).toBe(80);
     expect(spieler.lautstaerke('halbzeit')).toBe(50);
-    expect(spieler.stumm()).toBe(false);
+  });
+
+  it('@HT-039 ein alter gespeicherter Stumm-Wert „true“ (die Taste gibt es nicht mehr) wird gelöscht und ignoriert: bereit statt „Lautstärke 0 %“', async () => {
+    const lokal = speicher({ 'hallenton:stumm': 'true', 'hallenton:lautstaerke': JSON.stringify({ abpfiff: 80, halbzeit: 50, tor: 100 }) });
+    const { spieler } = await bereit({ speicher: lokal });
+    expect(lokal.daten['hallenton:stumm']).toBeUndefined();
+    expect(spieler.zustand()).toBe('ready');
+    expect(spieler.jetztSpielen('abpfiff')).toBe(true);
+  });
+  it('Gegenbeispiel: der Regler auf 0 % macht weiter „volume_zero“', async () => {
+    const { spieler } = await bereit();
+    spieler.setzeLautstaerke('abpfiff', 0);
+    expect(spieler.zustand()).toBe('volume_zero');
   });
 
   it('@HT-023 Gegenbeispiel: die Lautstärke ist nicht turnierweit – der Schlüssel enthält kein Turnier', async () => {
     const lokal = speicher();
     const { spieler } = aufbau({ speicher: lokal });
     spieler.setzeLautstaerke('abpfiff', 30);
-    spieler.setzeStumm(true);
-    expect(Object.keys(lokal.daten).sort()).toEqual(['hallenton:lautstaerke', 'hallenton:stumm']);
+    expect(Object.keys(lokal.daten)).toEqual(['hallenton:lautstaerke']);
   });
 
-  it('ohne Speicher (privates Fenster, gesperrt) gelten 100 % und nicht stumm, nichts wirft', async () => {
+  it('ohne Speicher (privates Fenster, gesperrt) gelten 100 %, nichts wirft', async () => {
     const kaputt: Speicher = {
       getItem: () => { throw new Error('SecurityError'); },
       setItem: () => { throw new Error('QuotaExceededError'); },
     };
     const { spieler } = aufbau({ speicher: kaputt });
     expect(spieler.lautstaerke('abpfiff')).toBe(100);
-    expect(spieler.stumm()).toBe(false);
     spieler.setzeLautstaerke('abpfiff', 40);
     expect(spieler.lautstaerke('abpfiff')).toBe(40);
     const ohne = aufbau({ speicher: null });
@@ -222,15 +233,6 @@ describe('hallTonSpieler', () => {
     spieler.setzeLautstaerke('halbzeit', 0);
     expect(spieler.zustand()).toBe('ready');
     expect(spieler.planen('h', 'halbzeit', 1)).toBe(false);
-  });
-
-  it('stumm: kein Ton, Zustand volume_zero; wieder laut → ready', async () => {
-    const { spieler } = await bereit();
-    spieler.setzeStumm(true);
-    expect(spieler.zustand()).toBe('volume_zero');
-    expect(spieler.jetztSpielen('abpfiff')).toBe(false);
-    spieler.setzeStumm(false);
-    expect(spieler.zustand()).toBe('ready');
   });
 
   it('@HT-027 eigener Ton über die öffentliche Storage-Adresse (https): geladen und gespielt', async () => {
