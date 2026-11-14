@@ -799,7 +799,9 @@
   },
   "scheduleHead": {
     "title": "Spiele",
-    "times": "Beginn {{start}} Uhr · Ende etwa {{end}} Uhr"
+    "times": "Beginn {{start}} Uhr · Ende etwa {{end}} Uhr",
+    "duration_one": "{{count}} Minute je Spiel",
+    "duration_other": "{{count}} Minuten je Spiel"
   },
   "scheduleCurrent": {
     "live": "Läuft · {{name}} · Feld {{field}}",

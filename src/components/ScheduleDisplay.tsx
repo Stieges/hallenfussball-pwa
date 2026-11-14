@@ -118,6 +118,10 @@ interface ScheduleDisplayProps {
   // Note: Permission check is now handled in ScheduleTab
 }
 
+/** Innenabstand des Spielplans wie bisher (40 / 20 Bildpunkte), aus Tokens gerechnet statt fester Werte */
+const PAD_Y = `calc(${cssVars.spacing.xl} + ${cssVars.spacing.sm})`;
+const PAD_X = `calc(${cssVars.spacing.md} + ${cssVars.spacing.xs})`;
+
 export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   schedule,
   currentStandings,
@@ -217,7 +221,8 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   // Container Style - full width, parent controls maxWidth
   const containerStyle: CSSProperties = {
     width: '100%',
-    padding: compact ? cssVars.spacing.sm : `${cssVars.spacing.xl} ${cssVars.spacing.md}`,
+    // Kopf der Verwaltung: Innenabstand aus der Klasse `schedule-display--kopf` (ohne !important); sonst wie vor @ZP-113 (40 / 20 Bildpunkte, aus Tokens gerechnet)
+    padding: showListHead ? undefined : compact ? cssVars.spacing.sm : `${PAD_Y} ${PAD_X}`,
     background: cssVars.colors.background,
     fontFamily: cssVars.fontFamilies.body,
     color: cssVars.colors.textPrimary,
@@ -225,7 +230,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
 
   return (
     <ViewTimeNotes view={view}>
-    <div style={containerStyle} className="schedule-display">
+    <div style={containerStyle} className={showListHead ? 'schedule-display schedule-display--kopf' : 'schedule-display'}>
       {/* Tournament Header - Hidden on Desktop as info is in Top Nav */}
       {showTournamentHeader && (
         <div className="md:hidden">
@@ -237,8 +242,8 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
         </div>
       )}
 
-      {/* Participants (only for group tournaments) */}
-      {hasGroups && showParticipants && (participantsCollapsed
+      {/* Teilnehmer: mit Gruppen die Teamlisten je Gruppe; eingeklappt (Turnierleitung, @ZP-113) auch ohne Gruppen als eine Liste aller Teams */}
+      {(hasGroups || participantsCollapsed) && showParticipants && (participantsCollapsed
         ? <PublicParticipants teams={schedule.teams} />
         : (
           <ParticipantsAndGroups

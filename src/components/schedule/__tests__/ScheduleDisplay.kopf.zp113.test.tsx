@@ -65,4 +65,50 @@ describe('@ZP-113 Kopf des Spielplans (ScheduleDisplay)', () => {
     render(<ScheduleDisplay schedule={schedule} showListHead />);
     expect(screen.getByRole('heading', { name: 'Gruppenphase' })).toBeTruthy();
   });
+
+  describe('@ZP-113 Teilnehmer ohne Gruppen (jeder gegen jeden, z. B. Nikolausturnier mit 6 Teams)', () => {
+    const ohneGruppen = generateFullSchedule(createMockTournament({
+      teams: [1, 2, 3, 4, 5, 6].map((n) => ({ id: testUuid(60 + n), name: `Verein ${String(n)}` })), numberOfTeams: 6, numberOfGroups: 1, numberOfFields: 1, groupSystem: 'roundRobin',
+    }));
+
+    it('@ZP-113 eingeklappt „Teilnehmer (6)“, klappt mit einem Tipp auf und zeigt alle sechs Teams ohne Gruppenüberschrift', async () => {
+      render(<ScheduleDisplay schedule={ohneGruppen} showTournamentHeader={false} participantsCollapsed showListHead />);
+      const toggle = screen.getByTestId('public-participants-toggle');
+      expect(toggle).toHaveTextContent('Teilnehmer (6)');
+      expect(toggle).toHaveAttribute('aria-expanded', 'false');
+      expect(screen.queryByTestId('public-participants-list')).toBeNull();
+      await userEvent.click(toggle);
+      const liste = screen.getByTestId('public-participants-list');
+      for (let n = 1; n <= 6; n++) { expect(liste).toHaveTextContent(`Verein ${String(n)}`); }
+      expect(screen.queryByRole('heading', { name: /Gruppe/ })).toBeNull();
+    });
+
+    it('@ZP-113 Gegenbeispiel: `showParticipants` aus (Zuschauer-Seite) zeigt auch ohne Gruppen keine Teilnehmerliste', () => {
+      render(<ScheduleDisplay schedule={ohneGruppen} showParticipants={false} participantsCollapsed showListHead />);
+      expect(screen.queryByTestId('public-participants-toggle')).toBeNull();
+    });
+
+    it('@ZP-113 Gegenbeispiel: ohne `participantsCollapsed` (Vorschau im Assistenten, Zuschauer-Seite) bleibt es ohne Gruppen bei keiner Teilnehmerliste wie bisher', () => {
+      render(<ScheduleDisplay schedule={ohneGruppen} />);
+      expect(screen.queryByTestId('public-participants-toggle')).toBeNull();
+      expect(screen.queryByTestId('public-participants')).toBeNull();
+    });
+  });
+
+  it('@ZP-113 der Innenabstand des Kopfs gilt nur in der Verwaltung: die Klasse `schedule-display--kopf` nur mit Listenkopf, nie !important für den Kopf, der übrige Spielplan behält seinen Abstand', () => {
+    const { container, unmount } = render(<ScheduleDisplay schedule={schedule} showListHead />);
+    const kopf = container.querySelector('.schedule-display');
+    expect(kopf?.classList.contains('schedule-display--kopf')).toBe(true);
+    expect((kopf as HTMLElement).style.padding).toBe('');
+    const css = Array.from(document.querySelectorAll('style')).map((s) => s.textContent ?? '').join('\n').replace(/\/\*[\s\S]*?\*\//g, '');
+    const kopfRegeln = css.split('}').filter((r) => /\.schedule-display--kopf\s*\{/.test(r));
+    expect(kopfRegeln.length).toBeGreaterThan(0);
+    expect(kopfRegeln.every((r) => !r.includes('!important'))).toBe(true);
+    expect(css).toContain('.schedule-display:not(.schedule-display--kopf)');
+    unmount();
+    const { container: andere } = render(<ScheduleDisplay schedule={schedule} />);
+    const el = andere.querySelector<HTMLElement>('.schedule-display')!;
+    expect(el.classList.contains('schedule-display--kopf')).toBe(false);
+    expect(el.style.padding).not.toBe('');
+  });
 });

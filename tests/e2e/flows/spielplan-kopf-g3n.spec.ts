@@ -12,6 +12,8 @@ import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
 import { animationenFertig } from '../helpers/animationenFertig';
 import { cup, ID, NAMEN, NAME_50 } from '../helpers/laptopCup';
+// @ts-expect-error – .mjs ohne Typen; derselbe Lader wie bei `npm run visual:metrics --saat`
+import { installiereSaat, leseSaat } from '../../../scripts/visual-metrics/saat/lader.mjs';
 // @ts-expect-error – .mjs ohne Typen; die echten Messfunktionen von `npm run visual:metrics`
 import { messeSeite, dehneTexte } from '../../../scripts/visual-metrics/browser-messung.mjs';
 
@@ -144,5 +146,38 @@ test.describe('@ZP-113 Kopf des Spielplans der Turnierleitung', () => {
     expect(await position(), 'nicht im Bearbeiten-Modus: im Fluss').not.toBe('fixed');
     await page.getByTestId('schedule-edit-start').click();
     await expect.poll(position, { message: 'im Bearbeiten-Modus schwebt die Leiste wie bisher' }).toBe('fixed');
+  });
+});
+
+test.describe('@ZP-113 Kopf der Turnierleitung mit eigener Saat', () => {
+  // eslint-disable-next-line no-empty-pattern -- Playwright verlangt für den ersten Parameter ein Destrukturierungsmuster
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.name.includes('iPhone'), 'Safe-Area-Emulation stört die Klicks');
+  });
+
+  test('@ZP-113 Nikolausturnier (6 Teams ohne Gruppen, 10 Minuten je Spiel): „Teilnehmer (6)“ eingeklappt, klappt auf; die Kopfzeile nennt die Spielzeit', async ({ page }) => {
+    // Eigene Saat statt des Wegwerf-Turniers: sechs Teams, jeder gegen jeden. Die Uhr steht vor dem Turniertag (6.12.), die Einordnung hängt nicht am Tag des Laufs.
+    await page.clock.setFixedTime(new Date('2026-12-05T10:00:00+01:00'));
+    await installiereSaat(page.context(), leseSaat('nikolaus-vor-anpfiff'));
+    await page.setViewportSize({ width: 360, height: 640 });
+    await page.goto('/#/tournament/nikolaus-vor-anpfiff/schedule');
+    await expect(page.getByTestId('schedule-list-head')).toBeVisible({ timeout: 25_000 });
+    await expect(page.getByTestId('schedule-list-duration')).toHaveText('10 Minuten je Spiel');
+    const toggle = page.getByTestId('public-participants-toggle');
+    await expect(toggle).toHaveText(/Teilnehmer \(6\)/);
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.getByTestId('public-participants-list')).toHaveCount(0);
+    await toggle.click();
+    await expect(page.getByTestId('public-participants-list').locator('li')).toHaveCount(6);
+  });
+
+  test('@ZP-113 Gegenbeispiel: die Zuschauer-Seite (Messlauf-Turnier) hat keine Teilnehmer-Taste der Turnierleitung und keinen Listenkopf', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-11-10T10:00:00+01:00'));
+    await installiereSaat(page.context(), leseSaat('hallencup-messlauf'));
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/#/live/MESS26');
+    await expect(page.getByTestId('public-current')).toBeAttached({ timeout: 25_000 });
+    await expect(page.getByTestId('schedule-list-head')).toHaveCount(0);
+    await expect(page.locator('.schedule-display--kopf')).toHaveCount(0);
   });
 });
