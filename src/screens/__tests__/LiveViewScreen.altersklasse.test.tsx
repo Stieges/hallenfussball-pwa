@@ -13,11 +13,13 @@ vi.mock('i18next', async () => {
   const actual = await vi.importActual<typeof import('i18next')>('i18next');
   const de = (await import('../../i18n/locales/de/tournament.json')).default;
   const en = (await import('../../i18n/locales/en/tournament.json')).default;
+  const dePv = (await import('../../i18n/locales/de/publicView.json')).default;
+  const enPv = (await import('../../i18n/locales/en/publicView.json')).default;
   const instance = actual.default.createInstance();
   await instance.init({
     lng: 'de',
     fallbackLng: false,
-    resources: { de: { tournament: de }, en: { tournament: en } },
+    resources: { de: { tournament: de, publicView: dePv }, en: { tournament: en, publicView: enPv } },
     interpolation: { escapeValue: false },
   });
   return { default: instance };
@@ -59,8 +61,9 @@ async function renderWith(tournament: Tournament) {
       </MemoryRouter>
     </RepositoryProvider>
   );
-  const [heading] = await screen.findAllByRole('heading', { level: 1, name: tournament.title });
-  return heading.nextElementSibling?.textContent ?? '';
+  await screen.findAllByRole('heading', { level: 1, name: tournament.title });
+  // @ZM-210: die Altersklasse steht in den Einzelheiten unter dem Turniernamen (nicht mehr in der Kopfzeile „Altersklasse • Datum“); ohne Angabe fehlt die Zeile
+  return screen.queryByTestId('public-head-age')?.textContent ?? '';
 }
 
 describe('Altersklasse auf der Zuschauer-Seite (@W2B-022, @W2B-024, @W2B-026)', () => {
@@ -68,22 +71,21 @@ describe('Altersklasse auf der Zuschauer-Seite (@W2B-022, @W2B-024, @W2B-026)', 
     vi.clearAllMocks();
   });
 
-  it('@W2B-022 ohne Altersklasse steht kein Platzhalter und kein Trennzeichen vor dem Datum', async () => {
-    const subtitle = await renderWith({ ...buildLiveViewTournament({}), ageClass: '' });
-    expect(subtitle.trim()).not.toBe('');
-    expect(subtitle.trim().startsWith('\u2022')).toBe(false);
-    expect(subtitle).not.toContain('U11');
-    expect(subtitle).not.toMatch(/Keine Angabe/i);
+  it('@W2B-022 ohne Altersklasse steht kein Platzhalter und keine leere Zeile', async () => {
+    const age = await renderWith({ ...buildLiveViewTournament({}), ageClass: '' });
+    expect(age).toBe('');
+    expect(screen.getByTestId('public-head-when-where').textContent).not.toMatch(/Keine Angabe|\u2022/i);
+    expect(document.body.textContent).not.toMatch(/Keine Angabe/i);
   });
 
   it('@W2B-024 U11 steht genau so da, ohne Umrechnung', async () => {
     const subtitle = await renderWith({ ...buildLiveViewTournament({}), ageClass: 'U11' });
-    expect(subtitle.startsWith('U11 \u2022 ')).toBe(true);
+    expect(subtitle).toContain('U11');
     expect(subtitle).not.toContain('E-Jugend');
   });
 
   it('@W2B-026 ein alter Wert „AH“ steht weiter da', async () => {
     const subtitle = await renderWith({ ...buildLiveViewTournament({}), ageClass: 'AH' });
-    expect(subtitle.startsWith('AH \u2022 ')).toBe(true);
+    expect(subtitle).toContain('AH');
   });
 });

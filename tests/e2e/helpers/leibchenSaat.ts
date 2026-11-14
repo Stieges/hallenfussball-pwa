@@ -28,6 +28,7 @@ export const ORANGE = '#EF6C00';
 
 export type Szene =
   | 'vor-gleiche-farbe'   // Zustand 1/1b: Spiel 2, noch kein Leibchen, beide Rot → Gast weicht aus (Blau)
+  | 'vor-leibchen'        // @ZM-209: Spiel 2 vor dem Anpfiff, Leibchen Gelb für Team 3 bestätigt
   | 'laeuft'              // Zustand 3: Spiel 2 läuft 1 : 0, Leibchen Gelb, Zeitstrafe #5 Team 3
   | 'ende'                // Zustand 4: Spiel 2 läuft, der Test pfeift es ab (1 : 0)
   | 'beendet'             // Spiel 2 ist abgepfiffen (1 : 0), Spiel 5 folgt
@@ -79,6 +80,7 @@ function spiele(szene: Szene): Zeile[] {
   switch (szene) {
     // dazu Spiel 5 später: nur das nächste Spiel des Felds trägt Kästen (Spielliste der Zuschauer-Seite)
     case 'vor-gleiche-farbe': return [spiel(2, 2, 3, '08:40', {}), spiel(5, 5, 6, '09:10', {})];
+    case 'vor-leibchen': return [spiel(2, 2, 3, '08:40', { kitDecision: 'bib', ...kit(ROT, GELB, 'b') }), spiel(5, 5, 6, '09:10', {})];
     case 'laeuft': return [spiel(2, 2, 3, '08:40', { ...laeuft, ...kit(ROT, GELB, 'b'), scoreA: 1, scoreB: 0, ...strafe })];
     case 'laeuft-zweistellig': return [spiel(2, 2, 3, '08:40', { ...laeuft, ...kit(ROT, GELB, 'b'), scoreA: 1, scoreB: 10 })];
     case 'ende': return [spiel(2, 2, 3, '08:40', { ...laeuft, ...kit(ROT, GELB, 'b'), scoreA: 1, scoreB: 0, ...strafe })]; // der Abpfiff folgt zur Laufzeit (`beendeSpiel2`)
