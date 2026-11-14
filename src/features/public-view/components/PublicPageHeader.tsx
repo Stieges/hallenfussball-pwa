@@ -9,6 +9,7 @@ import { cssVars } from '../../../design-tokens';
 import { joinMeta, type MatchView } from '../../../core/view';
 import type { Tournament } from '../../../types/tournament';
 import { PublicEndedBadge } from './PublicFinalStandings';
+import { Chevron } from './PublicParticipants';
 import { anyMatchStarted, firstKickoffTime, headDateText, locationLong, readHeadChoice, writeHeadChoice } from '../publicHeadFacts';
 
 export interface PublicPageHeaderProps {
@@ -27,7 +28,7 @@ const toggleStyle: CSSProperties = {
   fontFamily: 'inherit', fontSize: cssVars.fontSizes.md, color: cssVars.colors.textSecondary, cursor: 'pointer', textAlign: 'center',
   overflowWrap: 'anywhere',
 };
-const arrowStyle: CSSProperties = { fontSize: cssVars.fontSizes.xl, lineHeight: 1, flexShrink: 0 };
+const arrowStyle: CSSProperties = { display: 'inline-flex', flexShrink: 0, color: cssVars.colors.textPrimary };
 const detailsStyle: CSSProperties = {
   display: 'grid', gap: cssVars.spacing.xs, margin: `0 auto ${cssVars.spacing.sm}`, padding: cssVars.spacing.md, maxWidth: '32rem', textAlign: 'left',
   background: cssVars.colors.surface, border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`, borderRadius: cssVars.borderRadius.lg,
@@ -68,7 +69,7 @@ export function PublicPageHeader({ tournament, matches, shareCode, ended }: Publ
       {summary !== '' && (
         <button type="button" style={toggleStyle} onClick={toggle} aria-expanded={open} aria-controls="public-head-details" data-testid="public-head-when-where">
           <span>{summary}</span>
-          <span aria-hidden="true" style={arrowStyle}>{open ? '▴' : '▾'}</span>
+          <span style={arrowStyle}><Chevron up={open} /></span>
         </button>
       )}
       <div id="public-head-details" data-testid="public-head-details" style={{ ...detailsStyle, display: open && shown.length > 0 ? detailsStyle.display : 'none' }} role="group" aria-label={t('head.toggleLabel')}>

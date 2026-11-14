@@ -30,7 +30,8 @@ const numberStyle: CSSProperties = { width: cssVars.spacing.lg, flex: 'none', te
 const nameStyle: CSSProperties = { fontSize: cssVars.fontSizes.md, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary, overflowWrap: 'break-word', minWidth: 0 };
 const srOnly: CSSProperties = { position: 'absolute', width: cssVars.sizing.hairline, height: cssVars.sizing.hairline, overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', margin: `calc(-1 * ${cssVars.sizing.hairline})`, padding: 0, border: 0 };
 
-function Chevron({ up }: { up: boolean }): ReactElement {
+/** Pfeil zum Auf- und Zuklappen; auch der Kopf der Seite nutzt ihn (@ZM-210), damit beide Zeilen gleich aussehen. */
+export function Chevron({ up }: { up: boolean }): ReactElement {
   return (
     <svg viewBox="0 0 24 24" width="1.25em" height="1.25em" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
       <path d={up ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6'} />
