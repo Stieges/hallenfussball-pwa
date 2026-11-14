@@ -6,7 +6,7 @@
  * echten `useHallStatus`; nur der Server-Aufruf ist gefälscht, der Ton je Gerät kommt aus `useCockpitTon` (echter `localStorage`).
  * Daten wie im Mockup: Hallencup Süd, Feld 1, Spiel 11, FC Nord – SV Süd, 14:02; 2:1, 2. Halbzeit, Restzeit 4:32 (Fall `halbzeit`: Pause).
  * Nur Testumgebung, nicht Teil des Builds.
- * Aufruf: `?fall=kein-netz|lautsprecher-aus|ausgang-geaendert|halbzeit|anpfiff|uhr|dialog|admin|ohne` (+ `&lang=en`, `&lang=de`).
+ * Aufruf: `?fall=kein-netz|lautsprecher-aus|ausgang-geaendert|halbzeit|anpfiff|uhr|dialog|admin|ohne|ton-aktivieren` (+ `&lang=en`, `&lang=de`).
  */
 import ReactDOM from 'react-dom/client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -34,6 +34,7 @@ import { __setzeHallStatusRpcFuerPruefstand } from '../../../src/features/hallen
 import { istAngepfiffen } from '../../../src/features/hallenton/runtime/feldStandSpiele';
 import { erzeugeLeitungLebenszeichen } from '../../../src/features/hallenton/runtime/leitungLebenszeichen';
 import { echterZeitgeber } from '../../../src/features/hallenton/runtime/zeitgeber';
+import { setzeEinschaltung } from '../../../src/features/hallenton/lautsprecherGeraet';
 
 // Angemeldeter Helfer (Tom): die Hülle des Cockpits braucht Anmeldung, Ablage und Meldungen als Umgebung
 const angemeldet = { user: { id: 'tom', name: 'Tom', email: 'tom@example.org' }, isAuthenticated: true, isGuest: false, isLoading: false, connectionState: 'online', reconnect: () => Promise.resolve(true) } as unknown as AuthContextValue;
@@ -44,10 +45,10 @@ const MIN = 60_000;
 /** Zeitpunkt des Anpfiffs: 14:02 (Mockup). */
 const ANPFIFF = new Date(2026, 10, 21, 14, 2).getTime();
 const SERVER_JETZT = ANPFIFF + 30_000;
-const FAELLE = ['kein-netz', 'lautsprecher-aus', 'ausgang-geaendert', 'halbzeit', 'anpfiff', 'uhr', 'dialog', 'admin', 'ohne'] as const;
+const FAELLE = ['kein-netz', 'lautsprecher-aus', 'ausgang-geaendert', 'halbzeit', 'anpfiff', 'uhr', 'dialog', 'admin', 'ohne', 'ton-aktivieren'] as const;
 type Fall = (typeof FAELLE)[number];
 /** Fälle mit Lautsprecher-Antwort der Leitung im Spiel (angepfiffen). */
-const LEITUNG_FAELLE: readonly Fall[] = ['kein-netz', 'lautsprecher-aus', 'ausgang-geaendert', 'halbzeit', 'anpfiff'];
+const LEITUNG_FAELLE: readonly Fall[] = ['kein-netz', 'lautsprecher-aus', 'ausgang-geaendert', 'halbzeit', 'anpfiff', 'ton-aktivieren'];
 
 const turnier = {
   id: TID, name: 'Hallencup Süd', groupPhaseGameDuration: 12, gamePeriods: 2, halftimeBreak: 1,
@@ -62,6 +63,7 @@ function lautsprecherAm(fall: Fall): Antwort | null {
     case 'lautsprecher-aus': return { state: 'ready', ageMs: 12_000, hint: false }; // meldet sich seit 14:02 nicht mehr
     case 'ausgang-geaendert': return { state: 'ready', ageMs: 1000, hint: true };
     case 'halbzeit':
+    case 'ton-aktivieren':
     case 'anpfiff': return { state: 'not_activated', ageMs: 1000, hint: false };
     case 'kein-netz':
     case 'uhr': return { state: 'ready', ageMs: 1000, hint: false };
@@ -183,6 +185,8 @@ export function Seite() {
       if (abgebrochen) { return; }
       if (LEITUNG_FAELLE.includes(fall) || fall === 'uhr' || fall === 'admin') { starteServerStand(fall); }
       if (LEITUNG_FAELLE.includes(fall)) { starteLeitung(fall, k); }
+      // @OB-087 Zeile 5: dieses Gerät ist selbst Hallen-Lautsprecher von Feld 1
+      if (fall === 'ton-aktivieren') { setzeEinschaltung({ turnierId: TID, felder: [1], name: 'Handy Tom' }); }
       setKontext(k);
     });
     return () => { abgebrochen = true; };
