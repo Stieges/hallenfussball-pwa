@@ -5,7 +5,7 @@
  * Spiel: FC Alpha (Heim, „FC Nord“ im Gherkin) gegen SV Beta („SV Süd“).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { act, render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { initRealDeI18n } from '../../../test/realDeI18n';
 import type { Tournament } from '../../../types/tournament';
@@ -115,13 +115,18 @@ describe('@SL-050 Das bereitstehende Spiel pfeift ein Tipp an, auch vor seiner U
   });
 
   it('@SL-050 gleiche Lage, aber wer den Anpfiff nicht tippt, hat kein laufendes Spiel (Gegenbeispiel: die Uhrzeit pfeift nicht von allein an)', async () => {
+    // Der 30-Sekunden-Takt der Tafel läuft hier über die gefälschte Uhr: so tickt er sicher NACH dem Anstoß (kein festes Warten, @TA-021)
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] });
     vi.setSystemTime(VIERZEHN_UHR_VIERZEHN_UTC);
     render(<Harness turnier={TURNIER} />);
     await screen.findByTestId('match-start-button');
     vi.setSystemTime(Date.UTC(2026, 10, 14, 14, 31));
-    await new Promise((fertig) => { setTimeout(fertig, 50); });
+    act(() => { vi.advanceTimersByTime(30_000); });
+    // @OB-068: eine Minute nach dem Anstoß meldet die Tafel „überfällig“ – der Takt hat also wirklich nach dem Anstoß getickt …
+    await waitFor(() => expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('überfällig 1 Minute'));
+    // … und trotzdem läuft kein Spiel: kein Anpfiff im Protokoll, kein „Live“, die Anpfiff-Taste wartet weiter auf den Tipp
     expect(eintraegeImLog().some((e) => e.type === 'MATCH_START')).toBe(false);
-    // Die Tafel darf je nach Uhr „überfällig“ melden; entscheidend ist: sie zeigt kein laufendes Spiel
     expect(screen.getByTestId('scoreboard-state')).not.toHaveTextContent('Live');
+    expect(screen.getByTestId('match-start-button')).toBeEnabled();
   });
 });

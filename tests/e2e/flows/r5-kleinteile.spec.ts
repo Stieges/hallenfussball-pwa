@@ -91,9 +91,9 @@ test.describe('@W2A-059 Zuschauer-Tabelle mit offenem Gleichstand', () => {
           await expect(marken.first()).toHaveAttribute('data-kind', art);
           const werte = await marken.evaluateAll((els) => els.map((el) => {
             const zeile = el.closest('tr');
-            // @W2A-059 meint Bedienelemente der Turnierleitung; das Aufklappen der Spiele eines Teams (@ZM-205, Taste mit aria-expanded) zählt nicht dazu
+            // @W2A-059 meint Bedienelemente der Turnierleitung; nur die eine Taste zum Aufklappen der Spiele eines Teams (@ZM-205, `standing-toggle-…`) zählt nicht dazu
             return { ziffer: zeile?.children[0].textContent?.trim(), inNamenszelle: el.closest('td') === zeile?.children[1],
-              bedienelemente: zeile?.querySelectorAll('button:not([aria-expanded]), a, input, select').length };
+              bedienelemente: zeile?.querySelectorAll('button:not([data-testid^="standing-toggle-"]), a, input, select').length };
           }));
           expect(werte[0].ziffer).toBe(werte[1].ziffer);
           expect(werte.every((w) => w.inNamenszelle && w.bedienelemente === 0)).toBe(true);
