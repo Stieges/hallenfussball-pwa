@@ -6,6 +6,7 @@
 import type { CSSProperties, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
+import styles from './ScheduleListHead.module.css';
 import { kickoffLocal } from '../../core/view';
 import type { GeneratedSchedule } from '../../core/generators';
 
@@ -23,10 +24,7 @@ const wrapStyle: CSSProperties = {
   margin: `${cssVars.spacing.md} 0 ${cssVars.spacing.sm}`,
 };
 const titleStyle: CSSProperties = { margin: 0, fontSize: cssVars.fontSizes.xl, fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.textPrimary };
-const timesStyle: CSSProperties = { margin: 0, fontSize: cssVars.fontSizes.md, color: cssVars.colors.textSecondary };
-const SEPARATOR = ' · ';
-// Jede Angabe bricht als Ganzes um, nie mitten in „10 Minuten je Spiel“
-const partStyle: CSSProperties = { whiteSpace: 'nowrap' };
+const timesStyle: CSSProperties = { fontSize: cssVars.fontSizes.md, color: cssVars.colors.textSecondary };
 
 export function ScheduleListHead({ schedule }: ScheduleListHeadProps): ReactElement {
   const { t } = useTranslation('tournament');
@@ -39,11 +37,14 @@ export function ScheduleListHead({ schedule }: ScheduleListHeadProps): ReactElem
     <div style={wrapStyle} data-testid="schedule-list-head">
       <h2 style={titleStyle}>{t('scheduleHead.title')}</h2>
       {start !== undefined && end !== undefined && (
-        <p style={timesStyle}>
-          <span style={partStyle} data-testid="schedule-list-times">{t('scheduleHead.times', { start, end })}</span>
-          {minutes > 0 && (
-            <>{SEPARATOR}<span style={partStyle} data-testid="schedule-list-duration">{t('scheduleHead.duration', { count: minutes })}</span></>
-          )}
+        // Trenner kommen aus dem Stylesheet (nie als Textknoten): bricht eine Angabe um, steht kein Trenner lose in der Zeile
+        <p className={styles.rahmen} style={timesStyle}>
+          <span className={styles.reihe}>
+            <span className={styles.teil} data-testid="schedule-list-times">{t('scheduleHead.times', { start, end })}</span>
+            {minutes > 0 && (
+              <span className={styles.teil} data-testid="schedule-list-duration">{t('scheduleHead.duration', { count: minutes })}</span>
+            )}
+          </span>
         </p>
       )}
     </div>

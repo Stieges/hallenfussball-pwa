@@ -171,6 +171,50 @@ test.describe('@ZP-113 Kopf der Turnierleitung mit eigener Saat', () => {
     await expect(page.getByTestId('public-participants-list').locator('li')).toHaveCount(6);
   });
 
+  test('@ZP-113 Listenkopf: breit eine Zeile mit beiden Trennern; schmal steht die Spielzeit in eigener Zeile ohne losen Trenner davor oder dahinter (360×640, 390×844, 1280×720)', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-12-05T10:00:00+01:00'));
+    await installiereSaat(page.context(), leseSaat('nikolaus-vor-anpfiff'));
+    const messen = () => page.evaluate(() => {
+      const kopf = document.querySelector('[data-testid="schedule-list-times"]')!;
+      const dauer = document.querySelector('[data-testid="schedule-list-duration"]')!;
+      const rahmen = kopf.closest('p')!;
+      const r = (e: Element) => e.getBoundingClientRect();
+      // Trenner als Textknoten (nur im alten Aufbau): lose Zeichen im Absatz
+      const textknoten = Array.from(rahmen.childNodes).filter((n) => n.nodeType === Node.TEXT_NODE && (n.textContent ?? '').includes('·')).length;
+      return {
+        gleicheZeile: Math.abs(r(dauer).top - r(kopf).top) < 2,
+        // Der Trenner einer Angabe liegt in deren linkem Streifen (links von ihrer Textkante); er ist sichtbar nur, wenn dieser Streifen im Rahmen liegt
+        dauerStreifenImRahmen: r(dauer).left >= r(rahmen).left - 0.5,
+        kopfStreifenImRahmen: r(kopf).left >= r(rahmen).left - 0.5,
+        dauerTrenner: getComputedStyle(dauer, '::before').content,
+        kopfTrenner: getComputedStyle(kopf, '::before').content,
+        textknoten,
+        breiter: document.documentElement.scrollWidth > window.innerWidth,
+        abgeschnitten: r(dauer).right > r(rahmen).right + 0.5 || r(kopf).right > r(rahmen).right + 0.5,
+      };
+    });
+    for (const [w, h, eineZeile] of [[1280, 720, true], [390, 844, false], [360, 640, false]] as const) {
+      await page.setViewportSize({ width: w, height: h });
+      await page.goto('/#/tournament/nikolaus-vor-anpfiff/schedule');
+      await expect(page.getByTestId('schedule-list-duration')).toBeVisible({ timeout: 25_000 });
+      await animationenFertig(page);
+      const m = await messen();
+      expect(m.textknoten, `${String(w)} px: kein Trenner als loser Text`).toBe(0);
+      expect(m.breiter, `${String(w)} px: kein waagerechtes Scrollen`).toBe(false);
+      expect(m.abgeschnitten, `${String(w)} px: nichts abgeschnitten`).toBe(false);
+      expect(m.kopfStreifenImRahmen, `${String(w)} px: vor „Beginn“ steht nie ein Trenner`).toBe(false);
+      expect(m.kopfTrenner, `${String(w)} px: „Beginn“ hat keinen Trenner`).not.toContain('·');
+      if (eineZeile) {
+        expect(m.gleicheZeile, `${String(w)} px: eine Zeile`).toBe(true);
+        expect(m.dauerStreifenImRahmen, `${String(w)} px: Trenner vor der Spielzeit sichtbar`).toBe(true);
+        expect(m.dauerTrenner).toContain('·');
+      } else {
+        expect(m.gleicheZeile, `${String(w)} px: Spielzeit in eigener Zeile`).toBe(false);
+        expect(m.dauerStreifenImRahmen, `${String(w)} px: am Zeilenanfang der Spielzeit ist der Trenner abgeschnitten`).toBe(false);
+      }
+    }
+  });
+
   test('@ZP-113 Gegenbeispiel: die Zuschauer-Seite (Messlauf-Turnier) hat keine Teilnehmer-Taste der Turnierleitung und keinen Listenkopf', async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-11-10T10:00:00+01:00'));
     await installiereSaat(page.context(), leseSaat('hallencup-messlauf'));

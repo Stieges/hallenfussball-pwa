@@ -49,4 +49,15 @@ describe.each(['UTC', 'Europe/Berlin', 'America/New_York', 'Pacific/Auckland'])(
     render(<ScheduleListHead schedule={schedule('09:00', '11:30')} />);
     expect(screen.queryByTestId('schedule-list-duration')).toBeNull();
   });
+
+  it('@ZP-113 Trenner kommen aus dem Stylesheet: im Text steht kein loser „ · “ zwischen den Angaben, jede Angabe ist ein eigener Block', () => {
+    const { container } = render(<ScheduleListHead schedule={schedule('09:00', '11:30', 10)} />);
+    const zeiten = screen.getByTestId('schedule-list-times');
+    const dauer = screen.getByTestId('schedule-list-duration');
+    expect(zeiten.parentElement).toBe(dauer.parentElement);
+    const knoten = Array.from(zeiten.parentElement!.childNodes);
+    expect(knoten.every((n) => n.nodeType === Node.ELEMENT_NODE)).toBe(true);
+    // Das einzige „·“ im Text steht innerhalb der Angabe „Beginn … · Ende etwa …“, nie dazwischen
+    expect((container.textContent ?? '').match(/·/g)).toHaveLength(1);
+  });
 });

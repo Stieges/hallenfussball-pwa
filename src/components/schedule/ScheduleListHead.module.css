@@ -1,0 +1,32 @@
+/*
+ * Zeitangaben im Listenkopf (@ZP-113): „Beginn … · Ende etwa … · 10 Minuten je Spiel“.
+ * Jede Angabe trägt links einen Streifen in Trennerbreite; der Trenner „·“ sitzt als Pseudoelement in diesem Streifen.
+ * Die Reihe ist um genau diese Breite nach links gezogen, der äußere Rahmen schneidet ab: die erste Angabe jeder Zeile
+ * (auch nach einem Umbruch) hat ihren Trenner außerhalb, also steht nie ein Trenner am Zeilenanfang oder -ende.
+ */
+.rahmen {
+  margin: 0;
+  overflow: hidden;
+}
+
+.reihe {
+  display: flex;
+  flex-wrap: wrap;
+  margin-left: calc(-1 * var(--spacing-md));
+}
+
+.teil {
+  position: relative;
+  padding-left: var(--spacing-md);
+  white-space: nowrap;
+}
+
+.teil + .teil::before {
+  content: '·';
+  /* Alternativtext leer: Screenreader lesen den Trenner nicht mit */
+  content: '·' / '';
+  position: absolute;
+  left: 0;
+  width: var(--spacing-md);
+  text-align: center;
+}
