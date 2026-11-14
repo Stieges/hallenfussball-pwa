@@ -14,7 +14,7 @@ import type { Locator, Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
 import { neuLaden } from '../helpers/neuLaden';
 import { abpfiffHalten } from '../helpers/abpfiff';
-import { GELB, MONITOR_LIVE, MONITOR_LIVE_2, ROT, SHARE_CODE, TEAM_MITTE, TEAM_NORD, TEAM_OST, TEAM_UFER, TURNIER_ID, WEISS, spielId, trikotfarbeTurnier } from '../helpers/trikotfarbeSaat';
+import { MONITOR_LIVE, MONITOR_LIVE_2, ROT, SHARE_CODE, TEAM_MITTE, TEAM_NORD, TEAM_OST, TEAM_UFER, TURNIER_ID, WEISS, spielId, trikotfarbeTurnier } from '../helpers/trikotfarbeSaat';
 
 const BILDER = process.env.TRIKOT_BILDER;
 const PHASE = process.env.TRIKOT_PHASE ?? 'nachher';
@@ -132,19 +132,17 @@ for (const g of GERAETE) {
       await bild(page, g, '6-zuschauer-laufend-rot');
     });
 
-    test(`@W3-028 SG Mitte hat keine Farbe und spielt nicht: Schwarz eintragen, das nächste Spiel zeigt Schwarz statt Streifen (Zuschauer, Monitor) (${g.name})`, async ({ page, seedIndexedDB }) => {
+    test(`@W3-028 SG Mitte hat keine Farbe und spielt nicht: Schwarz eintragen, das nächste Spiel zeigt am Monitor Schwarz statt Streifen, die Zuschauer-Seite zeigt vor dem Anpfiff keinen Kasten (@ZM-209) (${g.name})`, async ({ page, seedIndexedDB }) => {
       await oeffne(page, seedIndexedDB, g, true);
       await page.goto(`/#/live/${SHARE_CODE}`);
-      await expect(page.locator(`[data-testid="match-box-${spielId(4)}-home"]`).first()).toBeAttached({ timeout: 25000 });
-      await expect(page.locator(`[data-testid="match-box-${spielId(4)}-home"]`).first()).toHaveAttribute('data-fill', 'striped'); // vorher: Streifen
+      await expect(page.locator(`[data-testid="match-goals-${spielId(4)}-home"]`).first()).toHaveText('–', { timeout: 25000 }); // @ZM-209: vor dem Anpfiff kein Kasten
+      await expect(page.locator(`[data-testid="match-box-${spielId(4)}-home"]`)).toHaveCount(0);
       await farbeWaehlen(page, TEAM_MITTE, PALETTE_SCHWARZ);
       await bild(page, g, '7-teams-schwarz-gewaehlt');
       await page.goto(`/#/live/${SHARE_CODE}`);
-      await neuLaden(page); // wie ein Zuschauer, der die Seite neu öffnet: die Farbe stand schon gespeichert
-      const heim = page.locator(`[data-testid="match-box-${spielId(4)}-home"]`).first();
-      await expect(heim).toHaveAttribute('data-fill', 'solid', { timeout: 25000 });
-      expect(await farbe(heim)).toBe(PALETTE_SCHWARZ);
-      expect(await farbe(page.locator(`[data-testid="match-box-${spielId(4)}-away"]`).first())).toBe(GELB);
+      await neuLaden(page);
+      await expect(page.locator(`[data-testid="match-goals-${spielId(4)}-home"]`).first()).toHaveText('–', { timeout: 25000 });
+      await expect(page.locator(`[data-testid="match-box-${spielId(4)}-home"]`)).toHaveCount(0);
       await page.goto(`/#/display/${TURNIER_ID}/${MONITOR_LIVE_2}`);
       await expect(page.getByTestId('live-box-home')).toBeVisible({ timeout: 25000 });
       await expect(page.getByTestId('live-box-home')).toHaveAttribute('data-fill', 'solid');

@@ -81,5 +81,18 @@
     "toggle": "Teilnehmer ({{n}})",
     "collapsedSr": "eingeklappt",
     "expandedSr": "aufgeklappt"
+  },
+  "head": {
+    "from": "ab {{time}} Uhr",
+    "toggleLabel": "Einzelheiten zum Turnier",
+    "ageClass": "Altersklasse",
+    "location": "Ort",
+    "duration_one": "{{count}} Minute je Spiel",
+    "duration_other": "{{count}} Minuten je Spiel",
+    "durationLabel": "Spielzeit",
+    "teamsLabel": "Mannschaften",
+    "teams_one": "{{count}} Team",
+    "teams_other": "{{count}} Teams",
+    "organizer": "Veranstalter"
   }
 }

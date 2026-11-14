@@ -2,7 +2,7 @@
  * LegalPageLayout - Shared layout for legal pages
  *
  * Features:
- * - Back button at top
+ * - Kopf mit Zurück-Taste bleibt beim Scrollen oben stehen (sticky): auch am Ende der langen Seite ohne Hochscrollen erreichbar (@RE-005)
  * - Title (h1)
  * - Stand unter dem Titel
  * - Consistent styling
@@ -64,12 +64,26 @@ export function LegalPageLayout({
     padding: isMobile ? cssVars.spacing.md : cssVars.spacing.lg,
   };
 
+  // Kopf bleibt oben (Fläche aus dem Token, damit der Text beim Scrollen nicht durchscheint); Notch/Statusleiste über der Taste
+  const headerStyle: CSSProperties = {
+    position: 'sticky',
+    top: 0,
+    zIndex: cssVars.zIndex.sticky,
+    background: cssVars.colors.background,
+    borderBottom: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
+    paddingTop: `calc(${cssVars.spacing.sm} + env(safe-area-inset-top, 0px))`,
+    paddingBottom: cssVars.spacing.sm,
+    paddingLeft: isMobile ? cssVars.spacing.md : cssVars.spacing.lg,
+    paddingRight: isMobile ? cssVars.spacing.md : cssVars.spacing.lg,
+  };
+
+  const headerInnerStyle: CSSProperties = { maxWidth: '800px', margin: '0 auto' };
+
   const backButtonStyle: CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',
     gap: cssVars.spacing.xs,
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
-    marginBottom: cssVars.spacing.lg,
     background: 'transparent',
     border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
@@ -101,17 +115,20 @@ export function LegalPageLayout({
 
   return (
     <div style={containerStyle}>
+      <header style={headerStyle} data-testid="legal-header">
+        <div style={headerInnerStyle}>
+          <button
+            type="button"
+            style={backButtonStyle}
+            onClick={onBack}
+            aria-label="Zurück zur vorherigen Seite"
+            data-testid="legal-back-button"
+          >
+            ← Zurück
+          </button>
+        </div>
+      </header>
       <main style={contentStyle}>
-        <button
-          type="button"
-          style={backButtonStyle}
-          onClick={onBack}
-          aria-label="Zurück zur vorherigen Seite"
-          data-testid="legal-back-button"
-        >
-          ← Zurück
-        </button>
-
         <h1 style={titleStyle}>{title}</h1>
         <p style={standStyle} data-testid="legal-stand">Stand: {lastUpdated}</p>
 
