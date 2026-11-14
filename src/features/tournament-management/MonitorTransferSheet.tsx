@@ -27,7 +27,7 @@ import type { TournamentMonitor } from '../../types/monitor';
 import { useTournaments } from '../../hooks/useTournaments';
 import { canWithListedRole } from '../auth/hooks/useCan';
 import {
-  exportMonitorConfig, HALLEN_STANDARD, instantiateMonitorConfig,
+  exportMonitorConfig, hallenStandardPayload, instantiateMonitorConfig,
 } from '../../core/services/monitorConfigTransfer';
 import type { MonitorConfigPayload } from '../../core/services/monitorConfigTransfer';
 import { newId, readTransferFile } from './components/monitorTransferHelpers';
@@ -91,10 +91,7 @@ export function MonitorTransferSheet({ tournament, onClose, onApply }: MonitorTr
     if (!choice) {return null;}
     if (choice.kind === 'template') {
       // Der Monitorname ist in der Vorlage ein Schlüssel; die UI setzt den übersetzten Namen
-      return {
-        ...HALLEN_STANDARD,
-        monitors: HALLEN_STANDARD.monitors.map(m => ({ ...m, name: t('monitors.transfer.templateMonitorName') })),
-      };
+      return hallenStandardPayload(t('monitors.transfer.templateMonitorName'));
     }
     if (choice.kind === 'file') {return choice.payload;}
     const source = sources.find(s => s.id === choice.tournamentId);

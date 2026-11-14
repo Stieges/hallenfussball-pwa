@@ -30,6 +30,12 @@ vi.mock('./hooks/useTournaments', () => ({
   }),
 }));
 
+// @W5-039: der Assistent lädt das Turnier selbst (Repository), nicht aus der Kopie der Verwaltung
+vi.mock('./hooks/useRepository', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./hooks/useRepository')>()),
+  useRepository: () => ({ get: () => Promise.resolve(verwaltungsTurnier) }),
+}));
+
 // Verwaltung: ein Knopf, der „Im Wizard bearbeiten“ für das Turnier der Aufgabe auslöst.
 let verwaltungsTurnier: Tournament;
 vi.mock('./screens/TournamentManagementScreen', () => ({

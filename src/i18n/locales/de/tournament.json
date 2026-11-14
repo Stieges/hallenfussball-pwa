@@ -434,29 +434,29 @@
     }
   },
   "monitors": {
-    "title": "Monitore konfigurieren",
-    "subtitle": "Erstelle Display-Setups für TVs, Beamer oder andere Bildschirme",
+    "title": "Monitore",
+    "subtitle": "Richte die Monitore für Fernseher, Beamer und andere Bildschirme ein.",
     "addMonitor": "Neuer Monitor",
-    "createTitle": "Neuen Monitor erstellen",
+    "createTitle": "Neuen Monitor anlegen",
     "namePlaceholder": "Monitor-Name (z.B. Haupthalle Eingang)",
     "cancel": "Abbrechen",
-    "creating": "Erstellen...",
-    "createAndEdit": "Erstellen & Bearbeiten",
-    "emptyState": "Noch keine Monitore konfiguriert",
-    "emptyStateHint": "Erstelle einen Monitor, um eine Diashow mit Live-Spielen, Tabellen, Spielplänen und Sponsoren anzuzeigen.",
-    "displayUrlHint": "Öffne die Display-URL auf einem TV oder Beamer für die Vollbild-Anzeige",
-    "visibilityWarning": "Dieses Turnier ist derzeit nicht öffentlich. Auf einem anderen Gerät — also auf dem Hallen-Monitor — kann die Anzeige das Turnier dann nicht laden. Stelle die Sichtbarkeit unter Admin › Sichtbarkeit auf \"Mit Link teilbar\", bevor du die URL auf dem Monitor öffnest.",
-    "slidesCount_one": "{{count}} Slide",
-    "slidesCount_other": "{{count}} Slides",
-    "perSlide": "{{duration}} pro Slide",
+    "creating": "Wird angelegt...",
+    "createAndEdit": "Anlegen und bearbeiten",
+    "emptyState": "Noch kein Monitor angelegt",
+    "emptyStateHint": "Lege einen Monitor an, der Live-Spiele, Tabellen, Spielpläne und Sponsoren als Folienprogramm zeigt.",
+    "displayUrlHint": "Öffne die Adresse des Monitors auf einem Fernseher oder Beamer für die Vollbild-Anzeige",
+    "visibilityWarning": "Dieses Turnier ist derzeit nicht öffentlich. Auf einem anderen Gerät — also auf dem Hallen-Monitor — kann die Anzeige das Turnier dann nicht laden. Stelle die Sichtbarkeit unter Admin › Sichtbarkeit auf \"Mit Link teilbar\", bevor du die Adresse auf dem Monitor öffnest.",
+    "slidesCount_one": "{{count}} Folie",
+    "slidesCount_other": "{{count}} Folien",
+    "perSlide": "{{duration}} pro Folie",
     "moreSlides": "+{{count}} mehr",
     "edit": "Bearbeiten",
     "editAria": "Monitor \"{{name}}\" bearbeiten",
     "open": "Öffnen",
     "openAria": "Monitor \"{{name}}\" in neuem Tab öffnen",
-    "copyUrl": "URL kopieren",
-    "copyUrlAria": "URL für Monitor \"{{name}}\" kopieren",
-    "urlCopied": "URL kopiert",
+    "copyUrl": "Adresse kopieren",
+    "copyUrlAria": "Adresse für Monitor \"{{name}}\" kopieren",
+    "urlCopied": "Adresse kopiert",
     "copied": "Kopiert!",
     "duplicate": "Duplizieren",
     "duplicateAria": "Monitor \"{{name}}\" duplizieren",
@@ -478,10 +478,10 @@
       "nameRequired": "Name ist erforderlich",
       "nameTooLong": "Name darf maximal 50 Zeichen haben",
       "duplicateName": "Ein Monitor mit diesem Namen existiert bereits",
-      "createFailed": "Fehler beim Erstellen",
+      "createFailed": "Der Monitor konnte nicht angelegt werden",
       "deleteFailed": "Fehler beim Löschen",
       "duplicateFailed": "Fehler beim Duplizieren",
-      "copyFailed": "URL konnte nicht kopiert werden"
+      "copyFailed": "Adresse konnte nicht kopiert werden"
     },
     "transfer": {
       "openButton": "Monitore übernehmen",
@@ -540,7 +540,16 @@
         "removeSlide": "Folie entfernen",
         "keepHint": "Wählst du nichts, bleibt die Folie erhalten und ist im Monitor-Editor markiert."
       }
-    }
+    },
+    "nameLabel": "Name des Monitors",
+    "emptyStart": {
+      "hallenStandard": "Hallen-Standard anlegen",
+      "hallenStandardHint": "Legt einen Monitor mit Live-Spiel, Nächsten Spielen, Tabellen und Zuschauer-QR an.",
+      "hallenStandardHintMultiField": "Legt einen Monitor mit Live-Spiel von Feld 1, Nächsten Spielen, Tabellen und Zuschauer-QR an.",
+      "createEmpty": "Leer anlegen",
+      "transfer": "Aus anderem Turnier übernehmen"
+    },
+    "copyName": "{{name}} (Kopie)"
   },
   "sponsor": {
     "title": "Sponsoren",
@@ -860,7 +869,7 @@
   "monitorEditor": {
     "allTeams": "Alle Teams",
     "groupLabel": "Gruppe {{letter}}",
-    "notConfigured": "Nicht konfiguriert",
+    "notConfigured": "Nicht eingerichtet",
     "customText": "Eigener Text",
     "notFound": "Monitor nicht gefunden",
     "close": "Schließen",
@@ -875,7 +884,7 @@
     "settings": {
       "title": "Einstellungen",
       "name": "Name",
-      "slideDuration": "Slide-Dauer (Sek.)",
+      "slideDuration": "Folienzeit",
       "transition": "Übergang",
       "performanceLabel": "Performance",
       "themeLabel": "Farbschema",
@@ -903,18 +912,23 @@
         "lightDesc": "Dunkler Text auf hellem Grund",
         "auto": "Automatisch",
         "autoDesc": "Folgt der Einstellung des Geräts"
-      }
+      },
+      "durationValue": "{{seconds}} s"
     },
     "slides": {
-      "title": "Slides ({{count}})",
+      "title": "Folien ({{count}})",
       "moveUp": "Nach oben",
       "moveDown": "Nach unten",
       "edit": "Bearbeiten",
       "remove": "Entfernen",
-      "addSlide": "Slide hinzufügen",
+      "addSlide": "Folie hinzufügen",
       "qrHidden": "Ohne öffentliches Turnier wird diese Folie übersprungen",
       "referenceField": "Feld fehlt in diesem Turnier – bitte anpassen",
-      "referenceGroup": "Gruppe fehlt in diesem Turnier – bitte anpassen"
+      "referenceGroup": "Gruppe fehlt in diesem Turnier – bitte anpassen",
+      "moveUpAria": "{{slide}} nach oben",
+      "moveDownAria": "{{slide}} nach unten",
+      "editAria": "{{slide}} bearbeiten",
+      "removeAria": "{{slide}} löschen"
     },
     "saved": "Gespeichert",
     "cancel": "Abbrechen",
@@ -924,6 +938,18 @@
       "message": "Deine Änderungen am Monitor sind noch nicht gespeichert und gehen verloren.",
       "confirm": "Verwerfen",
       "keepEditing": "Weiter bearbeiten"
+    },
+    "setupProblem": {
+      "sponsor": "Sponsor fehlt",
+      "headline": "Überschrift fehlt"
+    },
+    "unready": {
+      "title": "Folien nicht eingerichtet",
+      "message_one": "{{count}} Folie ist noch nicht eingerichtet und wird am Monitor nicht gezeigt. Trotzdem speichern?",
+      "message_other": "{{count}} Folien sind noch nicht eingerichtet und werden am Monitor nicht gezeigt. Trotzdem speichern?",
+      "item": "{{slide}}: {{problem}}",
+      "backToEditor": "Zurück zum Editor",
+      "saveAnyway": "Trotzdem speichern"
     }
   },
   "toolbar": {
@@ -940,7 +966,7 @@
     "viewGrid": "Grid"
   },
   "slideEditor": {
-    "configAria": "Konfiguration für {{type}}-Slide",
+    "configAria": "Einstellungen der Folie „{{type}}“",
     "field": "Spielfeld",
     "pleaseSelect": "Bitte wählen...",
     "whenIdleLabel": "Wenn kein Spiel läuft",
@@ -955,19 +981,73 @@
     "numberOfPlayers": "Anzahl Spieler",
     "sponsor": "Sponsor",
     "showQrCode": "QR-Code anzeigen",
-    "qrTargetLabel": "QR-Code Ziel",
-    "customUrl": "Eigene URL",
+    "qrTargetLabel": "QR-Code-Ziel",
+    "customUrl": "Eigene Adresse",
     "headline": "Überschrift",
     "headlinePlaceholder": "z.B. Wichtige Ankündigung",
     "text": "Text",
     "textPlaceholder": "Dein Text hier...",
     "textAlignment": "Textausrichtung",
     "colorSchemeLabel": "Farbschema",
-    "customDuration": "Eigene Dauer (Sek.) - leer = Monitor-Standard",
-    "defaultPlaceholder": "Standard"
+    "customDuration": "Eigene Folienzeit (Sek.) – leer = wie am Monitor eingestellt",
+    "defaultPlaceholder": "Standard",
+    "topN": "Top {{count}}",
+    "qrTarget": {
+      "tournament": "Zuschauer-Seite",
+      "tournamentDesc": "Der QR-Code führt zur Zuschauer-Seite dieses Turniers.",
+      "sponsorWebsite": "Website des Sponsors",
+      "sponsorWebsiteDesc": "Der QR-Code führt zur Website, die beim Sponsor eingetragen ist.",
+      "custom": "Eigener Link",
+      "customDesc": "Der QR-Code führt zu einer Adresse, die du selbst eingibst."
+    },
+    "textAlign": {
+      "left": "Linksbündig",
+      "center": "Zentriert",
+      "right": "Rechtsbündig"
+    },
+    "colorSchemes": {
+      "default": "Standard",
+      "defaultDesc": "Normale Infos",
+      "highlight": "Hervorgehoben",
+      "highlightDesc": "Wichtige Infos",
+      "urgent": "Dringend",
+      "urgentDesc": "Warnungen",
+      "celebration": "Feier",
+      "celebrationDesc": "Sieger, Gratulation"
+    }
   },
   "slidePreview": {
-    "previewAria": "Vorschau: {{type}}"
+    "previewAria": "Vorschau: {{type}}",
+    "types": {
+      "live": "Live-Spiel",
+      "standings": "Tabelle",
+      "scheduleField": "Spielplan (Feld)",
+      "sponsor": "Sponsor",
+      "customText": "Eigener Text",
+      "qrCode": "Zuschauer-QR",
+      "allStandings": "Alle Tabellen",
+      "scheduleGroup": "Spielplan (Gruppe)",
+      "nextMatches": "Nächste Spiele",
+      "topScorers": "Torschützen"
+    },
+    "hint": {
+      "qrCode": "Zeigt den QR-Code zur Zuschauer-Seite.",
+      "allStandings": "Zeigt die Tabellen aller Gruppen.",
+      "nextMatches": "Zeigt die nächsten Spiele des Turniers.",
+      "scheduleGroup": "Zeigt den Spielplan einer Gruppe.",
+      "topScorers": "Zeigt die Torschützenliste."
+    },
+    "fieldLabel": "Feld {{num}}",
+    "allGroups": "Alle Gruppen",
+    "groupLabel": "Gruppe {{id}}",
+    "moreItems": "+{{count}} weitere",
+    "noData": "Keine Daten",
+    "noMatches": "Keine Spiele",
+    "headlineDefault": "Überschrift",
+    "sponsorFallback": "Sponsor",
+    "allTeams": "Alle Teams",
+    "placeholderTeamA": "Team A",
+    "placeholderTeamB": "Team B"
   },
   "standings": {
     "table": "Tabelle",

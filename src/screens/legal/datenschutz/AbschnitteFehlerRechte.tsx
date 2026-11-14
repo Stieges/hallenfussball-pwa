@@ -11,7 +11,7 @@ import { Betreiberemail } from '../BetreiberAngaben';
 import { LEGAL_CONFIG } from '../../../config/legal';
 
 const SPEICHERDAUER: string[][] = [
-  ['Turnier mit Spielen, Ereignissen, Rückennummern, Helfern und Monitor-Daten', 'spätestens 6 Monate nach dem Turnier gelöscht oder anonymisiert (automatisch oder durch mich). Endergebnisse und Tabellen ohne Rückennummern können länger bleiben, wenn der Veranstalter das Turnier behalten will.'],
+  ['Turnier mit Spielen, Ereignissen, Rückennummern, Helfern und Monitor-Daten', 'spätestens 6 Monate nach dem Turnier von mir gelöscht oder anonymisiert. Endergebnisse und Tabellen ohne Rückennummern können länger bleiben, wenn der Veranstalter das Turnier behalten will.'],
   ['Konto', 'bis zur Löschung auf Anfrage'],
   ['Hosting-Protokolle (Vercel)', 'kurz, nach den Vorgaben von Vercel'],
   ['Datenbank-Protokolle (Supabase)', 'kurz, nach den Vorgaben von Supabase'],
@@ -64,7 +64,7 @@ export function AbschnitteFehlerRechte() {
         <BulletList
           items={[
             'Die App speichert keine Namen von Spielerinnen und Spielern, nur Rückennummern.',
-            'Torschützen werden öffentlich nur als Mannschaft und Rückennummer gezeigt, und nur wenn die Turnierleitung das einschaltet. Der Kindermodus blendet sie aus.',
+            'Tore, Karten, Zeitstrafen und Strafstöße erscheinen öffentlich nur mit Mannschaft und Rückennummer, nie mit Namen. Der Kindermodus blendet sie zusammen mit Ergebnissen und Tabellen aus.',
             'Es gibt keine Fotos, keine Werbung und kein Tracking.',
             'Helfer unter 16 Jahren sollten mit Wissen ihrer Eltern helfen und als Namen nur einen Vornamen oder ein Kürzel eingeben.',
           ]}
@@ -79,7 +79,7 @@ export function AbschnitteFehlerRechte() {
             <><Strong>Auskunft</Strong> über deine Daten (Art. 15 DSGVO),</>,
             <><Strong>Berichtigung</Strong> (Art. 16), <Strong>Löschung</Strong> (Art. 17) und <Strong>Einschränkung</Strong> der Verarbeitung (Art. 18),</>,
             <><Strong>Datenübertragbarkeit</Strong> (Art. 20),</>,
-            <><Strong>Widerspruch</Strong> gegen Verarbeitungen, die auf berechtigten Interessen beruhen (Art. 21). Das gilt zum Beispiel für Fehlerberichte, aber auch, wenn du nicht willst, dass deine Rückennummer als Torschütze erscheint. Fehlerberichte schaltest du selbst in den Einstellungen ab.</>,
+            <><Strong>Widerspruch</Strong> gegen Verarbeitungen, die auf berechtigten Interessen beruhen (Art. 21). Das gilt zum Beispiel für Fehlerberichte, aber auch, wenn du nicht willst, dass deine Rückennummer bei Toren, Karten, Zeitstrafen oder Strafstößen erscheint. Fehlerberichte schaltest du selbst in den Einstellungen ab.</>,
           ]}
         />
         <Paragraph>

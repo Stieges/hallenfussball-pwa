@@ -15,8 +15,10 @@ import type { MonitorSlide, SlideConfig, ColorScheme } from '../../../types/moni
 import { COLOR_SCHEMES } from '../../../types/monitor';
 import type { Tournament, Match } from '../../../types/tournament';
 import { slotLabel } from '../../../core/models/slotLabel';
+import { assignedGroupIds } from '../../../core/services/monitorConfigTransferChecks';
 import { calculateStandings } from '../../../utils/calculations';
 import { Versus } from '../../../components/ui/atoms';
+import { slideTypeKey } from './monitor-editor/slideTypeLabels';
 
 // =============================================================================
 // TYPES
@@ -78,20 +80,29 @@ const typeBadgeStyle: CSSProperties = {
 // =============================================================================
 
 function getFieldDisplayName(fieldId: string | undefined): string {
+    // Ohne Feld gilt Feld 1, wie am Monitor (@ZM-074, @ME-076)
     if (!fieldId) {
-        return i18n.t('tournament:slidePreview.noField', { defaultValue: 'Kein Feld' });
+        return i18n.t('tournament:slidePreview.fieldLabel', { num: 1 });
     }
     const num = parseInt(fieldId.replace('field-', ''), 10);
-    return isNaN(num) ? fieldId : i18n.t('tournament:slidePreview.fieldLabel', { defaultValue: 'Feld {{num}}', num });
+    return isNaN(num) ? fieldId : i18n.t('tournament:slidePreview.fieldLabel', { num });
+}
+
+/** Feldnummer der Folie; ohne Feld gilt Feld 1, wie am Monitor (@ZM-074) */
+function fieldNumberOf(fieldId: string | undefined): number {
+    return fieldId ? parseInt(fieldId.replace('field-', ''), 10) : 1;
 }
 
 function getGroupName(tournament: Tournament, groupId: string | undefined): string {
     if (!groupId) {
-        return i18n.t('tournament:slidePreview.allGroups', { defaultValue: 'Alle Gruppen' });
+        // Ohne Gruppen heißt es „Alle Teams“, wie in der Folienzeile (@ME-075)
+        return assignedGroupIds(tournament.teams).length > 1
+            ? i18n.t('tournament:slidePreview.allGroups')
+            : i18n.t('tournament:slidePreview.allTeams');
     }
     const group = tournament.groups?.find(g => g.id === groupId);
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty customName should use fallback
-    return group?.customName || i18n.t('tournament:slidePreview.groupLabel', { defaultValue: 'Gruppe {{id}}', id: groupId });
+    return group?.customName || i18n.t('tournament:slidePreview.groupLabel', { id: groupId });
 }
 
 /** Anzeigetext einer Spielseite (@TM-015): Team über die Team-ID, offene Seite über ihre Herkunft. */
@@ -107,13 +118,14 @@ function LivePreview({ config, tournament }: { config: SlideConfig; tournament: 
     const fieldName = getFieldDisplayName(config.fieldId);
 
     // Find a running or next match for this field
-    const fieldNum = config.fieldId ? parseInt(config.fieldId.replace('field-', ''), 10) : 1;
+    // Ohne gewähltes Feld gilt Feld 1: Unterzeile und Spiele passen zusammen (@ME-076)
+    const fieldNum = fieldNumberOf(config.fieldId);
     const nextMatch = tournament.matches?.find(m =>
         m.field === fieldNum && (m.scoreA === undefined || m.scoreA === null)
     );
 
-    const teamA = nextMatch ? getSideName(tournament, nextMatch.slotA) : 'Team A';
-    const teamB = nextMatch ? getSideName(tournament, nextMatch.slotB) : 'Team B';
+    const teamA = nextMatch ? getSideName(tournament, nextMatch.slotA) : i18n.t('tournament:slidePreview.placeholderTeamA');
+    const teamB = nextMatch ? getSideName(tournament, nextMatch.slotB) : i18n.t('tournament:slidePreview.placeholderTeamB');
 
     return (
         <div style={slideContentStyle}>
@@ -158,12 +170,12 @@ function StandingsPreview({ config, tournament }: { config: SlideConfig; tournam
                     ))}
                     {standings.length > 3 && (
                         <div style={{ fontSize: '6px', opacity: 0.4, marginTop: '2px' }}>
-                            {i18n.t('tournament:slidePreview.moreItems', { defaultValue: '+{{count}} weitere', count: standings.length - 3 })}
+                            {i18n.t('tournament:slidePreview.moreItems', { count: standings.length - 3 })}
                         </div>
                     )}
                 </div>
             ) : (
-                <div style={{ fontSize: '7px', opacity: 0.5 }}>{i18n.t('tournament:slidePreview.noData', { defaultValue: 'Keine Daten' })}</div>
+                <div style={{ fontSize: '7px', opacity: 0.5 }}>{i18n.t('tournament:slidePreview.noData')}</div>
             )}
         </div>
     );
@@ -171,7 +183,7 @@ function StandingsPreview({ config, tournament }: { config: SlideConfig; tournam
 
 function ScheduleFieldPreview({ config, tournament }: { config: SlideConfig; tournament: Tournament }) {
     const fieldName = getFieldDisplayName(config.fieldId);
-    const fieldNum = config.fieldId ? parseInt(config.fieldId.replace('field-', ''), 10) : 1;
+    const fieldNum = fieldNumberOf(config.fieldId);
     const matches = tournament.matches?.filter(m => m.field === fieldNum).slice(0, 3) ?? [];
 
     return (
@@ -194,7 +206,7 @@ function ScheduleFieldPreview({ config, tournament }: { config: SlideConfig; tou
                     ))}
                 </div>
             ) : (
-                <div style={{ fontSize: '7px', opacity: 0.5 }}>{i18n.t('tournament:slidePreview.noMatches', { defaultValue: 'Keine Spiele' })}</div>
+                <div style={{ fontSize: '7px', opacity: 0.5 }}>{i18n.t('tournament:slidePreview.noMatches')}</div>
             )}
         </div>
     );
@@ -202,7 +214,7 @@ function ScheduleFieldPreview({ config, tournament }: { config: SlideConfig; tou
 
 function SponsorPreview({ config, tournament }: { config: SlideConfig; tournament: Tournament }) {
     const sponsor = tournament.sponsors?.find(s => s.id === config.sponsorId);
-    const name = sponsor?.name ?? 'Sponsor';
+    const name = sponsor?.name ?? i18n.t('tournament:slidePreview.sponsorFallback');
 
     return (
         <div style={slideContentStyle}>
@@ -241,7 +253,7 @@ function CustomTextPreview({ config }: { config: SlideConfig }) {
             color: colors.text,
         }}>
             <div style={{ fontSize: '9px', fontWeight: 700 }}>
-                {config.headline?.slice(0, 20) ?? i18n.t('tournament:slidePreview.headlineDefault', { defaultValue: 'Überschrift' })}
+                {config.headline?.slice(0, 20) ?? i18n.t('tournament:slidePreview.headlineDefault')}
             </div>
             {config.body && (
                 <div style={{ fontSize: '7px', opacity: 0.8, marginTop: '2px' }}>
@@ -252,11 +264,17 @@ function CustomTextPreview({ config }: { config: SlideConfig }) {
     );
 }
 
-function Phase2Preview({ type }: { type: string }) {
+/** Folien ohne Miniatur: Folienname und ein Satz, was der Monitor zeigt (statt „Phase 2“ mit Rohname) */
+function HintPreview({ type }: { type: string }) {
+    const key = slideTypeKey(type);
     return (
-        <div style={{ ...slideContentStyle, opacity: 0.5 }}>
-            <div style={{ fontSize: '8px' }}>Phase 2</div>
-            <div style={{ fontSize: '7px', opacity: 0.6 }}>{type}</div>
+        <div style={slideContentStyle}>
+            <div style={{ fontSize: cssVars.fontSizes.xs, fontWeight: 700 }}>{getTypeLabel(type)}</div>
+            {key && (
+                <div style={{ fontSize: cssVars.fontSizes.xs, opacity: 0.7, marginTop: cssVars.spacing.xs }}>
+                    {i18n.t(`tournament:slidePreview.hint.${key}` as never)}
+                </div>
+            )}
         </div>
     );
 }
@@ -287,19 +305,8 @@ export function SlidePreview({ slide, tournament, scale = 0.15 }: SlidePreviewPr
 }
 
 function getTypeLabel(type: string): string {
-    const keyMap: Record<string, string> = {
-        'live': 'slidePreview.types.live',
-        'standings': 'slidePreview.types.standings',
-        'schedule-field': 'slidePreview.types.scheduleField',
-        'sponsor': 'slidePreview.types.sponsor',
-        'custom-text': 'slidePreview.types.customText',
-        'all-standings': 'slidePreview.types.allStandings',
-        'schedule-group': 'slidePreview.types.scheduleGroup',
-        'next-matches': 'slidePreview.types.nextMatches',
-        'top-scorers': 'slidePreview.types.topScorers',
-    };
-    const key = keyMap[type];
-    return key ? i18n.t(`tournament:${key}`, { defaultValue: type }) : type;
+    const key = slideTypeKey(type);
+    return key ? i18n.t(`tournament:slidePreview.types.${key}` as never) : type;
 }
 
 function renderPreview(slide: MonitorSlide, tournament: Tournament) {
@@ -315,6 +322,6 @@ function renderPreview(slide: MonitorSlide, tournament: Tournament) {
         case 'custom-text':
             return <CustomTextPreview config={slide.config} />;
         default:
-            return <Phase2Preview type={slide.type} />;
+            return <HintPreview type={slide.type} />;
     }
 }

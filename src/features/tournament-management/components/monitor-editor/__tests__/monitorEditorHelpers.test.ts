@@ -89,7 +89,7 @@ describe('monitorEditorHelpers – getSlideDescription', () => {
     expect(beschreibung).toBe('Gruppe B');
   });
 
-  it('Sponsor mit leerem Namen fällt auf den Nicht-konfiguriert-Text zurück', () => {
+  it('Sponsor mit leerem Namen fällt auf den Nicht-eingerichtet-Text zurück', () => {
     const beschreibung = getSlideDescription(folie('sponsor', { sponsorId: 'sp-1' }), {
       groups: [],
       sponsors: [{ id: 'sp-1', name: '' }],
@@ -97,28 +97,37 @@ describe('monitorEditorHelpers – getSlideDescription', () => {
       t,
     });
     expect(beschreibung).toBe(de.monitorEditor.notConfigured);
-    expect(beschreibung).toBe('Nicht konfiguriert');
+    expect(beschreibung).toBe('Nicht eingerichtet');
   });
 
-  it('Eigener Text mit leerer Überschrift fällt auf den Fallback-Text zurück', () => {
+  it('Eigener Text mit leerer Überschrift: „Überschrift fehlt“ (@ME-076; früher der Ersatztext „Eigener Text“)', () => {
     const beschreibung = getSlideDescription(folie('custom-text', { headline: '' }), {
       groups: [],
       sponsors: [],
       getFieldDisplayName: (id: string) => id,
       t,
     });
-    expect(beschreibung).toBe(de.monitorEditor.customText);
-    expect(beschreibung).toBe('Eigener Text');
+    expect(beschreibung).toBe(de.monitorEditor.setupProblem.headline);
+    expect(beschreibung).toBe('Überschrift fehlt');
   });
 
-  it('Live-Folie ohne fieldId fällt auf den Nicht-konfiguriert-Text zurück', () => {
-    const beschreibung = getSlideDescription(folie('live', {}), {
+  it.each(['live', 'schedule-field'] as const)('@ME-076 %s ohne fieldId: „Feld 1“, wie am Monitor (kein „Feld fehlt“)', (typ) => {
+    const beschreibung = getSlideDescription(folie(typ, {}), {
       groups: [],
       sponsors: [],
-      getFieldDisplayName: (id: string) => id,
+      getFieldDisplayName: (id: string) => (id === 'field-1' ? 'Feld 1' : id),
       t,
     });
-    expect(beschreibung).toBe(de.monitorEditor.notConfigured);
-    expect(beschreibung).toBe('Nicht konfiguriert');
+    expect(beschreibung).toBe('Feld 1');
+  });
+
+  it('Gegenbeispiel: mit gewähltem Feld 2 steht „Feld 2“', () => {
+    const beschreibung = getSlideDescription(folie('live', { fieldId: 'field-2' }), {
+      groups: [],
+      sponsors: [],
+      getFieldDisplayName: (id: string) => (id === 'field-2' ? 'Feld 2' : id),
+      t,
+    });
+    expect(beschreibung).toBe('Feld 2');
   });
 });

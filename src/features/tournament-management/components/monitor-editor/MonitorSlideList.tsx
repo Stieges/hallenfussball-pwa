@@ -6,6 +6,7 @@
 import { useTranslation } from 'react-i18next';
 import type { SlideType, TournamentMonitor } from '../../../../types/monitor';
 import { SLIDE_TYPES } from '../../../../types/monitor';
+import { slideTypeLabel } from './slideTypeLabels';
 import { MonitorSlideRow } from './MonitorSlideRow';
 import type { SlideActions, SlideContext } from './monitorEditorTypes';
 import {
@@ -22,7 +23,6 @@ import {
 
 interface SlideTypeOption {
   type: SlideType;
-  label: string;
   icon: string;
   phase: number;
 }
@@ -47,7 +47,6 @@ const availableSlideTypes: SlideTypeOption[] = SLIDE_TYPES
   .filter(s => MONITOR_SLIDE_TYPES_OFFERED.includes(s.type))
   .map(s => ({
     type: s.type,
-    label: s.label,
     icon: s.icon,
     phase: s.phase,
   }));
@@ -102,8 +101,10 @@ export function MonitorSlideList({
         <button
           style={addSlideButtonStyle}
           onClick={() => onToggleAddSlide()}
+          aria-expanded={isAddingSlide}
+          data-testid="monitor-add-slide"
         >
-          <span>+</span>
+          <span aria-hidden="true">+</span>
           <span>{t('monitorEditor.slides.addSlide')}</span>
         </button>
 
@@ -115,9 +116,10 @@ export function MonitorSlideList({
                 key={st.type}
                 style={slideTypeButtonStyle}
                 onClick={() => onAddSlide(st.type)}
+                data-testid={`monitor-add-slide-${st.type}`}
               >
-                <div style={slideTypeIconStyle}>{st.icon}</div>
-                <div style={slideTypeLabelStyle}>{st.label}</div>
+                <div style={slideTypeIconStyle} aria-hidden="true">{st.icon}</div>
+                <div style={slideTypeLabelStyle}>{slideTypeLabel(t, st.type)}</div>
                 {st.type === 'qr-code' && !zuschauerQrMoeglich && (
                   <div style={slideTypeQrHintStyle}>
                     {t('monitorEditor.slides.qrHidden')}
