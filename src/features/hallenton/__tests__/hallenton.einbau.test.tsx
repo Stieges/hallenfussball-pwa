@@ -289,6 +289,28 @@ describe('Fixrunde 1 – W2: Hallenton liest die Turnierkopie nur lokal, die Lei
     expect(repos.tournamentRepository.get).not.toHaveBeenCalled();
   });
 
+  for (const pause of ['section_break', 'decision_pending', 'shootout'] as const) {
+    it(`@HT-040 @HT-050 in der Pause (${pause}) läuft das Lebenszeichen der Leitung weiter`, async () => {
+      turnier.wert = plan;
+      noteFieldControlList(TID, [{ field: 1, epoch: 1, holderName: null, holderRole: null, holderDeviceLabel: null, isMine: true, claimedAt: null }]);
+      const { uhr, rpc, leitung } = leitungMit(pause);
+      leitung.start();
+      await vor(uhr, 20_000);
+      leitung.stop();
+      expect(rpc.mock.calls.length).toBeGreaterThanOrEqual(3);
+    });
+  }
+
+  it('Gegenbeispiel @HT-035 letzte Zeile: nach dem Abpfiff (finished) kein Lebenszeichen mehr', async () => {
+    turnier.wert = plan;
+    noteFieldControlList(TID, [{ field: 1, epoch: 1, holderName: null, holderRole: null, holderDeviceLabel: null, isMine: true, claimedAt: null }]);
+    const { uhr, rpc, leitung } = leitungMit('finished');
+    leitung.start();
+    await vor(uhr, 20_000);
+    leitung.stop();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it('N3 (H3b-3): ein Spiel, das nicht im gemerkten Plan steht, ist am Laptop angepfiffen → das Lebenszeichen kommt im nächsten 5-s-Takt', async () => {
     turnier.wert = plan; // gemerkt: nur Spiel 11, nicht angepfiffen
     noteFieldControlList(TID, [{ field: 1, epoch: 1, holderName: null, holderRole: null, holderDeviceLabel: null, isMine: true, claimedAt: null }]);

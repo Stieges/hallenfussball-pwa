@@ -7,7 +7,7 @@
  * - `ausgangGeaendert`: ruhige Zeile (@HT-050), keine Störung.
  * Kein Lautsprecher am Feld (`keiner`) oder bereit ohne Hinweis → keine Zeile (@HT-016, @HT-038).
  */
-import type { CockpitHinweis } from './runtime/hallStatusAuswertung';
+import type { CockpitHinweis, LautsprecherLage } from './runtime/hallStatusAuswertung';
 
 export type CockpitGrundText = 'tonNichtAktiviert' | 'hintergrund' | 'schlafenGelegt' | 'lautstaerkeNull';
 
@@ -22,6 +22,28 @@ const GRUND_TEXT: Record<string, CockpitGrundText | undefined> = {
   slept: 'schlafenGelegt',
   volume_zero: 'lautstaerkeNull',
 };
+
+/**
+ * Die Zeile aus dem Server-Stand des Lautsprechers (`hall_sound_status`), solange die Leitung noch keinen eigenen Stand hat: vor dem
+ * Anpfiff und in der kurzen Lücke danach (@HT-039, Fassung 14.11.). Nie `keinNetz` – „Kein Netz – Halle zeigt alten Stand“ gilt nur im
+ * laufenden Spiel (@HT-035). „Prüfen“ (Ausgang geändert) nur im Spiel, ohne Spiel kein Hinweis (@HT-050 Z3).
+ * „Ausgang verloren/bestätigen“ gibt es erst, wenn der Server diese Zustände kennt (H4-11).
+ */
+export function cockpitHallZeileAusServer(lage: LautsprecherLage | undefined, imSpiel: boolean): CockpitHallZeile | null {
+  if (lage === undefined) {
+    return null;
+  }
+  switch (lage.art) {
+    case 'meldetSichNicht':
+      return { art: 'aus', grund: 'meldetSichNicht', zuletztServerMs: lage.zuletztServerMs };
+    case 'nichtBereit':
+      return { art: 'aus', grund: GRUND_TEXT[lage.grund] ?? null, zuletztServerMs: null };
+    case 'bereit':
+      return imSpiel && lage.pruefen ? { art: 'ausgangGeaendert' } : null;
+    case 'keiner':
+      return null;
+  }
+}
 
 export function cockpitHallZeile(hinweis: CockpitHinweis): CockpitHallZeile | null {
   switch (hinweis.art) {

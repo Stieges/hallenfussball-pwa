@@ -8,6 +8,7 @@ import { Button } from '../../../ui';
 import { ToggleSwitch } from '../../../ui/atoms';
 import { SettingRow } from '../../../match-settings/SettingRow';
 import { styles } from '../../../match-settings/settingsPanelStile';
+import { cssVars } from '../../../../design-tokens';
 import { useCockpitTon } from '../../hooks/useCockpitTon';
 
 export interface GeraetTonAbschnittProps {
@@ -18,7 +19,7 @@ export function GeraetTonAbschnitt({ onTestSound }: GeraetTonAbschnittProps): Re
   const { t } = useTranslation('cockpit');
   const ton = useCockpitTon();
   return (
-    <section style={styles.section} data-testid="cockpit-geraet-ton">
+    <section style={{ ...styles.section, marginTop: cssVars.spacing.lg }} data-testid="cockpit-geraet-ton">
       <h3 style={styles.sectionTitle}>{t('settings.deviceTitle')}</h3>
       <SettingRow label={t('settings.deviceSwitch')} description={t('settings.deviceSwitchDesc')}>
         <ToggleSwitch checked={ton.an} onChange={ton.setAn} label={t('settings.deviceSwitchAria')} data-testid="cockpit-ton-schalter" />

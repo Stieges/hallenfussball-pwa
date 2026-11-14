@@ -7,7 +7,7 @@ import { T0 } from '../../../../core/hallenton/__tests__/hallentonFixtures';
 import { FalscherHallServer } from '../../../../test/hallenton/falscherHallServer';
 import { ManuelleUhr } from '../../../../test/hallenton/manuelleUhr';
 import { cockpitHinweisAusLeitung } from '../hallStatusAuswertung';
-import { VERSUCH_GESCHEITERT_MAX_MS, erzeugeLeitungLebenszeichen } from '../leitungLebenszeichen';
+import { erzeugeLeitungLebenszeichen } from '../leitungLebenszeichen';
 import { flush } from './feldStandTestlage';
 import { TID } from './lebenszeichenTestlage';
 
@@ -18,12 +18,12 @@ function halle(mitLautsprecher: boolean) {
     server.zuordnen(1, 'laptop');
   }
   server.steuer.set(1, 'handy');
-  const handy = { netz: true, grund: 'netz' as 'netz' | 'kein_recht' };
+  const handy = { netz: true, haengt: false, grund: 'netz' as 'netz' | 'kein_recht' };
   const leitung = erzeugeLeitungLebenszeichen({
     deviceId: 'handy',
     eigeneFelder: () => ({ [TID]: [1] }),
     angepfiffen: () => true,
-    rpc: (args) => (handy.netz ? server.leitungHeartbeat(args) : Promise.resolve({ ok: false, grund: handy.grund })),
+    rpc: (args) => (handy.netz ? server.leitungHeartbeat(args) : handy.haengt ? new Promise<never>(() => undefined) : Promise.resolve({ ok: false, grund: handy.grund })),
     zeitgeber: uhr.gruppe('handy'),
   });
   const vor = async (ms: number): Promise<void> => {
@@ -59,7 +59,7 @@ describe('@HT-034 @HT-035 „Kein Netz – Halle zeigt alten Stand“ im Cockpit
     expect(h.hinweis().art).not.toBe('unbekannt');
   });
 
-  it('das Flag hält zwischen zwei Takten (kein Flackern) und läuft ohne neuen Versuch nach 10 s ab', async () => {
+  it('das Flag hält zwischen zwei Takten (kein Flackern)', async () => {
     const h = halle(true);
     h.leitung.start();
     await h.vor(6000);
@@ -68,9 +68,30 @@ describe('@HT-034 @HT-035 „Kein Netz – Halle zeigt alten Stand“ im Cockpit
     expect(h.leitung.versuchGescheitert(TID, 1)).toBe(true);
     await h.vor(4000);
     expect(h.leitung.versuchGescheitert(TID, 1)).toBe(true); // jünger als 10 s, der nächste Versuch kommt erst
+  });
+
+  it('läuft ohne neuen Versuch nach 10 s ab: der nächste Versuch hängt, das Flag fällt nach 10 s, dann gilt die 15-s-Regel', async () => {
+    const h = halle(true);
+    h.leitung.start();
+    await h.vor(6000);
+    h.handy.netz = false;
+    await h.vor(5100); // der erste Versuch scheitert (Flag gesetzt)
+    h.handy.haengt = true; // der nächste Versuch hängt und sperrt weitere Versuche (`laufend`)
+    await h.vor(4000);
+    expect(h.leitung.versuchGescheitert(TID, 1)).toBe(true);
+    await h.vor(6000); // jetzt 10,1 s nach dem gescheiterten Versuch
+    expect(h.leitung.versuchGescheitert(TID, 1)).toBe(false);
+    expect(h.hinweis()).toEqual({ art: 'unbekannt' }); // die letzte Antwort ist älter als 15 s: „Kein Netz“ ohne Lücke
+  });
+
+  it('beim Stoppen ist das Flag weg', async () => {
+    const h = halle(true);
+    h.leitung.start();
+    await h.vor(6000);
+    h.handy.netz = false;
+    await h.vor(5100);
     h.leitung.stop();
     expect(h.leitung.versuchGescheitert(TID, 1)).toBe(false);
-    expect(VERSUCH_GESCHEITERT_MAX_MS).toBe(10_000);
   });
 
   it('Gegenbeispiel: scheitert der Versuch nicht am Netz (kein Recht), erscheint kein „Kein Netz“', async () => {

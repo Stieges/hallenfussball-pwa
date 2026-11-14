@@ -82,4 +82,15 @@ describe('@HT-009 @SL-125 Ton je Gerät', () => {
     act(() => { result.current.setAn(false); });
     expect(result.current.an).toBe(false);
   });
+
+  it('K4 Speicher voll: ein alter Wert steht noch da, Schreiben wirft → „Ton aus“ wirkt trotzdem sofort', () => {
+    gerät.setItem(COCKPIT_TON_SCHLUESSEL, JSON.stringify({ an: true, lautstaerke: 100 }));
+    const { result } = renderHook(() => useCockpitTon());
+    expect(result.current.an).toBe(true);
+    vi.spyOn(gerät, 'setItem').mockImplementation(() => { throw new DOMException('voll', 'QuotaExceededError'); });
+    act(() => { result.current.setAn(false); });
+    expect(result.current.an).toBe(false);
+    act(() => { result.current.setLautstaerke(30); });
+    expect(result.current).toMatchObject({ an: false, lautstaerke: 30 });
+  });
 });

@@ -225,7 +225,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
             <>
               {tafel}
               <CockpitKopfStreifen
-                tournamentId={tournamentId} matchId={match.id} feldId={match.fieldId} vorAnpfiff={phase.zustand === 'vorAnpfiff'} readOnly={readOnly} fremdGesteuert={Boolean(props.steuerung)}
+                tournamentId={tournamentId} matchId={match.id} feldId={match.fieldId} zustand={phase.zustand} readOnly={readOnly} fremdGesteuert={Boolean(props.steuerung)}
                 outboxStatus={outboxStatus} onOutboxReload={handleOutboxReload} nurZusehen={uebergabe?.art === 'zusehen' ? uebergabe.count : null}
               />
             </>

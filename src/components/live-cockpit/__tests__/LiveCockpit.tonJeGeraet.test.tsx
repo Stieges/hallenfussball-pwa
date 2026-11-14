@@ -34,6 +34,11 @@ vi.mock('../../../hooks/useSyncStatus', () => ({
     syncTournament: vi.fn(), retryFailedMutation: vi.fn(), discardFailedMutation: vi.fn(), isCloudSyncAvailable: false,
   }),
 }));
+// Server-Stand des Lautsprechers (`hall_sound_status`): hier von Hand, standardmäßig ohne Antwort
+const hallStatus = vi.hoisted(() => ({ stand: 'laedt', felder: {} }));
+vi.mock('../../../features/hallenton/useHallStatus', () => ({
+  useHallStatus: () => ({ stand: hallStatus.stand, antwort: null, felder: hallStatus.felder, lautsprecherBekannt: false, testtonAnfordern: vi.fn(), gehoert: vi.fn() }),
+}));
 vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }));
 
 const letzterAufruf = (): unknown[] => ton.aufrufe[ton.aufrufe.length - 1] ?? [];
@@ -42,6 +47,8 @@ const ABZEICHEN = 'Ton für das Spielende ist aus – antippen zum Einschalten';
 beforeEach(() => {
   ton.aufrufe = [];
   ton.isActivated = false;
+  hallStatus.stand = 'laedt';
+  hallStatus.felder = {};
   installiereGeraet();
   __setzeCockpitTonFuerTests();
 });
@@ -146,14 +153,25 @@ describe('Hinweise zum Hallen-Lautsprecher unter der Tafel', () => {
     expect(getComputedStyle(kasten).position).not.toBe('absolute');
   });
 
-  it('@HT-039 Anpfiff bleibt mit jedem Hinweis möglich: die Taste ist bedienbar und löst den Anpfiff aus', async () => {
-    setzeLeitung(leitung(stand('volume_zero')));
+  it('@HT-039 Kasten schon vor dem Anpfiff (Server-Stand, Leitung hat noch keinen Stand); Anpfiff bleibt möglich und der Kasten bleibt stehen', async () => {
+    hallStatus.stand = 'aktuell';
+    hallStatus.felder = { 1: { art: 'nichtBereit', grund: 'volume_zero', pruefen: false } };
     const onStart = vi.fn();
     const user = userEvent.setup();
-    render(<LiveCockpit {...makeProps(makeLiveMatch({ status: 'NOT_STARTED', elapsedSeconds: 0 }), { onStart })} />);
+    const { rerender } = render(<LiveCockpit {...makeProps(makeLiveMatch({ status: 'NOT_STARTED', elapsedSeconds: 0 }), { onStart })} />);
     expect(screen.getByTestId('cockpit-hall-aus')).toHaveTextContent('Grund: Lautstärke 0 %');
     await user.click(screen.getByTestId('match-start-button'));
     expect(onStart).toHaveBeenCalled();
+    // Tom pfeift an: das Spiel läuft, die Leitung hat noch keinen Stand – der Kasten bleibt stehen
+    rerender(<LiveCockpit {...makeProps(makeLiveMatch({ status: 'RUNNING', elapsedSeconds: 1 }), { onStart })} />);
+    expect(screen.getByTestId('cockpit-hall-aus')).toHaveTextContent('Grund: Lautstärke 0 %');
+  });
+
+  it('@HT-039 Gegenbeispiel: ohne Steuerrecht (nur ansehen) kein Kasten aus dem Server-Stand', () => {
+    hallStatus.stand = 'aktuell';
+    hallStatus.felder = { 1: { art: 'nichtBereit', grund: 'volume_zero', pruefen: false } };
+    render(<LiveCockpit {...makeProps(makeLiveMatch({ status: 'NOT_STARTED', elapsedSeconds: 0 }), { kannSteuern: false })} />);
+    expect(screen.queryByTestId('cockpit-hall-hinweise')).toBeNull();
   });
 
   it('@HT-038 @HT-016 Gegenbeispiel: ohne Lautsprecher am Feld kein Kasten, und der Anpfiff geht', () => {
@@ -173,7 +191,7 @@ describe('Hinweise zum Hallen-Lautsprecher unter der Tafel', () => {
     expect(screen.queryByTestId('cockpit-hall-hinweise')).toBeNull();
   });
 
-  it('Rand: ein sehr langer Teamname und Grund „meldet sich nicht“ – der Kasten bricht um, kein Überlauf nach rechts', () => {
+  it('Rand: Grund „meldet sich nicht“ mit Uhrzeit (Überlauf und Umbruch misst Playwright)', () => {
     setzeLeitung(leitung({ ...stand('ready'), speaker: { state: 'ready', ageMs: 30_000, outputHint: false } }));
     render(<LiveCockpit {...makeProps(makeLiveMatch({ homeTeam: { id: 'a', name: 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921' } }))} />);
     expect(screen.getByTestId('cockpit-hall-aus')).toHaveTextContent(/Grund: meldet sich nicht \(zuletzt \d\d:\d\d\)/);

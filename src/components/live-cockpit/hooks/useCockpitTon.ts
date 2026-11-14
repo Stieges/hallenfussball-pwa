@@ -53,7 +53,8 @@ let zwischen: { roh: string | null; wert: CockpitTon } = { roh: null, wert: COCK
 
 function leseRoh(): string | null {
   try {
-    return browserSpeicher()?.getItem(COCKPIT_TON_SCHLUESSEL) ?? imSpeicherNurHier;
+    // Der Wert im Arbeitsspeicher geht vor: er gilt, wenn Schreiben scheiterte (Speicher voll) und ein alter Eintrag noch dasteht.
+    return imSpeicherNurHier ?? browserSpeicher()?.getItem(COCKPIT_TON_SCHLUESSEL) ?? null;
   } catch {
     return imSpeicherNurHier;
   }
