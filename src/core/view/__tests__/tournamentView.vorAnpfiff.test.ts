@@ -99,3 +99,33 @@ describe('@SL-210 @ZM-200 nach dem Anpfiff ohne Tipp', () => {
     expect(b?.home.bib).toBe(false);
   });
 });
+
+describe('@ZM-209 Vor dem Anpfiff zeigt die Zuschauer-Seite keinen Stand – der Hallenmonitor weiter die Kästen (@ZM-195)', () => {
+  const zeigtKaesten = (audience: 'organizer' | 'viewer' | 'screen', match: Match, teams: Team[] = blauBlau) =>
+    buildTournamentView(input(teams, [match]), { audience, medium: 'app', locale: 'de' }).byId.get(match.id)?.showBoxes;
+  const bestaetigt = spiel2({ kitDecision: 'bib', kit: { a: GELB, bibSide: 'a' } });
+
+  it('Zeilen 1 und 2: kein Spiel angepfiffen, keine Leibchen bestätigt – Zuschauer: keine Kästen', () => {
+    expect(zeigtKaesten('viewer', spiel2())).toBe(false);
+    expect(zeigtKaesten('viewer', spiel2({ kitDecision: 'none' }))).toBe(false);
+  });
+
+  it('Zeile 3: Leibchen bestätigt – Zuschauer: die Kästen bleiben (Weste, @ZM-161)', () => {
+    expect(zeigtKaesten('viewer', bestaetigt)).toBe(true);
+  });
+
+  it('Zeile 4: angepfiffen (läuft, Halbzeit) und beendet – Zuschauer: Kästen wie bisher', () => {
+    expect(zeigtKaesten('viewer', spiel2({ matchStatus: 'running' }))).toBe(true);
+    expect(zeigtKaesten('viewer', spiel2({ matchStatus: 'finished', scoreA: 1, scoreB: 0 }))).toBe(true);
+  });
+
+  it('Gegenbeispiel @ZM-195: Hallenmonitor (screen) und Verwaltung (organizer) zeigen die Kästen vor dem Anpfiff weiter', () => {
+    expect(zeigtKaesten('screen', spiel2())).toBe(true);
+    expect(zeigtKaesten('organizer', spiel2())).toBe(true);
+  });
+
+  it('die Kastenwerte selbst bleiben für alle Zielgruppen gleich (nur die Anzeige-Entscheidung unterscheidet sich)', () => {
+    const von = (audience: 'organizer' | 'viewer' | 'screen') => boxen(blauBlau, spiel2(), audience);
+    expect(von('viewer')).toEqual(von('screen'));
+  });
+});
