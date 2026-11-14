@@ -16,6 +16,7 @@ import { useSwAutoReload } from './hooks/useSwAutoReload';
 import { useMatchProtectionNotices } from './hooks/useMatchProtectionNotices';
 import { useGuestTournamentNotices } from './hooks/useGuestTournamentNotices';
 import { useRouteMatch } from './hooks/useRouteMatch';
+import { useBackOrHome } from './hooks/useBackOrHome';
 import { matchRoute } from './core/routing';
 import { AuthProvider } from './features/auth/context/AuthContext';
 import { useAuth } from './features/auth/hooks/useAuth';
@@ -143,6 +144,7 @@ function AppContent() {
   const { showError } = useToast();
   const { isGuest } = useAuth();
   const navigate = useNavigate();
+  const backOrHome = useBackOrHome(); // Impressum/Datenschutz: nie aus der App heraus (@RE-005)
   const location = useLocation();
 
   // QW-002: Show toast if auth initialization timed out
@@ -648,17 +650,11 @@ function AppContent() {
 
         {/* Legal Screens */}
         {(screen === 'impressum' || isLegalPath && location.pathname === '/impressum') && (
-          <ImpressumScreen onBack={() => {
-            void navigate(-1); // Go back to previous page
-          }} />
+          <ImpressumScreen onBack={backOrHome} />
         )}
 
         {(screen === 'datenschutz' || isLegalPath && location.pathname === '/datenschutz') && (
-          <DatenschutzScreen
-            onBack={() => {
-              void navigate(-1); // Go back to previous page
-            }}
-          />
+          <DatenschutzScreen onBack={backOrHome} />
         )}
 
         {/* 404 Not Found */}
