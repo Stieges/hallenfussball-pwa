@@ -12,6 +12,7 @@ import type { BrowserContext, Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
 import { animationenFertig } from '../helpers/animationenFertig';
 import { wartePicker } from '../helpers/cockpitNeu';
+import { mitSpielplan } from '../helpers/seedMatches';
 
 const TOURNAMENT = 'fu139-warnung';
 const NORD = '00000000-0000-4000-8000-0000000013b1';
@@ -24,9 +25,10 @@ function turnier(): Record<string, unknown> {
   const d = new Date();
   d.setDate(d.getDate() + 1);
   const date = d.toISOString().split('T')[0];
-  return {
+  // Die Spiele erzeugt `mitSpielplan`: die Verwaltung erzeugt beim Öffnen keinen Plan mehr (@W5-042)
+  return mitSpielplan({
     id: TOURNAMENT, status: 'published', sport: 'football', sportId: 'football-indoor', tournamentType: 'classic', mode: 'classic',
-    numberOfFields: 1, numberOfTeams: 4, numberOfGroups: 1, groupSystem: 'roundRobin', finals: { enabled: false }, matches: [],
+    numberOfFields: 1, numberOfTeams: 4, numberOfGroups: 1, groupSystem: 'roundRobin', finals: { enabled: false },
     groupPhaseGameDuration: 10, groupPhaseBreakDuration: 2, gameDuration: 10, breakDuration: 2, finalRoundDuration: 10,
     placementLogic: ['points', 'goalDifference', 'goalsFor'],
     isKidsTournament: false, hideScoresForPublic: false, hideRankingsForPublic: false, resultMode: 'goals',
@@ -34,7 +36,7 @@ function turnier(): Record<string, unknown> {
     date, timeSlot: '10:00 - 14:00', startDate: date, startTime: '10:00', location: { name: 'Halle Nord' },
     teams: [{ id: NORD, name: 'FC Nord' }, { id: SUED, name: 'SV Süd' }, { id: WEST, name: 'TSV West' }, { id: OST, name: 'SC Ost' }],
     createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
-  };
+  });
 }
 
 /** Seite A: Cockpit, Spiel 1 angepfiffen; mit `tor` ein Tor von Nummer 7 für die Heim-Seite (Stand 1:0). */
