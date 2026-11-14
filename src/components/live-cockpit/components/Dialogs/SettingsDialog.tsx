@@ -4,6 +4,7 @@ import { DialogSurface } from '../../../ui/molecules/DialogSurface';
 import { MatchCockpitSettingsPanel } from '../../../match-settings/MatchCockpitSettingsPanel';
 import type { MatchCockpitSettings } from '../../../../types/tournament';
 import { TastenkuerzelSchalter } from './TastenkuerzelSchalter';
+import { GeraetTonAbschnitt } from './GeraetTonAbschnitt';
 
 interface SettingsDialogProps {
     isOpen: boolean;
@@ -111,7 +112,9 @@ export function SettingsDialog({
                         tournamentId={tournamentId}
                         onTestSound={onTestSound}
                         readOnly={readOnly}
+                        ohneTonwahl
                     />
+                    <GeraetTonAbschnitt onTestSound={onTestSound} />
                     <TastenkuerzelSchalter />
                 </div>
 

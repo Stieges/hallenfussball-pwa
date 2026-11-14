@@ -1,5 +1,5 @@
 /**
- * MatchSoundSection: Ton-Abschnitt der Einstellungen des Match Cockpits – Wahl des Abpfiff-Tons, Lautstärke, eigener Ton hochladen.
+ * MatchSoundSection: Ton-Abschnitt der Einstellungen des Match Cockpits – Wahl des Abpfiff-Tons und eigener Ton hochladen (Ein/Aus und Lautstärke: je Gerät, `useCockpitTon`).
  * Aus `MatchCockpitSettingsPanel.tsx` gelöst (H4-12), Verhalten gleich.
  */
 
@@ -32,13 +32,6 @@ export function MatchSoundSection({ settings, onChange, tournamentId, onTestSoun
     { value: 'horn-3', label: t('settings.horn3') },
     { value: 'custom', label: t('settings.customSound') },
   ];
-
-  const updateSetting = useCallback(
-    <K extends keyof MatchCockpitSettings>(key: K, value: MatchCockpitSettings[K]) => {
-      onChange({ ...settings, [key]: value });
-    },
-    [settings, onChange]
-  );
 
   // Handle sound preset change
   const handleSoundChange = useCallback(
@@ -94,9 +87,8 @@ export function MatchSoundSection({ settings, onChange, tournamentId, onTestSoun
   }, [tournamentId, settings, onChange]);
 
   // Get current sound value for select
-  const currentSoundValue = settings.soundEnabled && settings.soundId
-    ? settings.soundId
-    : 'none';
+  // H4-12: nur die Tonwahl zählt; Ein/Aus und Lautstärke gelten je Gerät (`useCockpitTon`), `soundEnabled` wird nicht mehr gelesen
+  const currentSoundValue = settings.soundId ?? 'none';
 
   return (
     <section style={styles.section}>
@@ -134,46 +126,6 @@ export function MatchSoundSection({ settings, onChange, tournamentId, onTestSoun
           )}
         </div>
       </SettingRow>
-
-      {settings.soundEnabled && (
-        <SettingRow label={t('settings.volume')} description={t('settings.volumePercent', { percent: settings.soundVolume })}>
-          <div style={styles.sliderContainer}>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={settings.soundVolume}
-              onChange={(e) => updateSetting('soundVolume', Number(e.target.value))}
-              style={styles.slider}
-              aria-label={t('settings.volumeAria')}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={settings.soundVolume}
-            />
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                if (settings.soundVolume > 0) {
-                  updateSetting('soundVolume', 0);
-                } else {
-                  updateSetting('soundVolume', 50); // Restore to default/medium volume
-                }
-              }}
-              style={styles.iconButton}
-              aria-label={settings.soundVolume > 0 ? t('settings.mute') : t('settings.unmute')}
-              title={settings.soundVolume > 0 ? t('settings.mute') : t('settings.unmute')}
-            >
-              {settings.soundVolume > 0 ? '🔊' : '🔇'}
-            </Button>
-            {onTestSound && (
-              <Button variant="secondary" size="sm" onClick={onTestSound} data-testid="settings-volume-listen">
-                {t('settings.listen')}
-              </Button>
-            )}
-          </div>
-        </SettingRow>
-      )}
 
       {/* Custom Sound Upload */}
       <SettingRow label={t('settings.customSound')} description={t('settings.uploadHint', { maxKB: Math.round(MAX_SOUND_FILE_SIZE / 1024) })}>

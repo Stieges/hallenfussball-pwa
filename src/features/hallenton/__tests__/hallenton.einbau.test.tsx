@@ -216,7 +216,7 @@ describe('useHallStatus(tid) – Datenseite für H4', () => {
 
 describe('useHallCockpitHinweis(tid, feldId) – Datenseite für H4', () => {
   function leitungMit(stand: LeitungStand | null, jetzt = 1000): LeitungLebenszeichen {
-    return { start: vi.fn(), stop: vi.fn(), stand: () => stand, version: () => 1, jetzt: () => jetzt, subscribe: () => () => undefined };
+    return { start: vi.fn(), stop: vi.fn(), stand: () => stand, versuchGescheitert: () => false, version: () => 1, jetzt: () => jetzt, subscribe: () => () => undefined };
   }
 
   it('@HT-040 Lautsprecher meldet sich nicht → „aus“ mit Grund und „zuletzt“ (Serverzeit)', () => {

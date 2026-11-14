@@ -2,7 +2,8 @@
  * R5 PR 3, @HT-030: Im Assistenten (Schritt 2, Bereich Cockpit) lässt sich der gewählte Ton anhören.
  * Szenario: „Olli wählt für das Spielende ‚Hupe 2‘ und drückt ‚Anhören‘ → das Gerät spielt ‚Hupe 2‘ einmal.“
  * Der Test wählt im Auswahlfeld „horn-2“ (Zustand lebt im Wrapper wie im Assistenten) und prüft, dass der Ton-Baustein
- * danach mit genau diesem Ton geladen ist und „Anhören“ ihn einmal spielt. Gegenprobe: bei „Ton aus“ fehlt die Lautstärke.
+ * danach mit genau diesem Ton geladen ist und „Anhören“ ihn einmal spielt. H4-12 (@HT-009): die Lautstärke des Anhörens ist die dieses Geräts (Vorgabe 100 %),
+ * nicht `soundVolume` des Turniers; ohne gewählten Ton (`soundId` leer) ist der Ton-Baustein aus.
  * Mutation: in Step2_ModeAndSystem `useMatchSound('horn-1', …)` fest verdrahten → Test rot; `onTestSound` entfernen → rot.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -48,19 +49,29 @@ describe('@HT-030 Wizard Schritt 2: Ton anhören', () => {
     schritt2(true);
     fireEvent.change(screen.getByTestId('settings-end-sound-select'), { target: { value: 'horn-2' } });
     const letzter = vi.mocked(useMatchSound).mock.calls.at(-1);
-    expect(letzter?.slice(0, 3)).toEqual(['horn-2', 80, true]);
+    // H4-12: Lautstärke dieses Geräts (100 %), nicht die 80 % des Turniers
+    expect(letzter?.slice(0, 3)).toEqual(['horn-2', 100, true]);
     fireEvent.click(screen.getByTestId('settings-end-sound-listen'));
     expect(testPlay).toHaveBeenCalledTimes(1);
   });
 
-  it('der zweite „Anhören“-Knopf (Lautstärke) spielt ebenfalls', () => {
+  it('H4-12 Gegenprobe: es gibt keine Lautstärke-Zeile mehr (je Gerät, im Cockpit-Dialog), auch nicht bei gewähltem Ton', () => {
     schritt2(true);
-    fireEvent.click(screen.getByTestId('settings-volume-listen'));
-    expect(testPlay).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('settings-volume-listen')).toBeNull();
+    expect(screen.queryByRole('slider')).toBeNull();
   });
 
-  it('Gegenprobe: bei „Ton aus“ gibt es keine Lautstärke-Zeile', () => {
+  it('Gegenprobe: ohne gewählten Ton („Kein Sound“) ist der Ton-Baustein aus', () => {
     schritt2(false);
-    expect(screen.queryByTestId('settings-volume-listen')).toBeNull();
+    expect(vi.mocked(useMatchSound).mock.calls.at(-1)?.slice(0, 3)).toEqual([null, 100, false]);
+  });
+
+  it('H4-12 die Zusammenfassung des Bereichs nennt „Sound“ nach der Tonwahl (`soundId`), nicht nach `soundEnabled`', () => {
+    const mit = render(<Wrapper soundEnabled={true} />);
+    expect(mit.container.textContent).toMatch(/Sound/);
+    mit.unmount();
+    // kein Ton gewählt → kein „Sound“ in der Zusammenfassung
+    const ohne = render(<Wrapper soundEnabled={false} />);
+    expect(ohne.container.textContent).not.toMatch(/\bSound\b/);
   });
 });

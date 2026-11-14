@@ -79,11 +79,16 @@ export function cockpitHinweisAus(lage: LautsprecherLage): CockpitHinweis {
 }
 
 /** Cockpit-Hinweis aus der letzten Antwort auf das Lebenszeichen der Leitung; ohne (kein Spiel, nicht leitend) neutral. */
-export function cockpitHinweisAusLeitung(stand: LeitungStand | null, jetzt: number): CockpitHinweis {
+export function cockpitHinweisAusLeitung(stand: LeitungStand | null, jetzt: number, versuchGescheitert = false): CockpitHinweis {
   if (stand === null || stand.status === 'not_controller') {
     return { art: 'keiner' };
   }
-  if (jetzt - stand.empfangenUm > ANTWORT_GUELTIG_MS) {
+  // Feld ohne eingerichteten Lautsprecher bleibt neutral – auch ohne Netz (@HT-016, @HT-038)
+  if (stand.speaker === null) {
+    return { art: 'keiner' };
+  }
+  // H4-12: der letzte Versuch scheiterte am Netz → sofort „kein Netz“, ohne die 15 s abzuwarten (@HT-034, @HT-035)
+  if (versuchGescheitert || jetzt - stand.empfangenUm > ANTWORT_GUELTIG_MS) {
     return { art: 'unbekannt' };
   }
   return cockpitHinweisAus(lautsprecherLage(stand.speaker, stand.serverNow));

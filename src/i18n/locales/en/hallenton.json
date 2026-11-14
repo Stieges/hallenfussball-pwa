@@ -48,7 +48,9 @@
   "cockpit": {
     "titel": "Hall speaker off – signal the end yourself",
     "grund": "Reason: {{grund}}",
-    "ausgangGeaendert": "Hall audio output changed"
+    "ausgangGeaendert": "Hall audio output changed",
+    "keinNetz": "No network – hall shows an old state",
+    "uhrNichtAbgeglichen": "Clock not synced – hall tone may differ"
   },
   "geraet": {
     "uebernommen": "Field {{feld}} taken over by another device",

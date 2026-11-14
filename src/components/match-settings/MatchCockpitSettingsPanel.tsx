@@ -31,6 +31,8 @@ export interface MatchCockpitSettingsPanelProps {
    *  wörtlich. Unter readOnly bleibt das Panel sichtbar, alle Eingaben werden aber über ein
    *  natives `<fieldset disabled>` gesperrt (kein einzelner Callback mehr auslösbar). */
   readOnly?: boolean;
+  /** Ohne Tonwahl (Cockpit-Dialog, H4-12): Ton an/aus und Lautstärke gelten je Gerät, die Tonwahl ist Sache der Turnierleitung. */
+  ohneTonwahl?: boolean;
 }
 
 export function MatchCockpitSettingsPanel({
@@ -39,6 +41,7 @@ export function MatchCockpitSettingsPanel({
   tournamentId,
   onTestSound,
   readOnly = false,
+  ohneTonwahl = false,
 }: MatchCockpitSettingsPanelProps): React.ReactNode {
   const { t } = useTranslation('cockpit');
 
@@ -83,7 +86,7 @@ export function MatchCockpitSettingsPanel({
 
       <MatchRulesSections settings={settings} updateSetting={updateSetting} />
 
-      <MatchSoundSection settings={settings} onChange={onChange} tournamentId={tournamentId} onTestSound={onTestSound} />
+      {!ohneTonwahl && <MatchSoundSection settings={settings} onChange={onChange} tournamentId={tournamentId} onTestSound={onTestSound} />}
 
       {/* Feedback Section */}
       <section style={styles.section}>

@@ -9,6 +9,7 @@ import { useCallback } from 'react';
 import { CategoryPage } from '../shared';
 import { MatchCockpitSettingsPanel } from '../../../../components/match-settings/MatchCockpitSettingsPanel';
 import { useMatchSound } from '../../../../hooks';
+import { useCockpitTon } from '../../../../components/live-cockpit/hooks/useCockpitTon';
 import { useCan } from '../../../auth/hooks/useCan';
 import { RulesLockProvider } from '../../../../components/match-settings/RulesLockContext';
 import type { Tournament, MatchCockpitSettings } from '../../../../types/tournament';
@@ -51,11 +52,12 @@ export function MatchCockpitCategory({
     // Match Cockpit Pro settings
     const cockpitSettings = getCockpitSettings(tournament);
 
-    // Sound hook for testing
+    // „Anhören“: gewählter Ton mit der Lautstärke dieses Geräts (H4-12: Ein/Aus und Lautstärke gelten je Gerät, nicht je Turnier)
+    const geraetTon = useCockpitTon();
     const sound = useMatchSound(
         cockpitSettings.soundId,
-        cockpitSettings.soundVolume,
-        cockpitSettings.soundEnabled,
+        geraetTon.lautstaerke,
+        cockpitSettings.soundId !== null,
         tournamentId
     );
 

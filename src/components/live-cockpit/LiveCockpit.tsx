@@ -55,6 +55,7 @@ import { alsUebersetzer } from './model/alsUebersetzer';
 import { kastenOderStandard } from './model/kastenOderStandard';
 import { hatSchonGelb as hatSchonGelbIn } from './model/secondYellow';
 import { useLeibchenBereich } from './hooks/useLeibchenBereich';
+import { useCockpitTon } from './hooks/useCockpitTon';
 import { useCockpitUebergabe } from './hooks/useCockpitUebergabe';
 import { CockpitKopfStreifen } from './areas/CockpitKopfStreifen';
 const NO_SPERREN: readonly SperrHinweis[] = [];
@@ -67,7 +68,10 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   const { outboxStatus, handleOutboxReload, uebergabe, zugriffEntzogen, matchMitVerlauf } = useCockpitUebergabe(props);
   // Einstellungen mit Vorgaben, Ton für das Ende, Gerätetyp
   const cockpitSettings = useMemo(() => ({ ...DEFAULT_MATCH_COCKPIT_SETTINGS, ...cockpitSettingsProp }), [cockpitSettingsProp]);
-  const sound = useMatchSound(cockpitSettings.soundId, cockpitSettings.soundVolume, cockpitSettings.soundEnabled, tournamentId);
+  // Ton an/aus und Lautstärke gelten je Gerät (@HT-009); die Tonwahl bleibt Sache des Turniers, ohne Tonwahl kein Ton
+  const geraetTon = useCockpitTon();
+  const tonAn = geraetTon.an && cockpitSettings.soundId !== null;
+  const sound = useMatchSound(cockpitSettings.soundId, geraetTon.lautstaerke, tonAn, tournamentId);
   const { isMobile, isTablet, width } = useBreakpoint();
   const layout = width >= breakpointValues.desktop ? 'breit' : 'daumen';
   const stufe = useCockpitStufe();
@@ -104,7 +108,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   // Abzeichen Ton (nur im angepfiffenen Spiel) und Bildschirm wach ab dem Anpfiff (@SL-059, @SL-122)
   const { tonHinweis, wachhaltenHinweis } = useTafelAbzeichen({
     zustand: phase.zustand, matchId: currentMatch?.id, wachhalten: cockpitSettings.wakeLockEnabled, t: tx, melde: notices.melde, quittungMitFolgespiel: (view?.quittungRestMs ?? 0) > 0 && view?.status !== 'skipped' && upcomingMatches.length > 0,
-    ton: { an: cockpitSettings.soundEnabled, freigegeben: sound.isActivated, aktiviere: () => { void sound.activate(); } },
+    ton: { an: tonAn, freigegeben: sound.isActivated, aktiviere: () => { void sound.activate(); } },
   });
   const teams = useMemo(() => (currentMatch ? { home: currentMatch.homeTeam, away: currentMatch.awayTeam } : null), [currentMatch]);
   const frisch = useFreshEntryCommands({
@@ -124,7 +128,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
     turnier: props.leibchenTurnier, matchId: currentMatch?.id, zustand: phase.zustand, melde: notices.melde, kannSteuern, onUebernehmen: props.steuerung?.onUebernehmen,
   });
   const cmd = useCockpitCommands({
-    props, settings: cockpitSettings, sound, flows, sides, melde: notices.melde, engineView, view,
+    props, settings: cockpitSettings, tonAn, sound, flows, sides, melde: notices.melde, engineView, view,
   });
   // Tastenkürzel (@SL-153): nur am Laptop mit Steuerrecht und eingeschaltetem Schalter; `?` auch ohne Steuerrecht
   const [tastenAn] = useTastenkuerzelAn();
@@ -221,7 +225,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
             <>
               {tafel}
               <CockpitKopfStreifen
-                tournamentId={tournamentId} matchId={match.id} readOnly={readOnly} fremdGesteuert={Boolean(props.steuerung)}
+                tournamentId={tournamentId} matchId={match.id} feldId={match.fieldId} vorAnpfiff={phase.zustand === 'vorAnpfiff'} readOnly={readOnly} fremdGesteuert={Boolean(props.steuerung)}
                 outboxStatus={outboxStatus} onOutboxReload={handleOutboxReload} nurZusehen={uebergabe?.art === 'zusehen' ? uebergabe.count : null}
               />
             </>
