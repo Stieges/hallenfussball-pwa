@@ -4,6 +4,7 @@
  */
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useInRouterContext, useNavigate } from 'react-router-dom';
 import { AwaitingServerCopyLine } from '../../../features/collaboration';
 import { OutboxNotice } from '../../../features/collaboration/outbox/OutboxNotice';
 import type { OutboxStatus } from '../../../core/match/client/outboxTypes';
@@ -26,6 +27,18 @@ export interface CockpitKopfStreifenProps {
   nurZusehen: number | null;
 }
 
+type AusgangsHinweisProps = Pick<React.ComponentProps<typeof OutboxNotice>, 'status' | 'matchId' | 'onReload'>;
+
+/** Der Ausgangs-Hinweis mit „Anmelden“ (@OB-087 Zeile 3): in der App führt die Taste zur Anmeldung; ohne Router (einzelne Prüfstände, Tests) bleibt es beim Text. */
+function AusgangsHinweisMitAnmelden(props: AusgangsHinweisProps): ReactElement {
+  const navigate = useNavigate();
+  return <OutboxNotice {...props} onLogin={() => { void navigate('/login'); }} />;
+}
+
+function AusgangsHinweis(props: AusgangsHinweisProps): ReactElement {
+  return useInRouterContext() ? <AusgangsHinweisMitAnmelden {...props} /> : <OutboxNotice {...props} />;
+}
+
 export function CockpitKopfStreifen({ tournamentId, matchId, feldId, zustand, readOnly, fremdGesteuert, outboxStatus, onOutboxReload, nurZusehen }: CockpitKopfStreifenProps): ReactElement {
   const { t } = useTranslation('cockpit');
   return (
@@ -41,7 +54,7 @@ export function CockpitKopfStreifen({ tournamentId, matchId, feldId, zustand, re
         </div>
       )}
       {/* W1 (Nachtrag C3a-2a): rendert selbst nichts, solange kein Ausgangs-Zustand vorliegt. */}
-      <OutboxNotice status={outboxStatus} matchId={matchId} onReload={onOutboxReload} />
+      <AusgangsHinweis status={outboxStatus} matchId={matchId} onReload={onOutboxReload} />
       {nurZusehen !== null && <p className={shell.readOnlyBanner} data-testid="cockpit-uebergeben-zusehen" role="status">{t('leiste.nurZusehen', { count: nurZusehen })}</p>}
     </>
   );

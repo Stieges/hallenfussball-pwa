@@ -7,10 +7,11 @@
 import { useCallback } from 'react';
 import { Tournament } from '../../../types/tournament';
 import { useScheduleResultEntry, type KnownScore, type ScheduleResultEntry, type StaleInfo } from './useScheduleResultEntry';
+import type { ToastOptions } from '../../../components/ui/Toast';
 
 interface UseScheduleTabActionsProps {
   tournament: Tournament;
-  showWarning: (message: string) => void;
+  showWarning: (message: string, options?: ToastOptions) => void;
   lockFinishedResults: boolean;
   /** B-49 (@FU-081): fremd gesteuertes Feld bei laufendem Spiel – Hinweis bzw. „Spielleitung übernehmen“. */
   offerTakeover?: (matchId: string, field: number | null) => Promise<boolean>;

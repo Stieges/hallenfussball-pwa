@@ -3,6 +3,8 @@
  * Prioritaet (Produktentscheidung): clientOutdated > authRequired > notReady > tournamentFinished > review.
  * `tournamentFinished` (R3-2a, @FU-018, @HE-070): nach dem Abschluss angekommene Einträge sind an die Turnierleitung übergeben.
  * `onReload` ist injiziert (Standard-Aufrufer: window.location.reload).
+ * `onLogin` (@OB-087 Zeile 3): bei abgelaufener Sitzung steht „Anmelden“ am Hinweis; ohne `onLogin` (Aufrufer ohne Router) bleibt es beim Text.
+ * Nach der Anmeldung gehen die wartenden Einträge von selbst raus (`OutboxSender.resumeAuth` über den neuen Token des Kontos).
  */
 import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -18,6 +20,8 @@ export interface OutboxNoticeProps {
   /** Spielbezug fuer `pausedMatches`/`reviewByMatch`; ohne ihn gilt die Gesamtzahl. */
   matchId?: string;
   onReload: () => void;
+  /** Öffnet die Anmeldung; ohne diese Funktion zeigt der Hinweis bei `authRequired` keine Taste. */
+  onLogin?: () => void;
 }
 
 const noticeStyle: CSSProperties = {
@@ -58,7 +62,7 @@ function noticeKind(status: OutboxStatus, matchId: string | undefined): OutboxNo
   return reviewCountOf(status, matchId) > 0 ? 'review' : null;
 }
 
-export function OutboxNotice({ status, matchId, onReload }: OutboxNoticeProps) {
+export function OutboxNotice({ status, matchId, onReload, onLogin }: OutboxNoticeProps) {
   const { t } = useTranslation('common');
   const kind = noticeKind(status, matchId);
   if (kind === null) {
@@ -76,6 +80,11 @@ export function OutboxNotice({ status, matchId, onReload }: OutboxNoticeProps) {
       {kind === 'clientOutdated' && (
         <Button data-testid="outbox-notice-reload" variant="secondary" onClick={onReload}>
           {t('outbox.notice.reloadNow')}
+        </Button>
+      )}
+      {kind === 'authRequired' && onLogin !== undefined && (
+        <Button data-testid="outbox-notice-login" variant="secondary" onClick={onLogin}>
+          {t('actions.login')}
         </Button>
       )}
     </div>

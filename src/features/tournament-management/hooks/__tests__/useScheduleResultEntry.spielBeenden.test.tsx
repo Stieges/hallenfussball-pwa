@@ -28,6 +28,9 @@ vi.mock('../../../../core/repositories/fieldControlStateRpc', async (importOrigi
   readForeignFieldHolder: holder.read,
 }));
 
+const sw = vi.hoisted(() => ({ reload: vi.fn() }));
+vi.mock('../../../../lib/swRegistration', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../../../lib/swRegistration')>()), requestUrgentReload: sw.reload }));
+
 import { initRealDeI18n } from '../../../../test/realDeI18n';
 import { MatchEngineContext } from '../../../match-engine/matchEngineContextInstance';
 import { MatchCommands, type EngineEventWithSeq } from '../../../../core/match/client';
@@ -425,6 +428,35 @@ describe('Spiel beenden und Ergebnis eintragen (Spielplan)', () => {
     expect(await done).toBe(false);
     expect(lastWarning(showWarning)).toBe('App aktualisieren');
     expect(await outboxEmpty(h, SPIEL_9)).toBe(true);
+  });
+
+  it('@OB-087 Zeile 4: Olli trägt im Spielplan ein Ergebnis ein, die App ist veraltet → der Hinweis trägt „Jetzt aktualisieren“, ein Tipp lädt die neue Fassung', async () => {
+    confirmed(h, [anpfiff(480_000)]);
+    h.api.mockResolvedValueOnce({ error: 'CLIENT_OUTDATED', minClientFormat: 9, serverTime: NOW });
+    const { enter, answer, showWarning } = render(h);
+    const done = enter(SPIEL_9, 3, 1);
+    await act(async () => { await settle(); });
+    await answer('yes');
+    expect(await done).toBe(false);
+
+    const options = showWarning.mock.calls.at(-1)?.[1] as { duration?: number; action?: { label: string; onClick: () => void } } | undefined;
+    expect(options?.action?.label).toBe('Jetzt aktualisieren');
+    expect(options?.duration).toBe(0); // bleibt stehen, bis die Person tippt oder schließt
+    expect(sw.reload).not.toHaveBeenCalled();
+    options?.action?.onClick();
+    expect(sw.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('@OB-087 Zeile 4 Gegenbeispiel: andere Hinweise des Notwegs (Netz weg) tragen keine „Jetzt aktualisieren“-Taste', async () => {
+    confirmed(h, [anpfiff(480_000)]);
+    h.api.mockRejectedValueOnce(networkError());
+    const { enter, answer, showWarning } = render(h);
+    const done = enter(SPIEL_9, 3, 1);
+    await act(async () => { await settle(); });
+    await answer('yes');
+    expect(await done).toBe(false);
+    expect(lastWarning(showWarning)).toBe('Nicht gesendet – bitte erneut versuchen');
+    expect(showWarning.mock.calls.at(-1)?.[1]).toBeUndefined();
   });
 
   it('N3 angenommen, der Abgleich danach scheitert → keine Fehlermeldung, das Ende gilt', async () => {

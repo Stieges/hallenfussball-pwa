@@ -33,6 +33,8 @@ import { routeForStatus } from './scoreChangeHelpers';
 import { useResultEntryAck } from './useResultEntryAck';
 import { readEventAuthorNames } from '../../../core/repositories/eventAuthorNamesRpc';
 import { supabase } from '../../../lib/supabase';
+import { requestUrgentReload } from '../../../lib/swRegistration';
+import type { ToastOptions } from '../../../components/ui/Toast';
 import { readForeignFieldHolder } from '../../../core/repositories/fieldControlStateRpc';
 import { getDeviceId } from '../../../core/device/deviceId';
 import { fieldHolderText } from '../../match-engine/fieldHolderText';
@@ -80,7 +82,7 @@ export interface ScheduleResultEntry {
 
 export interface UseScheduleResultEntryOptions {
   tournament: Tournament;
-  showWarning: (message: string) => void;
+  showWarning: (message: string, options?: ToastOptions) => void;
   lockFinishedResults: boolean;
   /**
    * B-49 (@FU-081): laufendes Spiel auf einem fremd gesteuerten Feld → Hinweis „Feld 2 wird gerade von Tom gesteuert“ bzw.
@@ -171,6 +173,12 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
     }
   }, [t, tCommon]);
 
+  /** @OB-087 Zeile 4: der Hinweis „App aktualisieren“ trägt „Jetzt aktualisieren“ (wie im Cockpit, `requestUrgentReload`); bleibt stehen, bis die Person tippt oder ihn schließt. */
+  const updateAction = useCallback((): ToastOptions => ({
+    duration: 0,
+    action: { label: tCommon('outbox.notice.reloadNow'), onClick: requestUrgentReload },
+  }), [tCommon]);
+
   const rejectionText = useCallback(async (error: unknown, entry: ValidMatchEntry): Promise<string> => {
     if (error instanceof MatchCommandRejectedError && error.code === ERROR_CODES.STALE_BASE) {
       const current = (error.detail as { currentScores?: Record<string, number> } | undefined)?.currentScores ?? {};
@@ -254,7 +262,7 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
             const answer = await ask({ kind: 'shootout', matchNumber: entry.meta.number, score: score(scoreA, scoreB), homeName: homeTeam.name, awayName: awayTeam.name });
             return answer === null ? null : shootoutOf(answer, entry.ctx.teamAId, entry.ctx.teamBId);
           },
-          warn: (key) => showWarning(endWarning(key)),
+          warn: (key) => showWarning(endWarning(key), key === 'outdated' ? updateAction() : undefined),
           pendingCount: async () => (await context.store.load(context.accountId, id))?.pending.length ?? 0,
           flush: () => context.sender.kick(id),
           warnStale: async (now) => showWarning(await staleText(entry, now)),
@@ -332,7 +340,7 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
       }
       return false;
     }
-  }, [tournament, context, commands, actor, lockFinishedResults, showWarning, t, ask, trackAck, rejectionText, staleText, endWarning, offerTakeover]);
+  }, [tournament, context, commands, actor, lockFinishedResults, showWarning, t, ask, trackAck, rejectionText, staleText, endWarning, updateAction, offerTakeover]);
 
   return { enterScore, prompt, answerPrompt, changeAuthor };
 }

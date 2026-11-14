@@ -57,3 +57,9 @@
   gap: var(--spacing-sm);
   min-width: 0;
 }
+
+/* Taste unter dem Text des Kastens (@OB-087): im Fluss, die Taste bleibt mindestens 44 px hoch (`Button`) */
+.taste {
+  display: block;
+  margin-top: var(--spacing-sm);
+}

@@ -16,6 +16,7 @@ import { InlineNotice } from '../../../../components/ui/molecules/InlineNotice';
 import { TafelIcons } from '../../../../components/ui/IconsTafel';
 import { breakpointValues, cssVars, dialogWidths, iconSizeValues } from '../../../../design-tokens';
 import type { Tournament } from '../../../../types/tournament';
+import { VerbindenTaste } from '../../../match-engine/VerbindenTaste';
 import { useAuth } from '../../../auth/hooks/useAuth';
 import { useCanState } from '../../../auth/hooks/useCan';
 import { CategoryPage } from '../shared';
@@ -124,7 +125,11 @@ export function TeamHelpersCategory({ tournamentId, tournament }: TeamHelpersCat
   const right = (
     <div style={stack}>
       {showOffline ? (
-        <InlineNotice tone="warn" icon={<Icons.WifiOff size={iconSizeValues.sm} />} data-testid="needs-network">
+        <InlineNotice
+          tone="warn" icon={<Icons.WifiOff size={iconSizeValues.sm} />} data-testid="needs-network"
+          // @OB-087 Zeile 2: „Verbinden“ versucht die Verbindung sofort neu; danach lädt die Liste der Helfer von selbst (nicht erst im nächsten 2-s-Takt)
+          footer={<div><VerbindenTaste data-testid="needs-network-verbinden" beiEnde={() => { void refresh(); }} /></div>}
+        >
           <b style={noticeTitle}>{t('teamHelpers.offline.title')}</b>
           <span style={noticeText}>{t('teamHelpers.offline.text')}</span>
         </InlineNotice>
