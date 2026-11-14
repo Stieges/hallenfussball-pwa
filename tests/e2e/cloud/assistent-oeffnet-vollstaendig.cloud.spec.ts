@@ -239,7 +239,8 @@ test.describe('@W5-039 „Im Wizard bearbeiten“ in den Einstellungen der Verwa
         const page = await freshOwnerPage(browser);
         if (lokal !== 'keine Kopie') {
           await page.goto(`/#/tournament/${cup.id}`); // die Verwaltung legt die lokale Kopie an, ohne etwas zu ändern
-          await expect(page.locator('[role="tab"]').first()).toBeVisible({ timeout: 20_000 });
+          // geladen ist die Verwaltung, sobald der Spielplan des Turniers steht (nur sichtbare Karten: Handy- und Desktop-Ansicht liegen beide im DOM)
+          await expect(page.locator('[data-match-card]:visible').first()).toBeVisible({ timeout: 20_000 });
         }
         await page.goto(`/#/tournament/${cup.id}/settings`);
         await page.getByTestId('wizard-edit-edit-teams').click();
