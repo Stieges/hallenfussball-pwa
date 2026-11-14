@@ -104,7 +104,7 @@ test.describe('@W2A-059 Zuschauer-Tabelle mit offenem Gleichstand', () => {
 });
 
 test.describe('@HT-030 Anhören im Assistenten', () => {
-  test('Schritt „Modus“, Bereich Cockpit: zwei „Anhören“-Knöpfe ≥ 44 px, Klick spielt den Ton', async ({ page }) => {
+  test('Schritt „Modus“, Bereich Cockpit: ein „Anhören“-Knopf ≥ 44 px, Klick spielt den Ton', async ({ page }) => {
     await page.addInitScript(() => {
       const w = window as unknown as { __gespielt: number };
       w.__gespielt = 0;
@@ -113,7 +113,7 @@ test.describe('@HT-030 Anhören im Assistenten', () => {
     await page.goto('/#/tournament/new?step=3');
     await page.getByRole('button', { name: /Cockpit/i }).first().click();
     const knoepfe = page.getByRole('button', { name: 'Anhören' });
-    await expect(knoepfe).toHaveCount(2);
+    await expect(knoepfe).toHaveCount(1);
     for (const k of await knoepfe.all()) {
       await k.scrollIntoViewIfNeeded();
       expect((await k.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
@@ -144,11 +144,11 @@ test.describe('@W3-039 Farbe & Logo im Assistenten', () => {
 });
 
 test.describe('@HT-030 „Anhören“ im Admin-Cockpit (gleiche Komponente wie im Assistenten)', () => {
-  test('Admin → Match Cockpit: zwei „Anhören“-Knöpfe ≥ 44 px, nichts ragt über den Rand', async ({ page }) => {
+  test('Admin → Match Cockpit: ein „Anhören“-Knopf ≥ 44 px, nichts ragt über den Rand', async ({ page }) => {
     await installiereSaat(page.context(), leseSaat('hallencup-messlauf'));
     await page.goto('/#/tournament/hallencup-messlauf/admin/match-cockpit');
     const knoepfe = page.getByRole('button', { name: 'Anhören' });
-    await expect(knoepfe).toHaveCount(2, { timeout: 25000 });
+    await expect(knoepfe).toHaveCount(1, { timeout: 25000 });
     await knoepfe.last().scrollIntoViewIfNeeded();
     const breite = page.viewportSize()?.width ?? 0;
     for (const k of await knoepfe.all()) {
