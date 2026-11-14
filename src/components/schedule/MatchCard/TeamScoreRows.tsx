@@ -45,6 +45,8 @@ export interface TeamScoreRowsProps {
    * `cup`: Pokal beim Sieger (nur Finalrunde); „nach Verlängerung“ klein unter dem Namen des Siegers. Nur zusammen mit `kasten`.
    */
   ende?: { cup: boolean };
+  /** Ohne Stand steht keine Torfläche und kein Kasten, nur Kreis und Name (nächstes Spiel in der Verwaltung, @ZP-109, @SL-239); Zuschauer: 0 : 0 (@ZM-195) */
+  noScore?: boolean;
 }
 
 type Side = 'a' | 'b';
@@ -74,7 +76,7 @@ const goalsStyle: CSSProperties = {
   fontFamily: 'inherit',
 };
 
-export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam, awayTeam, result, status, onScoreClick, disabled = false, zeitstrafen, kasten, ende }) => {
+export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam, awayTeam, result, status, onScoreClick, disabled = false, zeitstrafen, kasten, ende, noScore = false }) => {
   const { t } = useTranslation('tournament');
   const { colors } = useTheme();
   const decided = result?.winner !== undefined && result.winner !== null;
@@ -138,40 +140,42 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
           <TeamAvatar team={team} size="sm" />
           {nameBlock}
         </div>
-        <button
-          type="button"
-          data-score-circle
-          data-testid={`match-goals-${matchId}-${side === 'a' ? 'home' : 'away'}`}
-          style={{
-            ...goalsStyle,
-            gridColumn: 2,
-            gridRow: row,
-            cursor: disabled ? 'default' : 'pointer',
-            fontWeight: isWinner ? cssVars.fontWeights.bold : cssVars.fontWeights.semibold,
-            color: isLoser || goals === undefined ? cssVars.colors.textSecondary : cssVars.colors.textPrimary,
-          }}
-          aria-label={first ? spokenWithBib : undefined}
-          aria-hidden={first ? undefined : true}
-          tabIndex={first && !disabled ? 0 : -1}
-          onClick={(e) => { e.stopPropagation(); if (!disabled) { onScoreClick(); } }}
-        >
-          {kasten === undefined ? (goals ?? '–') : (
-            <ScoreBox
-              score={goals ?? 0}
-              fill={(first ? kasten.home : kasten.away).fill}
-              size="compact"
-              background={hintergrund}
-              textColor={colors.textPrimary}
-              bib={(first ? kasten.home : kasten.away).bib}
-              outcome={finished && decided ? (isWinner ? 'winner' : 'loser') : undefined}
-              cup={finished && isWinner && ende.cup}
-              frameStrength={rahmen}
-              ariaLabel={[`${team.name}: ${String(goals ?? 0)}`, finished && isWinner ? t('matchCard.winnerAria') : null, (first ? kasten.home : kasten.away).bib ? t('matchCard.bibAria') : null].filter((x) => x !== null).join(', ')}
-              testId={`match-box-${matchId}-${seite}`}
-              position={seite}
-            />
-          )}
-        </button>
+        {!(noScore && goals === undefined) && (
+          <button
+            type="button"
+            data-score-circle
+            data-testid={`match-goals-${matchId}-${side === 'a' ? 'home' : 'away'}`}
+            style={{
+              ...goalsStyle,
+              gridColumn: 2,
+              gridRow: row,
+              cursor: disabled ? 'default' : 'pointer',
+              fontWeight: isWinner ? cssVars.fontWeights.bold : cssVars.fontWeights.semibold,
+              color: isLoser || goals === undefined ? cssVars.colors.textSecondary : cssVars.colors.textPrimary,
+            }}
+            aria-label={first ? spokenWithBib : undefined}
+            aria-hidden={first ? undefined : true}
+            tabIndex={first && !disabled ? 0 : -1}
+            onClick={(e) => { e.stopPropagation(); if (!disabled) { onScoreClick(); } }}
+          >
+            {kasten === undefined ? (goals ?? '–') : (
+              <ScoreBox
+                score={goals ?? 0}
+                fill={(first ? kasten.home : kasten.away).fill}
+                size="compact"
+                background={hintergrund}
+                textColor={colors.textPrimary}
+                bib={(first ? kasten.home : kasten.away).bib}
+                outcome={finished && decided ? (isWinner ? 'winner' : 'loser') : undefined}
+                cup={finished && isWinner && ende.cup}
+                frameStrength={rahmen}
+                ariaLabel={[`${team.name}: ${String(goals ?? 0)}`, finished && isWinner ? t('matchCard.winnerAria') : null, (first ? kasten.home : kasten.away).bib ? t('matchCard.bibAria') : null].filter((x) => x !== null).join(', ')}
+                testId={`match-box-${matchId}-${seite}`}
+                position={seite}
+              />
+            )}
+          </button>
+        )}
         {penalty !== undefined && (
           <span
             style={{
