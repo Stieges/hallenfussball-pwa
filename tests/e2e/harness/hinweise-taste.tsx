@@ -38,13 +38,13 @@ const quelle: PublicTournamentSource = {
   },
 };
 
-function Zuschauer() {
+export function Zuschauer() {
   const state = usePublicTournament('NORD28', quelle, { storage: null });
   if (state.loadingState === 'error') { return <PublicErrorView errorMessage={state.errorMessage} onRetry={state.refresh} />; }
   return <p data-testid="zuschauer-geladen" style={{ padding: cssVars.spacing.lg, color: cssVars.colors.textPrimary }}>{state.loadingState === 'loading' ? '…' : 'Spielplan geladen'}</p>;
 }
 
-function Anmelden() {
+export function Anmelden() {
   const navigate = useNavigate();
   const status = { ...emptyOutboxStatus(), authRequired: true, pendingByMatch: { 'match-11': 3 } };
   return (
@@ -57,19 +57,17 @@ function Anmelden() {
   );
 }
 
-function Aktualisieren() {
+export function Aktualisieren() {
   const { showWarning } = useToast();
   useEffect(() => {
     const text = i18n.t('common:outbox.notice.clientOutdated');
-    const id = vorher
-      ? showWarning(text, { duration: 0 })
-      : showWarning(text, { duration: 0, action: { label: i18n.t('common:outbox.notice.reloadNow'), onClick: () => { hin.aktualisiert += 1; } } });
-    return () => { void id; };
+    if (vorher) { showWarning(text, { duration: 0 }); return; }
+    showWarning(text, { duration: 0, action: { label: i18n.t('common:outbox.notice.reloadNow'), onClick: () => { hin.aktualisiert += 1; } } });
   }, [showWarning]);
   return <p style={{ padding: cssVars.spacing.lg, color: cssVars.colors.textPrimary }}>Spielplan</p>;
 }
 
-function Seite() {
+export function Seite() {
   const body = fall === 'anmelden' ? <Anmelden /> : fall === 'aktualisieren' ? <Aktualisieren /> : <Zuschauer />;
   return <div style={{ minHeight: '100vh', background: cssVars.colors.background }}>{body}</div>;
 }

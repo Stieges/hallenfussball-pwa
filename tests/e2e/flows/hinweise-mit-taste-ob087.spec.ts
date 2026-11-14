@@ -25,7 +25,7 @@ const lies = (page: Page, schluessel: string): Promise<number | boolean> =>
 /** Stellt einen Schalter des Prüfstands und meldet danach das Netz zurück (`online`), wenn verlangt. */
 const stelle = (page: Page, schluessel: string, wert: boolean, onlineMelden = false): Promise<void> =>
   page.evaluate(([k, v, o]) => {
-    (window as unknown as { __hinweise: Zaehler }).__hinweise[k as string] = v as boolean;
+    (window as unknown as { __hinweise: Zaehler }).__hinweise[k] = v;
     if (o) { window.dispatchEvent(new Event('online')); }
   }, [schluessel, wert, onlineMelden] as const);
 
