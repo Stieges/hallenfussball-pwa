@@ -111,14 +111,23 @@ describe('monitorEditorHelpers – getSlideDescription', () => {
     expect(beschreibung).toBe('Überschrift fehlt');
   });
 
-  it('Live-Folie ohne fieldId: „Feld fehlt“ (@ME-076; früher „Nicht konfiguriert“)', () => {
-    const beschreibung = getSlideDescription(folie('live', {}), {
+  it.each(['live', 'schedule-field'] as const)('@ME-076 %s ohne fieldId: „Feld 1“, wie am Monitor (kein „Feld fehlt“)', (typ) => {
+    const beschreibung = getSlideDescription(folie(typ, {}), {
       groups: [],
       sponsors: [],
-      getFieldDisplayName: (id: string) => id,
+      getFieldDisplayName: (id: string) => (id === 'field-1' ? 'Feld 1' : id),
       t,
     });
-    expect(beschreibung).toBe(de.monitorEditor.setupProblem.field);
-    expect(beschreibung).toBe('Feld fehlt');
+    expect(beschreibung).toBe('Feld 1');
+  });
+
+  it('Gegenbeispiel: mit gewähltem Feld 2 steht „Feld 2“', () => {
+    const beschreibung = getSlideDescription(folie('live', { fieldId: 'field-2' }), {
+      groups: [],
+      sponsors: [],
+      getFieldDisplayName: (id: string) => (id === 'field-2' ? 'Feld 2' : id),
+      t,
+    });
+    expect(beschreibung).toBe('Feld 2');
   });
 });

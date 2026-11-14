@@ -21,10 +21,12 @@ const mockCreateMonitor = vi.fn();
 const mockDeleteMonitor = vi.fn();
 const mockDuplicateMonitor = vi.fn();
 const mockGetDisplayUrl = vi.fn();
+/** Monitore, die der gemockte Hook liefert (je Test setzbar) */
+let mockMonitors: TournamentMonitor[] = [];
 
 vi.mock('../../../hooks', () => ({
   useMonitors: vi.fn(() => ({
-    monitors: [],
+    monitors: mockMonitors,
     createMonitor: mockCreateMonitor,
     deleteMonitor: mockDeleteMonitor,
     duplicateMonitor: mockDuplicateMonitor,
@@ -78,6 +80,7 @@ describe('MonitorsConfigTab', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockMonitors = [];
     mockGetDisplayUrl.mockReturnValue('/display/tournament-1/monitor-1');
 
     // Mock clipboard
@@ -143,9 +146,10 @@ describe('MonitorsConfigTab', () => {
       expect(screen.getByPlaceholderText(/monitors\.namePlaceholder/)).toBeInTheDocument();
     });
 
-    it('versteckt "Neuer Monitor" Button im Create-Modus', async () => {
+    it('mit vorhandenem Monitor: „Neuer Monitor“ ist da, öffnet das Formular und verschwindet, solange es offen ist', async () => {
       const user = userEvent.setup();
-      const tournament = createMockTournament();
+      mockMonitors = [createMockMonitor()];
+      const tournament = createMockTournament(mockMonitors);
 
       render(
         <MonitorsConfigTab
@@ -154,9 +158,42 @@ describe('MonitorsConfigTab', () => {
         />
       );
 
-      await user.click(screen.getByTestId('monitors-start-empty')); // @ME-074: im leeren Reiter heißt der Weg „Leer anlegen“
+      // Gegenprobe: ohne Klick ist die Taste da und das Formular zu
+      expect(screen.getByRole('button', { name: /monitors\.addMonitor/ })).toBeInTheDocument();
+      expect(screen.queryByText('tournament:monitors.createTitle')).not.toBeInTheDocument();
 
+      await user.click(screen.getByRole('button', { name: /monitors\.addMonitor/ }));
+
+      expect(screen.getByText('tournament:monitors.createTitle')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /monitors\.addMonitor/ })).not.toBeInTheDocument();
+    });
+
+    it('mit vorhandenem Monitor: Taste → Name → Anlegen öffnet den Editor des neuen Monitors', async () => {
+      const user = userEvent.setup();
+      mockMonitors = [createMockMonitor()];
+      mockCreateMonitor.mockResolvedValue(createMockMonitor({ id: 'zweiter', name: 'Eingang' }));
+
+      render(
+        <MonitorsConfigTab
+          tournament={createMockTournament(mockMonitors)}
+          onTournamentUpdate={mockOnTournamentUpdate}
+          onEditMonitor={mockOnEditMonitor}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: /monitors\.addMonitor/ }));
+      await user.type(screen.getByPlaceholderText(/monitors\.namePlaceholder/), 'Eingang');
+      await user.click(screen.getByText(/monitors\.createAndEdit/));
+
+      expect(mockCreateMonitor).toHaveBeenCalledWith('Eingang');
+      await waitFor(() => expect(mockOnEditMonitor).toHaveBeenCalledWith('zweiter'));
+      expect(screen.queryByText('tournament:monitors.createTitle')).not.toBeInTheDocument();
+    });
+
+    it('im leeren Reiter gibt es „Neuer Monitor“ nicht, nur die Wege aus @ME-074', () => {
+      render(<MonitorsConfigTab tournament={createMockTournament()} onTournamentUpdate={mockOnTournamentUpdate} />);
+      expect(screen.queryByRole('button', { name: /monitors\.addMonitor/ })).not.toBeInTheDocument();
+      expect(screen.getByTestId('monitors-start-empty')).toBeInTheDocument();
     });
 
     it('ruft createMonitor mit Name auf', async () => {

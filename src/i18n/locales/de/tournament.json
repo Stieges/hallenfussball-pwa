@@ -440,12 +440,12 @@
     "createTitle": "Neuen Monitor anlegen",
     "namePlaceholder": "Monitor-Name (z.B. Haupthalle Eingang)",
     "cancel": "Abbrechen",
-    "creating": "Erstellen...",
-    "createAndEdit": "Erstellen & Bearbeiten",
+    "creating": "Wird angelegt...",
+    "createAndEdit": "Anlegen und bearbeiten",
     "emptyState": "Noch kein Monitor angelegt",
     "emptyStateHint": "Lege einen Monitor an, der Live-Spiele, Tabellen, Spielpläne und Sponsoren als Folienprogramm zeigt.",
     "displayUrlHint": "Öffne die Adresse des Monitors auf einem Fernseher oder Beamer für die Vollbild-Anzeige",
-    "visibilityWarning": "Dieses Turnier ist derzeit nicht öffentlich. Auf einem anderen Gerät — also auf dem Hallen-Monitor — kann die Anzeige das Turnier dann nicht laden. Stelle die Sichtbarkeit unter Admin › Sichtbarkeit auf \"Mit Link teilbar\", bevor du die URL auf dem Monitor öffnest.",
+    "visibilityWarning": "Dieses Turnier ist derzeit nicht öffentlich. Auf einem anderen Gerät — also auf dem Hallen-Monitor — kann die Anzeige das Turnier dann nicht laden. Stelle die Sichtbarkeit unter Admin › Sichtbarkeit auf \"Mit Link teilbar\", bevor du die Adresse auf dem Monitor öffnest.",
     "slidesCount_one": "{{count}} Folie",
     "slidesCount_other": "{{count}} Folien",
     "perSlide": "{{duration}} pro Folie",
@@ -454,9 +454,9 @@
     "editAria": "Monitor \"{{name}}\" bearbeiten",
     "open": "Öffnen",
     "openAria": "Monitor \"{{name}}\" in neuem Tab öffnen",
-    "copyUrl": "URL kopieren",
-    "copyUrlAria": "URL für Monitor \"{{name}}\" kopieren",
-    "urlCopied": "URL kopiert",
+    "copyUrl": "Adresse kopieren",
+    "copyUrlAria": "Adresse für Monitor \"{{name}}\" kopieren",
+    "urlCopied": "Adresse kopiert",
     "copied": "Kopiert!",
     "duplicate": "Duplizieren",
     "duplicateAria": "Monitor \"{{name}}\" duplizieren",
@@ -481,7 +481,7 @@
       "createFailed": "Der Monitor konnte nicht angelegt werden",
       "deleteFailed": "Fehler beim Löschen",
       "duplicateFailed": "Fehler beim Duplizieren",
-      "copyFailed": "URL konnte nicht kopiert werden"
+      "copyFailed": "Adresse konnte nicht kopiert werden"
     },
     "transfer": {
       "openButton": "Monitore übernehmen",
@@ -545,6 +545,7 @@
     "emptyStart": {
       "hallenStandard": "Hallen-Standard anlegen",
       "hallenStandardHint": "Legt einen Monitor mit Live-Spiel, Nächsten Spielen, Tabellen und Zuschauer-QR an.",
+      "hallenStandardHintMultiField": "Legt einen Monitor mit Live-Spiel von Feld 1, Nächsten Spielen, Tabellen und Zuschauer-QR an.",
       "createEmpty": "Leer anlegen",
       "transfer": "Aus anderem Turnier übernehmen"
     },
@@ -927,8 +928,7 @@
     },
     "setupProblem": {
       "sponsor": "Sponsor fehlt",
-      "headline": "Überschrift fehlt",
-      "field": "Feld fehlt"
+      "headline": "Überschrift fehlt"
     },
     "unready": {
       "title": "Folien nicht eingerichtet",
@@ -968,8 +968,8 @@
     "numberOfPlayers": "Anzahl Spieler",
     "sponsor": "Sponsor",
     "showQrCode": "QR-Code anzeigen",
-    "qrTargetLabel": "QR-Code Ziel",
-    "customUrl": "Eigene URL",
+    "qrTargetLabel": "QR-Code-Ziel",
+    "customUrl": "Eigene Adresse",
     "headline": "Überschrift",
     "headlinePlaceholder": "z.B. Wichtige Ankündigung",
     "text": "Text",
@@ -1024,7 +1024,6 @@
       "scheduleGroup": "Zeigt den Spielplan einer Gruppe.",
       "topScorers": "Zeigt die Torschützenliste."
     },
-    "noField": "Kein Feld gewählt",
     "fieldLabel": "Feld {{num}}",
     "allGroups": "Alle Gruppen",
     "groupLabel": "Gruppe {{id}}",

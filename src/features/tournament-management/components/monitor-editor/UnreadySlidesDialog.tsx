@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens';
 import { ConfirmDialog } from '../../../../components/ui/ConfirmDialog';
 import type { MonitorSlide } from '../../../../types/monitor';
-import type { SlideSetupProblem } from './monitorEditorHelpers';
+import type { SlideSetupProblem } from '../../../../core/services/monitorSlideSetup';
 import { slideTypeLabel } from './slideTypeLabels';
 
 export interface UnreadySlide {

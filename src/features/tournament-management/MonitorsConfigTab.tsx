@@ -63,6 +63,8 @@ export function MonitorsConfigTab({
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
 
+  const hallenStandardRunning = useRef(false);
+
   // Ref for timeout cleanup
   const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -139,6 +141,9 @@ export function MonitorsConfigTab({
 
   // @ME-074: Vorlage „Hallen-Standard“ mit einem Tipp anlegen; die Liste zeigt den Monitor, der Editor bleibt zu
   const handleHallenStandard = async () => {
+    // Doppeltipp: solange das Anlegen läuft, zählt nur der erste Tipp (der State wirkt erst nach dem Rendern)
+    if (hallenStandardRunning.current) {return;}
+    hallenStandardRunning.current = true;
     setIsLoading(true);
     setError(null);
     try {
@@ -156,6 +161,7 @@ export function MonitorsConfigTab({
     } catch {
       setError(t('monitors.errors.createFailed'));
     } finally {
+      hallenStandardRunning.current = false;
       setIsLoading(false);
     }
   };
@@ -463,6 +469,8 @@ export function MonitorsConfigTab({
         {monitors.length === 0 ? (
           <MonitorEmptyStart
             canManage={canTransfer && !isCreating}
+            hasRight={canTransfer}
+            multipleFields={tournamentFieldList(tournament).length > 1}
             isLoading={isLoading}
             onHallenStandard={() => void handleHallenStandard()}
             onCreateEmpty={handleStartCreate}

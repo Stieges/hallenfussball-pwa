@@ -80,11 +80,17 @@ const typeBadgeStyle: CSSProperties = {
 // =============================================================================
 
 function getFieldDisplayName(fieldId: string | undefined): string {
+    // Ohne Feld gilt Feld 1, wie am Monitor (@ZM-074, @ME-076)
     if (!fieldId) {
-        return i18n.t('tournament:slidePreview.noField');
+        return i18n.t('tournament:slidePreview.fieldLabel', { num: 1 });
     }
     const num = parseInt(fieldId.replace('field-', ''), 10);
     return isNaN(num) ? fieldId : i18n.t('tournament:slidePreview.fieldLabel', { num });
+}
+
+/** Feldnummer der Folie; ohne Feld gilt Feld 1, wie am Monitor (@ZM-074) */
+function fieldNumberOf(fieldId: string | undefined): number {
+    return fieldId ? parseInt(fieldId.replace('field-', ''), 10) : 1;
 }
 
 function getGroupName(tournament: Tournament, groupId: string | undefined): string {
@@ -112,9 +118,9 @@ function LivePreview({ config, tournament }: { config: SlideConfig; tournament: 
     const fieldName = getFieldDisplayName(config.fieldId);
 
     // Find a running or next match for this field
-    // Ohne gewähltes Feld zeigt die Vorschau keine Spiele eines „ersten“ Felds (kein Widerspruch zur Unterzeile, @ME-075)
-    const fieldNum = config.fieldId ? parseInt(config.fieldId.replace('field-', ''), 10) : undefined;
-    const nextMatch = fieldNum === undefined ? undefined : tournament.matches?.find(m =>
+    // Ohne gewähltes Feld gilt Feld 1: Unterzeile und Spiele passen zusammen (@ME-076)
+    const fieldNum = fieldNumberOf(config.fieldId);
+    const nextMatch = tournament.matches?.find(m =>
         m.field === fieldNum && (m.scoreA === undefined || m.scoreA === null)
     );
 
@@ -177,8 +183,8 @@ function StandingsPreview({ config, tournament }: { config: SlideConfig; tournam
 
 function ScheduleFieldPreview({ config, tournament }: { config: SlideConfig; tournament: Tournament }) {
     const fieldName = getFieldDisplayName(config.fieldId);
-    const fieldNum = config.fieldId ? parseInt(config.fieldId.replace('field-', ''), 10) : undefined;
-    const matches = fieldNum === undefined ? [] : (tournament.matches?.filter(m => m.field === fieldNum).slice(0, 3) ?? []);
+    const fieldNum = fieldNumberOf(config.fieldId);
+    const matches = tournament.matches?.filter(m => m.field === fieldNum).slice(0, 3) ?? [];
 
     return (
         <div style={{ ...slideContentStyle, justifyContent: 'flex-start', paddingTop: '12%' }}>
@@ -263,9 +269,9 @@ function HintPreview({ type }: { type: string }) {
     const key = slideTypeKey(type);
     return (
         <div style={slideContentStyle}>
-            <div style={{ fontSize: '9px', fontWeight: 700 }}>{getTypeLabel(type)}</div>
+            <div style={{ fontSize: cssVars.fontSizes.xs, fontWeight: 700 }}>{getTypeLabel(type)}</div>
             {key && (
-                <div style={{ fontSize: '7px', opacity: 0.7, marginTop: '3px' }}>
+                <div style={{ fontSize: cssVars.fontSizes.xs, opacity: 0.7, marginTop: cssVars.spacing.xs }}>
                     {i18n.t(`tournament:slidePreview.hint.${key}` as never)}
                 </div>
             )}

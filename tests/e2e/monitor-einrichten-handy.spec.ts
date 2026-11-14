@@ -7,6 +7,7 @@ import { mkdirSync } from 'node:fs';
 import type { Page } from '@playwright/test';
 import { test, expect } from './helpers/test-fixtures';
 import { animationenFertig } from './helpers/animationenFertig';
+import { neuLaden } from './helpers/neuLaden';
 import { buildVisualTournament, freezeClock } from './visual/helpers';
 
 const ID = 'nikolaus-monitor';
@@ -48,6 +49,12 @@ test.describe('@ME-074 leerer Reiter', () => {
     await expect(page.getByRole('heading', { name: 'Hallen-Standard' })).toBeVisible();
     await expect(page.getByText('4 Folien')).toBeVisible();
     await expect(page.getByTestId('monitor-editor-save')).toHaveCount(0);
+    await expect(page.getByTestId('monitors-empty-start')).toHaveCount(0);
+    // Gespeichert, nicht nur angezeigt: nach dem Neuladen ist der Monitor noch da (Gegenprobe: der Leerzustand bleibt weg)
+    await neuLaden(page);
+    await expect(page.getByRole('heading', { name: 'Monitore' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Hallen-Standard' })).toBeVisible();
+    await expect(page.getByText('4 Folien')).toBeVisible();
     await expect(page.getByTestId('monitors-empty-start')).toHaveCount(0);
     await page.getByRole('button', { name: /Hallen-Standard.*bearbeiten/ }).click();
     await expect(page.getByTestId(/^monitor-slide-row-/)).toHaveCount(4);
@@ -178,6 +185,18 @@ test.describe('Bilder Monitor einrichten (nachher)', () => {
       await page.getByTestId('monitors-start-hallen-standard').click();
       await expect(page.getByText('4 Folien')).toBeVisible();
       await bild(page, `${g.praefix}-19-hallen-standard-liste`);
+    });
+  }
+
+  for (const g of GERAETE) {
+    test(`${g.praefix}: Monitor-Karte mit Adresse kopieren`, async ({ page, seedIndexedDB }) => {
+      await page.setViewportSize({ width: g.width, height: g.height });
+      await oeffneReiter(page, seedIndexedDB, [{ ...MONITOR_LEER, slides: [
+        { id: 'k1', type: 'live', config: {}, duration: null, order: 0 },
+        { id: 'k2', type: 'next-matches', config: {}, duration: null, order: 1 },
+      ] }]);
+      await expect(page.getByText('Adresse kopieren')).toBeVisible();
+      await bild(page, `${g.praefix}-30-monitor-karte`);
     });
   }
 

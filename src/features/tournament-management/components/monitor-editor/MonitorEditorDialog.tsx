@@ -16,7 +16,8 @@ import { ConfirmDialog } from '../../../../components/ui/ConfirmDialog';
 import { useOptionalToast } from '../../../../components/ui/Toast';
 import { useSlotFields } from '../../hooks/useSlotFields';
 import { useMonitorEditorDraft } from '../../hooks/useMonitorEditorDraft';
-import { buildEditorGroups, slideSetupProblem } from './monitorEditorHelpers';
+import { buildEditorGroups } from './monitorEditorHelpers';
+import { slideSetupProblem } from '../../../../core/services/monitorSlideSetup';
 import { validateMonitorName } from './validateMonitorName';
 import { UnreadySlidesDialog, type UnreadySlide } from './UnreadySlidesDialog';
 import { MonitorSettingsSection } from './MonitorSettingsSection';
@@ -112,7 +113,7 @@ export function MonitorEditorDialog({ tournament, stored, onTournamentUpdate, on
   useEffect(() => {
     if (!scrollToId) {return;}
     const row = document.querySelector(`[data-testid="monitor-slide-row-${scrollToId}"]`);
-    if (row && typeof row.scrollIntoView === 'function') {row.scrollIntoView({ block: 'center' });}
+    if (row && typeof row.scrollIntoView === 'function') {row.scrollIntoView({ block: 'start' });}
     setScrollToId(null);
   }, [scrollToId]);
 

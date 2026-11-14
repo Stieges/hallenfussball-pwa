@@ -99,11 +99,11 @@ describe('@ME-075 Vorschau und Folienzeile widersprechen sich nicht', () => {
   const spiele = [{ id: 'm1', round: 1, field: 1, slotA: { kind: 'team', teamId: 'team-0' }, slotB: { kind: 'team', teamId: 'team-1' } }];
   const mitSpielen = { ...nikolaus(monitor()), matches: spiele } as unknown as Tournament;
 
-  it('ohne gewähltes Feld zeigt die Vorschau „Kein Feld gewählt“ und keine Spiele von Feld 1', () => {
+  it('@ME-076 ohne gewähltes Feld zeigt die Vorschau „Feld 1“ und dessen Spiele, wie der Monitor (@ZM-074)', () => {
     render(<SlidePreview slide={slide('p1', 'schedule-field')} tournament={mitSpielen} />);
-    expect(screen.getByText('Kein Feld gewählt')).toBeInTheDocument();
-    expect(screen.queryByText(/Waging/)).toBeNull();
-    expect(screen.getByText('Keine Spiele')).toBeInTheDocument();
+    expect(screen.getByText('Feld 1')).toBeInTheDocument();
+    expect(screen.queryByText('Kein Feld gewählt')).toBeNull();
+    expect(screen.getByText(/Waging/)).toBeInTheDocument();
   });
 
   it('Gegenbeispiel: mit Feld 1 zeigt die Vorschau die Spiele von Feld 1', () => {

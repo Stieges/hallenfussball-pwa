@@ -6,6 +6,10 @@ import type { TFunction } from 'i18next';
 import type { Tournament, TournamentGroup } from '../../../../types/tournament';
 import type { MonitorSlide } from '../../../../types/monitor';
 import { assignedGroupIds } from '../../../../core/services/monitorConfigTransferChecks';
+import { slideSetupProblem } from '../../../../core/services/monitorSlideSetup';
+
+/** Feld, das der Monitor nimmt, wenn eine Folie keines gewählt hat (@ZM-074) */
+const DEFAULT_FIELD_ID = 'field-1';
 
 export interface SlideDescriptionDeps {
   groups: TournamentGroup[];
@@ -49,28 +53,6 @@ export function buildEditorGroups(tournament: Tournament, t: TFunction<'tourname
   }));
 }
 
-/** Was an einer Folie noch fehlt, damit der Monitor sie zeigen kann (@ME-076) */
-export type SlideSetupProblem = 'sponsor' | 'headline' | 'field';
-
-/**
- * Ist die Folie eingerichtet? `null` = ja. Sponsor-Folie braucht einen vorhandenen Sponsor, „Eigener Text“ eine
- * Überschrift, Folien mit Feld ein Feld (@ME-075, @ME-076). Gruppe ist immer optional („Alle Gruppen“).
- */
-export function slideSetupProblem(slide: MonitorSlide, sponsors: readonly { id: string }[]): SlideSetupProblem | null {
-  const { type, config } = slide;
-  switch (type) {
-    case 'live':
-    case 'schedule-field':
-      return config.fieldId ? null : 'field';
-    case 'sponsor':
-      return config.sponsorId && sponsors.some(s => s.id === config.sponsorId) ? null : 'sponsor';
-    case 'custom-text':
-      return config.headline?.trim() ? null : 'headline';
-    default:
-      return null;
-  }
-}
-
 export function getSlideDescription(slide: MonitorSlide, deps: SlideDescriptionDeps): string {
   const { type, config } = slide;
   const { groups, sponsors, getFieldDisplayName, t } = deps;
@@ -81,7 +63,8 @@ export function getSlideDescription(slide: MonitorSlide, deps: SlideDescriptionD
   switch (type) {
     case 'live':
     case 'schedule-field': {
-      return config.fieldId ? getFieldDisplayName(config.fieldId) : t('monitorEditor.notConfigured');
+      // Ohne Feld gilt Feld 1, wie am Monitor (@ZM-074, @ME-076)
+      return getFieldDisplayName(config.fieldId ?? DEFAULT_FIELD_ID);
     }
     case 'standings':
     case 'schedule-group': {

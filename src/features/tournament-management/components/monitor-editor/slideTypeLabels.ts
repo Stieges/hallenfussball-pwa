@@ -4,8 +4,10 @@
  */
 
 import type { TFunction } from 'i18next';
+import type { SlideType } from '../../../../types/monitor';
 
-const TYPE_KEYS: Readonly<Record<string, string>> = {
+/** Jede Folienart braucht einen Namen: eine neue Art ohne Eintrag fällt beim Übersetzen auf */
+const TYPE_KEYS: Readonly<Record<SlideType, string>> = {
   'live': 'live',
   'standings': 'standings',
   'schedule-field': 'scheduleField',
@@ -20,7 +22,7 @@ const TYPE_KEYS: Readonly<Record<string, string>> = {
 
 /** i18n-Schlüsselteil der Folienart (`slidePreview.types.<teil>`), `null` bei unbekannter Art */
 export function slideTypeKey(type: string): string | null {
-  return Object.prototype.hasOwnProperty.call(TYPE_KEYS, type) ? TYPE_KEYS[type] : null;
+  return Object.prototype.hasOwnProperty.call(TYPE_KEYS, type) ? TYPE_KEYS[type as SlideType] : null;
 }
 
 /** Name der Folienart; unbekannte Art: der Rohwert (nur als letzter Ausweg) */

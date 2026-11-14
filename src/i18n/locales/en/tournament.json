@@ -440,12 +440,12 @@
     "createTitle": "Add a new monitor",
     "namePlaceholder": "Monitor name (e.g., Main Hall Entrance)",
     "cancel": "Cancel",
-    "creating": "Creating...",
-    "createAndEdit": "Create & Edit",
+    "creating": "Adding...",
+    "createAndEdit": "Add and edit",
     "emptyState": "No monitor added yet",
-    "emptyStateHint": "Add a monitor that shows live matches, tables, schedules and sponsors as a slide programme.",
+    "emptyStateHint": "Add a monitor that shows live matches, tables, schedules and sponsors as a slide program.",
     "displayUrlHint": "Open the monitor address on a TV or projector for fullscreen display",
-    "visibilityWarning": "This tournament is currently not public. On a different device — i.e. the venue monitor — the display cannot load it. Set the visibility under Admin › Visibility to \"Shareable with link\" before opening the URL on the monitor.",
+    "visibilityWarning": "This tournament is currently not public. On a different device — i.e. the venue monitor — the display cannot load it. Set the visibility under Admin › Visibility to \"Shareable with link\" before opening the address on the monitor.",
     "slidesCount_one": "{{count}} slide",
     "slidesCount_other": "{{count}} slides",
     "perSlide": "{{duration}} per slide",
@@ -454,9 +454,9 @@
     "editAria": "Edit monitor \"{{name}}\"",
     "open": "Open",
     "openAria": "Open monitor \"{{name}}\" in new tab",
-    "copyUrl": "Copy URL",
-    "copyUrlAria": "Copy URL for monitor \"{{name}}\"",
-    "urlCopied": "URL copied",
+    "copyUrl": "Copy address",
+    "copyUrlAria": "Copy address for monitor \"{{name}}\"",
+    "urlCopied": "Address copied",
     "copied": "Copied!",
     "duplicate": "Duplicate",
     "duplicateAria": "Duplicate monitor \"{{name}}\"",
@@ -481,7 +481,7 @@
       "createFailed": "The monitor could not be added",
       "deleteFailed": "Error deleting",
       "duplicateFailed": "Error duplicating",
-      "copyFailed": "Could not copy URL"
+      "copyFailed": "Could not copy address"
     },
     "transfer": {
       "openButton": "Take over monitors",
@@ -545,6 +545,7 @@
     "emptyStart": {
       "hallenStandard": "Add hall standard",
       "hallenStandardHint": "Adds one monitor with live match, next matches, tables and spectator QR code.",
+      "hallenStandardHintMultiField": "Adds one monitor with the live match of field 1, next matches, tables and spectator QR code.",
       "createEmpty": "Add empty",
       "transfer": "Take over from another tournament"
     },
@@ -927,8 +928,7 @@
     },
     "setupProblem": {
       "sponsor": "Sponsor missing",
-      "headline": "Headline missing",
-      "field": "Field missing"
+      "headline": "Headline missing"
     },
     "unready": {
       "title": "Slides not set up",
@@ -968,8 +968,8 @@
     "numberOfPlayers": "Number of Players",
     "sponsor": "Sponsor",
     "showQrCode": "Show QR code",
-    "qrTargetLabel": "QR Code Target",
-    "customUrl": "Custom URL",
+    "qrTargetLabel": "QR code target",
+    "customUrl": "Custom address",
     "headline": "Headline",
     "headlinePlaceholder": "e.g., Important Announcement",
     "text": "Text",
@@ -989,7 +989,7 @@
     },
     "textAlign": {
       "left": "Left",
-      "center": "Centred",
+      "center": "Centered",
       "right": "Right"
     },
     "colorSchemes": {
@@ -1024,7 +1024,6 @@
       "scheduleGroup": "Shows the schedule of one group.",
       "topScorers": "Shows the top scorer list."
     },
-    "noField": "No field selected",
     "fieldLabel": "Field {{num}}",
     "allGroups": "All groups",
     "groupLabel": "Group {{id}}",

@@ -9,7 +9,8 @@ import { SLIDE_TYPES } from '../../../../types/monitor';
 import { SlideConfigEditor } from '../SlideConfigEditor';
 import { SlidePreview } from '../SlidePreview';
 import { SlideReferenceWarning } from '../SlideReferenceWarning';
-import { getSlideDescription, slideSetupProblem } from './monitorEditorHelpers';
+import { getSlideDescription } from './monitorEditorHelpers';
+import { slideSetupProblem } from '../../../../core/services/monitorSlideSetup';
 import { slideTypeLabel } from './slideTypeLabels';
 import type { SlideActions, SlideContext } from './monitorEditorTypes';
 import {
