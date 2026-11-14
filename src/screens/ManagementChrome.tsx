@@ -47,8 +47,12 @@ const headerStyle: CSSProperties = {
   flexWrap: 'wrap',
   rowGap: cssVars.spacing.sm,
 };
-// Handy: Titel mindestens halbe Breite, die Tasten rutschen sonst in Zeile 2. Ab Tablet: eine Zeile, Titel nimmt den Rest (der Untertitel darf umbrechen)
-const headerContentStyle = (isMobile: boolean): CSSProperties => ({ flex: isMobile ? '1 1 50%' : '1 1 auto', minWidth: 0 });
+// Handy: Titel mindestens halbe Breite, die Tasten rutschen sonst in Zeile 2.
+// Ab Tablet: eine Zeile, der Titel nimmt den Rest und schrumpft zuerst (Grundgröße 0, Untergrenze ein knappes Drittel);
+// nur wenn selbst dann die Tastengruppe nicht daneben passt, rutscht sie als Ganzes in Zeile 2 (@OB-021, @OB-025)
+const headerContentStyle = (isMobile: boolean): CSSProperties => (
+  isMobile ? { flex: '1 1 50%', minWidth: 0 } : { flex: '1 1 0', minWidth: '30%' }
+);
 // Tastengruppe (Zahnrad, Status, Anmeldung): rechts oben; reicht die Breite nicht, rutscht sie als Ganzes in die zweite Zeile
 const headerActionsStyle: CSSProperties = { display: 'flex', alignItems: 'center', marginLeft: 'auto' };
 const backButtonStyle: CSSProperties = {
