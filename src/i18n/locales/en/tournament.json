@@ -139,6 +139,7 @@
       "endQuestionExpired": "Playing time is up – end it now at {{score}}?",
       "endControlledBy": "Field {{field}} is currently controlled by {{name}}",
       "endControlledByOther": "Field {{field}} is currently controlled by another device",
+      "endGoalsMismatch": "Goals have been booked in the cockpit that do not match {{entered}} (there: {{booked}}). The scorer list counts only the booked goals.",
       "teamsMissing": "Enter a result once both teams are known",
       "unavailable": "Entering a result is not possible right now",
       "shootoutTitle": "Penalty shootout result",
