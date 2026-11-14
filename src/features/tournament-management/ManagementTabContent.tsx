@@ -33,6 +33,8 @@ export interface ManagementTabContentProps {
   applyRemote: (tournament: Tournament) => void;
   onMatchesUpdate: (updates: MatchUpdate[]) => void;
   reloadFresh: () => void;
+  /** Wie `reloadFresh`, löst aber auf, wenn das Lesen fertig ist (Hinweis „Spielplan fehlt“). */
+  reloadFreshAsync: () => Promise<void>;
   onNavigateToCockpit: (matchId: string) => void;
   onInitialMatchConsumed: () => void;
   onSettingsDirtyChange: (dirty: boolean) => void;
@@ -42,7 +44,7 @@ export interface ManagementTabContentProps {
 
 export const ManagementTabContent = ({
   tournamentId, tournament, schedule, currentStandings, overallStandings, activeTab, initialMatchId, focusSection,
-  handleTournamentUpdate, saveTournamentOrThrow, applyRemote, onMatchesUpdate, reloadFresh, onNavigateToCockpit,
+  handleTournamentUpdate, saveTournamentOrThrow, applyRemote, onMatchesUpdate, reloadFresh, reloadFreshAsync, onNavigateToCockpit,
   onInitialMatchConsumed, onSettingsDirtyChange, onEditInWizard, onEditMonitor,
 }: ManagementTabContentProps) => {
   const navigate = useNavigate();
@@ -53,7 +55,7 @@ export const ManagementTabContent = ({
     {noMatches && (activeTab === 'schedule' || activeTab === 'tabellen' || activeTab === 'management') && (
       <ScheduleMissingNotice
         tournamentId={tournamentId} isDraft={tournament.status === 'draft'}
-        onOpenWizard={() => { void navigate(`/tournament/${tournamentId}/edit`); }} onReload={reloadFresh}
+        onOpenWizard={() => { void navigate(`/tournament/${tournamentId}/edit`); }} onReload={reloadFreshAsync}
       />
     )}
     {!noMatches && (activeTab === 'schedule' || activeTab === 'tabellen') && (
@@ -63,7 +65,7 @@ export const ManagementTabContent = ({
           {activeTab === 'schedule' && (
             <>
             {/* @LZ-007: ist alles entschieden, steht der Vorschlag zum Abschließen oben im Spielplan */}
-            <FinishTournamentSection tournament={tournament} onReload={reloadFresh} placement="schedule" />
+            <FinishTournamentSection tournament={tournament} onReload={reloadFreshAsync} placement="schedule" />
             <ScheduleTab
               tournament={tournament}
               schedule={schedule}

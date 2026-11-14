@@ -22,8 +22,9 @@ vi.mock('../../core/services/TournamentService', () => {
 });
 
 const STABLE_TOURNAMENT_REPOSITORY = {};
+const repoState: { current: object } = { current: STABLE_TOURNAMENT_REPOSITORY };
 vi.mock('../../core/contexts/RepositoryContext', () => ({
-  useRepositories: () => ({ tournamentRepository: STABLE_TOURNAMENT_REPOSITORY, isRealtimeEnabled: false }),
+  useRepositories: () => ({ tournamentRepository: repoState.current, isRealtimeEnabled: false }),
 }));
 vi.mock('../useRealtimeTournament', () => ({
   useRealtimeTournament: () => ({ isConnected: false, status: 'disconnected' }),
@@ -91,6 +92,7 @@ describe('@W5-042 useTournamentManager: Laden-Anzeige bleibt, bis das Nachlesen 
   beforeEach(() => {
     mockLoadTournament.mockReset();
     mockUpdateTournament.mockReset();
+    repoState.current = STABLE_TOURNAMENT_REPOSITORY;
   });
 
   function held<T>() {
@@ -142,5 +144,48 @@ describe('@W5-042 useTournamentManager: Laden-Anzeige bleibt, bis das Nachlesen 
     unmount();
     await act(async () => { first.resolve(tournament(0)); await first.promise; });
     expect(mockLoadTournament).toHaveBeenCalledTimes(1);
+  });
+
+  it('Turnierwechsel mitten im Nachlesen: isLoading bleibt true, bis die neue Kette fertig ist (kein Aufblitzen des Hinweises)', async () => {
+    const secondOld = held<Tournament>();
+    const firstNew = held<Tournament>();
+    mockLoadTournament
+      .mockResolvedValueOnce(tournament(0)) // alt, erstes Laden
+      .mockReturnValueOnce(secondOld.promise) // alt, Nachlesen (hängt)
+      .mockReturnValueOnce(firstNew.promise); // neu, erstes Laden (hängt)
+    const { result, rerender } = renderHook(({ id }) => useTournamentManager(id), { initialProps: { id: 'T' } });
+    await waitFor(() => expect(mockLoadTournament).toHaveBeenCalledTimes(2));
+
+    rerender({ id: 'U' });
+    await waitFor(() => expect(mockLoadTournament).toHaveBeenCalledTimes(3));
+    await act(async () => { secondOld.resolve(tournament(0)); await secondOld.promise; });
+
+    expect(result.current.isLoading).toBe(true);
+    await act(async () => { firstNew.resolve(tournament(15)); await firstNew.promise; });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+  });
+
+  it('abgebrochene Kette (Wechsel des Dienstes bei gleicher Adresse) setzt isLoading nicht zurück, solange die neue Kette hält', async () => {
+    const secondOld = held<Tournament>();
+    const firstNew = held<Tournament>();
+    const secondNew = held<Tournament>();
+    mockLoadTournament
+      .mockResolvedValueOnce(tournament(0)) // alt, erstes Laden
+      .mockReturnValueOnce(secondOld.promise) // alt, Nachlesen (hängt)
+      .mockResolvedValueOnce(tournament(0)) // neu, erstes Laden (hält)
+      .mockReturnValueOnce(secondNew.promise); // neu, Nachlesen (hängt)
+    const { result, rerender } = renderHook(() => useTournamentManager('T'));
+    await waitFor(() => expect(mockLoadTournament).toHaveBeenCalledTimes(2));
+
+    repoState.current = {}; // neuer Dienst, gleiche Adresse
+    rerender();
+    await waitFor(() => expect(mockLoadTournament).toHaveBeenCalledTimes(4));
+    await act(async () => { secondOld.resolve(tournament(0)); await secondOld.promise; });
+
+    expect(result.current.isLoading).toBe(true);
+    await act(async () => { secondNew.resolve(tournament(15)); await secondNew.promise; });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    firstNew.resolve(tournament(0));
+    repoState.current = STABLE_TOURNAMENT_REPOSITORY;
   });
 });

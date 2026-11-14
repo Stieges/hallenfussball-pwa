@@ -1255,7 +1255,9 @@
     "noRight": "The tournament management will finish the schedule.",
     "notLoadedTitle": "Schedule not loaded",
     "notLoadedText": "The schedule could not be loaded. Check your connection and try again.",
-    "reloadAction": "Reload"
+    "reloadAction": "Reload",
+    "reloading": "Loading …",
+    "stillEmpty": "The server has not delivered a schedule yet."
   },
   "rights": {
     "leadOnlyHint": "Only the tournament management can change this",

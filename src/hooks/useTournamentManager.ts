@@ -108,8 +108,9 @@ export function useTournamentManager(tournamentId: string) {
 
     // Load Tournament
     // `holdWhenEmpty` (@W5-042): ergibt das Laden ein Turnier OHNE Spiele, bleibt `isLoading` stehen; der Aufrufer löst es mit dem
-    // anschließenden frischen Lesen auf (dessen `finally` setzt es zurück). So blitzt der Hinweis „Spielplan noch nicht erstellt“ nie auf.
-    const loadTournament = useCallback(async (options?: { fresh?: boolean; holdWhenEmpty?: boolean }): Promise<Tournament | null | undefined> => {
+    // anschließenden frischen Lesen auf (dessen `finally` setzt es zurück). `cancelled`: eine abgebrochene Kette (Unmount, Turnier-/Dienstwechsel)
+    // setzt `isLoading` nie zurück, ein neues erstes Laden hält es evtl. gerade fest. So blitzt der Hinweis „Spielplan noch nicht erstellt“ nie auf.
+    const loadTournament = useCallback(async (options?: { fresh?: boolean; holdWhenEmpty?: boolean; cancelled?: () => boolean }): Promise<Tournament | null | undefined> => {
         if (!tournamentId) {return undefined;}
         const stillActive = () => activeIdRef.current === tournamentId;
         let hold = false;
@@ -128,7 +129,7 @@ export function useTournamentManager(tournamentId: string) {
             setError('Fehler beim Laden des Turniers');
             return undefined;
         } finally {
-            if (stillActive() && !hold) { setIsLoading(false); }
+            if (stillActive() && !hold && !options?.cancelled?.()) { setIsLoading(false); }
         }
     }, [service, tournamentId]);
 
@@ -143,9 +144,10 @@ export function useTournamentManager(tournamentId: string) {
     // Unmount oder Turnierwechsel (gesetzt wird in beiden Fällen ohnehin nur für die aktive Adresse).
     useEffect(() => {
         let cancelled = false;
-        void loadTournament({ holdWhenEmpty: true }).then((first) => {
+        const isCancelled = () => cancelled;
+        void loadTournament({ holdWhenEmpty: true, cancelled: isCancelled }).then((first) => {
             if (cancelled) { return undefined; }
-            if (first?.matches.length === 0) { return loadTournament(FRESH); }
+            if (first?.matches.length === 0) { return loadTournament({ ...FRESH, cancelled: isCancelled }); }
             return undefined;
         });
         return () => { cancelled = true; };

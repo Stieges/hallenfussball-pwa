@@ -1255,7 +1255,9 @@
     "noRight": "Die Turnierleitung stellt den Spielplan fertig.",
     "notLoadedTitle": "Spielplan nicht geladen",
     "notLoadedText": "Der Spielplan konnte nicht geladen werden. Prüfe die Verbindung und lade erneut.",
-    "reloadAction": "Erneut laden"
+    "reloadAction": "Erneut laden",
+    "reloading": "Wird geladen …",
+    "stillEmpty": "Der Server hat noch keinen Spielplan geliefert."
   },
   "rights": {
     "leadOnlyHint": "Ändern nur durch die Turnierleitung",

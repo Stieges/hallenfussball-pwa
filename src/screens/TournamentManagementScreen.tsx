@@ -102,6 +102,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
 
   // Paket TB-B: nach dem Eintragen oder Zurücknehmen einer Gleichstands-Entscheidung frisch aus der Cloud lesen
   const reloadFresh = useCallback(() => { void reload({ fresh: true }); }, [reload]);
+  const reloadFreshAsync = useCallback(() => reload({ fresh: true }), [reload]);
   // A-15b (@TM-071, @TM-150): nach einer angenommenen Korrektur schließt das Gerät der Turnierleitung die Gruppe erneut ab
   useAutoRecompletion(tournamentId, tournament, reloadFresh);
 
@@ -239,7 +240,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
           currentStandings={currentStandings} overallStandings={overallStandings} activeTab={activeTab}
           initialMatchId={initialMatchId} focusSection={searchParams.get('abschnitt') ?? undefined}
           handleTournamentUpdate={handleTournamentUpdate} saveTournamentOrThrow={saveTournamentOrThrow}
-          applyRemote={applyRemote} onMatchesUpdate={handleMatchesUpdate} reloadFresh={reloadFresh}
+          applyRemote={applyRemote} onMatchesUpdate={handleMatchesUpdate} reloadFresh={reloadFresh} reloadFreshAsync={reloadFreshAsync}
           onNavigateToCockpit={handleNavigateToCockpit} onInitialMatchConsumed={() => setInitialMatchId(null)}
           onSettingsDirtyChange={setIsSettingsDirty} onEditInWizard={onEditInWizard} onEditMonitor={setEditingMonitorId}
         />
