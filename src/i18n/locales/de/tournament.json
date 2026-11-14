@@ -1248,6 +1248,17 @@
       "ownGoals_other": "{{count}} Eigentore"
     }
   },
+  "scheduleMissing": {
+    "title": "Spielplan noch nicht erstellt",
+    "text": "Für dieses Turnier liegen noch keine Spiele vor. Stelle es im Wizard fertig, dann erscheint hier der Spielplan.",
+    "action": "Im Wizard fertigstellen",
+    "noRight": "Die Turnierleitung stellt den Spielplan fertig.",
+    "notLoadedTitle": "Spielplan nicht geladen",
+    "notLoadedText": "Der Spielplan konnte nicht geladen werden. Prüfe die Verbindung und lade erneut.",
+    "reloadAction": "Erneut laden",
+    "reloading": "Wird geladen …",
+    "stillEmpty": "Weiterhin kein Spielplan da. Frag im Zweifel die Turnierleitung."
+  },
   "rights": {
     "leadOnlyHint": "Ändern nur durch die Turnierleitung",
     "closedTitle": "Turnier abgeschlossen",

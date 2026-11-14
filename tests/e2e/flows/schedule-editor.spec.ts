@@ -18,6 +18,7 @@
 import { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
 import { t } from '../helpers/i18n';
+import { mitSpielplan } from '../helpers/seedMatches';
 
 // CI skip removed - using reliable seeding fixture
 
@@ -41,7 +42,7 @@ function getFutureDate(): string {
  */
 function createTestTournament() {
   const futureDate = getFutureDate();
-  return {
+  return mitSpielplan({
     id: 'editor-test-tournament',
     status: 'published',
     sport: 'football',
@@ -83,10 +84,10 @@ function createTestTournament() {
       { id: '00000000-0000-4000-8000-0000000000a5', name: '1. FC Nürnberg' },
       { id: '00000000-0000-4000-8000-0000000000a6', name: 'SpVgg Fürth' },
     ],
-    matches: [],
+    // matches: die Spiele erzeugt `mitSpielplan` (die Verwaltung erzeugt beim Öffnen keinen Plan, @W5-042)
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-  };
+  });
 }
 
 /**

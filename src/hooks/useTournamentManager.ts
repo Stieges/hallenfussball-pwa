@@ -107,31 +107,53 @@ export function useTournamentManager(tournamentId: string) {
     }
 
     // Load Tournament
-    const loadTournament = useCallback(async (options?: { fresh?: boolean }) => {
-        if (!tournamentId) {return;}
+    // `holdWhenEmpty` (@W5-042): ergibt das Laden ein Turnier OHNE Spiele, bleibt `isLoading` stehen; der Aufrufer löst es mit dem
+    // anschließenden frischen Lesen auf (dessen `finally` setzt es zurück). `cancelled`: eine abgebrochene Kette (Unmount, Turnier-/Dienstwechsel)
+    // setzt `isLoading` nie zurück, ein neues erstes Laden hält es evtl. gerade fest. So blitzt der Hinweis „Spielplan noch nicht erstellt“ nie auf.
+    const loadTournament = useCallback(async (options?: { fresh?: boolean; holdWhenEmpty?: boolean; cancelled?: () => boolean }): Promise<Tournament | null | undefined> => {
+        if (!tournamentId) {return undefined;}
         const stillActive = () => activeIdRef.current === tournamentId;
+        let hold = false;
 
         try {
             if (!options?.fresh) { setIsLoading(true); } // A-08f3b: Laden-Anzeige nur beim ersten Laden
-            const data = await service.loadTournament(tournamentId, options);
-            if (!stillActive()) { return; }
+            const data = await service.loadTournament(tournamentId, options?.fresh ? { fresh: true } : undefined);
+            if (!stillActive()) { return undefined; }
+            hold = !!options?.holdWhenEmpty && data?.matches.length === 0;
             setTournament(data);
             setError(null);
+            return data;
         } catch (err) {
-            if (!stillActive()) { return; }
+            if (!stillActive()) { return undefined; }
             console.error('Failed to load tournament:', err);
             setError('Fehler beim Laden des Turniers');
+            return undefined;
         } finally {
-            if (stillActive()) { setIsLoading(false); }
+            if (stillActive() && !hold && !options?.cancelled?.()) { setIsLoading(false); }
         }
     }, [service, tournamentId]);
 
-    // Initial Load
+    // Außen bleibt `reload` ohne Rückgabewert (Aufrufer erwarten `void | Promise<void>`)
+    const reload = useCallback(async (options?: { fresh?: boolean }): Promise<void> => { await loadTournament(options); }, [loadTournament]);
+
+    // Initial Load. @W5-042: das erste Laden ist local-first (die lokale Kopie steht sofort); der Cloud-Abruf läuft im Hintergrund und
+    // meldet sein Ergebnis nicht an die Anzeige. Liegt lokal nur eine ältere Kopie OHNE Spiele (z. B. der Entwurf, den ein anderes Gerät
+    // inzwischen festgelegt hat), folgt genau ein frisches Lesen: es hängt sich an den laufenden Abruf, führt den Stand des Servers mit
+    // der lokalen Kopie zusammen und zeigt ihn an (ohne Netz bleibt die lokale Kopie). Das Lesen schreibt nie.
+    // Bis das Nachlesen fertig ist (auch wenn es scheitert), bleibt die Laden-Anzeige stehen; `cancelled` verhindert das Nachlesen nach
+    // Unmount oder Turnierwechsel (gesetzt wird in beiden Fällen ohnehin nur für die aktive Adresse).
     useEffect(() => {
-        void loadTournament();
+        let cancelled = false;
+        const isCancelled = () => cancelled;
+        void loadTournament({ holdWhenEmpty: true, cancelled: isCancelled }).then((first) => {
+            if (cancelled) { return undefined; }
+            if (first?.matches.length === 0) { return loadTournament({ ...FRESH, cancelled: isCancelled }); }
+            return undefined;
+        });
+        return () => { cancelled = true; };
     }, [loadTournament]);
     // A-08f3b (@FU-087, @FU-001): Push und Abfrage-Ausweichen lesen frisch aus der Cloud
-    const loadFresh = useCallback(() => loadTournament(FRESH), [loadTournament]);
+    const loadFresh = useCallback(async (): Promise<void> => { await loadTournament(FRESH); }, [loadTournament]);
     useEngineCatchUpOnCloudChange(tournamentId); // H-1: geladene Engine-Kopien nachladen
     // A-08f3b2-F (I-1): Pushes eines Turniers bündeln (Debounce + Max-Wait), dann EIN frisches Lesen
     const loadFreshRef = useRef(loadFresh);
@@ -292,7 +314,7 @@ export function useTournamentManager(tournamentId: string) {
         handleTournamentUpdate,
         saveTournamentOrThrow,
         applyRemote,
-        reload: loadTournament,
+        reload,
         scheduleService: service.schedule,
         // Realtime status
         isRealtimeConnected,

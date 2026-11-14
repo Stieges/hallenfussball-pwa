@@ -54,7 +54,7 @@ const INVENTORY: Record<string, Entry> = {
   [`${HOME}ManagementTab.tsx`]: { gate: `${HOME}ManagementTab.tsx`, why: 'Cockpit: canPlay/istLeitung aus useCan' },
   [`${HOME}SettingsTab.tsx`]: { gate: `${HOME}SettingsTab.tsx`, why: 'Formular hinter useCan(tournamentSettings), Wizard-Einstieg hinter useCan(restructure)' },
   [`${HOME}TeamsTab.tsx`]: { gate: `${HOME}TeamsTab.tsx`, why: 'useCan(teams/restructure)' },
-  'src/screens/TournamentManagementScreen.tsx': { gate: 'src/screens/TournamentManagementScreen.tsx', why: 'Hinweis-Kasten, Monitor-Editor und Trefferliste nur offen' },
+  [`${HOME}ManagementTabContent.tsx`]: { gate: 'src/screens/TournamentManagementScreen.tsx', why: 'reicht die Speicherwege nur an die Reiter weiter; die Sperre sitzt im Screen (useTournamentClosed: Hinweis-Kasten, Monitor-Editor) und in den Reitern (SettingsTab, TeamsTab, ...)' },
   // --- gesperrt, Sperre sitzt im Elternteil ---
   [`${ADMIN}categories/MatchCockpit/index.tsx`]: { gate: `${ADMIN}components/CategoryRightGate.tsx`, why: 'CLOSED_LOCKED: nach dem Abschluss nur der Hinweis' },
   [`${ADMIN}categories/Metadata/index.tsx`]: { gate: `${ADMIN}components/CategoryRightGate.tsx`, why: 'Kategorie hinter useCan(tournamentSettings)' },

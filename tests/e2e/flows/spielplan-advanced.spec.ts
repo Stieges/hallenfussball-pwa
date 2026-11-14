@@ -18,6 +18,7 @@
 
 import { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
+import { mitSpielplan } from '../helpers/seedMatches';
 import { schliesseTorAuswahl } from '../helpers/cockpitNeu';
 
 import { abpfiffHalten } from '../helpers/abpfiff';
@@ -48,7 +49,7 @@ function getFutureDate(): string {
  */
 function createTestTournament() {
   const futureDate = getFutureDate();
-  return {
+  return mitSpielplan({
     id: 'spielplan-advanced-test',
     status: 'published',
     sport: 'football',
@@ -85,10 +86,10 @@ function createTestTournament() {
       { id: '00000000-0000-4000-8000-0000000000a5', name: '1. FC Nürnberg' },
       { id: '00000000-0000-4000-8000-0000000000a6', name: 'SpVgg Fürth' },
     ],
-    matches: [],
+    // matches: die Spiele erzeugt `mitSpielplan` (die Verwaltung erzeugt beim Öffnen keinen Plan, @W5-042)
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-  };
+  });
 }
 
 // Helper: Navigate to tournament and start a match

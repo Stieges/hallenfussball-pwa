@@ -7,6 +7,7 @@
  */
 
 import { test, expect } from '../helpers/test-fixtures';
+import { mitSpielplan } from '../helpers/seedMatches';
 
 import { abpfiffHalten } from '../helpers/abpfiff';
 /**
@@ -25,7 +26,7 @@ function getFutureDate(): string {
  */
 function createTestTournament(einstellungen?: Record<string, unknown>) {
   const futureDate = getFutureDate();
-  return {
+  return mitSpielplan({
     id: 'e2e-test-tournament',
     status: 'published',
     sport: 'football',
@@ -63,11 +64,10 @@ function createTestTournament(einstellungen?: Record<string, unknown>) {
       { id: '00000000-0000-4000-8000-0000000000e3', name: 'FC Test C' },
       { id: '00000000-0000-4000-8000-0000000000e4', name: 'FC Test D' },
     ],
-    // Let the app generate matches from the schedule
-    matches: [],
+    // matches: die Spiele erzeugt `mitSpielplan` (die Verwaltung erzeugt beim Öffnen keinen Plan, @W5-042)
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-  };
+  });
 }
 
 /** Die Zeile mit „Spiel n“ und der gespielten Zeit: am Laptop die Kopfzeile der Tafel (@SL-180), sonst die Zeile unter der Uhr */
