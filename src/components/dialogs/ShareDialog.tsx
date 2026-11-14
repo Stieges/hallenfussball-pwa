@@ -1,18 +1,39 @@
-import { useState, useEffect, CSSProperties } from 'react';
+/**
+ * Dialog „Spielplan teilen“ (@OB-074, @OB-085): Code, QR-Code und Link; die Taste „Link kopieren“ steht im festen Fuß
+ * (`DialogActions`), nur der Inhalt scrollt. Öffentlich: kurze Adresse `https://<host>/live/CODE` (ohne „#/“, @ZM-208) –
+ * QR-Code, Link und Kopieren tragen dieselbe Adresse. Nicht öffentlich: interne Adresse wie bisher.
+ * Größen- und Höhenregeln: `shareDialogStyles.ts`.
+ */
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from './Dialog';
-import { Button } from '../ui/Button';
-import { Icons } from '../ui/Icons';
-import { cssVars } from '../../design-tokens'
+import { DialogActions } from '../ui/molecules/DialogActions';
+import { cssVars } from '../../design-tokens';
 import { generateQRCode } from '../../utils/qrCodeGenerator';
 import {
   shareUrl,
   copyToClipboard,
   isShareSupported,
-  generateLiveUrl,
+  generateShortLiveUrl,
   generateTournamentUrl,
   getShareMessage,
 } from '../../utils/shareUtils';
+import {
+  shareDialogCss,
+  qrSectionStyle,
+  qrImageStyle,
+  qrPlaceholderStyle,
+  qrCaptionStyle,
+  urlSectionStyle,
+  labelStyle,
+  urlTextStyle,
+  deepLinkLabelStyle,
+  feedbackStyle,
+  shareCodeDisplayStyle,
+  shareCodeLabelStyle,
+  shareCodeValueStyle,
+  notPublicHintStyle,
+} from './shareDialogStyles';
 
 export interface ShareDialogProps {
   isOpen: boolean;
@@ -44,14 +65,14 @@ export const ShareDialog = ({
   const [feedback, setFeedback] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [useDeepLink, setUseDeepLink] = useState(false);
+  const linkRef = useRef<HTMLParagraphElement>(null);
 
-  // Determine Canonical URL
+  // Öffentlich: kurze Adresse ohne „#/“ (@OB-085); sonst die interne Adresse
   const hasShareCode = isPublic && shareCode;
   const canonicalUrl = baseUrl ?? (hasShareCode
-    ? generateLiveUrl(shareCode)
+    ? generateShortLiveUrl(shareCode)
     : generateTournamentUrl(tournamentId));
 
-  // Determine effective URL
   const hasDeepLinkOption = !!deepLinkUrl && deepLinkUrl !== canonicalUrl;
   const activeUrl = (hasDeepLinkOption && useDeepLink) ? deepLinkUrl : canonicalUrl;
 
@@ -70,7 +91,6 @@ export const ShareDialog = ({
           setIsGenerating(false);
         });
     }
-
   }, [isOpen, activeUrl]);
 
   // Clear feedback after 3 seconds
@@ -83,11 +103,7 @@ export const ShareDialog = ({
 
   const handleCopyLink = async () => {
     const success = await copyToClipboard(activeUrl);
-    if (success) {
-      setFeedback(t('share.copySuccess'));
-    } else {
-      setFeedback(t('share.copyError'));
-    }
+    setFeedback(success ? t('share.copySuccess') : t('share.copyError'));
   };
 
   const handleNativeShare = async () => {
@@ -96,188 +112,85 @@ export const ShareDialog = ({
       title: t('share.nativeShareTitle', { title: tournamentTitle }),
       text: t('share.nativeShareText', { title: tournamentTitle }),
     });
-
-    const message = getShareMessage(result);
-    setFeedback(message);
+    setFeedback(getShareMessage(result));
   };
 
-  const containerStyle: CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.xl,
+  // Antippen markiert die ganze Adresse (auswählbarer Text, kein Eingabefeld, damit nichts abgeschnitten wird)
+  const selectLink = () => {
+    const node = linkRef.current;
+    const selection = window.getSelection();
+    if (!node || !selection) {return;}
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    selection.removeAllRanges();
+    selection.addRange(range);
   };
 
-  const qrSectionStyle: CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: cssVars.spacing.md,
-  };
-
-  const qrImageStyle: CSSProperties = {
-    width: '100%',
-    maxWidth: '220px',
-    aspectRatio: '1 / 1',
-    borderRadius: cssVars.borderRadius.md,
-    border: `1px solid ${cssVars.colors.border}`,
-    background: cssVars.colors.qrBackground,
-    padding: cssVars.spacing.md,
-  };
-
-  const qrPlaceholderStyle: CSSProperties = {
-    ...qrImageStyle,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: cssVars.colors.textMuted,
-    fontSize: cssVars.fontSizes.sm,
-  };
-
-  const qrCaptionStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.md,
-    color: cssVars.colors.textSecondary,
-    textAlign: 'center',
-  };
-
-  const urlSectionStyle: CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.sm,
-  };
-
-  const labelStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textSecondary,
-    fontWeight: cssVars.fontWeights.medium,
-  };
-
-  const urlInputStyle: CSSProperties = {
-    width: '100%',
-    padding: cssVars.spacing.md,
-    borderRadius: cssVars.borderRadius.sm,
-    border: `1px solid ${cssVars.colors.borderControl}`,
-    background: cssVars.colors.surface,
-    color: cssVars.colors.textPrimary,
-    fontSize: cssVars.fontSizes.sm,
-    fontFamily: cssVars.fontFamilies.mono,
-    cursor: 'text',
-    wordBreak: 'break-all',
-  };
-
-  const buttonGroupStyle: CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.md,
-  };
-
-  const feedbackStyle: CSSProperties = {
-    padding: cssVars.spacing.md,
-    borderRadius: cssVars.borderRadius.sm,
-    background: cssVars.colors.primary,
-    color: cssVars.colors.background,
-    textAlign: 'center',
-    fontSize: cssVars.fontSizes.md,
-    fontWeight: cssVars.fontWeights.medium,
-    animation: 'fadeIn 0.2s ease-out',
-  };
-
-  const shareCodeDisplayStyle: CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: cssVars.spacing.xs,
-    padding: cssVars.spacing.md,
-    background: cssVars.colors.surfaceElevated,
-    borderRadius: cssVars.borderRadius.md,
-    marginBottom: cssVars.spacing.md,
-  };
-
-  const shareCodeValueStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.headlineLg,
-    fontWeight: cssVars.fontWeights.bold,
-    // eslint-disable-next-line local-rules/no-hardcoded-font-styles -- Monospace is intentional for share code display
-    fontFamily: 'monospace',
-    letterSpacing: '0.2em',
-    color: cssVars.colors.primary,
-  };
-
-  const notPublicHintStyle: CSSProperties = {
-    padding: cssVars.spacing.md,
-    background: cssVars.colors.warningLight,
-    borderRadius: cssVars.borderRadius.md,
-    border: `1px solid ${cssVars.colors.warningBorder}`,
-    color: cssVars.colors.warning,
-    fontSize: cssVars.fontSizes.sm,
-    textAlign: 'center',
-    marginBottom: cssVars.spacing.md,
-  };
+  // Fuß: Rückmeldung über der Taste, „Link kopieren“ als Haupttaste, Systemfunktion „Teilen“ als Nebentaste
+  const footer = (
+    <>
+      {feedback && (
+        <div style={feedbackStyle} role="status" data-testid="share-dialog-feedback">
+          {feedback}
+        </div>
+      )}
+      <DialogActions
+        data-testid="share-dialog-actions"
+        primary={{ label: t('share.copyLink'), onClick: () => void handleCopyLink(), 'data-testid': 'share-dialog-copy' }}
+        secondary={isShareSupported()
+          ? [{ label: t('share.shareButton'), onClick: () => void handleNativeShare(), 'data-testid': 'share-dialog-native' }]
+          : []}
+      />
+    </>
+  );
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} title={t('share.title')} maxWidth="500px">
-      <div style={containerStyle}>
-        {/* Share Code Display (if public) */}
-        {hasShareCode && (
-          <div style={shareCodeDisplayStyle}>
-            <span style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm }}>
-              {t('share.shareCode')}
-            </span>
+    <Dialog isOpen={isOpen} onClose={onClose} title={t('share.title')} maxWidth="500px" footer={footer}>
+      <div className="share-dialog-body">
+        {hasShareCode ? (
+          <div style={shareCodeDisplayStyle} data-testid="share-dialog-code">
+            <span style={shareCodeLabelStyle}>{t('share.shareCode')}</span>
             <span style={shareCodeValueStyle}>{shareCode}</span>
           </div>
-        )}
-
-        {/* Not Public Hint */}
-        {!hasShareCode && (
-          <div style={notPublicHintStyle}>
+        ) : (
+          <div style={notPublicHintStyle} data-testid="share-dialog-not-public">
             {'⚠️ '}{t('share.notPublicHint')}
           </div>
         )}
 
-        {/* QR Code Section */}
         <div style={qrSectionStyle}>
           {isGenerating ? (
-            <div style={qrPlaceholderStyle}>{t('share.qrGenerating')}</div>
+            <div className="share-dialog-qr" style={qrPlaceholderStyle}>{t('share.qrGenerating')}</div>
           ) : qrCode ? (
-            <img src={qrCode} alt="QR Code" style={qrImageStyle} />
+            <img src={qrCode} alt="QR Code" className="share-dialog-qr" style={qrImageStyle} data-testid="share-dialog-qr" />
           ) : (
-            <div style={qrPlaceholderStyle}>{t('share.qrNotAvailable')}</div>
+            <div className="share-dialog-qr" style={qrPlaceholderStyle}>{t('share.qrNotAvailable')}</div>
           )}
           <p style={qrCaptionStyle}>
-            {hasShareCode
-              ? t('share.qrCaptionPublic')
-              : t('share.qrCaptionPrivate')}
+            {hasShareCode ? t('share.qrCaptionPublic') : t('share.qrCaptionPrivate')}
           </p>
         </div>
 
-
-
-        {/* URL Display Section */}
         <div style={urlSectionStyle}>
-          <label style={labelStyle}>
+          <span style={labelStyle}>
             {hasShareCode ? t('share.publicLink') : t('share.internalLink')}
-          </label>
-          <input
-            type="text"
-            value={activeUrl}
-            readOnly
-            style={urlInputStyle}
-            onClick={(e) => e.currentTarget.select()}
-          />
+          </span>
+          <p
+            ref={linkRef}
+            style={urlTextStyle}
+            data-testid="share-dialog-link"
+            onClick={selectLink}
+          >
+            {activeUrl}
+          </p>
 
-          {/* Deep Link Toggle */}
           {hasDeepLinkOption && (
-            <label style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: cssVars.spacing.sm,
-              cursor: 'pointer',
-              marginTop: cssVars.spacing.xs,
-              userSelect: 'none',
-            }}>
+            <label style={deepLinkLabelStyle}>
               <input
                 type="checkbox"
                 checked={useDeepLink}
                 onChange={(e) => setUseDeepLink(e.target.checked)}
-                style={{ width: '16px', height: '16px', accentColor: cssVars.colors.primary }}
+                style={{ width: cssVars.iconSizes.md, height: cssVars.iconSizes.md, accentColor: cssVars.colors.primary }}
               />
               <span style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textPrimary }}>
                 {t('share.deepLinkOption')}
@@ -285,46 +198,8 @@ export const ShareDialog = ({
             </label>
           )}
         </div>
-
-        {/* Action Buttons */}
-        <div style={buttonGroupStyle}>
-          <Button
-            variant="primary"
-            size="md"
-            icon={<Icons.Copy />}
-            onClick={() => void handleCopyLink()}
-            fullWidth
-          >
-            {t('share.copyLink')}
-          </Button>
-
-          {isShareSupported() && (
-            <Button
-              variant="secondary"
-              size="md"
-              icon={<Icons.Share />}
-              onClick={() => void handleNativeShare()}
-              fullWidth
-            >
-              {t('share.shareButton')}
-            </Button>
-          )}
-        </div>
-
-        {/* Feedback Message */}
-        {feedback && (
-          <div style={feedbackStyle}>
-            {feedback}
-          </div>
-        )}
-
-        <style>{`
-          @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
-        `}</style>
       </div>
-    </Dialog >
+      <style>{shareDialogCss}</style>
+    </Dialog>
   );
 };
