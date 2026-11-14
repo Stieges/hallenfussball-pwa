@@ -66,6 +66,16 @@ describe('F-01 Kopf der Turnierseite', () => {
     expect(screen.getByTestId('management-header-actions').style.marginLeft).toBe('auto');
   });
 
+  it('@OB-021 C-KOPF-UEBERLAUF-TABLET-LANGTEXT: auch ab Tablet-Breite (isMobile aus) bricht der Kopf um, statt die Seite breiter als das Fenster zu machen', () => {
+    render(
+      <MemoryRouter>
+        <ManagementHeader tournament={tournament} isMobile={false} activeTab="schedule" isSettingsDirty={false} onTabChange={vi.fn()}
+          onNavigateToLogin={vi.fn()} onNavigateToRegister={vi.fn()} onNavigateToProfile={vi.fn()} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(LANGER_NAME).closest('header')!.style.flexWrap).toBe('wrap');
+  });
+
   it('@OB-022 das Zahnrad ist mindestens 44 × 44 groß', () => {
     kopf();
     const zahnrad = screen.getByTestId('management-admin-entry');

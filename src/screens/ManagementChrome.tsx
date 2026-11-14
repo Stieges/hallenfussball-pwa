@@ -42,7 +42,9 @@ const headerStyle: CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  // @OB-025: reicht die Breite nicht, rutschen die Tasten in eine zweite Zeile; der Titel bleibt lesbar (nie Buchstabe für Buchstabe)
+  // @OB-025: reicht die Breite nicht, rutschen die Tasten in eine zweite Zeile; der Titel bleibt lesbar (nie Buchstabe für Buchstabe).
+  // Bei jeder Breite (C-KOPF-UEBERLAUF-TABLET-LANGTEXT: am Tablet hochkant schob die Tastengruppe mit langem Text die Seite auf 800 px)
+  flexWrap: 'wrap',
   rowGap: cssVars.spacing.sm,
 };
 // Handy: Titel mindestens halbe Breite, die Tasten rutschen sonst in Zeile 2. Ab Tablet: eine Zeile, Titel nimmt den Rest (der Untertitel darf umbrechen)
@@ -120,7 +122,7 @@ export function ManagementHeader(p: ManagementHeaderProps): ReactElement {
   const { tournament, isMobile, activeTab, isSettingsDirty, onTabChange } = p;
   return (
     <>
-      <header style={{ ...headerStyle, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
+      <header style={headerStyle}>
         {p.onBack && (
           <button onClick={p.onBack} style={backButtonStyle} title="Zurück zum Dashboard">←</button>
         )}

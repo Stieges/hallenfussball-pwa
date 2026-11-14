@@ -240,7 +240,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
 
   return (
     <>
-      <div style={containerStyle} className="schedule-tab-container">
+      <div style={containerStyle} className="schedule-tab-container" data-actions-in-flow={isEditing ? undefined : ''}>
         <Card style={editModeCardStyle} className="schedule-tab-card">
           {/* GA4 A-13c: Zustand der Phasen und Vorschlag „Gruppe abschließen“ (nur Turnierleitung), nicht im Verwaltungskopf */}
           <GroupCompletionTop />
@@ -325,6 +325,9 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
                 currentMatches={draft.draftTournament.matches}
                 tournamentTeams={tournament.teams}
                 editable={!closed}
+                showTournamentHeader={false}
+                participantsCollapsed
+                showListHead
                 editingSchedule={isEditing}
                 pendingChanges={isEditing ? draft.changed : undefined}
                 onScoreChange={closed ? undefined : handleScoreChange}

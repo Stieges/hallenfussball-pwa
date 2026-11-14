@@ -135,9 +135,10 @@ export const ScheduleActionButtons = ({
               z-index: 100 !important;
             }
 
-            /* Steht oben im Spielplan die Karte „Läuft / Nächstes Spiel“ (@ZP-109), schwebt die Leiste nie über ihr: sie bleibt im Fluss unter der Karte
-               (wie ab Tablet-Breite), bei jeder Fensterhöhe ohne Messen. Ohne Karte (Bearbeiten-Modus, alle beendet) schwebt sie wie bisher. */
-            body:has([data-no-float-cover]) .schedule-action-buttons {
+            /* Steht oben im Spielplan die Karte „Läuft / Nächstes Spiel“ (@ZP-109) oder ist der Spielplan nicht im Bearbeiten-Modus (data-actions-in-flow, ScheduleTab),
+               schwebt die Leiste nie über Karte, Werkzeugen und Liste: sie bleibt im Fluss (wie ab Tablet-Breite, @OB-074), bei jeder Fensterhöhe ohne Messen.
+               Nur im Bearbeiten-Modus schwebt sie wie bisher. */
+            body:has([data-no-float-cover], [data-actions-in-flow]) .schedule-action-buttons {
               position: static !important;
               flex-direction: row !important;
             }
