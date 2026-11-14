@@ -94,7 +94,7 @@ describe('R3-3 Wizard-Neuplanung nach dem Abschluss (@LZ-036, @ZP-087; alle 5 Sc
     expect(screen.getByText('im-wizard-bearbeiten')).toBeInTheDocument();
   });
 
-  it('Gegenbeispiel: offen – /edit öffnet den Wizard, „Im Wizard bearbeiten“ speichert und öffnet ihn', async () => {
+  it('Gegenbeispiel: offen – /edit öffnet den Wizard, „Im Wizard bearbeiten“ öffnet ihn', async () => {
     oeffne('/tournament/t1/edit', turnier('fixed'));
     expect(await screen.findByTestId('wizard-stub', {}, { timeout: 5000 })).toBeInTheDocument();
     expect(screen.queryByTestId('wizard-closed-notice')).not.toBeInTheDocument();
@@ -104,6 +104,6 @@ describe('R3-3 Wizard-Neuplanung nach dem Abschluss (@LZ-036, @ZP-087; alle 5 Sc
     oeffne('/tournament/t1', turnier('fixed'));
     fireEvent.click(await screen.findByText('im-wizard-bearbeiten', {}, { timeout: 5000 }));
     expect(await screen.findByTestId('wizard-stub', {}, { timeout: 5000 })).toBeInTheDocument();
-    expect(saveTournament).toHaveBeenCalled();
+    expect(saveTournament).not.toHaveBeenCalled(); // @W5-039: der Einstieg speichert nichts
   });
 });

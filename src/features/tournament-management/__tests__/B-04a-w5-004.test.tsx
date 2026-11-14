@@ -4,7 +4,7 @@
  *
  * Echter Bedienweg: Verwaltung (SettingsTab) → „Im Wizard bearbeiten" →
  * handleEditInWizard reicht das Turnier mit unverändertem Status an App weiter
- * (App.handleEditInWizard speichert genau dieses Objekt 1:1).
+ * (App.handleEditInWizard speichert nichts, @W5-039).
  * UI-Ort: src/features/tournament-management/SettingsTab.tsx
  * („Erweiterte Bearbeitung" / handleEditInWizard).
  *
@@ -68,7 +68,7 @@ async function editInWizard(initial: Tournament): Promise<Tournament> {
   await user.click(await screen.findByTestId('confirm-dialog-confirm'));
   expect(browserConfirm).not.toHaveBeenCalled(); // @OB-017
 
-  // App.handleEditInWizard persistiert genau dieses Objekt und öffnet den Wizard.
+  // App.handleEditInWizard öffnet nur den Wizard und speichert nichts (@W5-039).
   expect(onEditInWizard).toHaveBeenCalledTimes(1);
   return onEditInWizard.mock.calls[0][0] as Tournament;
 }

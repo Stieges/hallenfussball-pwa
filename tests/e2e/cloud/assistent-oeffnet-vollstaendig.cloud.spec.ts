@@ -228,6 +228,29 @@ test.describe('@W5-039 der Assistent öffnet ein Turnier mit allen Teams und än
   });
 });
 
+test.describe('@W5-039 „Im Wizard bearbeiten“ in den Einstellungen der Verwaltung öffnet vollständig und ändert am Server nichts', () => {
+  test.describe.configure({ timeout: 90_000 });
+
+  for (const lokal of ['keine Kopie', 'eine Kopie ohne wartende Änderung'] as const) {
+    test(`veröffentlichtes Turnier vor dem Anpfiff, ${lokal}`, async ({ browser }) => {
+      const cup = await seedCup('published');
+      try {
+        const before = await serverState(cup);
+        const page = await freshOwnerPage(browser);
+        if (lokal !== 'keine Kopie') {
+          await page.goto(`/#/tournament/${cup.id}`); // die Verwaltung legt die lokale Kopie an, ohne etwas zu ändern
+          await expect(page.locator('[role="tab"]').first()).toBeVisible({ timeout: 20_000 });
+        }
+        await page.goto(`/#/tournament/${cup.id}/settings`);
+        await page.getByTestId('wizard-edit-edit-teams').click();
+        await page.getByTestId('confirm-dialog-confirm').click();
+        await expect(page).toHaveURL(new RegExp(`/tournament/${cup.id}/edit\\?step=${SCHRITT_TEAMS}`));
+        await expectUnchangedAfterWaiting(page, cup, before);
+      } finally { await safeCleanup('W5-039 Im Wizard bearbeiten', () => dropCup(cup)); }
+    });
+  }
+});
+
 async function openActionsOfCard(page: Page, cup: Cup): Promise<void> {
   await page.goto('/#/');
   const card = `[data-testid="tournament-card-${cup.id}"]`;
