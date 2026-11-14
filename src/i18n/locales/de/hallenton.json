@@ -52,7 +52,43 @@
   },
   "geraet": {
     "uebernommen": "Feld {{feld}} von einem anderen Gerät übernommen",
-    "abgemeldet": "Die Turnierleitung hat dieses Gerät als Hallen-Lautsprecher für Feld {{feld}} abgemeldet."
+    "abgemeldet": "Die Turnierleitung hat dieses Gerät als Hallen-Lautsprecher für Feld {{feld}} abgemeldet.",
+    "titel": "Dieses Gerät",
+    "bereit": "Lautsprecher bereit",
+    "bereitText": "Feld {{feld}} · {{name}}",
+    "tonNichtAktiv": "Ton nicht aktiv",
+    "tonNichtAktivText": "Klicke unten auf „Ton aktivieren“. Der Browser spielt Ton erst nach einem Klick.",
+    "nichtBereit": "Lautsprecher nicht bereit",
+    "grund": "Grund: {{grund}}.",
+    "keinLautsprecher": "Dieses Gerät ist kein Hallen-Lautsprecher",
+    "keinLautsprecherText": "Schalte unten den Schalter ein, um es zum Lautsprecher zu machen.",
+    "uebernommenText": "{{name}} gibt jetzt den Ton für Feld {{feld}}. Dieses Gerät tönt dafür nicht mehr.",
+    "uebernommenTextOhneName": "Ein anderes Gerät gibt jetzt den Ton für Feld {{feld}}. Dieses Gerät tönt dafür nicht mehr.",
+    "abgemeldetTitel": "Als Hallen-Lautsprecher abgemeldet",
+    "verstanden": "Verstanden",
+    "geraeteName": "Gerätename",
+    "geraeteNameHinweis": "So heißt das Gerät in der Verwaltung. Höchstens 60 Zeichen.",
+    "standardNameLaptop": "Laptop",
+    "standardNameHandy": "Handy",
+    "schalter": "Dieses Gerät ist Hallen-Lautsprecher für Feld …",
+    "schalterEin": "Ein",
+    "schalterAus": "Aus",
+    "feldWaehlen": "Feld wählen",
+    "feldWaehlenHinweis": "Wähle, für welche Felder dieses Gerät tönt.",
+    "handyHinweis": "Ein Handy ist als Hallen-Lautsprecher meist zu leise und schaltet sich ab – besser einen Rechner an der Hallenanlage",
+    "laeuftAls": "Läuft als",
+    "installierteApp": "installierte App",
+    "browserTab": "Browser-Tab",
+    "besserInstallieren": "besser: App installieren",
+    "gesperrt": "Nach dem Turnierende lässt sich dieses Gerät nicht mehr zum Hallen-Lautsprecher machen.",
+    "speichern": "Wird gespeichert …",
+    "fehler": {
+      "netz": "Das hat nicht geklappt: kein Netz. Es wurde nichts geändert.",
+      "kein_recht": "Das hat nicht geklappt: dafür fehlt dir das Recht.",
+      "turnier_beendet": "Das hat nicht geklappt: das Turnier ist beendet.",
+      "ungueltig": "Das hat nicht geklappt: die Eingabe passt nicht.",
+      "antwort_unbekannt": "Das hat nicht geklappt. Es wurde nichts geändert."
+    }
   },
   "seite": {
     "felderTitel": "Lautsprecher je Feld",
@@ -81,6 +117,68 @@
     "fehler": "Kein Testton: das hat nicht geklappt",
     "zuFrueh": "Bitte kurz warten und dann noch einmal versuchen",
     "keinLautsprecher": "Kein Testton: kein Hallen-Lautsprecher"
+  },
+  "einrichtung": {
+    "titel": "Hallen-Lautsprecher einrichten",
+    "empfohlen": "empfohlen",
+    "schritt1": "App installieren",
+    "schritt1Text": "Eigenes Fenster, der Browser legt sie seltener schlafen.",
+    "schritt1Erledigt": "Die App läuft schon installiert.",
+    "schritt1Knopf": "App installieren",
+    "schritt1Ohne": "Im Browser-Menü „App installieren“ oder „Zum Startbildschirm“ wählen.",
+    "schritt2": "Schalter einschalten",
+    "schritt2Text": "Danach wählst du, für welche Felder dieses Gerät tönt.",
+    "schritt3": "Ton aktivieren",
+    "schritt3Text": "Der Browser spielt Ton erst nach einem Klick. Der Knopf „Ton aktivieren“ erscheint unten, sobald ein Feld gewählt ist.",
+    "schritt4": "Testton in der Halle",
+    "schritt4Text": "Dann spielt „Testton in der Halle“ einmal den Abpfiff-Ton, und hier steht „gespielt“ mit der Uhrzeit.",
+    "erledigt": "erledigt"
+  },
+  "anleitung": {
+    "titel": "Laptop und Browser einstellen",
+    "einleitung": "Damit der Browser den Lautsprecher nicht schlafen legt:",
+    "browser": "Browser",
+    "chrome": "Chrome",
+    "edge": "Edge",
+    "safari": "Safari",
+    "schrittAdresse": "Öffne diese Adresse in einem neuen Tab:",
+    "schrittSuchen": "Suche „Diese Websites immer aktiv lassen“ und klicke auf „Hinzufügen“.",
+    "schrittApp": "Trage die Adresse dieser App ein:",
+    "safariText": "Safari hat keine Ausnahmeliste und meldet der App das Schlafenlegen nicht. Lass das Fenster dieser App geöffnet. Nach jedem Neuladen klickst du wieder „Ton aktivieren“.",
+    "amLaptop": "Am Laptop",
+    "netzteil": "Netzteil angeschlossen",
+    "ruhezustand": "Ruhezustand aus",
+    "pruefen": "Die App prüft das nicht. Meldet der Browser, dass er den Lautsprecher schlafen gelegt hat, steht das hier und in der Kopfzeile.",
+    "kopieren": "Kopieren",
+    "kopiert": "Kopiert",
+    "kopierenAdresse": "Adresse kopieren"
+  },
+  "aktivieren": {
+    "taste": "Ton aktivieren",
+    "hinweis": "Nach dem Neuladen braucht der Browser wieder einen Klick."
+  },
+  "abloesen": {
+    "titel": "Lautsprecher ablösen",
+    "frage": "Feld {{feld}} hat schon einen Hallen-Lautsprecher ({{name}}). Ablösen?",
+    "frageMehrere": "Diese Felder haben schon einen Hallen-Lautsprecher: {{liste}}. Ablösen?",
+    "folge": "Danach tönt nur noch {{eigen}} für {{felder}}. Das bisherige Gerät zeigt dann „von einem anderen Gerät übernommen“. Einen Knopf zum Zurückholen gibt es nicht; dort wählst du das Feld wieder wie beim ersten Mal.",
+    "bestaetigen": "Ablösen",
+    "abbrechen": "Abbrechen"
+  },
+  "wechseln": {
+    "titel": "Hallen-Lautsprecher wechseln",
+    "frage": "Dieses Gerät ist schon Hallen-Lautsprecher für ‚{{turnier}}‘. Wechseln?",
+    "frageOhneName": "Dieses Gerät ist schon Hallen-Lautsprecher für ein anderes Turnier. Wechseln?",
+    "folge": "Danach tönt es nur noch für dieses Turnier. Im anderen Turnier steht bei den Feldern „kein Hallen-Lautsprecher“.",
+    "bestaetigen": "Wechseln",
+    "abbrechen": "Abbrechen",
+    "alteAbmeldung": "Im Turnier ‚{{turnier}}‘ konnte der Lautsprecher nicht abgemeldet werden – dort bitte selbst ausschalten.",
+    "alteAbmeldungOhneName": "Im alten Turnier konnte der Lautsprecher nicht abgemeldet werden – dort bitte selbst ausschalten."
+  },
+  "anmelden": {
+    "titel": "Bitte melde dich an",
+    "text": "Um den Hallen-Lautsprecher einzurichten, melde dich mit dem Konto der Turnierleitung an. Danach öffnet sich dieser Unterpunkt wieder.",
+    "taste": "Anmelden"
   },
   "toeneKarte": {
     "abschnitt": "Töne",

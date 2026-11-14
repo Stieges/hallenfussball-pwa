@@ -20,10 +20,14 @@ import {
   handleImplicitFlow,
 } from '../utils/authCallbackHelpers';
 import { authCallbackStyles as styles } from './AuthCallback.styles';
+import { holeRueckkehr } from '../utils/loginRueckkehr';
 
 // ============================================================================
 // Component
 // ============================================================================
+
+/** @HT-026: Nach der Anmeldung (Google, Magic-Link) zurück in den Unterpunkt, von dem sie kam; andere Ziele (z. B. Passwort setzen) bleiben. */
+const nachAnmeldung = (ziel: string): string => (ziel === '/' ? holeRueckkehr() ?? '/' : ziel);
 
 export const AuthCallback: React.FC = () => {
   const { t } = useTranslation('auth');
@@ -102,7 +106,7 @@ export const AuthCallback: React.FC = () => {
         if (existingSession) {
           const result = handleExistingSession(params.type);
           if (result.redirectTo) {
-            void navigate(result.redirectTo, { replace: true });
+            void navigate(nachAnmeldung(result.redirectTo), { replace: true });
           }
           return;
         }
@@ -115,7 +119,7 @@ export const AuthCallback: React.FC = () => {
             return;
           }
           if (result.redirectTo) {
-            void navigate(result.redirectTo, { replace: true });
+            void navigate(nachAnmeldung(result.redirectTo), { replace: true });
           }
           return;
         }
@@ -128,7 +132,7 @@ export const AuthCallback: React.FC = () => {
             return;
           }
           if (result.redirectTo) {
-            void navigate(result.redirectTo, { replace: true });
+            void navigate(nachAnmeldung(result.redirectTo), { replace: true });
           }
           return;
         }
@@ -147,7 +151,7 @@ export const AuthCallback: React.FC = () => {
             return handleAuthCallback(retryCount + 1);
           }
           // After retries, redirect to home - auth might have succeeded
-          void navigate('/', { replace: true });
+          void navigate(nachAnmeldung('/'), { replace: true });
           return;
         }
 

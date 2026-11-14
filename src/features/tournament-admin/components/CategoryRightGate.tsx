@@ -3,7 +3,8 @@
  * „Ändern nur durch die Turnierleitung“ (@W5-017 „Bearbeiten“: Stammdaten, Einstellungen, Sponsoren; @LZ-022 „die
  * öffentliche Ansicht beenden / auf ‚dauerhaft‘ stellen“: Sichtbarkeit). Rechte nur über useCan.
  */
-import type { ReactNode } from 'react';
+import { useContext, type ReactNode } from 'react';
+import { AuthContext } from '../../auth/context/authContextInstance';
 import { useCan, useCanState } from '../../auth/hooks/useCan';
 import { useTournamentClosed } from '../../../hooks/useTournamentClosed';
 import { TournamentClosedHint } from '../../../components/ui/molecules/TournamentClosedHint';
@@ -11,6 +12,7 @@ import type { Permission } from '../../auth/utils/permissions';
 import { LeadOnlyHint } from '../../../components/ui/molecules/LeadOnlyHint';
 import type { AdminCategoryId } from '../types/admin.types';
 import { CategorySkeleton } from './CategorySkeleton';
+import { HallentonAnmeldeHinweis } from './HallentonAnmeldeHinweis';
 
 const CATEGORY_RIGHT: Partial<Record<AdminCategoryId, Permission>> = {
   metadata: 'tournamentSettings',
@@ -51,12 +53,17 @@ function RightCheck({ permission, category, tournamentId, children }: { permissi
 /**
  * H4-8 (@HT-022, @HT-046): „Hallenton“ lesen darf, wer `manageScreens` hat – auch nach dem Turnierende (dann lesbar, ändern sperrt jede
  * Taste selbst über `useCan('manageScreens')` ohne Ausnahme). Kein `CLOSED_LOCKED`, kein `RightCheck`: ohne das Recht steht immer
- * „Ändern nur durch die Turnierleitung“ (Helfer, Helfer-Zugang und Bildschirm), nie der Abschluss-Hinweis.
+ * „Ändern nur durch die Turnierleitung“ (Helfer, Helfer-Zugang und Bildschirm), nie der Abschluss-Hinweis. H4-9 (@HT-026): wer gar nicht
+ * angemeldet ist oder nur als Gast (zweiter Rechner), bekommt „Anmelden“ mit Rückweg in diesen Unterpunkt statt des Hinweises „nur Turnierleitung“.
  */
 function HallentonLesen({ tournamentId, children }: { tournamentId: string; children: ReactNode }) {
   const { allowed, isLoading } = useCanState('manageScreens', tournamentId, { openAfterClose: true });
+  const auth = useContext(AuthContext);
   if (allowed) {
     return <>{children}</>;
+  }
+  if (auth !== undefined && !auth.isLoading && (auth.user === null || auth.isGuest)) {
+    return <HallentonAnmeldeHinweis />;
   }
   return isLoading ? <CategorySkeleton /> : <LeadOnlyHint />;
 }
