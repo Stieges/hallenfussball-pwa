@@ -29,7 +29,7 @@ vi.mock('./hooks/useTournaments', () => ({
 // Der zweite Entwurf lädt über das Repository (nie aus der Liste)
 vi.mock('./hooks/useRepository', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./hooks/useRepository')>()),
-  useRepository: () => ({ get: (id: string) => Promise.resolve(id === 'd2' ? entwurf('d2', 'Zweiter Entwurf') : null) }),
+  useRepository: () => ({ get: (id: string) => Promise.resolve(id === 'd2' ? entwurf('d2', 'Zweiter Entwurf') : id === 't1' ? entwurf('t1', 'Alt') : null) }),
 }));
 
 let verwaltungsTurnier: Tournament;
@@ -68,7 +68,7 @@ async function oeffneVerwaltungUndWizard(): Promise<void> {
   render(<MemoryRouter initialEntries={['/', '/tournament/t1']} initialIndex={1}><App /></MemoryRouter>);
   fireEvent.click(await screen.findByText('im-wizard-bearbeiten', {}, { timeout: 20_000 }));
   await screen.findByText('browser-zurueck', {}, { timeout: 20_000 });
-  saveTournament.mockClear(); // „Im Wizard bearbeiten“ speichert beim Öffnen (Vorbedingung, nicht der Gegenstand)
+  expect(saveTournament).not.toHaveBeenCalled(); // @W5-039: das Öffnen speichert nichts
   fireEvent.click(screen.getByText('browser-zurueck')); // Browser-Zurück: kein „Abbrechen“, die App setzt nichts selbst zurück
   await screen.findByText('anderen-entwurf-oeffnen', {}, { timeout: 20_000 });
 }

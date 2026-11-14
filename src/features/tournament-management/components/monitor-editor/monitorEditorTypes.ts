@@ -13,6 +13,8 @@ export interface SlideContext {
   sponsors: { id: string; name: string }[];
   slotTargets: SlotTargets;
   getFieldDisplayName: (id: string) => string;
+  /** Nach einem Speichern-Versuch zeigt die Folien-Konfiguration, was fehlt (@ME-076) */
+  showErrors: boolean;
 }
 
 export interface SlideActions {

@@ -4,6 +4,8 @@ import { cssVars } from '../../../design-tokens';
 import { MonitorSlide, SlideConfig, QrTargetType, ColorScheme, DEFAULT_SLIDE_CONFIG } from '../../../types/monitor';
 import { TournamentField, TournamentGroup } from '../../../types/tournament';
 import { validateSlideConfig } from '../../../core/models/schemas/SlideConfigSchema';
+import { slideSetupProblem } from '../../../core/services/monitorSlideSetup';
+import { slideTypeLabel } from './monitor-editor/slideTypeLabels';
 
 // =============================================================================
 // CONSTANTS
@@ -53,6 +55,9 @@ const errorStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.sm,
     marginTop: cssVars.spacing.xs,
 };
+
+/** „… fehlt“ ist ein Hinweis, kein Fehler: gleiche Warnfarbe wie in der Folienliste (@ME-076) */
+const missingStyle: CSSProperties = { ...errorStyle, color: cssVars.colors.warning };
 
 const requiredMarkerStyle: CSSProperties = {
     color: cssVars.colors.error,
@@ -115,6 +120,12 @@ export function SlideConfigEditor({
 
     const getErrorId = (field: string) => `${idPrefix}-${field}-error`;
     const hasError = (field: string) => !!errors[field];
+    // Fehlt Sponsor oder Überschrift, steht „… fehlt“ in Warnfarbe; sonst der echte Feldfehler (z. B. zu lang)
+    const missing = showErrors ? slideSetupProblem(slide, sponsors) : null;
+    const isMissing = (field: 'sponsor' | 'headline') => missing === field;
+    const fieldColor = (field: string, problem: 'sponsor' | 'headline' | null) =>
+        (problem !== null && isMissing(problem) ? cssVars.colors.warning : hasError(field) ? cssVars.colors.error : undefined);
+    const showFieldSelect = (type === 'live' || type === 'schedule-field') && (fields.length > 1 || !fields.some(f => f.id === config.fieldId));
 
     // WCAG: minHeight for touch targets on all interactive elements
     const accessibleSelectStyle: CSSProperties = {
@@ -131,43 +142,32 @@ export function SlideConfigEditor({
         <div
             style={styles.slideConfigStyle}
             role="group"
-            aria-label={t('slideEditor.configAria', { type })}
+            aria-label={t('slideEditor.configAria', { type: slideTypeLabel(t, type) })}
         >
-            {/* === Feld-Auswahl für live, schedule-field === */}
-            {(type === 'live' || type === 'schedule-field') && (
+            {/* === Feld-Auswahl für live, schedule-field; bei genau einem Feld und gesetztem Feld entfällt sie (@ME-075) === */}
+            {showFieldSelect && (
                 <div style={styles.inputGroupStyle}>
                     <label style={styles.labelStyle} htmlFor={`${idPrefix}-fieldId`}>
-                        {t('slideEditor.field')} <span style={requiredMarkerStyle}>*</span>
+                        {t('slideEditor.field')}
                     </label>
                     <select
                         id={`${idPrefix}-fieldId`}
-                        style={{
-                            ...accessibleSelectStyle,
-                            borderColor: hasError('fieldId') ? cssVars.colors.error : undefined,
-                        }}
+                        style={accessibleSelectStyle}
                         value={config.fieldId ?? ''}
                         onChange={(e) => handleConfigChange('fieldId', e.target.value || undefined)}
-                        aria-invalid={hasError('fieldId') || undefined}
-                        aria-describedby={hasError('fieldId') ? getErrorId('fieldId') : undefined}
-                        aria-required="true"
                     >
                         <option value="">{t('slideEditor.pleaseSelect')}</option>
                         {fields.map(f => (
                             <option key={f.id} value={f.id}>{getFieldDisplayName(f.id)}</option>
                         ))}
                     </select>
-                    {hasError('fieldId') && (
-                        <span id={getErrorId('fieldId')} role="alert" style={errorStyle}>
-                            {errors.fieldId}
-                        </span>
-                    )}
                 </div>
             )}
 
             {/* === Live-Slides: Rotation pausieren (keine Farbe: @ZM-152). „Wenn kein Spiel läuft“ entfällt (@OB-002: wirkt nicht, @ZM-122) === */}
             {type === 'live' && (
                 <>
-                    <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
+                    <div style={showFieldSelect ? { ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm } : styles.inputGroupStyle}>
                         <label style={checkboxLabelStyle}>
                             <input
                                 type="checkbox"
@@ -242,7 +242,7 @@ export function SlideConfigEditor({
                         onChange={(e) => handleConfigChange('numberOfPlayers', Number(e.target.value))}
                     >
                         {[5, 10, 15, 20].map(n => (
-                            <option key={n} value={n}>Top {n}</option>
+                            <option key={n} value={n}>{t('slideEditor.topN', { count: n })}</option>
                         ))}
                     </select>
                 </div>
@@ -259,12 +259,12 @@ export function SlideConfigEditor({
                             id={`${idPrefix}-sponsorId`}
                             style={{
                                 ...accessibleSelectStyle,
-                                borderColor: hasError('sponsorId') ? cssVars.colors.error : undefined,
+                                borderColor: fieldColor('sponsorId', 'sponsor'),
                             }}
                             value={config.sponsorId ?? ''}
                             onChange={(e) => handleConfigChange('sponsorId', e.target.value || undefined)}
-                            aria-invalid={hasError('sponsorId') || undefined}
-                            aria-describedby={hasError('sponsorId') ? getErrorId('sponsorId') : undefined}
+                            aria-invalid={hasError('sponsorId') || isMissing('sponsor') || undefined}
+                            aria-describedby={hasError('sponsorId') || isMissing('sponsor') ? getErrorId('sponsorId') : undefined}
                             aria-required="true"
                         >
                             <option value="">{t('slideEditor.pleaseSelect')}</option>
@@ -272,9 +272,9 @@ export function SlideConfigEditor({
                                 <option key={s.id} value={s.id}>{s.name}</option>
                             ))}
                         </select>
-                        {hasError('sponsorId') && (
-                            <span id={getErrorId('sponsorId')} role="alert" style={errorStyle}>
-                                {errors.sponsorId}
+                        {(isMissing('sponsor') || hasError('sponsorId')) && (
+                            <span id={getErrorId('sponsorId')} role="alert" style={isMissing('sponsor') ? missingStyle : errorStyle}>
+                                {isMissing('sponsor') ? t('monitorEditor.setupProblem.sponsor') : errors.sponsorId}
                             </span>
                         )}
                     </div>
@@ -355,19 +355,19 @@ export function SlideConfigEditor({
                             type="text"
                             style={{
                                 ...accessibleInputStyle,
-                                borderColor: hasError('headline') ? cssVars.colors.error : undefined,
+                                borderColor: fieldColor('headline', 'headline'),
                             }}
                             value={config.headline ?? ''}
                             onChange={(e) => handleConfigChange('headline', e.target.value)}
                             placeholder={t('slideEditor.headlinePlaceholder')}
                             maxLength={100}
-                            aria-invalid={hasError('headline') || undefined}
-                            aria-describedby={hasError('headline') ? getErrorId('headline') : undefined}
+                            aria-invalid={hasError('headline') || isMissing('headline') || undefined}
+                            aria-describedby={hasError('headline') || isMissing('headline') ? getErrorId('headline') : undefined}
                             aria-required="true"
                         />
-                        {hasError('headline') && (
-                            <span id={getErrorId('headline')} role="alert" style={errorStyle}>
-                                {errors.headline}
+                        {(isMissing('headline') || hasError('headline')) && (
+                            <span id={getErrorId('headline')} role="alert" style={isMissing('headline') ? missingStyle : errorStyle}>
+                                {isMissing('headline') ? t('monitorEditor.setupProblem.headline') : errors.headline}
                             </span>
                         )}
                     </div>

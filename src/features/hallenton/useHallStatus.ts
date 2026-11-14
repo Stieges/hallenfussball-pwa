@@ -14,7 +14,7 @@ import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { getDeviceId } from '../../core/device/deviceId';
 import {
   hallOutputHeard, hallSoundStatus, hallTestToneRequest,
-  type HallErgebnis, type HallHeardAntwort, type HallTestRequestAntwort,
+  type HallArgs, type HallErgebnis, type HallHeardAntwort, type HallStatusAntwort, type HallTestRequestAntwort,
 } from '../../core/repositories/hallentonRpc';
 import { supabase } from '../../lib/supabase';
 import { erzeugeHallStatusAbfrage, type HallStatusSchnappschuss } from './runtime/hallStatusAbfrage';
@@ -30,11 +30,23 @@ export interface HallStatus extends HallStatusSchnappschuss {
 
 const online = (): boolean => typeof navigator === 'undefined' || navigator.onLine;
 
+type StatusRpc = (args: HallArgs<'hall_sound_status'>) => Promise<HallErgebnis<HallStatusAntwort>>;
+let rpcErsatz: StatusRpc | null = null;
+
+/**
+ * Nur Prüfstand (Playwright am Offline-Server, dort gibt es keinen Supabase-Client, `page.route` fände nichts): ersetzt den Server-Aufruf,
+ * so wie `setzeLeitung` die Leitung ersetzt; Abfrage, Auswertung und Hook bleiben die echten. `null` stellt den echten Aufruf wieder her.
+ */
+export function __setzeHallStatusRpcFuerPruefstand(rpc: StatusRpc | null): void {
+  rpcErsatz = rpc;
+  geteilt.zuruecksetzen();
+}
+
 /** Eine Abfrage je Turnier für alle Einbindungen (Zähler der Abonnenten, `hallStatusGeteilt.ts`). */
 const geteilt = erzeugeGeteilteAbfragen((turnierId) => erzeugeHallStatusAbfrage({
   turnierId,
   deviceId: getDeviceId(),
-  rpc: (args) => hallSoundStatus(supabase, args),
+  rpc: (args) => (rpcErsatz ?? ((a: HallArgs<'hall_sound_status'>) => hallSoundStatus(supabase, a)))(args),
   online,
   zeitgeber: echterZeitgeber,
 }), () => (typeof window === 'undefined' ? null : window), echterZeitgeber);

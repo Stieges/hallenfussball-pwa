@@ -16,13 +16,8 @@ import { useTranslation } from 'react-i18next';
 import { useBreakpoint, useMatchTimerExtended, useMatchSound } from '../../hooks';
 import { breakpointValues } from '../../design-tokens';
 import { useFoulZaehler } from './hooks/useFoulZaehler';
-import { AwaitingServerCopyLine, SyncStatusIndicator } from '../../features/collaboration';
-import { OutboxNotice } from '../../features/collaboration/outbox/OutboxNotice';
-import { useUebergabe } from '../../features/klaerungsliste/useUebergabe';
-import { useVerworfeneEintraege } from '../../features/klaerungsliste/useVerworfeneEintraege';
-import { useOutboxStatus } from '../../features/collaboration/outbox/useOutboxStatus';
+import { SyncStatusIndicator } from '../../features/collaboration';
 import { useRejectedOutboxDialog } from '../../features/collaboration/outbox/useRejectedOutboxDialog';
-import { useMatchEngineContextOptional } from '../../features/match-engine/useMatchEngineContext';
 import { getEffectiveScore } from '../../utils/matchScore';
 import type { SperrHinweis } from '../../core/match';
 import type { LiveCockpitProps } from './types';
@@ -60,27 +55,23 @@ import { alsUebersetzer } from './model/alsUebersetzer';
 import { kastenOderStandard } from './model/kastenOderStandard';
 import { hatSchonGelb as hatSchonGelbIn } from './model/secondYellow';
 import { useLeibchenBereich } from './hooks/useLeibchenBereich';
+import { useCockpitTon } from './hooks/useCockpitTon';
+import { useCockpitUebergabe } from './hooks/useCockpitUebergabe';
+import { CockpitKopfStreifen } from './areas/CockpitKopfStreifen';
 const NO_SPERREN: readonly SperrHinweis[] = [];
 const NO_TEAMS = { home: { id: '', name: '' }, away: { id: '', name: '' } };
 export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   const { fieldName, tournamentName, tournamentId, cockpitSettings: cockpitSettingsProp, kannSteuern, istLeitung = false, currentMatch, upcomingMatches, leer = null } = props;
   const { t } = useTranslation('cockpit');
 
-  // W1 (Nachtrag C3a-2a): nur einbinden -- OutboxNotice rendert selbst nichts, solange kein
-  // Ausgangs-Zustand vorliegt (kind === null).
-  const matchEngineContext = useMatchEngineContextOptional();
-  const outboxStatus = useOutboxStatus(matchEngineContext?.sender ?? null);
-  const handleOutboxReload = useCallback(() => window.location.reload(), []);
-  // B-50 (@HE-056, @FU-017): hat der Server Einträge dieses Geräts wegen entzogenen Rechts zur Klärung gelegt
-  // B-50 Review M2: nur Spiele mit übergebenen Einträgen; Recht zurück schließt ab, Zuschauer behält die Lesesicht
-  const uebergabe = useUebergabe(outboxStatus, currentMatch?.id, kannSteuern);
-  const zugriffEntzogen = props.zugriffEntzogen ?? (uebergabe?.art === 'sperre' ? { uebergebeneEintraege: uebergabe.count } : null);
-  // B-50 (@FU-095, B6.3): verworfene Klärungseinträge stehen im Spielprotokoll der Turnierleitung (zählen nicht)
-  const verworfene = useVerworfeneEintraege(tournamentId, currentMatch, istLeitung);
-  const matchMitVerlauf = useMemo(() => (currentMatch && verworfene.length > 0 ? { ...currentMatch, discardedEntries: verworfene } : currentMatch), [currentMatch, verworfene]);
+  // Ausgang, Übergabe bei entzogenem Recht, verworfene Klärungseinträge (W1, B-50)
+  const { outboxStatus, handleOutboxReload, uebergabe, zugriffEntzogen, matchMitVerlauf } = useCockpitUebergabe(props);
   // Einstellungen mit Vorgaben, Ton für das Ende, Gerätetyp
   const cockpitSettings = useMemo(() => ({ ...DEFAULT_MATCH_COCKPIT_SETTINGS, ...cockpitSettingsProp }), [cockpitSettingsProp]);
-  const sound = useMatchSound(cockpitSettings.soundId, cockpitSettings.soundVolume, cockpitSettings.soundEnabled, tournamentId);
+  // Ton an/aus und Lautstärke gelten je Gerät (@HT-009); die Tonwahl bleibt Sache des Turniers, ohne Tonwahl kein Ton
+  const geraetTon = useCockpitTon();
+  const tonAn = geraetTon.an && cockpitSettings.soundId !== null;
+  const sound = useMatchSound(cockpitSettings.soundId, geraetTon.lautstaerke, tonAn, tournamentId);
   const { isMobile, isTablet, width } = useBreakpoint();
   const layout = width >= breakpointValues.desktop ? 'breit' : 'daumen';
   const stufe = useCockpitStufe();
@@ -117,7 +108,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   // Abzeichen Ton (nur im angepfiffenen Spiel) und Bildschirm wach ab dem Anpfiff (@SL-059, @SL-122)
   const { tonHinweis, wachhaltenHinweis } = useTafelAbzeichen({
     zustand: phase.zustand, matchId: currentMatch?.id, wachhalten: cockpitSettings.wakeLockEnabled, t: tx, melde: notices.melde, quittungMitFolgespiel: (view?.quittungRestMs ?? 0) > 0 && view?.status !== 'skipped' && upcomingMatches.length > 0,
-    ton: { an: cockpitSettings.soundEnabled, freigegeben: sound.isActivated, aktiviere: () => { void sound.activate(); } },
+    ton: { an: tonAn, freigegeben: sound.isActivated, aktiviere: () => { void sound.activate(); } },
   });
   const teams = useMemo(() => (currentMatch ? { home: currentMatch.homeTeam, away: currentMatch.awayTeam } : null), [currentMatch]);
   const frisch = useFreshEntryCommands({
@@ -137,7 +128,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
     turnier: props.leibchenTurnier, matchId: currentMatch?.id, zustand: phase.zustand, melde: notices.melde, kannSteuern, onUebernehmen: props.steuerung?.onUebernehmen,
   });
   const cmd = useCockpitCommands({
-    props, settings: cockpitSettings, sound, flows, sides, melde: notices.melde, engineView, view,
+    props, settings: cockpitSettings, tonAn, sound, flows, sides, melde: notices.melde, engineView, view,
   });
   // Tastenkürzel (@SL-153): nur am Laptop mit Steuerrecht und eingeschaltetem Schalter; `?` auch ohne Steuerrecht
   const [tastenAn] = useTastenkuerzelAn();
@@ -233,17 +224,10 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
           kopf={(
             <>
               {tafel}
-              {/* @FU-109: Statuszeile im normalen Fluss unter der Anzeigetafel (Review Version-Fix R1) */}
-              <AwaitingServerCopyLine tournamentId={tournamentId} />
-              {/* Task R2: Read-Only-Banner — nur bei fehlender Berechtigung, nicht bei beendetem Spiel und nicht bei fremd gesteuertem Feld (B-49: Zeile in der Leiste). */}
-              {readOnly && !props.steuerung && (
-                <div className={shell.readOnlyBanner} data-testid="cockpit-readonly-banner" role="status">
-                  {t('readOnly.banner')}
-                </div>
-              )}
-              {/* W1 (Nachtrag C3a-2a): rendert selbst nichts, solange kein Ausgangs-Zustand vorliegt. */}
-              <OutboxNotice status={outboxStatus} matchId={match.id} onReload={handleOutboxReload} />
-              {uebergabe?.art === 'zusehen' && <p className={shell.readOnlyBanner} data-testid="cockpit-uebergeben-zusehen" role="status">{t('leiste.nurZusehen', { count: uebergabe.count })}</p>}
+              <CockpitKopfStreifen
+                tournamentId={tournamentId} matchId={match.id} feldId={match.fieldId} zustand={phase.zustand} readOnly={readOnly} fremdGesteuert={Boolean(props.steuerung)}
+                outboxStatus={outboxStatus} onOutboxReload={handleOutboxReload} nurZusehen={uebergabe?.art === 'zusehen' ? uebergabe.count : null}
+              />
             </>
           )}
           match={match}

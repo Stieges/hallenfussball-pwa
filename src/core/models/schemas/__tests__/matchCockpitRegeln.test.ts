@@ -158,6 +158,7 @@ describe('@W2A-017 Unterzahl nach Gelb-Rot oder Rot', () => {
 
 describe('@W2A-038 Abpfiff-Ton und Vibration als Vorbelegung', () => {
   it('@W2A-038 neue Turniere haben Abpfiff-Ton und Vibration eingeschaltet', () => {
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Vorbelegung des Altfelds bleibt geprüft
     expect(neuesTurnier().matchCockpitSettings?.soundEnabled).toBe(true);
     expect(neuesTurnier().matchCockpitSettings?.hapticEnabled).toBe(true);
   });

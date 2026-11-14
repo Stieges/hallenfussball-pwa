@@ -48,7 +48,9 @@
   "cockpit": {
     "titel": "Hallen-Lautsprecher aus – Ende selbst anzeigen",
     "grund": "Grund: {{grund}}",
-    "ausgangGeaendert": "Hallenton-Ausgang geändert"
+    "ausgangGeaendert": "Hallenton-Ausgang geändert",
+    "keinNetz": "Kein Netz – Halle zeigt alten Stand",
+    "uhrNichtAbgeglichen": "Uhr nicht abgeglichen – Hallenton kann abweichen"
   },
   "geraet": {
     "uebernommen": "Feld {{feld}} von einem anderen Gerät übernommen",

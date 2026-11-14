@@ -133,7 +133,7 @@ async function aufAnfang({ asRole }: StepContext): Promise<void> {
 async function monitorEinrichten({ asRole }: StepContext): Promise<void> {
   const ownerPage = await asRole('owner');
   await openTurniertagPath(ownerPage, '/monitors');
-  await expectPageAnchor(ownerPage.getByRole('heading', { level: 2, name: 'Monitore konfigurieren' }), 'Reiter Monitore');
+  await expectPageAnchor(ownerPage.getByRole('heading', { level: 2, name: 'Monitore', exact: true }), 'Reiter Monitore');
   await expectSollMarker(ownerPage, 'monitor-remote-reload');
 }
 

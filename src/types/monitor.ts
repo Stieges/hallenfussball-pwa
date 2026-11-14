@@ -91,30 +91,28 @@ export type SlideType =
  */
 export interface SlideTypeMetadata {
   type: SlideType;
-  label: string;
   icon: string;
   category: 'live' | 'standings' | 'schedule' | 'other';
   phase: 1 | 2;
-  description: string;
 }
 
 /**
- * Alle verfügbaren Slide-Typen mit Metadaten
+ * Alle verfügbaren Slide-Typen mit Metadaten (Namen stehen in i18n: `slidePreview.types.*`)
  */
 export const SLIDE_TYPES: SlideTypeMetadata[] = [
   // Phase 1
-  { type: 'live', label: 'Live-Spiel', icon: '🔴', category: 'live', phase: 1, description: 'Aktuelles Spiel auf einem Feld' },
-  { type: 'standings', label: 'Tabelle', icon: '📊', category: 'standings', phase: 1, description: 'Tabelle einer Gruppe' },
-  { type: 'schedule-field', label: 'Spielplan (Feld)', icon: '📋', category: 'schedule', phase: 1, description: 'Spielplan eines Feldes' },
-  { type: 'sponsor', label: 'Sponsor', icon: '📢', category: 'other', phase: 1, description: 'Sponsor mit Logo und QR-Code' },
-  { type: 'custom-text', label: 'Eigener Text', icon: '📝', category: 'other', phase: 1, description: 'Individuelle Ankündigung' },
-  { type: 'qr-code', label: 'Zuschauer-QR', icon: '📱', category: 'other', phase: 1, description: 'Zuschauer-QR-Code zur Zuschauer-Seite' },
+  { type: 'live', icon: '🔴', category: 'live', phase: 1 },
+  { type: 'standings', icon: '📊', category: 'standings', phase: 1 },
+  { type: 'schedule-field', icon: '📋', category: 'schedule', phase: 1 },
+  { type: 'sponsor', icon: '📢', category: 'other', phase: 1 },
+  { type: 'custom-text', icon: '📝', category: 'other', phase: 1 },
+  { type: 'qr-code', icon: '📱', category: 'other', phase: 1 },
 
   // Phase 2
-  { type: 'all-standings', label: 'Alle Tabellen', icon: '📊📊', category: 'standings', phase: 2, description: 'Alle Gruppentabellen' },
-  { type: 'schedule-group', label: 'Spielplan (Gruppe)', icon: '📋', category: 'schedule', phase: 2, description: 'Spielplan einer Gruppe' },
-  { type: 'next-matches', label: 'Nächste Spiele', icon: '⏭️', category: 'schedule', phase: 2, description: 'Kommende Spiele' },
-  { type: 'top-scorers', label: 'Torschützen', icon: '⚽', category: 'standings', phase: 2, description: 'Torschützenliste' },
+  { type: 'all-standings', icon: '📊📊', category: 'standings', phase: 2 },
+  { type: 'schedule-group', icon: '📋', category: 'schedule', phase: 2 },
+  { type: 'next-matches', icon: '⏭️', category: 'schedule', phase: 2 },
+  { type: 'top-scorers', icon: '⚽', category: 'standings', phase: 2 },
 ];
 
 // =============================================================================

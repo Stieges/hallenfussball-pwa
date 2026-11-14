@@ -6,6 +6,7 @@ import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { PlanSpiel } from '../runtime/feldStandSpiele';
 import { angepfiffeneFelder } from '../runtime/angepfiffeneFelder';
+import { leitungOhneNetz } from '../runtime/hallStatusAuswertung';
 
 const spiel = (id: string, field: number, status?: PlanSpiel['status']): PlanSpiel => ({ id, field, matchNumber: 1, status, ctx: null });
 
@@ -18,6 +19,32 @@ describe('@HT-035 angepfiffeneFelder', () => {
   it('die Engine geht vor der Kopie: Kopie „läuft“, Engine „beendet“ → nicht angepfiffen; umgekehrt angepfiffen', () => {
     expect(angepfiffeneFelder([spiel('a', 1, 'RUNNING')], () => 'finished').size).toBe(0);
     expect([...angepfiffeneFelder([spiel('a', 1)], () => 'running')]).toEqual([1]);
+  });
+});
+
+describe('@HT-040 @HT-050 Pausen des Spiels zählen als angepfiffen (Halbzeit, Verlängerung, Entscheidung, Strafstoßschießen)', () => {
+  for (const status of ['section_break', 'decision_pending', 'shootout'] as const) {
+    it(`Engine meldet ${status} → Feld 1 ist angepfiffen (auch wenn die Kopie nur „paused“ kennt)`, () => {
+      expect([...angepfiffeneFelder([spiel('a', 1, 'PAUSED')], () => status)]).toEqual([1]);
+      expect([...angepfiffeneFelder([spiel('a', 1)], () => status)]).toEqual([1]);
+    });
+  }
+
+  it('Gegenbeispiel @HT-035 letzte Zeile: nach dem Abpfiff (finished) und bei „übersprungen“ ist kein Feld angepfiffen', () => {
+    expect(angepfiffeneFelder([spiel('a', 1, 'RUNNING')], () => 'finished').size).toBe(0);
+    expect(angepfiffeneFelder([spiel('a', 1, 'RUNNING')], () => 'skipped').size).toBe(0);
+    expect(angepfiffeneFelder([spiel('a', 1, 'RUNNING')], () => 'scheduled').size).toBe(0);
+  });
+
+  it('Olli in der Halbzeit: kommt das Lebenszeichen weiter, steht „Feld 1: Handy ohne Netz“ nicht da; bleibt es 12 s aus, steht es da (echter Ausfall)', () => {
+    const felder = angepfiffeneFelder([spiel('a', 1, 'PAUSED')], () => 'section_break');
+    expect(leitungOhneNetz(2000, felder.has(1))).toBe(false);
+    expect(leitungOhneNetz(12_000, felder.has(1))).toBe(true);
+  });
+
+  it('Gegenbeispiel: nach dem Abpfiff meldet die Leitung nichts mehr – das ist kein Ausfall, auch bei altem Lebenszeichen', () => {
+    const felder = angepfiffeneFelder([spiel('a', 1, 'PAUSED')], () => 'finished');
+    expect(leitungOhneNetz(60_000, felder.has(1))).toBe(false);
   });
 });
 

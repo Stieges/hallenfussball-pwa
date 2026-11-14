@@ -3,9 +3,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { initRealDeI18n } from '../../../test/realDeI18n';
 import { MonitorEditor } from '../MonitorEditor';
 import type { Tournament } from '../../../types/tournament';
 import type { MonitorSlide } from '../../../types/monitor';
+
+vi.unmock('i18next');
+vi.unmock('react-i18next');
+await initRealDeI18n();
 
 const hoisted = vi.hoisted(() => ({
   monitor: {
@@ -47,7 +52,7 @@ function renderEditor(t: Tournament) {
 }
 
 async function openAddMenu(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole('button', { name: /addSlide/ }));
+  await user.click(screen.getByRole('button', { name: /Folie hinzufügen/ }));
 }
 
 describe('MonitorEditor – angebotene Folien-Typen', () => {
@@ -73,14 +78,14 @@ describe('MonitorEditor – angebotene Folien-Typen', () => {
     const user = userEvent.setup();
     renderEditor(tournament({ isPublic: false }));
     await openAddMenu(user);
-    expect(screen.getByRole('button', { name: /Zuschauer-QR/ })).toHaveTextContent(/qrHidden/);
+    expect(screen.getByRole('button', { name: /Zuschauer-QR/ })).toHaveTextContent(/Ohne öffentliches Turnier wird diese Folie übersprungen/);
   });
 
   it('zeigt bei öffentlichem Turnier mit Share-Code keinen Hinweis', async () => {
     const user = userEvent.setup();
     renderEditor(tournament({ isPublic: true, shareCode: 'ABC123' }));
     await openAddMenu(user);
-    expect(screen.getByRole('button', { name: /Zuschauer-QR/ })).not.toHaveTextContent(/qrHidden/);
+    expect(screen.getByRole('button', { name: /Zuschauer-QR/ })).not.toHaveTextContent(/Ohne öffentliches Turnier wird diese Folie übersprungen/);
   });
 
   it('Nächste Spiele neu angelegt: Anzahl ist 3 (R-f5)', async () => {
@@ -98,10 +103,10 @@ describe('MonitorEditor – angebotene Folien-Typen', () => {
     const user = userEvent.setup();
     hoisted.monitor.slides = [{ id: 's-live', type: 'live', config: { fieldId: 'f1' }, duration: null, order: 0 }];
     const { baseElement: container } = renderEditor(tournament());
-    await user.click(screen.getByTitle(/slides\.edit$/));
+    await user.click(screen.getByTitle('Bearbeiten'));
     expect(container.querySelector('select[id$="-whenIdle"]')).toBeNull();
-    expect(screen.queryByText(/whenIdleLabel/)).toBeNull();
-    expect(screen.getByText(/pauseRotation/)).toBeInTheDocument();
+    expect(screen.queryByText(/Wenn kein Spiel läuft/)).toBeNull();
+    expect(screen.getByText(/Rotation bei laufendem Spiel pausieren/)).toBeInTheDocument();
   });
 
   it('@ME-066 Neue Live-Spiel-Folie ist mit dem ersten Feld vorbelegt und gilt als eingerichtet', async () => {
@@ -109,7 +114,7 @@ describe('MonitorEditor – angebotene Folien-Typen', () => {
     renderEditor(tournament());
     await openAddMenu(user);
     await user.click(screen.getByRole('button', { name: /Live-Spiel/ }));
-    expect(screen.queryByText(/notConfigured/)).toBeNull();
+    expect(screen.queryByText(/^(Nicht eingerichtet|Feld fehlt)$/)).toBeNull();
     await user.click(screen.getByTestId('monitor-editor-save'));
     const gespeichert = hoisted.saveMonitor.mock.calls[0][0] as { slides: MonitorSlide[] };
     expect(gespeichert.slides[0]).toMatchObject({ type: 'live', config: { fieldId: 'f1' } });

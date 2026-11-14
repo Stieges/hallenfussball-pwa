@@ -1,0 +1,59 @@
+/* Hinweis unter der Tafel im Cockpit (Mockup „cockpit-*“, H4-12): ruhiger Kasten im normalen Fluss, verdeckt weder Uhr noch Tasten. Nur Tokens. */
+.kasten {
+  display: grid;
+  grid-template-columns: var(--icon-size-md) minmax(0, 1fr);
+  gap: var(--spacing-sm);
+  align-items: start;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: var(--border-width-medium) solid var(--color-warning-solid);
+  border-radius: var(--border-radius-md);
+  background-color: var(--color-background);
+  background-image: linear-gradient(var(--color-warning-light), var(--color-warning-light));
+  color: var(--color-text-primary);
+  min-width: 0;
+}
+
+.ruhig {
+  border-width: var(--border-width-thin);
+  border-color: var(--color-info);
+  background-image: linear-gradient(var(--color-info-light), var(--color-info-light));
+}
+
+.symbol {
+  margin-top: calc(var(--spacing-xs) / 2);
+  color: var(--color-warning-solid);
+}
+
+.ruhig .symbol {
+  color: var(--color-info);
+}
+
+.text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.titel {
+  display: block;
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-body-md);
+  font-weight: var(--font-weight-bold);
+}
+
+.ruhig .titel {
+  font-weight: var(--font-weight-semibold);
+}
+
+.grund {
+  display: block;
+  margin-top: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body-sm);
+}
+
+.liste {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  min-width: 0;
+}

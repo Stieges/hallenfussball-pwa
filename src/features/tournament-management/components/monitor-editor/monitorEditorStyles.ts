@@ -3,7 +3,7 @@
  */
 
 import type { CSSProperties } from 'react';
-import { cssVars, gridMinColumnWidths, spacingSemantics } from '../../../../design-tokens';
+import { cssVars, gridMinColumnWidths } from '../../../../design-tokens';
 
 export const headerStyle: CSSProperties = {
   padding: cssVars.spacing.lg,
@@ -71,7 +71,8 @@ export const inputStyle: CSSProperties = {
   border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}`,
   background: cssVars.colors.surface,
   color: cssVars.colors.textPrimary,
-  fontSize: cssVars.fontSizes.md,
+  fontSize: cssVars.fontSizes.lg, // 16 px: iOS zoomt bei kleinerer Schrift ins Feld (@ME-075-Paket, Größen am Handy)
+  minHeight: cssVars.touchTargets.minimum,
 };
 
 export const selectStyle: CSSProperties = {
@@ -91,6 +92,7 @@ export const slideItemStyle = (isEditing: boolean): CSSProperties => ({
   borderRadius: cssVars.borderRadius.md,
   border: `${cssVars.borderWidth.thin} solid ${isEditing ? cssVars.colors.primary : cssVars.colors.border}`,
   display: 'flex',
+  flexWrap: 'wrap', // am Handy rutschen die Tasten unter den Namen, damit nichts abgeschnitten wird
   alignItems: 'center',
   gap: cssVars.spacing.md,
 });
@@ -102,8 +104,8 @@ export const slideIconStyle: CSSProperties = {
 };
 
 export const slideInfoStyle: CSSProperties = {
-  flex: 1,
-  minWidth: 0,
+  flex: '1 1 auto',
+  minWidth: gridMinColumnWidths.sm,
 };
 
 export const slideTypeStyle: CSSProperties = {
@@ -115,19 +117,25 @@ export const slideTypeStyle: CSSProperties = {
 export const slideDescStyle: CSSProperties = {
   fontSize: cssVars.fontSizes.sm,
   color: cssVars.colors.textSecondary,
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap',
+  overflowWrap: 'anywhere', // umbrechen statt „…“ (@ME-076)
+};
+
+/** Beschreibung einer nicht eingerichteten Folie: Warnfarbe, ungekürzt (@ME-076) */
+export const slideProblemStyle: CSSProperties = {
+  ...slideDescStyle,
+  color: cssVars.colors.warning,
+  fontWeight: cssVars.fontWeights.semibold,
 };
 
 export const slideActionsStyle: CSSProperties = {
   display: 'flex',
-  gap: cssVars.spacing.xs,
+  gap: cssVars.spacing.sm,
+  marginLeft: 'auto',
 };
 
 export const iconButtonStyle: CSSProperties = {
-  minWidth: spacingSemantics.iconButtonSm,
-  minHeight: spacingSemantics.iconButtonSm,
+  minWidth: cssVars.touchTargets.minimum,
+  minHeight: cssVars.touchTargets.minimum,
   padding: cssVars.spacing.xs,
   background: 'transparent',
   border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}`,
@@ -138,6 +146,7 @@ export const iconButtonStyle: CSSProperties = {
 
 export const addSlideButtonStyle: CSSProperties = {
   width: '100%',
+  minHeight: cssVars.touchTargets.minimum,
   padding: cssVars.spacing.md,
   background: cssVars.colors.surfaceLight,
   border: `${cssVars.borderWidth.medium} dashed ${cssVars.colors.borderControl}`,
@@ -163,6 +172,7 @@ export const slideTypeSelectorStyle: CSSProperties = {
 };
 
 export const slideTypeButtonStyle: CSSProperties = {
+  minHeight: cssVars.touchTargets.minimum,
   padding: cssVars.spacing.md,
   background: cssVars.colors.surfaceLight,
   border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}`,

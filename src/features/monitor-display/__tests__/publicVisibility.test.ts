@@ -81,7 +81,8 @@ describe('selectDisplayableSlides mit isShowable (@ZM-090)', () => {
   });
 
   it('zeigbare Folien bleiben in ihrer Reihenfolge, wertende fallen weg', () => {
-    const programm = [folie('standings', 'tab'), folie('live', 'live'), folie('sponsor', 'spon')];
+    const sponsorFolie: MonitorSlide = { ...folie('sponsor', 'spon'), config: { sponsorId: 'sp1' } }; // eingerichtet (@ME-077)
+    const programm = [folie('standings', 'tab'), folie('live', 'live'), sponsorFolie];
     const ergebnis = selectDisplayableSlides(programm, { qrMoeglich: true, isShowable: verboten });
     expect(ergebnis.map(s => s.id)).toEqual(['live', 'spon']);
   });

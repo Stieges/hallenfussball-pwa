@@ -21,7 +21,7 @@ async function monitoreUebernehmen({ asRole }: StepContext): Promise<void> {
   // Zweites Turnier öffnen (eigener leerer Seed-Cup) und dort aus dem Turniertag-Cup übernehmen.
   const ownerPage = await asRole('owner');
   await openTurniertagPath(ownerPage, '/monitors', E2E_ZWEITES_TURNIER_ID);
-  await expectPageAnchor(ownerPage.getByRole('heading', { level: 2, name: 'Monitore konfigurieren' }), 'Reiter Monitore');
+  await expectPageAnchor(ownerPage.getByRole('heading', { level: 2, name: 'Monitore', exact: true }), 'Reiter Monitore');
   await ownerPage.locator('[data-testid="monitors-transfer-open"]').click();
   await ownerPage.locator(`[data-testid="transfer-source-${TURNIERTAG_ID}"]`).click();
   await ownerPage.locator('[data-testid="transfer-confirm"]').click();
@@ -62,7 +62,7 @@ function ohneIds(monitor: MonitorKonfig): unknown {
 async function bildschirmNeuKoppeln({ asRole }: StepContext): Promise<void> {
   const ownerPage = await asRole('owner');
   await openTurniertagPath(ownerPage, '/monitors', E2E_ZWEITES_TURNIER_ID);
-  await expectPageAnchor(ownerPage.getByRole('heading', { level: 2, name: 'Monitore konfigurieren' }), 'Reiter Monitore');
+  await expectPageAnchor(ownerPage.getByRole('heading', { level: 2, name: 'Monitore', exact: true }), 'Reiter Monitore');
   await expectSollMarker(ownerPage, 'monitor-pairing-code-input');
 }
 

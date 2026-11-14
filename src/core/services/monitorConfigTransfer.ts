@@ -101,6 +101,23 @@ export const HALLEN_STANDARD: MonitorConfigPayload = {
   ],
 };
 
+/**
+ * Die Vorlage mit sichtbarem Namen und dem Feld, das das Turnier wirklich hat (@ME-058, @ME-074): Der Name der Vorlage
+ * ist ein Schlüssel, die UI setzt den übersetzten Namen; `fieldId` ersetzt „field-1“ in der Live-Folie.
+ */
+export function hallenStandardPayload(name: string, fieldId?: string): MonitorConfigPayload {
+  return {
+    ...HALLEN_STANDARD,
+    monitors: HALLEN_STANDARD.monitors.map(m => ({
+      ...m,
+      name,
+      slides: m.slides.map(slide => (
+        slide.type === 'live' && fieldId ? { ...slide, config: { ...slide.config, fieldId } } : slide
+      )),
+    })),
+  };
+}
+
 // --- EXPORT ---
 
 /** Kopie eines flachen Objekts, damit Datei und Ziel keine Referenzen auf das Quellturnier teilen (@ME-044) */
@@ -290,4 +307,16 @@ export function instantiateMonitorConfig(
   });
 
   return { monitors, skippedSponsors, renamed };
+}
+
+/**
+ * Legt aus der Vorlage „Hallen-Standard“ einen Monitor für das Turnier an (@ME-074, @ME-058): Live-Spiel auf dem ersten
+ * Feld, Nächste Spiele, Alle Tabellen, Zuschauer-QR. Teams, Spiele und Tabellen kommen aus dem Turnier.
+ */
+export function buildHallenStandardMonitors(
+  name: string,
+  fieldId: string | undefined,
+  options: InstantiateMonitorConfigOptions,
+): TournamentMonitor[] {
+  return instantiateMonitorConfig(hallenStandardPayload(name, fieldId), options).monitors;
 }

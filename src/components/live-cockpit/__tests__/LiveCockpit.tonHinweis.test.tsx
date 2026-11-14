@@ -102,9 +102,9 @@ describe('LiveCockpit: Ton-Hinweis als Abzeichen der Tafel', () => {
     expect(ton.activate).not.toHaveBeenCalled();
   });
 
-  it('@W2A-038 Gegenbeispiel: ist der Abpfiff-Ton in den Regeln aus, gibt es kein Abzeichen und der Anpfiff aktiviert keinen Ton', async () => {
+  it('@W2A-038 Gegenbeispiel: ist der Abpfiff-Ton in den Regeln aus (kein Ton gewählt, H4-12: `soundEnabled` zählt nicht mehr), gibt es kein Abzeichen und der Anpfiff aktiviert keinen Ton', async () => {
     const user = userEvent.setup();
-    const props = makeProps(makeLiveMatch({ status: 'NOT_STARTED' }), { cockpitSettings: { soundEnabled: false } as never });
+    const props = makeProps(makeLiveMatch({ status: 'NOT_STARTED' }), { cockpitSettings: { soundId: null } as never });
     render(<LiveCockpit {...props} />);
     expect(screen.queryByRole('button', { name: ABZEICHEN })).toBeNull();
     await user.click(screen.getByTestId('match-start-button'));

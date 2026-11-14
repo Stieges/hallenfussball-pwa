@@ -58,9 +58,15 @@ export function planSpielAus(zeile: SpielplanZeile, datum: string): PlanSpiel {
   };
 }
 
-/** Angepfiffen im Sinne des Takts: die Uhr läuft oder ist angehalten (@HT-005, @HT-007). */
+/**
+ * Angepfiffen im Sinne des Takts: die Uhr läuft oder ist angehalten (@HT-005, @HT-007) – und auch in den Pausen des Spiels
+ * (Halbzeit, Pause vor der Verlängerung, offene Entscheidung, Strafstoßschießen), damit das Lebenszeichen der Leitung und der Kasten
+ * im Cockpit dort nicht aussetzen (@HT-040 „im Spiel“, @HT-050). Dieselbe Lesart wie `types/tournament.ts` (`paused` = angepfiffen, aber
+ * unterbrochen) und `cacheColumns.ts` (`section_break`/`decision_pending`/`shootout` werden als `paused` gespeichert).
+ */
 export function istAngepfiffen(status: MatchState['status'] | FeldSpielStatus | undefined): boolean {
-  return status === 'running' || status === 'paused' || status === 'RUNNING' || status === 'PAUSED';
+  return status === 'running' || status === 'paused' || status === 'section_break' || status === 'decision_pending' || status === 'shootout'
+    || status === 'RUNNING' || status === 'PAUSED';
 }
 
 /** Ändert sich, sobald der Stand ein Ereignis mehr kennt, eines zurückgenommen ist oder der Zustand wechselt. */

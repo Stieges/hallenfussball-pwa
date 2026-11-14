@@ -76,13 +76,13 @@ test.describe('@ME-071 @ME-072 Monitor-Editor mit Speichern und Abbrechen', () =
     await page.setViewportSize({ width: 1440, height: 900 });
     await oeffneEditor(page, seedIndexedDB);
 
-    await page.getByLabel('Slide-Dauer (Sek.)').selectOption('30');
+    await page.getByLabel('Folienzeit').selectOption('30');
     await page.getByTestId('monitor-editor-cancel').click();
     await expect(page.getByTestId('monitor-editor-save')).toBeHidden();
     await page.getByRole('button', { name: /bearbeiten/ }).first().click();
-    await expect(page.getByLabel('Slide-Dauer (Sek.)')).toHaveValue('15');
+    await expect(page.getByLabel('Folienzeit')).toHaveValue('15');
 
-    await page.getByLabel('Slide-Dauer (Sek.)').selectOption('30');
+    await page.getByLabel('Folienzeit').selectOption('30');
     await page.getByTestId('monitor-editor-close').click();
     await expect(page.getByText('Änderungen verwerfen?')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Weiter bearbeiten' })).toBeFocused();
@@ -98,7 +98,7 @@ test.describe('@ME-071 @ME-072 Monitor-Editor mit Speichern und Abbrechen', () =
     await expect(page.getByText('Gespeichert')).toBeVisible();
     await expect(page.getByTestId('monitor-editor-save')).toBeHidden();
     await page.getByRole('button', { name: /bearbeiten/ }).first().click();
-    await expect(page.getByLabel('Slide-Dauer (Sek.)')).toHaveValue('30');
+    await expect(page.getByLabel('Folienzeit')).toHaveValue('30');
   });
 
   test('laptop: leerer Name zeigt den Hinweis am Feld, nichts wird gespeichert', async ({ page, seedIndexedDB }, testInfo) => {
