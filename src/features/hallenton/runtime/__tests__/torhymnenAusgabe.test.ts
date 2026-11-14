@@ -171,16 +171,13 @@ describe('Torhymnen im Spieler', () => {
     expect(spieler.hymnen.laeuft()).toBe(true);
   });
 
-  it('Gegenbeispiele: nicht aktiviert, stumm oder Regler „tor“ auf 0 % → keine Hymne', async () => {
+  it('Gegenbeispiele: nicht aktiviert oder Regler „tor“ auf 0 % → keine Hymne', async () => {
     const kontext = new FalscherAudioKontext();
     const spieler = erzeugeHallTonSpieler({ erzeugeKontext: () => kontext, ladeDaten: (url) => Promise.resolve(DATEN[url] ?? tonDaten(255)), speicher: null });
     await spieler.hymnen.laden([A]);
     expect(spieler.hymnen.spielen(0)).toBe(false); // nicht aktiviert
     await spieler.laden({ abpfiff: 'horn-2', halbzeit: 'horn-1' });
     await spieler.aktivieren();
-    spieler.setzeStumm(true);
-    expect(spieler.hymnen.spielen(0)).toBe(false);
-    spieler.setzeStumm(false);
     spieler.setzeLautstaerke('tor', 0);
     expect(spieler.hymnen.spielen(0)).toBe(false);
     expect(spieler.zustand()).toBe('ready'); // „volume_zero“ hängt nur am Abpfiff-Ton

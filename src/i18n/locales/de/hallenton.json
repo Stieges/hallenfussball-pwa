@@ -104,10 +104,10 @@
     "halbzeit": "Halbzeit",
     "tor": "Torhymne",
     "anhoeren": "Anhören",
-    "prozent": "{{wert}} %",
+    "prozent": "{{wert}}\u00a0%",
     "gesperrt": "Nach dem Turnierende lässt sich die Lautstärke nur noch ablesen.",
     "belegt": "Gerade klingt ein echter Ton. Höre es danach noch einmal an.",
-    "nichtSpielbar": "Nicht gespielt: Der Ton ist stumm, steht auf 0 % oder ist noch nicht geladen.",
+    "nichtSpielbar": "Nicht gespielt: Der Ton steht auf 0 % oder ist noch nicht geladen.",
     "nichtSpielbarNull": "Bei 0 % ist nichts zu hören."
   },
   "rueckfrage": {

@@ -34,7 +34,7 @@ import type { LokaleLage } from '../../../src/features/hallenton/hallAnzeige';
 
 const SERVER_JETZT = new Date(2026, 10, 21, 14, 2, 30).getTime();
 const EIGEN = 'Laptop Turnierleitung';
-const FALL = ['leer', 'eingerichtet', 'bereit', 'abloesen', 'abgeloest', 'anleitung', 'wechseln', 'lautstaerke0', 'schlafen', 'angehalten', 'anderesFenster', 'anhoerenFrage', 'gesperrt'] as const;
+const FALL = ['leer', 'eingerichtet', 'bereit', 'abloesen', 'abgeloest', 'anleitung', 'wechseln', 'lautstaerke0', 'schlafen', 'angehalten', 'anderesFenster', 'anhoerenFrage', 'gesperrt', 'lautstaerke100'] as const;
 type Fall = (typeof FALL)[number];
 
 function antwort(sprecher: ReadonlyArray<{ name: string; state: 'ready' | 'not_activated'; ich: boolean }>): HallStatusVoll {
@@ -57,7 +57,7 @@ function lokalerZustand(fall: Fall): { zustand: FeldZustand; rolle: LaufzeitRoll
 
 /** Spiel 11 läuft auf Feld 1 (ein fester Verweis: der Hook hängt seine Funktion daran). */
 const LAUFEND: ReadonlyMap<number, number> = new Map([[1, 11]]);
-const EIGENE = new Set<Fall>(['eingerichtet', 'bereit', 'anleitung', 'lautstaerke0', 'schlafen', 'angehalten', 'anderesFenster', 'anhoerenFrage', 'gesperrt']);
+const EIGENE = new Set<Fall>(['eingerichtet', 'bereit', 'anleitung', 'lautstaerke0', 'schlafen', 'angehalten', 'anderesFenster', 'anhoerenFrage', 'gesperrt', 'lautstaerke100']);
 
 /** Der Server-Stand und die lokale Lage dieses Geräts je Fall. */
 function lage(fall: Fall): { server: HallStatusVoll; lokal: LokaleLage | null } {
@@ -109,7 +109,7 @@ export function Seite() {
   }, [fall, fragen]);
   const abschnitt: GeraetAbschnitt = {
     modus, alteAbmeldung: null, oben: einrichtung || istLautsprecher, banner, verstanden: aus, angehaltenBestaetigen: aus,
-    regler: istLautsprecher ? { lautstaerke: { abpfiff: fall === 'lautstaerke0' ? 0 : 80, halbzeit: 50, tor: 40 }, gesperrt: fall === 'gesperrt', onLautstaerke: aus, onAnhoeren: aus, hinweis: null } : null,
+    regler: istLautsprecher ? { lautstaerke: { abpfiff: fall === 'lautstaerke0' ? 0 : fall === 'lautstaerke100' ? 100 : 80, halbzeit: 50, tor: 40 }, gesperrt: fall === 'gesperrt', onLautstaerke: aus, onAnhoeren: aus, hinweis: null } : null,
     felder: [1, 2], gewaehlt: istLautsprecher ? [1] : [], an: istLautsprecher || fall === 'abloesen' || fall === 'wechseln', name: EIGEN, setzeName: aus, nameVerlassen: aus,
     schalterUmlegen: aus, feldUmschalten: aus, beschaeftigt: false, fehler: null, handy: false, installiert: fall !== 'leer', installAngebot: false, installieren: aus,
     schalterErledigt: istLautsprecher, tonErledigt: fall === 'bereit' || fall === 'anleitung' || fall === 'angehalten', tonNoetig: fall === 'eingerichtet' || fall === 'schlafen', tonAktivieren: aus,

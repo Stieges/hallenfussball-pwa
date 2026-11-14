@@ -26,8 +26,6 @@ export interface HallTonSpieler {
   audioZeitFuerServerZeit(serverMs: number, serverNowMs: number): number;
   lautstaerke(art: ReglerArt): number;
   setzeLautstaerke(art: ReglerArt, prozent: number): void;
-  stumm(): boolean;
-  setzeStumm(stumm: boolean): void;
   zustand(): SpielerZustand;
   onZustand(fn: (zustand: SpielerZustand) => void): () => void;
   geplant(): string[];

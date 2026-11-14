@@ -7,19 +7,19 @@
  *   eigenen Ton, der nicht ladbar oder länger als 5 s ist, Zustand `custom_sound_failed`.
  * - `planen(id, art, t)`: `AudioBufferSourceNode.start(t)` → Lautstärke (`GainNode`) → Begrenzer (`DynamicsCompressorNode`)
  *   → Ausgang, harter Stopp nach 5 s. Dieselbe Kennung ersetzt den alten Ton.
- * - Lautstärke je Ton (auch Torhymne, Regler `tor`) und Stumm je Gerät in `localStorage` (`hallenton:lautstaerke`,
- *   `hallenton:stumm`), nicht turnierweit (@HT-023). Abpfiff-Ton auf 0 % oder stumm → Zustand `volume_zero` (@HT-039).
+ * - Lautstärke je Ton (auch Torhymne, Regler `tor`) je Gerät in `localStorage` (`hallenton:lautstaerke`),
+ *   nicht turnierweit (@HT-023). Abpfiff-Ton auf 0 % → Zustand `volume_zero` (@HT-039).
  * - H3c: Torhymnen (`hymnen`, `torhymnenAusgabe.ts`) auf derselben Ausgabe; jeder hier geplante Ton beendet sie zu seinem Beginn.
  */
 import type { AudioKontext, AudioPuffer, GainKnoten, KompressorKnoten, QuellKnoten } from './webAudioTypen';
-import { browserSpeicher, gespeicherteLautstaerke, lies, schreib, LAUTSTAERKE_SCHLUESSEL, STUMM_SCHLUESSEL, type TonArt } from './tonEinstellungen';
+import { browserSpeicher, gespeicherteLautstaerke, schreib, vergissAltenStummWert, LAUTSTAERKE_SCHLUESSEL, type TonArt } from './tonEinstellungen';
 import { erzeugeHallTonLader, HART_STOPP_SEK, type LadeStand, type TonWahl } from './hallTonLader';
 import type { HallTonSpieler, HallTonSpielerAbhaengigkeiten, SpielerZustand } from './hallTonSpielerTypen';
 import { erzeugeHupenVorschau } from './hallTonVorschau';
 import { erzeugeTorhymnenAusgabe } from './torhymnenAusgabe';
 
 export type { AudioKontext, AudioPuffer, AudioZiel, GainKnoten, KompressorKnoten, QuellKnoten } from './webAudioTypen';
-export { LAUTSTAERKE_SCHLUESSEL, STUMM_SCHLUESSEL, type ReglerArt, type Speicher, type TonArt } from './tonEinstellungen';
+export { LAUTSTAERKE_SCHLUESSEL, type ReglerArt, type Speicher, type TonArt } from './tonEinstellungen';
 
 export { HART_STOPP_SEK, type HupenId, type LadeStand, type TonWahl } from './hallTonLader';
 export type { AnhoerenErgebnis } from './hallTonVorschau';
@@ -33,7 +33,7 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
   let begrenzerWert: KompressorKnoten | null = null;
   let aktiviert = false;
   let lautstaerke = gespeicherteLautstaerke(speicher);
-  let stumm = lies(speicher, STUMM_SCHLUESSEL) === 'true';
+  vergissAltenStummWert(speicher); // „Stumm“ gibt es nicht mehr (H4-10): ein alter Wert gilt nie
   let puffer: Record<TonArt, AudioPuffer | null> = { abpfiff: null, halbzeit: null };
   let eigenerTonFehlt: Record<TonArt, boolean> = { abpfiff: false, halbzeit: false };
   let letzteWahl: Record<TonArt, TonWahl> | null = null;
@@ -48,7 +48,7 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
     if (!aktiviert || kontextWert?.state !== 'running' || puffer.abpfiff === null) {
       return 'not_activated';
     }
-    if (stumm || lautstaerke.abpfiff === 0) {
+    if (lautstaerke.abpfiff === 0) {
       return 'volume_zero';
     }
     return eigenerTonFehlt.abpfiff || eigenerTonFehlt.halbzeit ? 'custom_sound_failed' : 'ready';
@@ -98,7 +98,7 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
   const hymnen = erzeugeTorhymnenAusgabe({
     kontext, begrenzer, dekodiere: lader.dekodiere, andereToene: () => geplant.values(), lautstaerke: () => lautstaerke.tor,
     vorschauBeenden: vorschau.beenden,
-    darf: () => aktiviert && kontextWert?.state === 'running' && !stumm && lautstaerke.tor > 0, // ohne geladenen Abpfiff-Ton
+    darf: () => aktiviert && kontextWert?.state === 'running' && lautstaerke.tor > 0, // ohne geladenen Abpfiff-Ton
   });
 
   const abbrechen = (id: string): void => {
@@ -120,7 +120,7 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
   // muss deshalb der Planer halten, der Spieler prüft sie nicht.
   const planen = (id: string, art: TonArt, startAtAudioSec: number): boolean => {
     const ton = puffer[art];
-    if (berechne() === 'not_activated' || stumm || lautstaerke[art] === 0 || !ton) {
+    if (berechne() === 'not_activated' || lautstaerke[art] === 0 || !ton) {
       return false;
     }
     abbrechen(id);
@@ -183,7 +183,7 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
     },
     anhoeren(art) {
       const ton = puffer[art];
-      if (berechne() === 'not_activated' || stumm || lautstaerke[art] === 0 || !ton) {
+      if (berechne() === 'not_activated' || lautstaerke[art] === 0 || !ton) {
         return false;
       }
       if (echterTonKlingt() || hymnen.laeuft()) {
@@ -218,12 +218,6 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
           eintrag.gain.gain.value = wert / 100;
         }
       }
-      bewerten();
-    },
-    stumm: () => stumm,
-    setzeStumm(wert) {
-      stumm = wert;
-      schreib(speicher, STUMM_SCHLUESSEL, String(wert));
       bewerten();
     },
     zustand: berechne,

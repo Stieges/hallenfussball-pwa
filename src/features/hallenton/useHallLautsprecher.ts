@@ -1,6 +1,6 @@
 /**
  * useHallLautsprecher(tid) – Schnittstelle für H4 (Plan „Schnittstelle für H4“, H3b-2b): Rolle und Felder dieses Geräts,
- * Zustand je Feld mit Grund, nächster Ton, Aktionen, Lautstärke und Stumm. Keine Oberfläche.
+ * Zustand je Feld mit Grund, nächster Ton, Aktionen, Lautstärke. Keine Oberfläche.
  *
  * - `einschalten(felder, name, abloesen?)` über `hall_speaker_assign` (@HT-001, @HT-002, @HT-015): bei `assigned` merkt sich das
  *   Gerät die Einschaltung, der Baustein in `App.tsx` startet die Laufzeit; `occupied` geht an H4 für die Rückfrage
@@ -59,8 +59,6 @@ export interface HallLautsprecher {
   hierAnhoeren(ton: ReglerArt, hymne?: number): Promise<AnhoerenErgebnis>;
   lautstaerke: Readonly<Record<ReglerArt, number>>;
   setzeLautstaerke(ton: ReglerArt, prozent: number): void;
-  stumm: boolean;
-  setzeStumm(stumm: boolean): void;
   /** Fehlergrund des letzten Lebenszeichens (z. B. `ungueltig`); `null` = angekommen (H3b-3 K2). */
   lebenszeichenFehler: HallFehlerGrund | null;
   /**
@@ -148,10 +146,6 @@ export function useHallLautsprecher(tid: string): HallLautsprecher {
     geraetSpieler().setzeLautstaerke(ton, prozent);
     neuZeichnen();
   }, []);
-  const setzeStumm = useCallback((stumm: boolean) => {
-    geraetSpieler().setzeStumm(stumm);
-    neuZeichnen();
-  }, []);
 
   const spieler = geraetSpieler(); // ohne `AudioContext`: der entsteht erst beim Abspielen oder Aktivieren
   const abpfiff = spieler.lautstaerke('abpfiff');
@@ -167,7 +161,6 @@ export function useHallLautsprecher(tid: string): HallLautsprecher {
     einschalten, tonAktivieren, ausschalten, wechseln, feldAbmelden, hierAnhoeren,
     anderesTurnier: rolle === 'anderesTurnier' && einschaltung ? { turnierId: einschaltung.turnierId, felder: einschaltung.felder } : null,
     lautstaerke, setzeLautstaerke,
-    stumm: spieler.stumm(), setzeStumm,
     lebenszeichenFehler: rolle === 'diesesTurnier' ? lebenszeichenFehler : null,
     abgeloest: abgeloest?.turnierId === tid ? { felder: abgeloest.felder, um: abgeloest.um } : null,
     abgeloestVerstanden, angehaltenBestaetigen: () => geraetStand().laufzeit?.angehaltenBestaetigen(), erneutVersuchen: () => erneutVersuchen(),

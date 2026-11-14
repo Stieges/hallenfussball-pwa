@@ -104,10 +104,10 @@
     "halbzeit": "Half-time",
     "tor": "Goal anthem",
     "anhoeren": "Listen",
-    "prozent": "{{wert}} %",
+    "prozent": "{{wert}}\u00a0%",
     "gesperrt": "After the tournament has ended the volume can only be read.",
     "belegt": "A real tone is playing right now. Listen again afterwards.",
-    "nichtSpielbar": "Not played: the tone is muted, at 0 % or not loaded yet.",
+    "nichtSpielbar": "Not played: the tone is at 0 % or not loaded yet.",
     "nichtSpielbarNull": "At 0 % nothing can be heard."
   },
   "rueckfrage": {

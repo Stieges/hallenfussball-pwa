@@ -337,7 +337,7 @@ describe('@HT-046 nach dem Turnierende: lesbar, nichts änderbar', () => {
     doppel.lautsprecher = eigenerLautsprecher([1], 'not_activated');
     render(seite());
     expect(screen.getByTestId('geraet-gesperrt')).toHaveTextContent('Nach dem Turnierende lässt sich dieses Gerät nicht mehr zum Hallen-Lautsprecher machen.');
-    expect(screen.queryByTestId('geraet-schalter-taste')).toBeNull(); // der Schalter „Hallen-Lautsprecher“ (der Schalter „Stumm“ der Regler bleibt lesbar, aber gesperrt)
+    expect(screen.queryByTestId('geraet-schalter-taste')).toBeNull(); // der Schalter „Hallen-Lautsprecher“
     expect(screen.queryByTestId('geraet-feld-1')).toBeNull();
     expect(screen.queryByTestId('geraet-name')).toBeNull();
     expect(screen.queryByTestId('hallenton-fussleiste')).toBeNull();

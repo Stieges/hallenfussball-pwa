@@ -27,7 +27,7 @@ const titelStil: CSSProperties = { margin: 0, fontSize: cssVars.fontSizes.titleM
 const textStil: CSSProperties = { margin: 0, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm, lineHeight: cssVars.lineHeights.bodySm };
 const beschriftungStil: CSSProperties = { fontWeight: cssVars.fontWeights.semibold, fontSize: cssVars.fontSizes.md };
 const schiebeStil: CSSProperties = { fontSize: cssVars.fontSizes.bodyLg, width: '100%', minHeight: cssVars.touchTargets.minimum, margin: 0, accentColor: cssVars.colors.primary };
-const wertStil: CSSProperties = { fontWeight: cssVars.fontWeights.bold, fontVariantNumeric: 'tabular-nums', textAlign: 'right' };
+const wertStil: CSSProperties = { fontWeight: cssVars.fontWeights.bold };
 
 export function LautstaerkeRegler({ lautstaerke, gesperrt, onLautstaerke, onAnhoeren, hinweis }: LautstaerkeReglerProps): ReactElement {
   const { t } = useTranslation('hallenton');
@@ -43,7 +43,7 @@ export function LautstaerkeRegler({ lautstaerke, gesperrt, onLautstaerke, onAnho
             aria-labelledby={`lv-${art}-l`} aria-valuetext={t('regler.prozent', { wert: lautstaerke[art] })}
             onChange={(e) => onLautstaerke(art, Number(e.target.value))} data-testid={`regler-${art}-schieber`}
           />
-          <output style={wertStil} data-testid={`regler-${art}-wert`}>{t('regler.prozent', { wert: lautstaerke[art] })}</output>
+          <output className={styles.wert} style={wertStil} data-testid={`regler-${art}-wert`}>{t('regler.prozent', { wert: lautstaerke[art] })}</output>
           <span className={styles.anhoeren}>
             <Button
               variant="secondary" icon={<Icons.Play size={iconSizeValues.sm} />} disabled={gesperrt} onClick={() => onAnhoeren(art)}

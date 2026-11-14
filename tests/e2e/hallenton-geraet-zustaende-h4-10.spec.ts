@@ -119,4 +119,16 @@ test.describe('@HT-011 @HT-013 @HT-014 @HT-023 @HT-033 @HT-037 @HT-017 H4-10 „
       }
     }
   }
+
+  // N1: „100 %“ steht einzeilig (so hoch wie „50 %“), bei 360 und bei 1280 px
+  for (const g of GERAETE) {
+    test(`@HT-023 lautstaerke100 ${g.name}: „100 %“ bricht nicht um`, async ({ page }) => {
+      await page.setViewportSize({ width: g.width, height: g.height });
+      await page.goto('/tests/e2e/harness/hallenton-dieses-geraet.html?fall=lautstaerke100');
+      await expect(page.getByTestId('regler-abpfiff-wert')).toHaveText('100 %');
+      // einzeilig: die Höhe ist kleiner als zwei Zeilen der eigenen Schrift (zwei Zeilen wären mindestens 2 × Schriftgröße)
+      const zeilen = await page.getByTestId('regler-abpfiff-wert').evaluate((el) => el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).fontSize));
+      expect(zeilen, '„100 %“ ist nur eine Zeile hoch').toBeLessThan(1.8);
+    });
+  }
 });
