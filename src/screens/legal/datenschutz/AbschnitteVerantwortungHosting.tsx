@@ -66,7 +66,7 @@ export function AbschnitteVerantwortungHosting() {
         <BulletList
           items={[
             'Ich erfahre über dich nur die technischen Angaben aus Abschnitt 3 und die Abrufe bei der Datenbank (Abschnitt 9).',
-            <>Angezeigt werden: Turniername, Datum, Halle, Mannschaften mit Logo und Farben, Spiele und Ergebnisse. Bei jedem Spiel stehen außerdem Tore, Karten und Zeitstrafen, <Strong>nur mit Mannschaft und Rückennummer</Strong> (nie mit Namen). Je nachdem, was die Turnierleitung einschaltet, kommen hinzu: eine Torschützen-Liste, ebenfalls nur mit Mannschaft und Rückennummer, und eine Kontaktperson des Veranstalters. Bei Kinder- und Jugendturnieren kann die Turnierleitung den „Kindermodus“ einschalten. Dann werden keine Ergebnisse, keine Tore, Karten und Zeitstrafen und keine Torschützen gezeigt.</>,
+            <>Angezeigt werden: Turniername, Datum, Halle, Mannschaften mit Logo und Farben, Spiele und Ergebnisse. Bei jedem Spiel stehen außerdem Tore, Karten, Zeitstrafen und Strafstöße, <Strong>nur mit Mannschaft und Rückennummer</Strong> (nie mit Namen). Hat der Veranstalter eine Kontaktperson freigegeben, steht sie dabei. Bei Kinder- und Jugendturnieren kann die Turnierleitung den „Kindermodus“ einschalten. Dann werden keine Ergebnisse, Tabellen, Tore, Karten, Zeitstrafen und Strafstöße gezeigt.</>,
             'Wer einen Eintrag eingegeben hat, siehst du als Zuschauer nie.',
             'Auf deinem Gerät wird gespeichert, was in Abschnitt 14 steht. Für die Zuschauer-Seite sind das deine Auswahl „Mein Team“, der zuletzt geladene Turnierstand und der Zwischenspeicher der App.',
           ]}

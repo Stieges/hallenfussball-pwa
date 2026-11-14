@@ -64,7 +64,7 @@ export function AbschnitteFehlerRechte() {
         <BulletList
           items={[
             'Die App speichert keine Namen von Spielerinnen und Spielern, nur Rückennummern.',
-            'Tore, Karten und Zeitstrafen erscheinen öffentlich nur mit Mannschaft und Rückennummer, nie mit Namen. Der Kindermodus blendet sie zusammen mit den Ergebnissen aus.',
+            'Tore, Karten, Zeitstrafen und Strafstöße erscheinen öffentlich nur mit Mannschaft und Rückennummer, nie mit Namen. Der Kindermodus blendet sie zusammen mit Ergebnissen und Tabellen aus.',
             'Es gibt keine Fotos, keine Werbung und kein Tracking.',
             'Helfer unter 16 Jahren sollten mit Wissen ihrer Eltern helfen und als Namen nur einen Vornamen oder ein Kürzel eingeben.',
           ]}
@@ -79,7 +79,7 @@ export function AbschnitteFehlerRechte() {
             <><Strong>Auskunft</Strong> über deine Daten (Art. 15 DSGVO),</>,
             <><Strong>Berichtigung</Strong> (Art. 16), <Strong>Löschung</Strong> (Art. 17) und <Strong>Einschränkung</Strong> der Verarbeitung (Art. 18),</>,
             <><Strong>Datenübertragbarkeit</Strong> (Art. 20),</>,
-            <><Strong>Widerspruch</Strong> gegen Verarbeitungen, die auf berechtigten Interessen beruhen (Art. 21). Das gilt zum Beispiel für Fehlerberichte, aber auch, wenn du nicht willst, dass deine Rückennummer als Torschütze erscheint. Fehlerberichte schaltest du selbst in den Einstellungen ab.</>,
+            <><Strong>Widerspruch</Strong> gegen Verarbeitungen, die auf berechtigten Interessen beruhen (Art. 21). Das gilt zum Beispiel für Fehlerberichte, aber auch, wenn du nicht willst, dass deine Rückennummer bei Toren, Karten, Zeitstrafen oder Strafstößen erscheint. Fehlerberichte schaltest du selbst in den Einstellungen ab.</>,
           ]}
         />
         <Paragraph>
