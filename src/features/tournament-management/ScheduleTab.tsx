@@ -18,7 +18,7 @@ import { useCallback, CSSProperties, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card } from '../../components/ui';
 import { useToast } from '../../components/ui/Toast';
-import { cssVars, mediaQueries } from '../../design-tokens'
+import { cssVars } from '../../design-tokens'
 import { Tournament, Standing, Match } from '../../types/tournament';
 import { MatchUpdate } from '../../core/models/types';
 import { useScheduleDraft, useScheduleEditActions, useScheduleTabActions, useScheduleFilters, getFilterOptions } from './hooks';
@@ -33,6 +33,8 @@ import { useScheduleForfeit } from './hooks/useScheduleForfeit';
 import { useSpielplanKorrektur } from './hooks/useSpielplanKorrektur';
 import { GeneratedSchedule } from '../../core/generators';
 import { ScheduleDisplay } from '../../components/ScheduleDisplay';
+import { ScheduleCurrentBlock } from './components/ScheduleCurrentBlock';
+import { ScheduleTabStyles } from './components/ScheduleTabStyles';
 import { ScheduleEditor } from '../schedule-editor';
 import { RefereeAssignmentEditor } from '../../components/RefereeAssignmentEditor';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
@@ -222,14 +224,14 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   // ==========================================================================
 
   const containerStyle: CSSProperties = {
-    maxWidth: '1400px',
+    maxWidth: cssVars.sizing.contentMax,
     margin: '0 auto',
-    padding: '24px',
+    padding: cssVars.spacing.lg,
   };
 
   const editModeCardStyle: CSSProperties = isEditing ? {
-    border: `3px solid ${cssVars.colors.primary}`,
-    boxShadow: `0 0 0 4px ${cssVars.colors.secondaryLight}`,
+    border: `${cssVars.borderWidth.strong} solid ${cssVars.colors.primary}`,
+    boxShadow: `0 0 0 ${cssVars.spacing.xs} ${cssVars.colors.secondaryLight}`,
     // Fix: backdrop-filter creates a new containing block for position:fixed,
     // which breaks @dnd-kit DragOverlay positioning (ghost appears offset)
     backdropFilter: 'none',
@@ -242,6 +244,20 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
         <Card style={editModeCardStyle} className="schedule-tab-card">
           {/* GA4 A-13c: Zustand der Phasen und Vorschlag „Gruppe abschließen“ (nur Turnierleitung), nicht im Verwaltungskopf */}
           <GroupCompletionTop />
+          {/* @ZP-109: das laufende bzw. nächste Spiel mit der Taste ins Cockpit; im Bearbeiten-Modus und in der Raster-Ansicht keine Karte */}
+          {viewMode === 'table' && !isEditing && (
+            <ScheduleCurrentBlock
+              view={view}
+              schedule={shownSchedule}
+              tournament={tournament}
+              currentMatches={draft.draftTournament.matches}
+              elapsedSeconds={elapsedSeconds}
+              locale={locale}
+              rights={{ lead: canEndRunning, play: canControlTimer, schedule: canSchedule }}
+              // Die Karte „Läuft“ führt ins Cockpit des Spiels, das sie selbst zeigt: dort fragt nichts nach (@SL-194 gilt beim Wechsel zu einem anderen Spiel)
+              onNavigateToCockpit={onNavigateToCockpit ? (id) => (liveMatchIds.has(id) ? onNavigateToCockpit(id) : handleNavigateToCockpit(id)) : undefined}
+            />
+          )}
           {/* Action Buttons Header */}
           <ScheduleToolbar
             isEditing={isEditing}
@@ -378,34 +394,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
         />
       )}
 
-      {/* Responsive Styles */}
-      <style>{`
-        ${mediaQueries.tabletDown} {
-          .schedule-tab-container {
-            padding: 16px 12px !important;
-          }
-        }
-
-        @media (min-width: 768px) and (max-width: 1024px) {
-          .schedule-tab-container {
-            padding: 20px 16px !important;
-          }
-        }
-
-        ${mediaQueries.tabletDown} {
-          .schedule-tab-container .card {
-            border-radius: 8px;
-            padding: 12px;
-          }
-
-          /* @OB-074: backdrop-filter würde die Karte zum Bezug von position: fixed machen, die Leiste klebte dann am Kartenende
-             statt am Fensterrand. Am Handy ist der Filter aus; den Platz unter der letzten Zeile reserviert (seit Usability F) die Fußzeile (Footer: Leistenhöhe + --schedule-action-bar-h + Safe-Area), damit weder die letzte Zeile noch Impressum/Datenschutz unter der Leiste liegen */
-          .schedule-tab-card {
-            backdrop-filter: none !important;
-            -webkit-backdrop-filter: none !important;
-          }
-        }
-      `}</style>
+      <ScheduleTabStyles />
     </>
   );
 };

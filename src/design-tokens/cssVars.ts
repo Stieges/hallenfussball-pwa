@@ -592,6 +592,7 @@ export const cssSizing = {
   noticeLineHeightRegular: 'var(--sizing-notice-line-height-regular)',
   teamStripeWidth: 'var(--sizing-team-stripe-width)',
   qrPlaceholder: 'var(--sizing-qr-placeholder)',
+  contentMax: 'var(--sizing-content-max)',
   scoreField: 'var(--sizing-score-field)',
   dragOverlayMinWidth: 'var(--sizing-drag-overlay-min-width)',
   scorePreviewWidth: 'var(--sizing-score-preview-width)',

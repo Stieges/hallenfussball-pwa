@@ -439,6 +439,8 @@
   --sizing-team-stripe-width: var(--spacing-xs);
   /* Spaltenkopf im Cockpit: Streifenzeile + drei Namenszeilen, beide Köpfe gleich hoch (@OB-025, Altplan 3.3) */
   --sizing-qr-placeholder: 150px;
+  /* Größte Breite des Spielplan-Reiters der Turnierleitung (G3-N N1a, vorher fest in ScheduleTab) */
+  --sizing-content-max: 1400px;
   /* Tor-Feld im Blatt „Endergebnis“ (Mockup Runde 4: 64 px Kantenlänge, große Ziffer) */
   --sizing-score-field: 64px;
   /* Mindestbreite der Ziehen-Vorschau eines Spiels am Handy (Spielplan bearbeiten) */

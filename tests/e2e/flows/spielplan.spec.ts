@@ -266,8 +266,8 @@ test.describe('Spielplan 2.0 - Desktop Layout', () => {
     // GIVEN - Navigate to Spielplan
     await navigateToSpielplan(page);
 
-    // THEN - Score circles should be visible
-    const scoreCircles = page.locator('[data-score-circle]');
+    // THEN - Score circles der Liste (nicht die der Karte „Läuft / Nächstes Spiel“ oben, @ZP-109: ihre Kästen sind beim nächsten Spiel leer) sollten sichtbar sein
+    const scoreCircles = page.locator('[data-match-card] [data-score-circle]');
     const count = await scoreCircles.count();
 
     if (count > 0) {

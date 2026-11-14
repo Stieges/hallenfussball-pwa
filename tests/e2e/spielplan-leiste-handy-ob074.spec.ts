@@ -1,5 +1,6 @@
 /**
- * @OB-074 „Teilen“ und „Als PDF“ sind am Handy ohne Scrollen erreichbar (Grundriss: Handy 360×640 und 390×844, Turnier mit 15 Spielen).
+ * @OB-074 „Teilen“ und „Als PDF“ sind am Handy erreichbar (Grundriss: Handy 360×640 und 390×844, Turnier mit 15 Spielen). Seit @ZP-109 (Karte oben)
+ * steht die Leiste im Fluss unter der Karte und schwebt nie über ihr; im Bearbeiten-Modus (keine Karte) schwebt sie wie bisher. Hinter „Mehr“ (N2) wandert sie später.
  * Vorher: `backdrop-filter` der Karte machte sie zum Bezugsrahmen von `position: fixed`; die Leiste klebte am Kartenende (y ≈ 3500 bei 640 Höhe).
  * Gegenbeispiel: Im Bearbeiten-Modus (dort ist der Filter schon aus) bleibt die Leiste wie bisher im Fenster.
  * Bilder: Ordner aus OB074_SCR (sonst im Testergebnis-Ordner). Läuft nur im Projekt `desktop` (setzt Fenster selbst).
@@ -94,21 +95,22 @@ test.describe('@OB-074 Teilen und Als PDF am Handy ohne Scrollen', () => {
   });
 
   for (const g of GERAETE) {
-    test(`@OB-074 ${g.name}: beide Tasten im Fenster über der unteren Leiste, oben und nach dem Scrollen`, async ({ page, seedIndexedDB }, testInfo) => {
+    test(`@OB-074 ${g.name}: mit der Karte oben steht die Leiste im Fluss, jede Taste ist erreichbar und liegt dann ganz im Fenster über der unteren Leiste`, async ({ page, seedIndexedDB }, testInfo) => {
       const ordner = process.env.OB074_SCR ?? testInfo.outputDir;
       await page.setViewportSize({ width: g.width, height: g.height });
       await oeffneSpielplan(page, seedIndexedDB);
-
+      // @OB-074 (geändert 10.11.) und @ZP-109: „Teilen“ und „Als PDF“ scrollen mit, bis sie hinter „Mehr“ liegen (N2); die Karte oben wird nie überdeckt
+      await expect(page.getByTestId('schedule-current')).toBeVisible();
+      const position = await page.evaluate(() => getComputedStyle(document.querySelector('.schedule-action-buttons')!).position);
+      expect(position, 'die Leiste schwebt nicht über der Karte').not.toBe('fixed');
       await bild(page, ordner, `leiste-${g.name}-oben`);
-      imFensterUeberNav(await messe(page));
 
-      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight / 2));
-      await page.waitForTimeout(200);
-      imFensterUeberNav(await messe(page));
-
+      for (const taste of [page.locator('.schedule-action-buttons button').filter({ hasText: 'Teilen' }), page.getByTestId('schedule-action-pdf')]) {
+        await taste.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+        await expect(taste).toBeVisible();
+        imFensterUeberNav(await messe(page));
+      }
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-      await page.waitForTimeout(200);
-      imFensterUeberNav(await messe(page));
       await bild(page, ordner, `leiste-${g.name}-unten`);
     });
   }
