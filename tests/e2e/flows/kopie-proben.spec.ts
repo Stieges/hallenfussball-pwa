@@ -12,6 +12,9 @@ import { installiereSaat, leseSaat } from '../../../scripts/visual-metrics/saat/
 const BILDER = process.env.KP_BILDER;
 const GROESSEN = [{ name: '360x640', width: 360, height: 640 }, { name: '1280x720', width: 1280, height: 720 }];
 const ORIGINAL = 'hallencup-phase-halbzeit';
+// Die Saat trägt das feste Turnierdatum 14.11.2026. Der Test hält die Uhr des Browsers davor an,
+// sonst hängt der Datumsvorschlag des Dialogs am Tag, an dem der Test läuft.
+const TESTZEIT = new Date('2026-11-10T10:00:00');
 
 async function bild(page: Page, name: string, groesse: string) {
   if (!BILDER) { return; }
@@ -27,6 +30,7 @@ async function warteBisRuhig(page: Page) {
 
 async function oeffneKopieDialog(page: Page, groesse: { width: number; height: number }) {
   await page.setViewportSize(groesse);
+  await page.clock.setFixedTime(TESTZEIT);
   await installiereSaat(page.context(), leseSaat('hallencup-messlauf'));
   await page.goto('/#/');
   const trigger = page.getByTestId(`tournament-${ORIGINAL}-actions-trigger`);

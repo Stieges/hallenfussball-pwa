@@ -13,6 +13,9 @@ import { installiereSaat, leseSaat } from '../../../scripts/visual-metrics/saat/
 const BILDER = process.env.ZL_BILDER;
 const GROESSEN = [{ name: '360x640', width: 360, height: 640 }, { name: '1280x720', width: 1280, height: 720 }];
 const SCHEMAS = ['light', 'dark'] as const;
+// Die Saat trägt das feste Turnierdatum 14.11.2026. Der Test hält die Uhr des Browsers davor an,
+// sonst hängt die Einordnung auf der Startseite am Tag, an dem der Test läuft.
+const TESTZEIT = new Date('2026-11-10T10:00:00');
 
 // Saat „Hallencup“ (wie `npm run visual:metrics --saat`) plus zwei Turniere, die dieser Test aus der Saat ableitet:
 // „alle-entschieden“ hat alle Spiele beendet, aber nichts abgeschlossen (@LZ-006: bleibt „Läuft“); „abschluss-messlauf“ wird hier
@@ -56,6 +59,7 @@ for (const groesse of GROESSEN) {
         test.skip(!testInfo.project.name.includes('desktop'), 'Nur desktop (setzt Fenster selbst).');
         await page.setViewportSize(groesse);
         await page.emulateMedia({ colorScheme: schema });
+        await page.clock.setFixedTime(TESTZEIT);
         await installiereSaat(page.context(), saatMitServerZustand());
         await page.goto('/#/');
         await expect(page.getByTestId('section-running')).toBeVisible({ timeout: 20000 });
