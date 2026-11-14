@@ -4,7 +4,7 @@
  * Lesen, damit nach kurzem Laden der Stand des Servers steht. Das Öffnen schreibt nie: weder das Laden noch die Anzeige rufen `updateTournament`. Mocks wie useTournamentManager.turnierWechsel.test.tsx.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import type { Tournament } from '../../core/models/types';
 import { useTournamentManager } from '../useTournamentManager';
 import { looseVs } from '../../test/matchSlotFixtures';
@@ -84,5 +84,63 @@ describe('@W5-042 useTournamentManager: Öffnen zeigt den Stand des Servers und 
     await result.current.handleTournamentUpdate({ ...tournament(15), title: 'Neuer Name' });
 
     expect(mockUpdateTournament).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('@W5-042 useTournamentManager: Laden-Anzeige bleibt, bis das Nachlesen fertig ist', () => {
+  beforeEach(() => {
+    mockLoadTournament.mockReset();
+    mockUpdateTournament.mockReset();
+  });
+
+  function held<T>() {
+    let resolve!: (value: T) => void;
+    let reject!: (reason: unknown) => void;
+    const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej; });
+    return { promise, resolve, reject };
+  }
+
+  it('ohne Spiele lokal: isLoading bleibt bis zur Antwort des zweiten Ladens stehen; danach mit Spielen geladen', async () => {
+    const second = held<Tournament>();
+    mockLoadTournament.mockResolvedValueOnce(tournament(0)).mockReturnValueOnce(second.promise);
+
+    const { result } = renderHook(() => useTournamentManager('T'));
+
+    await waitFor(() => expect(mockLoadTournament).toHaveBeenCalledTimes(2));
+    expect(result.current.isLoading).toBe(true);
+    await act(async () => { second.resolve(tournament(15)); await second.promise; });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.tournament?.matches.length).toBe(15);
+  });
+
+  it('scheitert das Nachlesen (offline), endet die Laden-Anzeige trotzdem; die lokale Kopie ohne Spiele bleibt', async () => {
+    const second = held<Tournament>();
+    mockLoadTournament.mockResolvedValueOnce(tournament(0)).mockReturnValueOnce(second.promise);
+    const { result } = renderHook(() => useTournamentManager('T'));
+    await waitFor(() => expect(mockLoadTournament).toHaveBeenCalledTimes(2));
+    expect(result.current.isLoading).toBe(true);
+
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    await act(async () => { second.reject(new Error('offline')); await second.promise.catch(() => undefined); });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.tournament?.matches.length).toBe(0);
+    expect(mockLoadTournament).toHaveBeenCalledTimes(2);
+  });
+
+  it('Gegenbeispiel: lokale Kopie mit Spielen -> kein zweites Laden, isLoading endet nach dem ersten Laden', async () => {
+    mockLoadTournament.mockResolvedValue(tournament(15));
+    const { result } = renderHook(() => useTournamentManager('T'));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(mockLoadTournament).toHaveBeenCalledTimes(1);
+  });
+
+  it('Unmount vor dem ersten Laden: kein Nachlesen mehr', async () => {
+    const first = held<Tournament>();
+    mockLoadTournament.mockReturnValueOnce(first.promise);
+    const { unmount } = renderHook(() => useTournamentManager('T'));
+    unmount();
+    await act(async () => { first.resolve(tournament(0)); await first.promise; });
+    expect(mockLoadTournament).toHaveBeenCalledTimes(1);
   });
 });

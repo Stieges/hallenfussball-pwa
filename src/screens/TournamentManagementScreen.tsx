@@ -25,16 +25,7 @@ import { useCockpitFrame } from '../components/live-cockpit/frame/cockpitFrame';
 import { getTabFromPath, buildTournamentTabPath, TournamentTab } from '../features/tournament-management/utils/tournamentTabUtils';
 
 // Tab Components
-import { ScheduleTab } from '../features/tournament-management/ScheduleTab';
-import { FinishTournamentSection } from '../features/tournament-finish/components/FinishTournamentSection';
-import { TabellenTabMitAdresse } from '../features/tournament-management/TabellenTabMitAdresse';
-import { StandingTieProvider } from '../features/tournament-management/standings/StandingTieProvider';
-import { GroupCompletionProvider } from '../features/tournament-management/group-completion/GroupCompletionProvider';
-import { ManagementTab } from '../features/tournament-management/ManagementTab';
-import { ScheduleMissingNotice } from '../features/tournament-management/ScheduleMissingNotice';
-import { SettingsTabConnected } from '../features/tournament-management/SettingsTabConnected';
-import { TeamsTab } from '../features/tournament-management/TeamsTab';
-import { MonitorsConfigTab } from '../features/tournament-management/MonitorsConfigTab';
+import { ManagementTabContent } from '../features/tournament-management/ManagementTabContent';
 import { MonitorEditor } from '../features/tournament-management/MonitorEditor';
 
 
@@ -168,13 +159,10 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
     void navigate(`${buildTournamentTabPath(tournamentId, 'management')}?matchId=${matchId}`);
   };
 
-  // MON-KONF-01: Async wrapper for monitor components
-  const handleAsyncTournamentUpdate = async (updatedTournament: Tournament): Promise<void> => {
-    void handleTournamentUpdate(updatedTournament);
-  };
-
-  // Loading / Error state
-  if (!tournament || !schedule) {
+  // Loading / Error state. @W5-042: ein Turnier ohne Spiele gilt als „lädt noch“, solange das Nachlesen vom Server läuft
+  // (isLoading bleibt dafür stehen) -- der Hinweis „Spielplan noch nicht erstellt“ erscheint erst danach.
+  const checkingServer = isLoading && !!tournament && tournament.matches.length === 0;
+  if (!tournament || !schedule || checkingServer) {
     // Still loading - show spinner
     if (isLoading) {
       return (
@@ -217,8 +205,6 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
     );
   }
 
-  const noMatches = tournament.matches.length === 0;
-
   const containerStyle: CSSProperties = {
     minHeight: 'var(--min-h-screen)',
     ...(vollbild ? { flex: 1, minHeight: 0 } : {}),
@@ -248,73 +234,15 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
 
       {/* TAB CONTENT */}
       <div style={contentStyle}>
-        {/* @W5-042: ohne Spiele erzeugt die Verwaltung keinen Plan (Laden schreibt nie), sie weist auf den Wizard hin */}
-        {noMatches && (activeTab === 'schedule' || activeTab === 'tabellen' || activeTab === 'management') && (
-          <ScheduleMissingNotice onOpenWizard={() => { void navigate(`/tournament/${tournamentId}/edit`); }} />
-        )}
-        {!noMatches && (activeTab === 'schedule' || activeTab === 'tabellen') && (
-          // GA4 A-13c: Spielplan und Tabellen teilen sich Rechte, Netz und den Ablauf „Gruppe abschließen“ (Banner, Dialoge)
-          <StandingTieProvider tournamentId={tournamentId} onChanged={reloadFresh}>
-            <GroupCompletionProvider tournament={tournament}>
-              {activeTab === 'schedule' && (
-                <>
-                {/* @LZ-007: ist alles entschieden, steht der Vorschlag zum Abschließen oben im Spielplan */}
-                <FinishTournamentSection tournament={tournament} onReload={reloadFresh} placement="schedule" />
-                <ScheduleTab
-                  tournament={tournament}
-                  schedule={schedule}
-                  currentStandings={currentStandings}
-                  onTournamentUpdate={(t) => { void handleTournamentUpdate(t); }} onTournamentSave={saveTournamentOrThrow}
-                  onLocalTournamentUpdate={applyRemote}
-                  onMatchesUpdate={handleMatchesUpdate}
-                  onNavigateToCockpit={(id) => { handleNavigateToCockpit(id); }}
-                />
-                </>
-              )}
-              {activeTab === 'tabellen' && (
-                <TabellenTabMitAdresse
-                  tournament={tournament}
-                  schedule={schedule}
-                  currentStandings={currentStandings}
-                  overallStandings={overallStandings}
-                />
-              )}
-            </GroupCompletionProvider>
-          </StandingTieProvider>
-        )}
-        {!noMatches && activeTab === 'management' && (
-          <ManagementTab
-            tournament={tournament}
-            schedule={schedule}
-            onTournamentUpdate={(t) => { void handleTournamentUpdate(t); }}
-            onLocalTournamentUpdate={applyRemote}
-            initialMatchId={initialMatchId}
-            onInitialMatchConsumed={() => setInitialMatchId(null)}
-          />
-        )}
-        {activeTab === 'teams' && (
-          <TeamsTab
-            tournament={tournament}
-            onTournamentUpdate={(t) => { void handleTournamentUpdate(t); }}
-          />
-        )}
-        {activeTab === 'settings' && (
-          <SettingsTabConnected
-            tournament={tournament}
-            onTournamentUpdate={(t) => { void handleTournamentUpdate(t); }}
-            onDirtyChange={setIsSettingsDirty}
-            onEditInWizard={onEditInWizard}
-            focusSection={searchParams.get('abschnitt') ?? undefined}
-            onPlacesSaved={reloadFresh}
-          />
-        )}
-        {activeTab === 'monitor' && (
-          <MonitorsConfigTab
-            tournament={tournament}
-            onTournamentUpdate={handleAsyncTournamentUpdate}
-            onEditMonitor={setEditingMonitorId}
-          />
-        )}
+        <ManagementTabContent
+          tournamentId={tournamentId} tournament={tournament} schedule={schedule}
+          currentStandings={currentStandings} overallStandings={overallStandings} activeTab={activeTab}
+          initialMatchId={initialMatchId} focusSection={searchParams.get('abschnitt') ?? undefined}
+          handleTournamentUpdate={handleTournamentUpdate} saveTournamentOrThrow={saveTournamentOrThrow}
+          applyRemote={applyRemote} onMatchesUpdate={handleMatchesUpdate} reloadFresh={reloadFresh}
+          onNavigateToCockpit={handleNavigateToCockpit} onInitialMatchConsumed={() => setInitialMatchId(null)}
+          onSettingsDirtyChange={setIsSettingsDirty} onEditInWizard={onEditInWizard} onEditMonitor={setEditingMonitorId}
+        />
       </div>
 
       {/* MON-KONF-01: Monitor-Editor Dialog */}

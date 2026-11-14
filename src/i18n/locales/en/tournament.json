@@ -1251,7 +1251,11 @@
   "scheduleMissing": {
     "title": "Schedule not created yet",
     "text": "This tournament has no matches yet. Finish it in the wizard and the schedule will appear here.",
-    "action": "Finish in the wizard"
+    "action": "Finish in the wizard",
+    "noRight": "The tournament management will finish the schedule.",
+    "notLoadedTitle": "Schedule not loaded",
+    "notLoadedText": "The schedule could not be loaded. Check your connection and try again.",
+    "reloadAction": "Reload"
   },
   "rights": {
     "leadOnlyHint": "Only the tournament management can change this",

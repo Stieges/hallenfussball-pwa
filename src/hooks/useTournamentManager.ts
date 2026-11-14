@@ -107,14 +107,18 @@ export function useTournamentManager(tournamentId: string) {
     }
 
     // Load Tournament
-    const loadTournament = useCallback(async (options?: { fresh?: boolean }): Promise<Tournament | null | undefined> => {
+    // `holdWhenEmpty` (@W5-042): ergibt das Laden ein Turnier OHNE Spiele, bleibt `isLoading` stehen; der Aufrufer löst es mit dem
+    // anschließenden frischen Lesen auf (dessen `finally` setzt es zurück). So blitzt der Hinweis „Spielplan noch nicht erstellt“ nie auf.
+    const loadTournament = useCallback(async (options?: { fresh?: boolean; holdWhenEmpty?: boolean }): Promise<Tournament | null | undefined> => {
         if (!tournamentId) {return undefined;}
         const stillActive = () => activeIdRef.current === tournamentId;
+        let hold = false;
 
         try {
             if (!options?.fresh) { setIsLoading(true); } // A-08f3b: Laden-Anzeige nur beim ersten Laden
-            const data = await service.loadTournament(tournamentId, options);
+            const data = await service.loadTournament(tournamentId, options?.fresh ? { fresh: true } : undefined);
             if (!stillActive()) { return undefined; }
+            hold = !!options?.holdWhenEmpty && data?.matches.length === 0;
             setTournament(data);
             setError(null);
             return data;
@@ -124,7 +128,7 @@ export function useTournamentManager(tournamentId: string) {
             setError('Fehler beim Laden des Turniers');
             return undefined;
         } finally {
-            if (stillActive()) { setIsLoading(false); }
+            if (stillActive() && !hold) { setIsLoading(false); }
         }
     }, [service, tournamentId]);
 
@@ -135,11 +139,16 @@ export function useTournamentManager(tournamentId: string) {
     // meldet sein Ergebnis nicht an die Anzeige. Liegt lokal nur eine ältere Kopie OHNE Spiele (z. B. der Entwurf, den ein anderes Gerät
     // inzwischen festgelegt hat), folgt genau ein frisches Lesen: es hängt sich an den laufenden Abruf, führt den Stand des Servers mit
     // der lokalen Kopie zusammen und zeigt ihn an (ohne Netz bleibt die lokale Kopie). Das Lesen schreibt nie.
+    // Bis das Nachlesen fertig ist (auch wenn es scheitert), bleibt die Laden-Anzeige stehen; `cancelled` verhindert das Nachlesen nach
+    // Unmount oder Turnierwechsel (gesetzt wird in beiden Fällen ohnehin nur für die aktive Adresse).
     useEffect(() => {
-        void loadTournament().then((first) => {
+        let cancelled = false;
+        void loadTournament({ holdWhenEmpty: true }).then((first) => {
+            if (cancelled) { return undefined; }
             if (first?.matches.length === 0) { return loadTournament(FRESH); }
             return undefined;
         });
+        return () => { cancelled = true; };
     }, [loadTournament]);
     // A-08f3b (@FU-087, @FU-001): Push und Abfrage-Ausweichen lesen frisch aus der Cloud
     const loadFresh = useCallback(async (): Promise<void> => { await loadTournament(FRESH); }, [loadTournament]);
