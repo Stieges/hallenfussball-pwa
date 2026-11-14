@@ -36,10 +36,9 @@ export function LiveHeader({ badge, field, matchNumber, group, size, themeColors
     marginBottom: layout.headerGap,
     flexShrink: 0,
   };
-  // B-44a2: eine Marken-Gestaltung für alle Zustände, feste Breite (das Abzeichen füllt sie)
+  // B-44a2: eine Marken-Gestaltung für alle Zustände; @ZM-167: links in der Kopfzeile, nur so breit wie das Wort (kein Füllen einer festen Spalte)
   const badgeSlotStyle: CSSProperties = {
     display: 'flex',
-    width: layout.badgeWidth,
     justifySelf: 'start',
     fontSize: xl ? displayFontSizes.liveBadge : displayFontSizes.bodySM,
   };

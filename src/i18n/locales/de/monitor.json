@@ -65,7 +65,8 @@
     },
     "qr": {
       "headline": "Ergebnisse aufs Handy",
-      "idleHint": "Schau auf die Anzeige in der Halle – hier läuft das Spiel live mit."
+      "idleHint": "Schau auf die Anzeige in der Halle – hier läuft das Spiel live mit.",
+      "alt": "QR-Code zur Zuschauer-Seite des Turniers"
     },
     "page": "Seite {{page}} / {{pages}}",
     "allStandings": {

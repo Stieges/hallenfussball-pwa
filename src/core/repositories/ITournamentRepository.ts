@@ -18,8 +18,12 @@ export interface ITournamentRepository {
      * Loads a tournament by ID.
      * Returns null if not found.
      */
-    /** A-08f3b: `fresh` = auf den Cloud-Stand warten (nur `OfflineRepository`, sonst ohne Wirkung). */
-    get(id: string, options?: { fresh?: boolean }): Promise<Tournament | null>;
+    /**
+     * A-08f3b: `fresh` = auf den Cloud-Stand warten (nur `OfflineRepository`, sonst ohne Wirkung).
+     * Y3 (@W5-039): `onLocalFallback` wird gerufen, wenn `fresh` den Cloud-Stand nicht bekam (Zeitgrenze, kein Netz, Fehler) und die
+     * lokale Kopie geliefert wird -- der Aufrufer weist dann darauf hin, dass es der Stand dieses Geräts ist.
+     */
+    get(id: string, options?: { fresh?: boolean; onLocalFallback?: () => void }): Promise<Tournament | null>;
     getByShareCode(code: string): Promise<Tournament | null>;
 
     /**
@@ -29,6 +33,13 @@ export interface ITournamentRepository {
      * Ergebnis ohne Bedeutung für Aufrufer; `SupabaseRepository` liefert die erreichte Server-Version (C-VERSION-NACH-ERSTANLAGE).
      */
     save(tournament: Tournament): Promise<unknown>;
+
+    /**
+     * @W5-040: Papierkorb und Wiederherstellen. Ändert NUR die Löschmarke (`deletedAt` = Zeitpunkt, `null` = wiederherstellen),
+     * dazu optional mitgegebene Angaben (z. B. `status`), nie Teams oder Spiele. Ersetzt das Speichern des ganzen Turniers,
+     * das mit einem Listen-Eintrag Teams und Spiele am Server gelöscht hat.
+     */
+    setTrashed(id: string, deletedAt: string | null, metadata?: Partial<Tournament>): Promise<void>;
 
     /**
      * Updates a specific match.

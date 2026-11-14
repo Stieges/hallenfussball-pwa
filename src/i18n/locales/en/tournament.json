@@ -41,12 +41,14 @@
     "overall": "Overall standings",
     "currentlyPlaying": "Currently playing",
     "details": {
-      "played": "Played",
       "wins": "Wins",
       "draws": "Draws",
       "losses": "Losses",
       "goalsFor": "Goals scored",
-      "goalsAgainst": "Goals conceded"
+      "goalsAgainst": "Goals conceded",
+      "column": "Details",
+      "showFor": "Show details for {{team}}",
+      "hideFor": "Hide details for {{team}}"
     }
   },
   "finalRankings": {
@@ -137,6 +139,7 @@
       "endQuestionExpired": "Playing time is up – end it now at {{score}}?",
       "endControlledBy": "Field {{field}} is currently controlled by {{name}}",
       "endControlledByOther": "Field {{field}} is currently controlled by another device",
+      "endGoalsMismatch": "Goals have been booked in the cockpit that do not match {{entered}} (there: {{booked}}). The scorer list counts only the booked goals.",
       "teamsMissing": "Enter a result once both teams are known",
       "unavailable": "Entering a result is not possible right now",
       "shootoutTitle": "Penalty shootout result",
@@ -1258,6 +1261,17 @@
       "ownGoals_one": "{{count}} own goal",
       "ownGoals_other": "{{count}} own goals"
     }
+  },
+  "scheduleMissing": {
+    "title": "Schedule not created yet",
+    "text": "This tournament has no matches yet. Finish it in the wizard and the schedule will appear here.",
+    "action": "Finish in the wizard",
+    "noRight": "The tournament management will finish the schedule.",
+    "notLoadedTitle": "Schedule not loaded",
+    "notLoadedText": "The schedule could not be loaded. Check your connection and try again.",
+    "reloadAction": "Reload",
+    "reloading": "Loading …",
+    "stillEmpty": "Still no schedule. If in doubt, ask the tournament management."
   },
   "rights": {
     "leadOnlyHint": "Only the tournament management can change this",

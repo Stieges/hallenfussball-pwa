@@ -54,8 +54,7 @@ const INVENTORY: Record<string, Entry> = {
   [`${HOME}ManagementTab.tsx`]: { gate: `${HOME}ManagementTab.tsx`, why: 'Cockpit: canPlay/istLeitung aus useCan' },
   [`${HOME}SettingsTab.tsx`]: { gate: `${HOME}SettingsTab.tsx`, why: 'Formular hinter useCan(tournamentSettings), Wizard-Einstieg hinter useCan(restructure)' },
   [`${HOME}TeamsTab.tsx`]: { gate: `${HOME}TeamsTab.tsx`, why: 'useCan(teams/restructure)' },
-  'src/screens/TournamentManagementScreen.tsx': { gate: 'src/screens/TournamentManagementScreen.tsx', why: 'Hinweis-Kasten, Monitor-Editor und Trefferliste nur offen' },
-  'src/hooks/useTournaments.ts': { gate: 'src/hooks/useTournaments.ts', why: 'Papierkorb/Wiederherstellen werfen bei abgeschlossenem Turnier' },
+  [`${HOME}ManagementTabContent.tsx`]: { gate: 'src/screens/TournamentManagementScreen.tsx', why: 'reicht die Speicherwege nur an die Reiter weiter; die Sperre sitzt im Screen (useTournamentClosed: Hinweis-Kasten, Monitor-Editor) und in den Reitern (SettingsTab, TeamsTab, ...)' },
   // --- gesperrt, Sperre sitzt im Elternteil ---
   [`${ADMIN}categories/MatchCockpit/index.tsx`]: { gate: `${ADMIN}components/CategoryRightGate.tsx`, why: 'CLOSED_LOCKED: nach dem Abschluss nur der Hinweis' },
   [`${ADMIN}categories/Metadata/index.tsx`]: { gate: `${ADMIN}components/CategoryRightGate.tsx`, why: 'Kategorie hinter useCan(tournamentSettings)' },
@@ -105,16 +104,18 @@ describe('Inventar: Sperre nach dem Abschluss (R3-3, V6)', () => {
     expect(noReason).toEqual([]);
   });
 
-  it('nur CategoryRightGate (öffentliche Ansicht), der Aushang, das Endstand-PDF und der Zustand „abgeschlossen“ der Verwaltung lassen per openAfterClose ein Recht nach dem Abschluss offen (nur kürzen, nie erweitern)', () => {
+  it('nur CategoryRightGate (öffentliche Ansicht, Unterpunkt „Hallenton“ lesen) und das Admin Center (Menüpunkt „Hallenton“ sichtbar), der Aushang, das Endstand-PDF und der Zustand „abgeschlossen“ der Verwaltung lassen per openAfterClose ein Recht nach dem Abschluss offen (nur kürzen, nie erweitern)', () => {
     const users = sourceFiles
       .filter((f) => /openAfterClose\s*:/.test(f.text) && f.path !== 'src/features/auth/hooks/useCan.ts')
       .map((f) => f.path);
+    // Unterpunkt „Hallenton“ (@HT-046): lesen ja nach dem Turnierende – Gate (CategoryRightGate) und Menüfilter (TournamentAdminCenter) stellen dieselbe
+    // Lesefrage; jede Taste im Unterpunkt fragt `useCan('manageScreens')` ohne Ausnahme und ist nach dem Abschluss gesperrt.
     // Aushang (QR-Code der öffentlichen Ansicht drucken) schreibt nichts, @LZ-037 Z. 5, Review #394 R-2
     // Zustand C der Verwaltung (R3-4, Review #394 H-1): `manageLifecycle` ist nach dem Abschluss gesperrt, der Bereich „abgeschlossen“
     // (Endstand, „Nach dem Ende eingetroffen“) liest nur und muss der Turnierleitung trotzdem erscheinen – er schreibt nichts.
     // Endstand-PDF in der Endstand-Ansicht (@DR-048 Z. 3, @DR-011): gibt es erst nach dem Abschluss, druckt nur den gespeicherten Endstand.
     expect(users.sort()).toEqual([
-      `${ADMIN}categories/Exports/index.tsx`, `${ADMIN}components/CategoryRightGate.tsx`,
+      `${ADMIN}TournamentAdminCenter.tsx`, `${ADMIN}categories/Exports/index.tsx`, `${ADMIN}components/CategoryRightGate.tsx`,
       'src/features/tournament-finish/components/FinalStandingsPdfButton.tsx',
       'src/features/tournament-finish/components/FinishTournamentSection.tsx', `${HOME}ScheduleTab.tsx`,
     ]);

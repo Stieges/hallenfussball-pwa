@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { QRCodeSVG } from 'qrcode.react';
 import { cssVars, displayFontSizes, displaySpacing, displayMonitor } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
-import { zuschauerUrl } from '../publicVisibility';
+import { qrTypedAddress, zuschauerUrl } from '../publicVisibility';
 
 interface QrSlideProps {
   tournament: Tournament;
@@ -32,9 +32,11 @@ export function QrSlide({ tournament, style }: QrSlideProps) {
             bgColor={displayMonitor.qr.background}
             fgColor={displayMonitor.qr.foreground}
             level="M"
+            title={t('slides.qr.alt')}
           />
-          <div data-monitor="nah" style={{ fontSize: displayFontSizes.bodyMD }}>
-            {qrUrl}
+          {/* @ZM-208: zum Abtippen, wenn das Handy keinen QR-Code liest: mindestens 3 % der Bildhöhe, eine Zeile, ohne „https://“ */}
+          <div data-monitor="nah" data-testid="qr-address" style={{ fontSize: displayFontSizes.qrAddress, fontWeight: cssVars.fontWeights.semibold, whiteSpace: 'nowrap', maxWidth: '100%', textAlign: 'center' }}>
+            {qrTypedAddress(qrUrl)}
           </div>
         </>
       )}

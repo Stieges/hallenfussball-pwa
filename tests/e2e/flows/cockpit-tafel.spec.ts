@@ -7,6 +7,7 @@
  */
 
 import { test, expect } from '../helpers/test-fixtures';
+import { mitSpielplan } from '../helpers/seedMatches';
 
 import { abpfiffHalten } from '../helpers/abpfiff';
 /**
@@ -25,7 +26,7 @@ function getFutureDate(): string {
  */
 function createTestTournament(einstellungen?: Record<string, unknown>) {
   const futureDate = getFutureDate();
-  return {
+  return mitSpielplan({
     id: 'e2e-test-tournament',
     status: 'published',
     sport: 'football',
@@ -63,11 +64,10 @@ function createTestTournament(einstellungen?: Record<string, unknown>) {
       { id: '00000000-0000-4000-8000-0000000000e3', name: 'FC Test C' },
       { id: '00000000-0000-4000-8000-0000000000e4', name: 'FC Test D' },
     ],
-    // Let the app generate matches from the schedule
-    matches: [],
+    // matches: die Spiele erzeugt `mitSpielplan` (die Verwaltung erzeugt beim Öffnen keinen Plan, @W5-042)
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-  };
+  });
 }
 
 /** Die Zeile mit „Spiel n“ und der gespielten Zeit: am Laptop die Kopfzeile der Tafel (@SL-180), sonst die Zeile unter der Uhr */
@@ -94,10 +94,16 @@ test.describe('Cockpit-Tafel', () => {
   test('Vor Anpfiff steht die Anstoßzeit nur bei der Uhr, der Abzeichen-Platz bleibt leer; Anpfiff macht die Tafel live', async ({ page }) => {
     // @SL-049/@SL-050, @OB-068: die Anstoßzeit steht einmal, bei der Uhr; der Platz des Abzeichens bleibt leer
     await expect(page.getByTestId('scoreboard-state')).toBeEmpty();
-    await expect(page.getByTestId('scoreboard-clock-rest')).toContainText(/\d{1,2}:\d{2}/);
-    await expect(page.getByTestId('scoreboard-clock')).toContainText('Anstoß');
+    if ((page.viewportSize()?.width ?? 1024) < 768) {
+      // @SL-241: am Handy steht vor dem Anpfiff keine große Uhr, die Anstoßzeit und die Spielzeit stehen klein in der Zeile
+      await expect(page.getByTestId('scoreboard-clock-rest')).toHaveCount(0);
+      await expect(page.getByTestId('scoreboard-clock-sub')).toContainText(/Anstoß\s\d{1,2}:\d{2}/);
+    } else {
+      await expect(page.getByTestId('scoreboard-clock-rest')).toContainText(/\d{1,2}:\d{2}/);
+      await expect(page.getByTestId('scoreboard-clock')).toContainText('Anstoß');
+    }
     // Am Laptop steht „Spiel 1 · Feld 1“ in der Kopfzeile der Tafel (@SL-180), am Handy unter der Uhr
-    await expect(page.locator(UHR_ZEILE).first()).toContainText(/Spiel \d+/);
+    await expect(page.locator(UHR_ZEILE).first()).toContainText(/Spiel\s\d+/);
 
     // @SL-001: der Anpfiff startet die Uhr; die Spielzeit läuft ab 0:00
     await page.getByTestId('match-start-button').click();
@@ -199,7 +205,8 @@ test.describe('Cockpit-Tafel', () => {
     await expect(page.getByRole('alertdialog')).toHaveCount(0); // die Rückfrage ist beantwortet
     // nicht mehr „Ende oder Anstoß“: das abgepfiffene Spiel bleibt mit dem Endstand stehen (Befund C-COCKPIT-ENDSTAND-NACH-AUTOENDE)
     await expect(page.getByTestId('scoreboard-state')).toContainText('Ende');
-    await expect(page.getByTestId('scoreboard-quittung')).toHaveText(/^Abgepfiffen · \d+:\d+ gespeichert$/);
+    // @SL-240: am Handy steht „gespielt …“ in der Quittungszeile
+    await expect(page.getByTestId('scoreboard-quittung')).toHaveText((page.viewportSize()?.width ?? 1024) < 768 ? /^Abgepfiffen · \d+:\d+ gespeichert · gespielt \d+:\d{2}( von \d+:\d{2})?$/ : /^Abgepfiffen · \d+:\d+ gespeichert$/);
     await expect(page.getByTestId('scoreboard-clock')).not.toContainText('Anstoß');
   });
 });

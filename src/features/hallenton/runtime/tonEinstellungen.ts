@@ -1,7 +1,7 @@
 /**
- * Lautstärke je Ton und Stumm je Gerät (H3b-1, @HT-023): in `localStorage` unter `hallenton:lautstaerke` (JSON
- * `{ abpfiff, halbzeit, tor }` in Prozent) und `hallenton:stumm`, nicht turnierweit. Ohne Speicher (privates Fenster, gesperrt)
- * gelten 100 % und nicht stumm; nichts wirft. H3c: eigener Regler `tor` für die Torhymne (Musik ist oft lauter als eine
+ * Lautstärke je Ton je Gerät (H3b-1, @HT-023): in `localStorage` unter `hallenton:lautstaerke` (JSON
+ * `{ abpfiff, halbzeit, tor }` in Prozent) nicht turnierweit. Ohne Speicher (privates Fenster, gesperrt)
+ * gelten 100 %; nichts wirft. H3c: eigener Regler `tor` für die Torhymne (Musik ist oft lauter als eine
  * Hupe), Vorbelegung wie die übrigen 100 %; ein älterer Eintrag ohne `tor` behält Abpfiff und Halbzeit.
  */
 export type TonArt = 'abpfiff' | 'halbzeit';
@@ -9,9 +9,10 @@ export type TonArt = 'abpfiff' | 'halbzeit';
 export type ReglerArt = TonArt | 'tor';
 
 export const LAUTSTAERKE_SCHLUESSEL = 'hallenton:lautstaerke';
-export const STUMM_SCHLUESSEL = 'hallenton:stumm';
+/** Früherer Schlüssel der (entfernten) Stumm-Taste: wird beim Start gelöscht, nie gelesen. */
+const ALTER_STUMM_SCHLUESSEL = 'hallenton:stumm';
 
-export interface Speicher { getItem(schluessel: string): string | null; setItem(schluessel: string, wert: string): void }
+export interface Speicher { getItem(schluessel: string): string | null; setItem(schluessel: string, wert: string): void; removeItem?(schluessel: string): void }
 
 export function lies(speicher: Speicher | null, schluessel: string): string | null {
   try {
@@ -44,6 +45,15 @@ export function gespeicherteLautstaerke(speicher: Speicher | null): Record<Regle
   return {
     abpfiff: gueltigeProzent(werte.abpfiff) ?? 100, halbzeit: gueltigeProzent(werte.halbzeit) ?? 100, tor: gueltigeProzent(werte.tor) ?? 100,
   };
+}
+
+/** Löscht einen alten Stumm-Wert (H4-10: die Stumm-Taste ist entfallen, ein gespeichertes „true“ hätte die Halle stumm gehalten). */
+export function vergissAltenStummWert(speicher: Speicher | null): void {
+  try {
+    speicher?.removeItem?.(ALTER_STUMM_SCHLUESSEL);
+  } catch {
+    // gesperrter Speicher: der Wert wird ohnehin nie gelesen
+  }
 }
 
 /** `localStorage` des Browsers; `null`, wenn der Zugriff gesperrt ist. */

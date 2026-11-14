@@ -41,7 +41,7 @@ async function oeffneZuschauer(page: Page, szene: Szene): Promise<void> {
   await karte.scrollIntoViewIfNeeded(); // die Karte steht im Bild (Aufnahmen)
 }
 
-/** Cockpit-Cup mit Blau gegen Navy (zu ähnlich): der Anpfiff gibt dem Heim-Team Leibchen; Kasten und Kopf zeigen die Weste (@SL-176). */
+/** Cockpit-Cup mit Blau gegen Navy (zu ähnlich): Tom bestätigt die Karte und pfeift an; Kasten und Kopf zeigen die Weste (@SL-176). */
 async function oeffneCockpit(page: Page, groesse: { width: number; height: number }, heimName: string): Promise<void> {
   await page.setViewportSize(groesse);
   const namen = [heimName, ...NAMEN.slice(1)];
@@ -49,7 +49,7 @@ async function oeffneCockpit(page: Page, groesse: { width: number; height: numbe
     formatVersion: 1, name: 'cockpit', localStorage: { 'app:consent': { errorTracking: false, sessionReplay: false, timestamp: 1794643200000, version: 1 } },
     datenbanken: [{ name: 'hallenfussball', version: 1, store: 'cache', eintraege: { tournaments: [cup({ namen, farben: ['#1565C0', '#0D1B4C', '#2E8B57', '#C0392B'] })] } }],
   });
-  await anpfeifen(page);
+  await anpfeifen(page, { leibchen: true }); // Tom bestätigt die Karte, dann der Anpfiff (@SL-206, @SL-210)
   await page.evaluate(() => document.fonts.ready);
 }
 
@@ -251,18 +251,14 @@ test.describe('Leibchen-Anzeige Zuschauer-Seite 390', () => {
     await bild(page, 'z-laeuft');
   });
 
-  test('@ZM-158 @ZM-195 Als Nächstes: Kästen mit „0“ in der echten Trikotfarbe statt Strich (Rot gegen Rot: beide Rot, keine Ausweichfarbe, @ZM-159 Fall D2)', async ({ page }) => {
+  test('@ZM-209 Als Nächstes: vor dem Anpfiff ohne bestätigte Leibchen „–“ bei beiden Teams, keine Kästen, kein „0 : 0“ (der Hallenmonitor zeigt sie weiter, @ZM-195)', async ({ page }) => {
     await oeffneZuschauer(page, 'vor-gleiche-farbe');
-    // Das nächste Spiel steht im Kopfblock und als Karte im Spielplan; gemessen wird die Karte, der Kopf trägt dieselben Farben
     const plan = page.locator('.mobile-view');
-    await expect(page.getByTestId('public-current').getByTestId(/^match-box-.*-away$/)).toHaveAttribute('data-color', ROT);
-    await expect(plan.getByTestId(/^match-box-.*-home-digits$/)).toHaveText('0');
-    await expect(plan.getByTestId(/^match-box-.*-home$/)).toHaveAttribute('data-color', ROT);
-    await expect(plan.getByTestId(/^match-box-.*-away$/)).toHaveAttribute('data-color', ROT);
-    await expect(plan.getByTestId(/^match-box-.*-away$/)).toHaveAttribute('data-fill', 'solid');
-    // Gegenbeispiel: Spiel 5 (später, Weiß gegen Grün) ist nicht das nächste Spiel des Felds → Zahl ohne Kasten wie bisher
-    await expect(page.locator('.mobile-view [data-testid^="match-box-"][data-testid$="-home"]')).toHaveCount(1);
-    await expect(page.locator('.mobile-view [data-testid^="match-goals-"]').first()).toBeVisible();
+    await expect(page.getByTestId('public-current').getByTestId(/^match-goals-kopf-.*-home$/)).toHaveText('–');
+    await expect(page.getByTestId('public-current').getByTestId(/^match-goals-kopf-.*-away$/)).toHaveText('–');
+    await expect(page.getByTestId('public-current').getByTestId(/^match-box-/)).toHaveCount(0);
+    await expect(plan.getByTestId(/^match-box-/)).toHaveCount(0);
+    await expect(plan.getByTestId(/^match-goals-.*-home$/).first()).toHaveText('–');
     await bild(page, 'z-vor');
   });
 
@@ -282,7 +278,7 @@ const COCKPITS = [{ name: 'laptop', width: 1280, height: 720 }, { name: 'handy',
 for (const g of COCKPITS) {
   test.describe(`Leibchen-Anzeige Cockpit ${g.name}`, () => {
     for (const [lang, heim] of [['kurz', NAMEN[0]], ['lang', NAME_50]] as const) {
-      test(`@SL-176 @ZM-161 Cockpit-Kasten zeigt die Form des Trainingsleibchens, der flache Team-Kopf behält die Streifen, Name ${lang} (${g.name})`, async ({ page }) => {
+      test(`@SL-176 @ZM-161 Cockpit-Kasten zeigt die Form des Trainingsleibchens, der flache Team-Kopf trägt die Streifen als eigene Elemente, Name ${lang} (${g.name})`, async ({ page }) => {
         await oeffneCockpit(page, g, heim);
         await bild(page, `c-${g.name}-${lang}`);
         const kasten = page.getByTestId('scoreboard-box-links');
@@ -291,7 +287,9 @@ for (const g of COCKPITS) {
         // Der flache Kopf behält die Streifen: die Form des Trainingsleibchens trägt dort nicht (Bilder `kopf-versuch-*`, Bericht)
         const kopf = page.getByTestId('team-head-home');
         await expect(kopf).toHaveAttribute('data-fill', 'vest');
-        await expect(kopf.locator('[data-teil]')).toHaveCount(0);
+        // …als zwei schmale Streifen am Rand neben dem Text, am Handy wie am Laptop (@SL-225); nie mit Hals- und Schulterteilen des Kastens
+        await expect(kopf.locator('[data-teil="streifen"]')).toHaveCount(2);
+        await expect(kopf.locator('[data-teil]:not([data-teil="streifen"])')).toHaveCount(0);
       });
     }
   });

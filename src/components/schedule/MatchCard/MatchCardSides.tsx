@@ -6,6 +6,7 @@
 import { type CSSProperties } from 'react';
 import { cssVars } from '../../../design-tokens';
 import { TeamAvatar } from '../../ui/TeamAvatar';
+import { SlashBreaks } from '../../ui/atoms/TeamName';
 import { ZeitstrafeHinweis } from '../../ui/molecules/ZeitstrafeHinweis';
 import type { SpectatorClock, ViewMatchStatus } from '../../../core/view';
 import type { ResultFigures } from '../matchResult';
@@ -45,8 +46,8 @@ export const MatchCardSides: React.FC<MatchCardSidesProps> = ({
       fontSize: cssVars.fontSizes.lg,
       fontWeight: isWinner ? cssVars.fontWeights.bold : isLoser || status === 'finished' ? cssVars.fontWeights.medium : cssVars.fontWeights.semibold,
       color: isLoser ? cssVars.colors.textSecondary : cssVars.colors.textPrimary,
-      // MOBILE-UX: No truncation - team names must be fully visible
-      wordBreak: 'break-word',
+      // MOBILE-UX: keine Kürzung. `overflow-wrap: break-word` bricht nur ein Wort, das allein länger ist als die Zeile; `word-break: break-word`
+      // (wie `anywhere`) ließe die Spalte unter die Wortbreite schrumpfen und brach „Tengling“ mitten im Wort (@ZM-207)
       overflowWrap: 'break-word',
     };
   };
@@ -56,7 +57,7 @@ export const MatchCardSides: React.FC<MatchCardSidesProps> = ({
       {/* Home Team (right-aligned) */}
       <div style={teamStyle('right')}>
         <ZeitstrafeHinweis liste={clock?.zeitstrafen?.home} testId={`match-time-penalty-${matchId}-home`} align="end">
-          <span style={teamNameStyle('a')} data-testid={`match-name-${matchId}-home`} data-winner={decided && result?.winner === 'a' ? 'true' : undefined}>{homeTeam.name}</span>
+          <span style={teamNameStyle('a')} data-testid={`match-name-${matchId}-home`} data-teamname data-winner={decided && result?.winner === 'a' ? 'true' : undefined}><SlashBreaks text={homeTeam.name} /></span>
         </ZeitstrafeHinweis>
         <TeamAvatar team={homeTeam} size="sm" />
       </div>
@@ -84,7 +85,7 @@ export const MatchCardSides: React.FC<MatchCardSidesProps> = ({
       <div style={teamStyle('left')}>
         <TeamAvatar team={awayTeam} size="sm" />
         <ZeitstrafeHinweis liste={clock?.zeitstrafen?.away} testId={`match-time-penalty-${matchId}-away`}>
-          <span style={teamNameStyle('b')} data-testid={`match-name-${matchId}-away`} data-winner={decided && result?.winner === 'b' ? 'true' : undefined}>{awayTeam.name}</span>
+          <span style={teamNameStyle('b')} data-testid={`match-name-${matchId}-away`} data-teamname data-winner={decided && result?.winner === 'b' ? 'true' : undefined}><SlashBreaks text={awayTeam.name} /></span>
         </ZeitstrafeHinweis>
       </div>
     </>

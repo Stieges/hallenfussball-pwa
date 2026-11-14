@@ -309,6 +309,7 @@
      Colors - Management & Ranking
      =========================================== */
   --color-ranking-highlight-bg: rgba(34, 197, 94, 0.15);
+  --color-ranking-negative-text: #FF7A7A;
   --color-ranking-placement-bg: rgba(0, 230, 118, 0.08);
   --color-ranking-expanded-bg: rgba(0, 230, 118, 0.05);
 
@@ -916,6 +917,7 @@ html[data-font-size="x-large"] {
      Colors - Management & Ranking
      =========================================== */
   --color-ranking-highlight-bg: rgba(5, 150, 105, 0.08);
+  --color-ranking-negative-text: #B91C1C;
   --color-ranking-placement-bg: rgba(5, 150, 105, 0.05);
   --color-ranking-expanded-bg: rgba(5, 150, 105, 0.03);
 

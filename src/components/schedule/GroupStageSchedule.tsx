@@ -186,7 +186,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     [view],
   );
 
-  // Kästen in Teamfarbe (Weste bei Leibchen) nur beim laufenden und beim nächsten Spiel des Felds (@ZM-158); nie im Kindermodus ohne Stand
+  // Kästen in Teamfarbe (Weste bei Leibchen) nur beim laufenden und beim nächsten Spiel des Felds (@ZM-158; Zuschauer vor dem Anpfiff nur mit bestätigtem Leibchen, @ZM-209); nie im Kindermodus ohne Stand
   const nextIds = useMemo(() => {
     const ids = new Set<string>();
     for (const field of new Set(matches.map((m) => m.field))) {
@@ -198,7 +198,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   const kastenOf = (matchId: string): MatchView['boxes'] | undefined => {
     const shown = view?.byId.get(matchId);
     // Laufendes Spiel nur mit eingeschaltetem Live-Stand: sonst „laufendes Spiel ohne Stand“ (@ZM-116, Zone 1 „Beim Öffnen“)
-    return view?.rules.results === true && shown !== undefined && (shown.isLive ? view.rules.liveScore : nextIds.has(matchId)) ? shown.boxes : undefined;
+    return view?.rules.results === true && shown !== undefined && (shown.isLive ? view.rules.liveScore : nextIds.has(matchId) && shown.showBoxes) ? shown.boxes : undefined;
   };
 
   // Spielseiten: Namen immer aus der Ansicht (Slots, aktuelle Teams; @TM-015), nie aus gespeichertem Anzeigetext

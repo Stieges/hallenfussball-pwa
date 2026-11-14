@@ -41,12 +41,14 @@
     "overall": "Gesamttabelle",
     "currentlyPlaying": "Gerade im Spiel",
     "details": {
-      "played": "Spiele",
       "wins": "Siege",
       "draws": "Unentschieden",
       "losses": "Niederlagen",
       "goalsFor": "Tore geschossen",
-      "goalsAgainst": "Tore kassiert"
+      "goalsAgainst": "Tore kassiert",
+      "column": "Details",
+      "showFor": "Details zu {{team}} anzeigen",
+      "hideFor": "Details zu {{team}} ausblenden"
     }
   },
   "finalRankings": {
@@ -137,6 +139,7 @@
       "endQuestionExpired": "Spielzeit abgelaufen – jetzt mit {{score}} beenden?",
       "endControlledBy": "Feld {{field}} wird gerade von {{name}} gesteuert",
       "endControlledByOther": "Feld {{field}} wird gerade von einem anderen Gerät gesteuert",
+      "endGoalsMismatch": "Im Cockpit sind Tore gebucht, die nicht zu {{entered}} passen (dort {{booked}}). Die Torschützenliste zählt nur die gebuchten Tore.",
       "teamsMissing": "Ergebnis erst, wenn beide Teams feststehen",
       "unavailable": "Ergebnis eintragen ist gerade nicht möglich",
       "shootoutTitle": "Ergebnis des Strafstoßschießens",
@@ -1258,6 +1261,17 @@
       "ownGoals_one": "{{count}} Eigentor",
       "ownGoals_other": "{{count}} Eigentore"
     }
+  },
+  "scheduleMissing": {
+    "title": "Spielplan noch nicht erstellt",
+    "text": "Für dieses Turnier liegen noch keine Spiele vor. Stelle es im Wizard fertig, dann erscheint hier der Spielplan.",
+    "action": "Im Wizard fertigstellen",
+    "noRight": "Die Turnierleitung stellt den Spielplan fertig.",
+    "notLoadedTitle": "Spielplan nicht geladen",
+    "notLoadedText": "Der Spielplan konnte nicht geladen werden. Prüfe die Verbindung und lade erneut.",
+    "reloadAction": "Erneut laden",
+    "reloading": "Wird geladen …",
+    "stillEmpty": "Weiterhin kein Spielplan da. Frag im Zweifel die Turnierleitung."
   },
   "rights": {
     "leadOnlyHint": "Ändern nur durch die Turnierleitung",

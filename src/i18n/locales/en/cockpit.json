@@ -90,6 +90,11 @@
       "strafstoss": "after $t(sport:events.penaltyShootout)"
     },
     "quittung": "Match ended · {{links}}:{{rechts}} saved",
+    "quittungZusatz": {
+      "gespielt": "played {{zeit}}",
+      "gespieltVon": "played {{zeit}} of {{geplant}}",
+      "strafstoss": "$t(sport:events.penaltyShootout) {{ergebnis}}"
+    },
     "keinWeiteresSpiel": "No more matches",
     "uebernahmePruefen": "Match time comes from {{name}}'s device – please check",
     "uebernahmePruefenOhneName": "Match time comes from the previous device – please check",
@@ -103,7 +108,8 @@
       "wartetOffline": "Your device has no network – your data may be out of date. The line-up may already be set on the server.",
       "wartetAuf": "Waiting for: {{grund}}",
       "abschnitteMal": "{{anzahl}} ×",
-      "anstossSpielFeld": "Kick-off {{zeit}} · {{spielFeld}}"
+      "anstossSpielFeld": "Kick-off {{zeit}} · {{spielFeld}}",
+      "zeileMitSpielzeit": "{{zeile}} · Match time {{spielzeit}}"
     },
     "wachhaltenSymbol": "The screen may lock, the clock keeps running",
     "tonAus": "Sound off",
@@ -298,6 +304,7 @@
     "assistFormat": "Assist: {{assists}}",
     "editAria": "Edit {{description}}",
     "edit": "Edit",
+    "penaltyEndedByGoal": "ended by goal {{time}}",
     "retractedMark": "retracted",
     "discardedMark": "discarded by {{by}}, {{time}}",
     "discardedByLead": "the organisers",
@@ -609,8 +616,7 @@
     "nurZusehen_other": "You can only watch now – {{count}} entries handed to the organisers",
     "tasteLeertaste": "Space",
     "tasteRueckgaengigStrg": "Ctrl+Z",
-    "tasteRueckgaengigCmd": "Cmd+Z",
-    "ohneLeibchen": "Kick off without bibs"
+    "tasteRueckgaengigCmd": "Cmd+Z"
   },
   "abpfiff": {
     "label": "End match",
@@ -705,10 +711,6 @@
   "anpfiff": {
     "hinweisGleich": "Same kit colour",
     "hinweisAehnlich": "Very similar kit colours",
-    "festlegen": "Assign bibs",
-    "leibchenFuer": "Bibs for {{team}}",
-    "farbeLabel": "Bibs: {{farbe}}",
-    "ohneAnpfeifen": "Kick off without bibs",
     "farbe": {
       "gelb": "Yellow",
       "orange": "Orange",
@@ -725,8 +727,52 @@
       "braun": "Brown",
       "turnier": "Tournament colour"
     },
-    "leibchen": "Bibs",
-    "farbeZuAehnlich": "{{farbe}} – too similar to the kit of {{gegner}}",
-    "gegnerAehnlichKurz": "Bibs too similar to the opponent"
+    "farbeZuAehnlich": "{{farbe}} – too similar to the kit of {{gegner}}"
+  },
+  "leibchenKarte": {
+    "zieht": "{{team}} wears {{farbe}}",
+    "aendernVorschlag": "Change bibs",
+    "bestaetigen": "Confirm",
+    "keine": "No bibs",
+    "aendern": "Change",
+    "andere": "Other colour …",
+    "keinPassendes": "No suitable bib available",
+    "festlegen": "Set bibs",
+    "wieTrikot": "Like jersey",
+    "aehnlichWieTrikot": "Similar to jersey",
+    "gleichHell": "Same brightness",
+    "wieGegner": "Like opponent",
+    "warnungEigenesTrikot": "Bib looks like the team's own jersey",
+    "gesendet": "sent",
+    "wirdGesendet": "sending",
+    "team": "Team",
+    "farbe": "Colour",
+    "uebernehmen": "Take over field",
+    "nurLesen": "Only the controlling device can confirm bibs.",
+    "nachtragen": "Add bibs",
+    "nachtragenTitel": "Bibs in the running match",
+    "schliessen": "Close",
+    "speichern": "Save",
+    "entfernen": "Remove bibs",
+    "gruppeAria": "Bibs for the next match",
+    "farbeAria": "{{farbe}}",
+    "farbeWarnAria": "{{farbe}} – {{warnung}}",
+    "meldung": {
+      "nichtUebernommen": "Bibs not accepted, please confirm again",
+      "anderesGeraet": "Bibs were changed by another device",
+      "zurueckgenommen": "Bibs withdrawn, please confirm again",
+      "nurSteuerndes": "Only the controlling device can confirm bibs.",
+      "zuSpaet": "The match has already kicked off, bibs not accepted",
+      "alsNachtrag": "The match was already running – bibs saved as a late entry. Change them under “More”.",
+      "fehlgeschlagen": "Bibs not accepted"
+    },
+    "eigenesTrikotVon": "{{farbe}} – looks like the own jersey of {{team}}",
+    "gleichHellVon": "{{farbe}} – same brightness as the own jersey of {{team}}",
+    "teamFrage": "Who wears the bibs?",
+    "ueberschrift": "Bibs for this match · Match {{nummer}}",
+    "ueberschriftOhneNummer": "Bibs for this match",
+    "ueberschriftNaechstes": "Bibs for the next match · Match {{nummer}}",
+    "ueberschriftNaechstesOhneNummer": "Bibs for the next match",
+    "grundBeideSpielen": "Both play {{farbe}}"
   }
 }

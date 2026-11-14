@@ -3,6 +3,13 @@
     "back": "Back",
     "next": "Next"
   },
+  "opening": {
+    "loading": "Loading the tournament …",
+    "failedTitle": "The tournament could not be loaded",
+    "failedBody": "Nothing has been changed. Check your connection and open the tournament again from the home page.",
+    "back": "Back to the home page",
+    "offlineHint": "Opened offline – state from this device."
+  },
   "step1": {
     "title": "Sport & Tournament Type",
     "sportLabel": "Sport",
@@ -225,6 +232,15 @@
       "unreadable": "The file could not be read. Please choose another file.",
       "generic": "The logo could not be processed. Please try another file.",
       "consent": "Please confirm the usage rights."
+    },
+    "bib": {
+      "title": "Bib colours of this tournament",
+      "hilfe": "Which bib colours does the hall have? Choose one or two, the first is the first choice. Without an entry the app suggests yellow.",
+      "regelTitel": "With the same jersey colour the bibs are worn by",
+      "heim": "Team named first (home)",
+      "gast": "Away",
+      "gewaehlt": "selected as colour {{position}}",
+      "max": "At most two colours"
     }
   },
   "step5": {

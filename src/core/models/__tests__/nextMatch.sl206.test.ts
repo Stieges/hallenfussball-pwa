@@ -55,6 +55,13 @@ describe('@SL-215 @SL-216 das nächste Spiel des Felds', () => {
     expect(nextMatchOnField(matches, 1)?.id).toBe('slot-1-nr-9');
   });
 
+  it('@SL-216 ohne Runde (undefined) kommt ein Spiel nach denen mit Runde (NULLS LAST statt NaN)', () => {
+    const gleichZeit = um(11, 0);
+    const matches = [spiel('ohne-runde', 1, { scheduledTime: gleichZeit, round: undefined as unknown as number }), spiel('mit-runde', 2, { scheduledTime: gleichZeit, round: 3 })];
+    expect(nextMatchOnField(matches, 1)?.id).toBe('mit-runde');
+    expect(nextMatchOnField([...matches].reverse(), 1)?.id).toBe('mit-runde');
+  });
+
   it('@SL-216 ein Spiel ohne Uhrzeit kommt nach denen mit Uhrzeit (NULLS LAST)', () => {
     const matches = [spiel('ohne', 2, { scheduledTime: undefined }), spiel('mit', 3)];
     expect(nextMatchOnField(matches, 1)?.id).toBe('mit');

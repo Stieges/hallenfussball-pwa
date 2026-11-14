@@ -108,8 +108,7 @@ export function badgeStyle(state: MatchBadgeState, size: MatchStatusBadgeSize, t
       padding: `${scoreArea.badgePadY} ${scoreArea.badgePadX}`,
       borderRadius: cssVars.borderRadius.md,
       fontSize: displayFontSizes.liveBadge,
-      width: '100%', // füllt die feste Breite der Monitor-Kopfzeile (`scoreArea.badgeWidth`)
-      boxSizing: 'border-box',
+      // nur so breit wie das Wort (@ZM-167): kein Füllen einer festen Spaltenbreite
     };
   }
   return {

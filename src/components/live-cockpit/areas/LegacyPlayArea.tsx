@@ -15,11 +15,13 @@ import type { TeamSummaryModel } from '../model/toTeamSummaryModel';
 import type { StrafenModel } from '../model/toStrafenModel';
 import { TeamColumn, type TeamColumnProps } from './TeamColumn';
 import { TeamSummary } from './TeamSummary';
+import { Rollbar } from './Rollbar';
 import styles from './LegacyAreas.module.css';
-import type { AnpfiffTeile } from './anpfiffTeile';
 
 export interface LegacyPlayAreaProps {
   match: LiveMatch;
+  /** Karte der Leibchen am Laptop: unten in der Spalte der Einträge, über der Leiste (@SL-218) – nimmt der Fläche links nichts weg. */
+  karte?: ReactNode;
   /** Zeile „Nächstes“ im Fluss unter der Tafel (LT-3, `NextMatchArea`). */
   naechstes?: ReactNode;
   isMobile: boolean;
@@ -34,8 +36,6 @@ export interface LegacyPlayAreaProps {
   columns: { links: Omit<TeamColumnProps, 'kompakt' | 'breit'>; rechts: Omit<TeamColumnProps, 'kompakt' | 'breit'> };
   /** Nach dem Abpfiff statt der Tastenblöcke: Tore, Karten, Zeitstrafen, Fouls je Team (@SL-048); in Anzeige-Reihenfolge. */
   zusammenfassung?: { links: TeamSummaryModel; rechts: TeamSummaryModel } | null;
-  /** Vor dem Anpfiff die Leibchen-Wahl (@SL-137, @SL-148): je Spalte die Taste im Platz der Tor-Taste, darunter Farbe und Hinweise. */
-  anpfiff?: AnpfiffTeile | null;
   sidebar: {
     /** Laufende Zeitstrafen als Karten (@SL-186). */
     strafen: StrafenModel;
@@ -46,30 +46,30 @@ export interface LegacyPlayAreaProps {
 const cls = (...names: Array<string | false>): string => names.filter(Boolean).join(' ');
 
 export function LegacyPlayArea(props: LegacyPlayAreaProps): ReactElement {
-  const { match, naechstes, isMobile, isDesktop, kopf, zustand, strafstossForm, columns, zusammenfassung, sidebar, anpfiff } = props;
-  const spalte = (spaltenProps: LegacyPlayAreaProps['columns']['links'], vorAnpfiff: ReactNode): ReactElement => (
-    <TeamColumn {...spaltenProps} kompakt={isMobile} breit={isDesktop} vorAnpfiff={vorAnpfiff} strafenInTafel={!isDesktop} />
+  const { match, naechstes, karte = null, isMobile, isDesktop, kopf, zustand, strafstossForm, columns, zusammenfassung, sidebar } = props;
+  const spalte = (spaltenProps: LegacyPlayAreaProps['columns']['links']): ReactElement => (
+    <TeamColumn {...spaltenProps} kompakt={isMobile} breit={isDesktop} strafenInTafel={!isDesktop} />
   );
 
   return (
     <div className={cls(styles.flaeche, isDesktop && styles.flaecheBreit, !isDesktop && styles.flaecheDaumen)} data-testid="cockpit-flaeche">
-      <div className={cls(styles.links, isDesktop && styles.linksBreit, isMobile && styles.linksMobile, !isDesktop && styles.linksDaumen)}>
+      <Rollbar als="div" className={cls(styles.links, isDesktop && styles.linksBreit, isMobile && styles.linksMobile, !isDesktop && styles.linksDaumen)}>
         {kopf}
         {naechstes}
-        <div data-testid="cockpit-tastenflaeche" className={cls(styles.scoreboard, isMobile && styles.scoreboardMobile, isDesktop && styles.scoreboardBreit, !isDesktop && styles.scoreboardDaumen)}>
+        <Rollbar als="div" testId="cockpit-tastenflaeche" className={cls(styles.scoreboard, isMobile && styles.scoreboardMobile, isDesktop && styles.scoreboardBreit, !isDesktop && styles.scoreboardDaumen)}>
           {zustand === 'strafstoss' && strafstossForm ? strafstossForm : zustand !== 'entscheidung' && (
             /* Team-Spalten – „Seiten tauschen“ vertauscht nur die Anzeige */
-            <div className={cls(styles.scoreRow, isMobile && styles.scoreRowMobile, isDesktop && !anpfiff && styles.scoreRowBreit)}>
-              {zusammenfassung ? <TeamSummary model={zusammenfassung.links} breit={isDesktop} /> : spalte(columns.links, anpfiff?.links)}
-              {zusammenfassung ? <TeamSummary model={zusammenfassung.rechts} breit={isDesktop} /> : spalte(columns.rechts, anpfiff?.rechts)}
+            <div className={cls(styles.scoreRow, isMobile && styles.scoreRowMobile, isDesktop && styles.scoreRowBreit)}>
+              {zusammenfassung ? <TeamSummary model={zusammenfassung.links} breit={isDesktop} /> : spalte(columns.links)}
+              {zusammenfassung ? <TeamSummary model={zusammenfassung.rechts} breit={isDesktop} /> : spalte(columns.rechts)}
             </div>
           )}
-          {anpfiff?.unten}
-        </div>
-      </div>
+        </Rollbar>
+      </Rollbar>
 
       {/* Liste der Einträge neben der Fläche – nur ab 1024 px, eigenes Scrollen (Plan LT-2) */}
       {isDesktop && (
+        <div className={styles.ereignisseSpalte}>
         <div className={styles.ereignisse}>
           <Sidebar
             strafen={sidebar.strafen}
@@ -85,6 +85,8 @@ export function LegacyPlayArea(props: LegacyPlayAreaProps): ReactElement {
             onEventEdit={sidebar.onEventEdit}
             matchId={match.id}
           />
+        </div>
+        {karte}
         </div>
       )}
     </div>

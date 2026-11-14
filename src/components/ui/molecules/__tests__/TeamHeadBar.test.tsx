@@ -5,7 +5,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { TeamHeadBar } from '../TeamHeadBar';
-import { fillStreifenProzent } from '../scoreBoxStyle';
 
 const EINFARBIG = { kind: 'solid', color: '#6B21A8' } as const;
 const WESTE = { kind: 'vest', center: '#2E7D32', stripes: '#FFFFFF' } as const;
@@ -14,15 +13,15 @@ const zeige = (fill: typeof EINFARBIG | typeof WESTE, breit = true) => render(<T
 describe('TeamHeadBar', () => {
   it('N3 mit Weste: der Innenabstand links und rechts beginnt hinter dem Streifen, „Gast“ liegt auf der Mitte', () => {
     zeige(WESTE);
-    const prozent = fillStreifenProzent(WESTE);
-    expect(prozent).toBeGreaterThan(0);
-    expect(screen.getByTestId('kopf').style.padding).toContain(`${String(prozent)}%`);
+    // Streifen fester Breite (`--spacing-sm`) am Rand; der Text beginnt dahinter (Breite des Streifens plus ein Abstand)
+    for (const streifen of screen.getByTestId('kopf').querySelectorAll<HTMLElement>('[data-teil="streifen"]')) { expect(streifen.style.width).toBe('var(--spacing-sm)'); }
+    expect(screen.getByTestId('kopf').style.padding).toContain('calc(var(--spacing-sm) + var(--spacing-sm))');
   });
 
   it('Gegenprobe: einfarbige Fläche hat keinen Streifen, der Innenabstand bleibt klein', () => {
     zeige(EINFARBIG);
-    expect(fillStreifenProzent(EINFARBIG)).toBe(0);
-    expect(screen.getByTestId('kopf').style.padding).toContain('0%');
+    expect(screen.getByTestId('kopf').querySelectorAll('[data-teil="streifen"]')).toHaveLength(0);
+    expect(screen.getByTestId('kopf').style.padding).not.toContain('calc');
   });
 
   it('am Laptop (breit) hat der Kopf die Mindesthöhe der Stufe und die Schrift der Stufe', () => {

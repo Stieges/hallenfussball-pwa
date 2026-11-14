@@ -35,13 +35,13 @@ vi.mock('../../../lib/sentry', () => ({
 // Cockpit-Stub: zeigt die „nächsten Spiele“ als Text, damit ihre Namen prüfbar sind
 vi.mock('../../../components/live-cockpit', () => ({
   LiveCockpit: (props: {
-    upcomingMatches?: { homeTeam: { name: string }; awayTeam: { name: string } }[];
+    upcomingMatches?: { id?: string; homeTeam: { name: string }; awayTeam: { name: string } }[];
     lastFinishedMatch?: { match: { homeTeam: { name: string }; awayTeam: { name: string } } } | null;
     currentMatch?: { id: string } | null;
     sperrHinweise?: { playerNumber: number }[];
     leer?: { art: string; gruende?: string[]; offline?: boolean } | null;
   }) => (
-    <div data-testid="cockpit-stub" data-has-match={props.currentMatch ? 'ja' : 'nein'} data-match-id={props.currentMatch?.id ?? ''} data-sperr={(props.sperrHinweise ?? []).map((h) => h.playerNumber).join(',')}>
+    <div data-testid="cockpit-stub" data-has-match={props.currentMatch ? 'ja' : 'nein'} data-match-id={props.currentMatch?.id ?? ''} data-sperr={(props.sperrHinweise ?? []).map((h) => h.playerNumber).join(',')} data-naechstes={(props.upcomingMatches ?? []).map((m) => m.id ?? '').join(',')}>
       {props.leer?.art === 'wartetAufHerkunft' && (
         <div data-testid="tafel-wartet">
           {props.leer.gruende?.map((g) => <span key={g} data-testid="tafel-grund">{g}</span>)}
@@ -156,9 +156,9 @@ const hf2 = scheduled({
   slotB: pendingSlot({ kind: 'groupRank', group: 'B', rank: 2 }),
 });
 
-function setup(options: { teams?: { id: string; name: string }[]; matches: ScheduledMatch[]; skipped?: string[] }) {
+function setup(options: { teams?: { id: string; name: string }[]; matches: ScheduledMatch[]; skipped?: string[]; finished?: string[] }) {
   const teams = options.teams ?? [{ id: NORD, name: 'FC Nord' }, { id: UFER, name: 'VfB Ufer' }];
-  const tournament = { id: 't1', title: 'Hallencup', numberOfFields: 1, teams, matches: (options.skipped ?? []).map((id) => ({ id, matchStatus: 'skipped' })), groups: [] } as unknown as Tournament;
+  const tournament = { id: 't1', title: 'Hallencup', numberOfFields: 1, teams, matches: [...(options.skipped ?? []).map((id) => ({ id, matchStatus: 'skipped' })), ...(options.finished ?? []).map((id) => ({ id, matchStatus: 'finished' }))], groups: [] } as unknown as Tournament;
   const schedule = {
     tournament: { id: 't1', title: 'Hallencup' }, teams, allMatches: options.matches, phases: [],
   } as unknown as GeneratedSchedule;
@@ -336,10 +336,8 @@ describe('ManagementTab – @SL-056 @SL-117 das nächste Spiel des Felds steht b
     expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-has-match', 'ja');
   });
 
-  // BEFUND C-COCKPIT-AUSGEFALLEN-BEREIT (Ziel-Record Spiel leiten, Paket B-10a1 `readyMatchOf`): `ManagementTab.currentMatchData` wählt das
-  // erste Spiel des Felds ohne Ergebnis und überspringt ausgefallene (`tournament.matches[].matchStatus: 'skipped'`) nicht. Der Test steht
-  // nach dem Gherkin rot und wird nicht an den Code angepasst; mit B-10a1 grün (dann `it.fails` entfernen).
-  it.fails('@SL-117 C-COCKPIT-AUSGEFALLEN-BEREIT ein ausgefallenes Spiel 13 steht nicht bereit: nach Spiel 11 steht Spiel 15 zum Anpfiff bereit', async () => {
+  // war BEFUND C-COCKPIT-AUSGEFALLEN-BEREIT (`it.fails`): Cockpit, „Weiter“, Tafel und Karte nehmen jetzt dieselbe Regel (`openMatchesInPlayOrder`, überspringt ausgefallene).
+  it('@SL-117 C-COCKPIT-AUSGEFALLEN-BEREIT ein ausgefallenes Spiel 13 steht nicht bereit: nach Spiel 11 steht Spiel 15 zum Anpfiff bereit', async () => {
     setup({ matches: [spiel11, spiel13, spiel15], skipped: [S13] });
     expect(await screen.findByTestId('cockpit-stub')).toHaveAttribute('data-match-id', S15);
   });
@@ -347,5 +345,33 @@ describe('ManagementTab – @SL-056 @SL-117 das nächste Spiel des Felds steht b
   it('@SL-117 Gegenbeispiel: ohne Ausfall steht das nächste Spiel 13 bereit, nicht Spiel 15 (Reihenfolge des Felds)', async () => {
     setup({ matches: [spiel11, spiel13, spiel15] });
     expect(await screen.findByTestId('cockpit-stub')).toHaveAttribute('data-match-id', S13);
+  });
+
+  it('@SL-117 die Tafel nennt als „Nächstes:“ nicht das ausgefallene Spiel 13, sondern Spiel 15 (und nicht ein früheres, schon abgesetztes zurück)', async () => {
+    setup({ matches: [spiel11, spiel13, spiel15], skipped: [S13], finished: [S11] });
+    const stub = await screen.findByTestId('cockpit-stub');
+    expect(stub).toHaveAttribute('data-match-id', S15);
+    expect(stub).toHaveAttribute('data-naechstes', '');
+  });
+
+  it('@SL-117 die Tafel überspringt ein ausgefallenes Spiel NACH dem gezeigten: Spiel 13 läuft bereit, Spiel 15 ist ausgefallen, „Nächstes:“ ist Spiel 17', async () => {
+    const spiel17 = scheduled({ id: testUuid(133), matchNumber: 17, slot: 4, phase: 'groupStage', slotA: teamSlot(NORD), slotB: teamSlot(UFER) });
+    setup({ matches: [spiel11, spiel13, spiel15, spiel17], skipped: [S15], finished: [S11] });
+    const stub = await screen.findByTestId('cockpit-stub');
+    expect(stub).toHaveAttribute('data-match-id', S13);
+    expect(stub).toHaveAttribute('data-naechstes', testUuid(133));
+  });
+
+  it('@SL-117 Gegenbeispiel: ohne Ausfall nennt die Tafel nach dem gezeigten Spiel 13 das Spiel 15', async () => {
+    setup({ matches: [spiel11, spiel13, spiel15] });
+    expect(await screen.findByTestId('cockpit-stub')).toHaveAttribute('data-naechstes', S15);
+  });
+
+  it('@SL-215 Tafel und Spiel: das nächste Spiel mit noch offener Paarung (Spiel 13) steht als „Nächstes:“, nicht erst das übernächste', async () => {
+    const offen13 = scheduled({ id: S13, matchNumber: 13, slot: 2, phase: 'groupStage', slotA: pendingSlot({ kind: 'groupRank', group: 'A', rank: 1 }), slotB: teamSlot(NORD) });
+    setup({ matches: [spiel11, offen13, spiel15], finished: [S11] });
+    const stub = await screen.findByTestId('cockpit-stub');
+    expect(stub).toHaveAttribute('data-match-id', S13);
+    expect(stub).toHaveAttribute('data-naechstes', S15);
   });
 });

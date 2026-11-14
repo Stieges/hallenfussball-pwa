@@ -47,7 +47,8 @@ export const PublicStandingsTab: React.FC<PublicStandingsTabProps> = ({ tourname
   }
 
   return (
-    <Card>
+    // Schmales Polster der Karte (statt xl): am Handy bleibt der Tabelle Breite für Name, Sp., Diff., Pkt. und Taste (@ZM-205)
+    <Card style={{ padding: cssVars.spacing.sm }}>
       <GroupTables
         standings={standings}
         teams={tournament.teams}

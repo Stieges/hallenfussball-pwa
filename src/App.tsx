@@ -16,13 +16,14 @@ import { useSwAutoReload } from './hooks/useSwAutoReload';
 import { useMatchProtectionNotices } from './hooks/useMatchProtectionNotices';
 import { useGuestTournamentNotices } from './hooks/useGuestTournamentNotices';
 import { useRouteMatch } from './hooks/useRouteMatch';
+import { useBackOrHome } from './hooks/useBackOrHome';
 import { matchRoute } from './core/routing';
 import { AuthProvider } from './features/auth/context/AuthContext';
 import { useAuth } from './features/auth/hooks/useAuth';
 import { ThemeProvider } from './hooks/useTheme';
 import {
   GuestBanner,
-  LoginScreen,
+  LoginRoute,
   RegisterScreen,
   UserProfileScreen,
   AuthCallback,
@@ -38,6 +39,8 @@ import { AppChrome, SwUpdateNoticeSlot } from './components/AppChrome';
 import { lazyWithRetry } from './lib/lazyWithRetry';
 import { isTournamentClosed } from './core/services/lifecycle';
 import { ClosedTournamentEditNotice } from './screens/ClosedTournamentEditNotice';
+import { WizardOpeningNotice, WizardOfflineHint } from './screens/WizardOpeningNotice';
+import { useWizardTournament } from './hooks/useWizardTournament';
 import { HelperStartGate } from './features/helpers/components/HelperStartGate'; // A-17c: Wiedereinstieg @HE-096
 
 // Lazy load screens for better initial load performance
@@ -141,6 +144,7 @@ function AppContent() {
   const { showError } = useToast();
   const { isGuest } = useAuth();
   const navigate = useNavigate();
+  const backOrHome = useBackOrHome(); // Impressum/Datenschutz: nie aus der App heraus (@RE-005)
   const location = useLocation();
 
   // QW-002: Show toast if auth initialization timed out
@@ -299,9 +303,16 @@ function AppContent() {
   const dashboardActions = useDashboardActions({ saveTournament, emptyTrash });
   const [screen, setScreen] = useState<ScreenType>('dashboard');
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
-  const wizardTournament = selectedTournament ?? (editingTournamentId ? tournaments.find(t => t.id === editingTournamentId) : undefined);
+  // @W5-039: der Assistent bekommt nur das vollständig geladene Turnier, nie den Listen-Eintrag der Startseite
+  const wizardLoad = useWizardTournament(isEditWizardPath ? editingTournamentId : null, selectedTournament);
+  const wizardTournament = wizardLoad.status === 'ready' ? wizardLoad.tournament : undefined;
   const [liveShareCode, setLiveShareCode] = useState<string | null>(null);
   const [quickEditMode, setQuickEditMode] = useState(false); // Für schnelles Bearbeiten & Zurück
+  // Wer den Assistenten verlässt (auch per Browser-Zurück), lässt keinen gehaltenen Stand zurück: sonst schriebe ein späteres
+  // „Abbrechen“ eines anderen Assistenten den Stand vom ersten Öffnen als Voll-Ersatz zurück
+  useEffect(() => {
+    if (!isEditWizardPath) { setSelectedTournament(null); setQuickEditMode(false); }
+  }, [isEditWizardPath]);
 
   // MON-KONF-01: Monitor Display Route params (now using URL-based detection above)
   // Removed monitorDisplayParams state in favor of monitorDisplayParamsFromUrl
@@ -487,13 +498,7 @@ function AppContent() {
       <Suspense fallback={<ScreenLoader />}>
         {/* Auth Screens */}
         {screen === 'login' && (
-          <LoginScreen
-            onSuccess={() => void navigate('/')}
-            onNavigateToRegister={() => void navigate('/register')}
-            onBack={() => void navigate(-1)}
-            onContinueAsGuest={() => void navigate('/')}
-            onNavigateToLegal={(path) => void navigate(path)}
-          />
+          <LoginRoute />
         )}
 
         {screen === 'register' && (
@@ -561,12 +566,16 @@ function AppContent() {
         {isEditWizardPath && wizardTournament !== undefined && isTournamentClosed(wizardTournament) && (
           <ClosedTournamentEditNotice onBack={() => void navigate(`/tournament/${wizardTournament.id}`)} />
         )}
-        {(isWizardPath || screen === 'create') && !(isEditWizardPath && wizardTournament !== undefined && isTournamentClosed(wizardTournament)) && (
+        {isEditWizardPath && wizardLoad.status === 'ready' && wizardLoad.offline === true && <WizardOfflineHint />}
+        {isEditWizardPath && wizardLoad.status !== 'ready' && (
+          <WizardOpeningNotice status={wizardLoad.status} onBack={() => void navigate('/')} />
+        )}
+        {(isWizardPath || screen === 'create') && wizardLoad.status === 'ready' && !(isEditWizardPath && wizardTournament !== undefined && isTournamentClosed(wizardTournament)) && (
           <TournamentCreationScreen
             onBack={() => {
               // Abbrechen im Wizard-Bearbeiten stellt den Stand von vorher wieder her – mit dem Zustand von vorher
               // (C-ENTWURF-KIPPT-BEIM-ABBRECHEN: ein Entwurf wurde sonst „festgelegt“ gespeichert)
-              if (quickEditMode && selectedTournament) {
+              if (quickEditMode && selectedTournament?.id === editingTournamentId && selectedTournament !== null) {
                 const restoredTournament: Tournament = {
                   ...selectedTournament,
                   updatedAt: new Date().toISOString(),
@@ -641,17 +650,11 @@ function AppContent() {
 
         {/* Legal Screens */}
         {(screen === 'impressum' || isLegalPath && location.pathname === '/impressum') && (
-          <ImpressumScreen onBack={() => {
-            void navigate(-1); // Go back to previous page
-          }} />
+          <ImpressumScreen onBack={backOrHome} />
         )}
 
         {(screen === 'datenschutz' || isLegalPath && location.pathname === '/datenschutz') && (
-          <DatenschutzScreen
-            onBack={() => {
-              void navigate(-1); // Go back to previous page
-            }}
-          />
+          <DatenschutzScreen onBack={backOrHome} />
         )}
 
         {/* 404 Not Found */}

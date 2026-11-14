@@ -72,4 +72,40 @@ describe('ScheduleEndPrompt (über ScheduleResultEntryPrompt)', () => {
     expect(view.queryByText('Spielleitung übernehmen')).toBeNull();
     expect(view.queryByTestId('confirm-dialog-secondary')).toBeNull();
   });
+
+  it('@FU-139 weicht der Eintrag von den gebuchten Toren ab: Warnung wörtlich mit beiden Ständen, Warn-Symbol, Teil der Rückfrage', () => {
+    const view = render(<ScheduleResultEntryPrompt prompt={{ ...ende, bookedScore: '1:0' }} answerPrompt={vi.fn()} />);
+    const warnung = view.getByTestId('result-entry-end-goals-warning');
+    expect(warnung.textContent).toBe('Im Cockpit sind Tore gebucht, die nicht zu 3:1 passen (dort 1:0). Die Torschützenliste zählt nur die gebuchten Tore.');
+    expect(warnung.getAttribute('data-tone')).toBe('warn');
+    expect(warnung.querySelector('svg')).not.toBeNull(); // Symbol, nicht Farbe allein
+    expect(view.getByRole('dialog').contains(warnung)).toBe(true);
+    // die bisherige Frage bleibt unverändert, ein Dialog, dieselben zwei Tasten
+    expect(view.getByTestId('result-entry-end-message').textContent).toBe('Spiel 9 läuft noch – Uhr zeigt 2:00 Restzeit. Jetzt mit 3:1 beenden?');
+    expect(view.getAllByRole('dialog')).toHaveLength(1);
+    expect(view.getByTestId('confirm-dialog-confirm').textContent).toBe('Beenden');
+    expect(view.getByTestId('confirm-dialog-cancel').textContent).toBe('Abbrechen');
+  });
+
+  it('@FU-139 „Beenden“ → yes, „Abbrechen“ → Abbruch (auch mit Warnung)', () => {
+    const answer = vi.fn();
+    const view = render(<ScheduleResultEntryPrompt prompt={{ ...ende, bookedScore: '1:0' }} answerPrompt={answer} />);
+    fireEvent.click(view.getByText('Beenden'));
+    fireEvent.click(view.getByText('Abbrechen'));
+    expect(answer.mock.calls).toEqual([['yes'], [null]]);
+  });
+
+  it('@FU-139 Gegenbeispiel: ohne Abweichung keine Warnung', () => {
+    const view = render(<ScheduleResultEntryPrompt prompt={ende} answerPrompt={vi.fn()} />);
+    expect(view.queryByTestId('result-entry-end-goals-warning')).toBeNull();
+    expect(view.queryByText(/Im Cockpit sind Tore gebucht/)).toBeNull();
+  });
+
+  it('@FU-139 abgelaufene Spielzeit (@FU-114): Warnung mit „Ja“/„Nein“; mit Hinweis „Feld 2 …“ stehen beide, die Frage bleibt', () => {
+    const view = render(<ScheduleResultEntryPrompt prompt={{ ...ende, score: '2:2', rest: null, bookedScore: '1:0', controlledBy: { field: 2, holder: 'Tom' } }} answerPrompt={vi.fn()} />);
+    expect(view.getByTestId('result-entry-end-goals-warning').textContent).toContain('nicht zu 2:2 passen (dort 1:0)');
+    expect(view.getByTestId('result-entry-end-controlled').textContent).toBe('Feld 2 wird gerade von Tom gesteuert');
+    expect(view.getByTestId('confirm-dialog-confirm').textContent).toBe('Ja');
+    expect(view.getByTestId('confirm-dialog-cancel').textContent).toBe('Nein');
+  });
 });

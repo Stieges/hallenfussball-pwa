@@ -18,6 +18,7 @@ import { overHex } from '../../../design-tokens/displayColor';
 import { useTheme } from '../../../hooks/useTheme';
 import { MATCH_BADGE_WORD_KEY } from '../../../core/view/badge';
 import { TeamAvatar } from '../../ui/TeamAvatar';
+import { SlashBreaks } from '../../ui/atoms/TeamName';
 import { ScoreBox } from '../../ui/molecules/ScoreBox';
 import { pairFrameStrength } from '../../ui/molecules/scoreBoxStyle';
 import { ZeitstrafeHinweis } from '../../ui/molecules/ZeitstrafeHinweis';
@@ -120,7 +121,8 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
       fontWeight: isWinner ? cssVars.fontWeights.bold : isLoser || status === 'finished' ? cssVars.fontWeights.medium : cssVars.fontWeights.semibold,
       color: isLoser ? cssVars.colors.textSecondary : cssVars.colors.textPrimary,
       // MOBILE-UX: Mannschaftsnamen werden nie abgeschnitten; minWidth 0 lässt den Namen schrumpfen statt über die Torfläche zu laufen
-      overflowWrap: 'break-word',
+      // `anywhere`: ein einzelnes Wort, das länger ist als die Zeile, bricht um (@ZM-207); normale Wörter und der Umbruch nach „/“ bleiben, wie sie sind
+      overflowWrap: 'anywhere',
       minWidth: 0,
     };
     const first = side === 'a';
@@ -129,7 +131,7 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
     const row = rowOf(side);
     const nameBlock = (
       <ZeitstrafeHinweis liste={zeitstrafen?.[seite]} testId={`match-time-penalty-${matchId}-${seite}`}>
-        <span style={nameStyle} data-winner={isWinner ? 'true' : undefined} data-testid={`match-name-${matchId}-${seite}`}>{team.name}</span>
+        <span style={nameStyle} data-winner={isWinner ? 'true' : undefined} data-testid={`match-name-${matchId}-${seite}`} data-teamname><SlashBreaks text={team.name} /></span>
       </ZeitstrafeHinweis>
     );
     return (

@@ -132,6 +132,7 @@ function matchView(match: Match, input: TournamentViewInput, options: ViewOption
   const score = blank ? undefined : scoreFor(match, status, rules);
   const correctedAt = blank ? undefined : correctedAtFor(match, input, options, rules);
   const final = match.isFinal === true;
+  const boxes = matchBoxes(match, input.teams, display);
   return {
     id: match.id,
     ...(match.matchNumber === undefined ? {} : { matchNumber: match.matchNumber }),
@@ -151,7 +152,8 @@ function matchView(match: Match, input: TournamentViewInput, options: ViewOption
     ...(isLive(status) ? { clockRules: clockRulesOf(match, input) } : {}),
     home: sideView(match, 'A', sides),
     away: sideView(match, 'B', sides),
-    boxes: matchBoxes(match, input.teams, display),
+    boxes,
+    showBoxes: options.audience !== 'viewer' || status !== 'scheduled' || boxes.home.bib || boxes.away.bib,
   };
 }
 

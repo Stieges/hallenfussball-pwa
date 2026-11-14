@@ -47,8 +47,11 @@ describe('K5/K11 Handy-Kopf', () => {
   it('Weste: schmale Streifen fester Breite statt eines Anteils der Fläche (der Name behält die Breite)', () => {
     render(<TeamHeadBar name="FC Teisendorf" label="Heim" fill={WEISS_MIT_GELB} kompakt bib={{ ariaLabel: 'Spiel mit Leibchen' }} testId="kopf" nameTestId="name" />);
     const kopf = screen.getByTestId('kopf');
-    expect(kopf.style.backgroundImage).toContain('var(--spacing-sm)');
-    expect(kopf.style.backgroundImage).not.toContain('%,');
+    // @SL-225: die Fläche ist EINE Farbe (kein Verlauf unter der Schrift), die Streifen sind eigene Elemente fester Breite neben dem Text
+    expect(kopf.style.backgroundImage).toBe('');
+    const streifen = [...kopf.querySelectorAll<HTMLElement>('[data-teil="streifen"]')];
+    expect(streifen).toHaveLength(2);
+    for (const el of streifen) { expect(el.style.width).toBe('var(--spacing-sm)'); }
     expect(screen.getByRole('img', { name: 'Spiel mit Leibchen' })).toBeInTheDocument();
   });
 

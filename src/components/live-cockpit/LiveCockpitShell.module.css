@@ -104,3 +104,25 @@
   color: var(--color-text-primary);
   font-weight: var(--font-weight-semibold);
 }
+
+/* Leibchen-Karte (@SL-221, Mockup Runde 3): solange die Wahl von Team und Farbe am Handy offen ist, weichen Tafel und Einträge aus dem Bild und die
+   Karte zieht sich über die frei gewordene Fläche (getönt, mit Rahmen). Der Block mit der Daumenleiste wächst nach oben, die Leiste bleibt unten:
+   „Anpfeifen“ bzw. „Weiter“ ändern ihre Lage nicht (K-4). Auf Tablet und Laptop bleibt alles stehen (das Attribut steht nur am Handy).
+   `!important` nur gegen die Inline-Werte des klebenden Blocks (`ThumbBarArea`). */
+.container[data-leibchen-offen='true'] .content {
+  display: none;
+}
+
+.container[data-leibchen-offen='true'] > [data-leibchen-leiste] {
+  flex: 1 1 auto !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 0;
+}
+
+.container[data-leibchen-offen='true'] > [data-leibchen-leiste] > [data-leibchen-flaeche] {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}

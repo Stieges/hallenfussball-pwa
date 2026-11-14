@@ -16,6 +16,7 @@ import type { BrowserContext, Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test, expect } from '../helpers/test-fixtures';
+import { mitSpielplan } from '../helpers/seedMatches';
 import { abpfiffHalten } from '../helpers/abpfiff';
 // @ts-expect-error – .mjs ohne Typen; die echte Messfunktion von `npm run visual:metrics`
 import { messeSeite } from '../../../scripts/visual-metrics/browser-messung.mjs';
@@ -48,7 +49,7 @@ function turnier(art: 'gruppe' | 'ko'): Record<string, unknown> {
     createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
   };
   if (art === 'gruppe') {
-    return { ...basis, groupSystem: 'roundRobin', finals: { enabled: false }, matches: [] };
+    return mitSpielplan({ ...basis, groupSystem: 'roundRobin', finals: { enabled: false } });
   }
   return {
     ...basis, groupSystem: 'groupsAndFinals', finals: { enabled: true }, finalsConfig: { preset: 'top-4', tiebreaker: 'shootout' },

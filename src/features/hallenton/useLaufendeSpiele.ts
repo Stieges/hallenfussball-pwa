@@ -1,18 +1,18 @@
 /**
- * useAngepfiffeneFelder(tid) – Felder des Turniers mit angepfiffenem Spiel, für die Anzeige „Feld N: Handy ohne Netz“ (@HT-035).
+ * useLaufendeSpiele(tid) – Feld → Nummer des angepfiffenen Spiels (H4-10: Rückfrage „Auf Feld 1 läuft Spiel 11“, @HT-017); die Schlüssel sind die Felder mit angepfiffenem Spiel, für die Anzeige „Feld N: Handy ohne Netz“ (@HT-035).
  * Plan aus der lokalen Turnierkopie (nur lokal gelesen, alle 30 s und bei jeder Änderung der eigenen Engine), Status zuerst nach der
  * Engine, sonst nach der Kopie (`angepfiffeneFelder.ts`); `nachlesen` (die letzte Status-Antwort) liest die Kopie zusätzlich neu (R1). Ohne Engine (kein Konto) zählt nur die Kopie.
  */
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useMatchEngineContextOptional } from '../match-engine/useMatchEngineContext';
 import { ladeTurnierLokal } from './lokalesTurnier';
-import { angepfiffeneFelder } from './runtime/angepfiffeneFelder';
+import { laufendeSpiele } from './runtime/angepfiffeneFelder';
 import type { PlanSpiel } from './runtime/feldStandSpiele';
 import { planAusTurnier } from './runtime/lokalerSpielplan';
 
 export const PLAN_LESEN_MS = 30_000;
 
-export function useAngepfiffeneFelder(tid: string, nachlesen?: unknown): ReadonlySet<number> {
+export function useLaufendeSpiele(tid: string, nachlesen?: unknown): ReadonlyMap<number, number> {
   const engine = useMatchEngineContextOptional();
   const [plan, setPlan] = useState<readonly PlanSpiel[]>([]);
   const [version, neuBewerten] = useReducer((n: number) => n + 1, 0);
@@ -56,5 +56,5 @@ export function useAngepfiffeneFelder(tid: string, nachlesen?: unknown): Readonl
 
   // `version` zählt die Änderungen der Engine: der Status je Spiel wird dann neu gelesen
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  return useMemo(() => angepfiffeneFelder(plan, (id) => engine?.engine.view(id)?.result.state.status), [plan, engine, version]);
+  return useMemo(() => laufendeSpiele(plan, (id) => engine?.engine.view(id)?.result.state.status), [plan, engine, version]);
 }

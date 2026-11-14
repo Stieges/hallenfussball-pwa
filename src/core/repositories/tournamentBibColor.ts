@@ -1,19 +1,48 @@
 /**
- * Leibchenfarbe des Turniers (A-30a Fixrunde 1, Review B2, @W3-029) im `tournaments.config`-JSON – keine eigene
- * Spalte, keine Migration. Schreiben und Lesen normalisieren auf `#RRGGBB`; ein ungültiger Wert wird weggelassen
- * (dann gilt die Vorgabe Gelb, `DEFAULT_BIB_COLOR`). Ausgelagert, damit `supabaseMappers.ts` nicht wächst.
+ * Leibchenfarben des Turniers und Regel „Bei gleicher Farbe zieht“ (@W3-029, @W3-041) im `tournaments.config`-JSON – keine eigene Spalte, keine
+ * Migration. Bis zu zwei Hallenfarben (`bibColors`, in der Reihenfolge der Eintragung: die erste ist die erste Wahl) und die Regel `bibRule`
+ * (`home` = die im Spielplan erstgenannte Mannschaft, Vorgabe; `away` = Gast). Das alte einzelne `bibColor` wird als erste Hallenfarbe gelesen und
+ * bleibt als erste Farbe mitgeschrieben (ältere Stände lesen es noch). Schreiben und Lesen normalisieren auf `#RRGGBB`; Ungültiges entfällt.
  */
-import { normalizeKitColor } from '../models/kit';
+import { normalizeKitColor, MAX_HALLEN_FARBEN } from '../models/kit';
 import type { Tournament } from '../../types/tournament';
 
-/** Lesen aus `config` (beliebiges JSON): gültige Farbe → `{ bibColor }`, sonst `{}`. */
-export function bibColorFromConfig(config: object): Pick<Tournament, 'bibColor'> {
-  const bibColor = normalizeKitColor((config as { bibColor?: unknown }).bibColor);
-  return bibColor === undefined ? {} : { bibColor };
+type BibFields = Pick<Tournament, 'bibColor' | 'bibColors' | 'bibRule'>;
+
+function cleanColors(values: unknown): string[] {
+  if (!Array.isArray(values)) {
+    return [];
+  }
+  const out: string[] = [];
+  for (const value of values) {
+    const hex = normalizeKitColor(value);
+    if (hex !== undefined && !out.includes(hex)) {
+      out.push(hex);
+    }
+  }
+  return out.slice(0, MAX_HALLEN_FARBEN);
 }
 
-/** Schreiben nach `config`: nur eine gültige Einstellung, normalisiert. */
-export function bibColorToConfig(tournament: Pick<Tournament, 'bibColor'>): { bibColor?: string } {
-  const bibColor = normalizeKitColor(tournament.bibColor);
-  return bibColor === undefined ? {} : { bibColor };
+function colorsOf(config: { bibColors?: unknown; bibColor?: unknown }): string[] {
+  const list = cleanColors(config.bibColors);
+  return list.length > 0 ? list : cleanColors([config.bibColor]);
+}
+
+/** Lesen aus `config` (beliebiges JSON). */
+export function bibColorFromConfig(config: object): BibFields {
+  const raw = config as { bibColors?: unknown; bibColor?: unknown; bibRule?: unknown };
+  const colors = colorsOf(raw);
+  return {
+    ...(colors.length === 0 ? {} : { bibColor: colors[0], bibColors: colors }),
+    ...(raw.bibRule === 'home' || raw.bibRule === 'away' ? { bibRule: raw.bibRule } : {}),
+  };
+}
+
+/** Schreiben nach `config`: nur gültige Einstellungen, normalisiert. */
+export function bibColorToConfig(tournament: BibFields): { bibColor?: string; bibColors?: string[]; bibRule?: 'home' | 'away' } {
+  const colors = colorsOf(tournament);
+  return {
+    ...(colors.length === 0 ? {} : { bibColor: colors[0], bibColors: colors }),
+    ...(tournament.bibRule === 'home' || tournament.bibRule === 'away' ? { bibRule: tournament.bibRule } : {}),
+  };
 }

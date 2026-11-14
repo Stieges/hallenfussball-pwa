@@ -13,6 +13,7 @@ import { useCan } from '../../../auth/hooks/useCan';
 import { RulesLockProvider } from '../../../../components/match-settings/RulesLockContext';
 import type { Tournament, MatchCockpitSettings } from '../../../../types/tournament';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../../../types/tournament';
+import { HallentonKarte } from './HallentonKarte';
 import { MatchRulesSection } from './MatchRulesSection';
 import { FoulLimitSection } from './FoulLimitSection';
 import { sectionSecondsOf } from './sectionSeconds';
@@ -106,7 +107,7 @@ export function MatchCockpitCategory({
         <CategoryPage
             icon="🎮"
             title="Match Cockpit"
-            description="Konfiguration für das Live-Scoreboard, Timer und Sounds"
+            description="Konfiguration für das Live-Scoreboard, den Timer und das Feedback"
         >
             <RulesLockProvider value={!canChangeRules}>
                 <MatchRulesSection
@@ -128,6 +129,7 @@ export function MatchCockpitCategory({
                     disabled={!canChangeRules}
                     onChange={handleForfeitScoreChange}
                 />
+                <HallentonKarte tournamentId={tournamentId} />
                 <MatchCockpitSettingsPanel
                     settings={cockpitSettings}
                     onChange={handleCockpitSettingsChange}

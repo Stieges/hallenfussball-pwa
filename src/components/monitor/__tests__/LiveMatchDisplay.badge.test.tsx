@@ -12,7 +12,7 @@ vi.unmock('react-i18next');
 import { initRealDeI18n } from '../../../test/realDeI18n';
 import { LiveMatchDisplay } from '../LiveMatchDisplay';
 import type { LiveMatch } from '../../../hooks/useLiveMatches';
-import { displayLayout, monitorThemes } from '../../../design-tokens';
+import { monitorThemes } from '../../../design-tokens';
 
 vi.mock('../../../hooks', async () => {
   const { monitorThemes: themes } = await import('../../../design-tokens');
@@ -20,8 +20,6 @@ vi.mock('../../../hooks', async () => {
 });
 
 await initRealDeI18n();
-
-const L = displayLayout.scoreArea;
 
 function createMatch(overrides: Partial<LiveMatch> = {}): LiveMatch {
   return {
@@ -64,17 +62,17 @@ describe('Abzeichen im Kopf der Live-Folie', () => {
     }
   });
 
-  it('@OB-066 Marke: dieselbe Breite für Live, Pause, Ende', () => {
+  it('@OB-066 @ZM-167 Marke: Live, Pause und Ende stehen links, jedes nur so breit wie sein Wort (keine feste Spaltenbreite)', () => {
     const marken = (['RUNNING', 'PAUSED', 'FINISHED'] as const).map((status) => {
       const { unmount } = render(<LiveMatchDisplay match={createMatch({ status })} />);
-      const badge = screen.getByTestId('live-badge');
-      const marke = { breite: badge.style.width, wort: badge.textContent };
+      const slot = screen.getByTestId('live-badge');
+      const badge = screen.getByTestId('match-status-badge');
+      const marke = { wort: slot.textContent, slotBreite: slot.style.width, badgeBreite: badge.style.width, ausrichtung: slot.style.justifySelf };
       unmount();
       return marke;
     });
     expect(marken.map((m) => m.wort)).toEqual(['Live', 'Pause', 'Ende']);
-    expect(new Set(marken.map((m) => m.breite)).size).toBe(1);
-    expect(marken[0].breite).toBe(L.badgeWidth);
+    expect(marken.every((m) => m.slotBreite === '' && m.badgeBreite === '' && m.ausrichtung === 'start')).toBe(true);
   });
 
   it('@OB-065 Gegenbeispiel: das Abzeichen enthält keine Uhrzeit oder Spielzeit', () => {

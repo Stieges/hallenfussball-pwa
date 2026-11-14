@@ -25,6 +25,7 @@ import type { ResultFigures } from './matchResult';
 import { MatchMenuSlot, OriginalTimeNote } from './MatchTimeShiftSlots';
 import { MatchActionTrigger } from './actionMenu/MatchActionTrigger';
 import { isInteractiveTarget } from './actionMenu/isInteractiveTarget';
+import { SlashBreaks } from '../ui/atoms/TeamName';
 
 export interface FinalMobileOption {
   value: number;
@@ -135,7 +136,7 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
       >
         {/* @ZM-184: laufende Zeitstrafe beim Team */}
         <ZeitstrafeHinweis liste={clock?.zeitstrafen?.[rowKey]} testId={`match-time-penalty-${match.id}-${rowKey}`}>
-          <span style={nameStyle} data-winner={isWinner ? 'true' : undefined} data-testid={`final-name-${match.id}-${rowKey}`}>{name}</span>
+          <span style={nameStyle} data-winner={isWinner ? 'true' : undefined} data-testid={`final-name-${match.id}-${rowKey}`} data-teamname><SlashBreaks text={name} /></span>
         </ZeitstrafeHinweis>
         {editable ? (
           <ScoreDraftInput

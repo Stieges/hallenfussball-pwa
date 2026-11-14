@@ -15,25 +15,15 @@ export class TournamentService {
     }
 
     /**
-     * Loads a tournament and initializes its schedule if needed.
+     * Lädt ein Turnier und liefert es unverändert. Laden schreibt NIE (@W5-042, Befund C-VERWALTUNG-OEFFNEN-ERZEUGT-SPIELPLAN):
+     * Hat die geladene Kopie keine Spiele, erzeugt und speichert die Verwaltung keinen Spielplan -- ein veröffentlichtes Turnier
+     * bekommt seine Spiele nur aus `publish()`, und eine ältere lokale Kopie ohne Spiele würde sonst den Stand des Servers
+     * mit einem falschen Plan überdecken (Versionsprüfung lehnt ab, die abgelehnte Änderung blockiert die Übernahme des Servers).
+     * Die Anzeige weist bei einem Turnier ohne Spiele auf den Assistenten hin (`ScheduleMissingNotice`).
      */
     async loadTournament(id: string, options?: { fresh?: boolean }): Promise<Tournament | null> {
         // A-08f3b: `fresh` (Push/Abfrage-Ausweichen) wartet auf den zusammengeführten Cloud-Stand.
-        const tournament = await this.repository.get(id, options);
-
-        if (!tournament) {return null;}
-
-        // Ensure schedule is initialized (handles empty matches). A-08f-F2: vorhandene Spiele direkt
-        // verwenden -- kein zweiter repository.get (halbiert die Last beim Abfrage-Ausweichen).
-        const matches = tournament.matches.length > 0
-            ? tournament.matches
-            : await this.scheduleService.initializeSchedule(id);
-
-        // Return tournament with potentially updated matches
-        return {
-            ...tournament,
-            matches
-        };
+        return this.repository.get(id, options);
     }
 
     /**

@@ -44,7 +44,16 @@
   gap: var(--spacing-sm);
 }
 
+/* Spalte rechts am Laptop: die Liste der Einträge rollt allein, die Karte der Leibchen steht darunter über der Leiste (@SL-218) */
+.ereignisseSpalte {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  min-height: 0;
+}
+
 .ereignisse {
+  flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
 }

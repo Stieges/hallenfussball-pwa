@@ -9,6 +9,7 @@ import { useCallback, useMemo, useSyncExternalStore, type ReactElement } from 'r
 import { useKioskRoute } from '../../../hooks/useKioskRoute';
 import { hallAnzeige } from '../hallAnzeige';
 import { abonniereGeraet, geraetStand } from '../lautsprecherGeraet';
+import { useAnderesFensterTont } from '../useAnderesFensterTont';
 import { useHallLautsprecher } from '../useHallLautsprecher';
 import { HallStatusZeileAnsicht } from './HallStatusZeile';
 import { useHatStatusZeileHost } from './StatusZeileOrt';
@@ -29,12 +30,11 @@ export function HallGeraetStreifen(): ReactElement | null {
 
 function Streifen({ turnierId }: { turnierId: string }): ReactElement {
   const { laufzeit, felder, tonAktivieren } = useHallLautsprecher(turnierId);
+  const lokal = useMemo(() => (laufzeit === null ? null : { felder, rolle: laufzeit.rolle, zustandJeFeld: laufzeit.zustandJeFeld }), [laufzeit, felder]);
+  const anderesFenster = useAnderesFensterTont(lokal);
   const anzeige = useMemo(() => hallAnzeige({
-    server: OHNE_SERVER,
-    lokal: laufzeit === null ? null : { felder, rolle: laufzeit.rolle, zustandJeFeld: laufzeit.zustandJeFeld },
-    angepfiffen: KEINE_FELDER,
-    lautsprecherBekannt: false,
-  }), [laufzeit, felder]);
+    server: OHNE_SERVER, lokal, angepfiffen: KEINE_FELDER, lautsprecherBekannt: false, anderesFensterTont: anderesFenster,
+  }), [lokal, anderesFenster]);
   const aktivieren = useCallback(() => { void tonAktivieren(); }, [tonAktivieren]);
   return <HallStatusZeileAnsicht anzeige={anzeige} tournamentId={turnierId} tonAktivieren={aktivieren} data-testid="hallenton-geraet-streifen" />;
 }

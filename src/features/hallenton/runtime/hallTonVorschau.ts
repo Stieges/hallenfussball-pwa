@@ -7,7 +7,7 @@
 import type { TonArt } from './tonEinstellungen';
 import type { AudioKontext, AudioPuffer, GainKnoten, KompressorKnoten, QuellKnoten } from './webAudioTypen';
 
-/** `true` = gespielt, `false` = nicht spielbar (stumm, 0 %, nicht geladen), `'belegt'` = ein echter Ton klingt gerade. */
+/** `true` = gespielt, `false` = nicht spielbar (0 %, nicht geladen), `'belegt'` = ein echter Ton klingt gerade. */
 export type AnhoerenErgebnis = boolean | 'belegt';
 
 export interface HupenVorschau {

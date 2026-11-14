@@ -27,7 +27,7 @@ vi.unmock('react-i18next');
  */
 const GRUPPE_A_ZEILEN: [string, string[]][] = [
   ['TSV Grünwald', ['1', '1', '0', '0', '3:2', '+1', '3']],
-  ['FC Bayern München II', ['1', '0', '0', '1', '2:3', '-1', '0']],
+  ['FC Bayern München II', ['1', '0', '0', '1', '2:3', '\u22121', '0']],
   ['SpVgg Unterhaching', ['1', '0', '1', '0', '1:1', '0', '1']],
   ['SV Heimstetten', ['1', '0', '1', '0', '1:1', '0', '1']],
 ];

@@ -159,8 +159,8 @@ function ScoreboardKompakt({ model, size, stufe, meldezeile, onHelferAnfragen, t
           <div style={uhrFlaeche} data-testid={id('clock')} data-schlussphase={String(uhr?.schlussphase ?? false)} data-steht={String(uhr?.steht ?? false)}>
             {uhr && (
               <>
-                {uhr.label && <div style={{ ...klein, fontWeight: cssVars.fontWeights.bold, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: cssVars.spacing.xs }}>{uhr.steht && <TafelIcons.Pause size={iconSizeValues.xs} />}{uhr.label}</div>}
-                {uhr.vorsatz
+                {uhr.label && uhr.nurZeile !== true && <div style={{ ...klein, fontWeight: cssVars.fontWeights.bold, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: cssVars.spacing.xs }}>{uhr.steht && <TafelIcons.Pause size={iconSizeValues.xs} />}{uhr.label}</div>}
+                {uhr.nurZeile === true ? null : uhr.vorsatz
                   ? <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: cssVars.spacing.xs }}><span style={{ ...uhrZahl, fontSize: `calc(${uhrZahl.fontSize as string} * 0.5)` }} data-testid={id('clock-vorsatz')}>{uhr.vorsatz}</span><ClockDigits text={uhr.rest} style={uhrZahl} testId={id('clock-rest')} /></div>
                   : <ClockDigits text={uhr.rest} style={uhrZahl} testId={id('clock-rest')} />}
                 <div style={{ ...klein, minHeight: gross ? cssVars.lineHeights.bodyMd : cssVars.lineHeights.bodySm }} data-testid={id('clock-sub')}>{uhr.unterzeile ?? uhr.gespielt}</div>

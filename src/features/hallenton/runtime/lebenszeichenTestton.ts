@@ -59,7 +59,7 @@ export function erzeugeTestton(d: TesttonDeps): Testton {
       quittieren(tests.filter((t) => gespielt.includes(t.testId)));
       const offen = tests.filter((t) => !gespielt.includes(t.testId) && t.ageMs + unterwegsMs <= TESTTON_MAX_ALTER_MS);
       if (offen.length === 0 || !d.spieler.jetztSpielen('abpfiff')) {
-        return; // stumm oder 0 %: nicht gespielt, also keine Quittung
+        return; // 0 %: nicht gespielt, also keine Quittung
       }
       d.ausgang()?.testtonGespielt();
       for (const t of offen) {
