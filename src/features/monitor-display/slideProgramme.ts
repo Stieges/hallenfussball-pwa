@@ -8,6 +8,7 @@
  */
 
 import type { MonitorSlide } from '../../types/monitor';
+import { slideSetupProblem } from '../../core/services/monitorSlideSetup';
 import { fieldIdToNumber } from './monitorDisplayHelpers';
 import { imVorlauf, type VorlaufSpiel } from './monitorVorlauf';
 
@@ -62,13 +63,20 @@ export const SPIELPLAN_FALLBACK_SLIDE: MonitorSlide = {
 
 export function selectDisplayableSlides<T extends MonitorSlideLike>(
   slides: T[],
-  options?: { qrMoeglich?: boolean; isShowable?: (slide: T) => boolean },
+  options?: { qrMoeglich?: boolean; isShowable?: (slide: T) => boolean; sponsors?: readonly { id: string }[] },
 ): Array<T | MonitorSlide | QrRueckfallFolie> {
+  // @ME-077: Sponsor-Folie ohne (vorhandenen) Sponsor und „Eigener Text“ ohne Überschrift werden übersprungen.
+  // Ein fehlendes oder unbekanntes Feld gehört nicht dazu: die Folie läuft weiter (Feld 1, @ZM-074).
+  const eingerichtet = (slide: T): boolean => slideSetupProblem(
+    { type: slide.type, config: slide.config },
+    options?.sponsors,
+  ) === null;
   // B-16e2 (@ZM-090): Folien, die bei ausgeblendeten Ergebnissen nicht zeigbar sind, fallen weg.
   // B-16f4: Eine Zuschauer-QR-Folie entfällt ohne öffentliches Turnier mit Share-Code (kein leerer QR).
   const displayable = slides.filter((slide) =>
     DISPLAYABLE_SLIDE_TYPES.has(slide.type)
     && (slide.type !== 'qr-code' || options?.qrMoeglich === true)
+    && eingerichtet(slide)
     && (options?.isShowable?.(slide) ?? true));
   if (displayable.length > 0) {
     return displayable;

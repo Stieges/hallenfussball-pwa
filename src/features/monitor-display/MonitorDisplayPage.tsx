@@ -138,8 +138,8 @@ function MonitorDisplayPageContent({
   const qrMoeglich = tournament?.isPublic === true && Boolean(tournament?.shareCode);
   // B-16e2 (@ZM-090): Bei ausgeblendeten Ergebnissen fallen wertende Folien weg (Rückfall: QR)
   const programSlides = useMemo(
-    () => selectDisplayableSlides(monitor?.slides ?? [], { qrMoeglich, isShowable: (slide) => view === null || isSlideShowable(slide, view.rules) }),
-    [monitor, qrMoeglich, view]
+    () => selectDisplayableSlides(monitor?.slides ?? [], { qrMoeglich, sponsors: tournament ? (tournament.sponsors ?? []) : undefined, isShowable: (slide) => view === null || isSlideShowable(slide, view.rules) }),
+    [monitor, qrMoeglich, view, tournament]
   );
   // Nach dem Abschluss ersetzt die Folie „Endstand“ Live-Spiel, Tabellen, Nächste Spiele und Spielplan (R3-7, @ZM-121)
   const slides = useMemo(() => applyEnd(programSlides, end), [programSlides, end]);

@@ -434,18 +434,18 @@
     }
   },
   "monitors": {
-    "title": "Configure Monitors",
-    "subtitle": "Create display setups for TVs, projectors, or other screens",
+    "title": "Monitors",
+    "subtitle": "Set up the monitors for TVs, projectors and other screens.",
     "addMonitor": "New Monitor",
-    "createTitle": "Create New Monitor",
+    "createTitle": "Add a new monitor",
     "namePlaceholder": "Monitor name (e.g., Main Hall Entrance)",
     "cancel": "Cancel",
-    "creating": "Creating...",
-    "createAndEdit": "Create & Edit",
-    "emptyState": "No monitors configured yet",
-    "emptyStateHint": "Create a monitor to display a slideshow with live matches, tables, schedules, and sponsors.",
-    "displayUrlHint": "Open the display URL on a TV or projector for fullscreen display",
-    "visibilityWarning": "This tournament is currently not public. On a different device — i.e. the venue monitor — the display cannot load it. Set the visibility under Admin › Visibility to \"Shareable with link\" before opening the URL on the monitor.",
+    "creating": "Adding...",
+    "createAndEdit": "Add and edit",
+    "emptyState": "No monitor added yet",
+    "emptyStateHint": "Add a monitor that shows live matches, tables, schedules and sponsors as a slide program.",
+    "displayUrlHint": "Open the monitor address on a TV or projector for fullscreen display",
+    "visibilityWarning": "This tournament is currently not public. On a different device — i.e. the venue monitor — the display cannot load it. Set the visibility under Admin › Visibility to \"Shareable with link\" before opening the address on the monitor.",
     "slidesCount_one": "{{count}} slide",
     "slidesCount_other": "{{count}} slides",
     "perSlide": "{{duration}} per slide",
@@ -454,9 +454,9 @@
     "editAria": "Edit monitor \"{{name}}\"",
     "open": "Open",
     "openAria": "Open monitor \"{{name}}\" in new tab",
-    "copyUrl": "Copy URL",
-    "copyUrlAria": "Copy URL for monitor \"{{name}}\"",
-    "urlCopied": "URL copied",
+    "copyUrl": "Copy address",
+    "copyUrlAria": "Copy address for monitor \"{{name}}\"",
+    "urlCopied": "Address copied",
     "copied": "Copied!",
     "duplicate": "Duplicate",
     "duplicateAria": "Duplicate monitor \"{{name}}\"",
@@ -478,10 +478,10 @@
       "nameRequired": "Name is required",
       "nameTooLong": "Name must not exceed 50 characters",
       "duplicateName": "A monitor with this name already exists",
-      "createFailed": "Error creating",
+      "createFailed": "The monitor could not be added",
       "deleteFailed": "Error deleting",
       "duplicateFailed": "Error duplicating",
-      "copyFailed": "Could not copy URL"
+      "copyFailed": "Could not copy address"
     },
     "transfer": {
       "openButton": "Take over monitors",
@@ -540,7 +540,16 @@
         "removeSlide": "Remove slide",
         "keepHint": "If you choose nothing, the slide stays and is marked in the monitor editor."
       }
-    }
+    },
+    "nameLabel": "Monitor name",
+    "emptyStart": {
+      "hallenStandard": "Add hall standard",
+      "hallenStandardHint": "Adds one monitor with live match, next matches, tables and spectator QR code.",
+      "hallenStandardHintMultiField": "Adds one monitor with the live match of field 1, next matches, tables and spectator QR code.",
+      "createEmpty": "Add empty",
+      "transfer": "Take over from another tournament"
+    },
+    "copyName": "{{name}} (copy)"
   },
   "sponsor": {
     "title": "Sponsors",
@@ -847,7 +856,7 @@
   "monitorEditor": {
     "allTeams": "All Teams",
     "groupLabel": "Group {{letter}}",
-    "notConfigured": "Not configured",
+    "notConfigured": "Not set up",
     "customText": "Custom Text",
     "notFound": "Monitor not found",
     "close": "Close",
@@ -862,7 +871,7 @@
     "settings": {
       "title": "Settings",
       "name": "Name",
-      "slideDuration": "Slide duration (sec.)",
+      "slideDuration": "Slide time",
       "transition": "Transition",
       "performanceLabel": "Performance",
       "themeLabel": "Color Scheme",
@@ -890,7 +899,8 @@
         "lightDesc": "Dark text on a light background",
         "auto": "Automatic",
         "autoDesc": "Follows the device setting"
-      }
+      },
+      "durationValue": "{{seconds}} s"
     },
     "slides": {
       "title": "Slides ({{count}})",
@@ -901,7 +911,11 @@
       "addSlide": "Add slide",
       "qrHidden": "Without a public tournament this slide is skipped",
       "referenceField": "Field is missing in this tournament – please adjust",
-      "referenceGroup": "Group is missing in this tournament – please adjust"
+      "referenceGroup": "Group is missing in this tournament – please adjust",
+      "moveUpAria": "Move {{slide}} up",
+      "moveDownAria": "Move {{slide}} down",
+      "editAria": "Edit {{slide}}",
+      "removeAria": "Delete {{slide}}"
     },
     "saved": "Saved",
     "cancel": "Cancel",
@@ -911,6 +925,18 @@
       "message": "Your changes to the monitor are not saved yet and will be lost.",
       "confirm": "Discard",
       "keepEditing": "Keep editing"
+    },
+    "setupProblem": {
+      "sponsor": "Sponsor missing",
+      "headline": "Headline missing"
+    },
+    "unready": {
+      "title": "Slides not set up",
+      "message_one": "{{count}} slide is not set up yet and will not be shown on the monitor. Save anyway?",
+      "message_other": "{{count}} slides are not set up yet and will not be shown on the monitor. Save anyway?",
+      "item": "{{slide}}: {{problem}}",
+      "backToEditor": "Back to the editor",
+      "saveAnyway": "Save anyway"
     }
   },
   "toolbar": {
@@ -927,7 +953,7 @@
     "viewGrid": "Grid"
   },
   "slideEditor": {
-    "configAria": "Configuration for {{type}} slide",
+    "configAria": "Settings of the slide “{{type}}”",
     "field": "Field",
     "pleaseSelect": "Please select...",
     "whenIdleLabel": "When no match is running",
@@ -942,19 +968,73 @@
     "numberOfPlayers": "Number of Players",
     "sponsor": "Sponsor",
     "showQrCode": "Show QR code",
-    "qrTargetLabel": "QR Code Target",
-    "customUrl": "Custom URL",
+    "qrTargetLabel": "QR code target",
+    "customUrl": "Custom address",
     "headline": "Headline",
     "headlinePlaceholder": "e.g., Important Announcement",
     "text": "Text",
     "textPlaceholder": "Your text here...",
     "textAlignment": "Text Alignment",
     "colorSchemeLabel": "Color Scheme",
-    "customDuration": "Custom duration (sec.) - empty = monitor default",
-    "defaultPlaceholder": "Default"
+    "customDuration": "Own slide time (sec.) – empty = as set for the monitor",
+    "defaultPlaceholder": "Default",
+    "topN": "Top {{count}}",
+    "qrTarget": {
+      "tournament": "Spectator page",
+      "tournamentDesc": "The QR code leads to the spectator page of this tournament.",
+      "sponsorWebsite": "Sponsor website",
+      "sponsorWebsiteDesc": "The QR code leads to the website entered for the sponsor.",
+      "custom": "Own link",
+      "customDesc": "The QR code leads to an address you enter yourself."
+    },
+    "textAlign": {
+      "left": "Left",
+      "center": "Centered",
+      "right": "Right"
+    },
+    "colorSchemes": {
+      "default": "Standard",
+      "defaultDesc": "Normal information",
+      "highlight": "Highlighted",
+      "highlightDesc": "Important information",
+      "urgent": "Urgent",
+      "urgentDesc": "Warnings",
+      "celebration": "Celebration",
+      "celebrationDesc": "Winners, congratulations"
+    }
   },
   "slidePreview": {
-    "previewAria": "Preview: {{type}}"
+    "previewAria": "Preview: {{type}}",
+    "types": {
+      "live": "Live match",
+      "standings": "Table",
+      "scheduleField": "Schedule (field)",
+      "sponsor": "Sponsor",
+      "customText": "Custom text",
+      "qrCode": "Spectator QR",
+      "allStandings": "All tables",
+      "scheduleGroup": "Schedule (group)",
+      "nextMatches": "Next matches",
+      "topScorers": "Top scorers"
+    },
+    "hint": {
+      "qrCode": "Shows the QR code to the spectator page.",
+      "allStandings": "Shows the tables of all groups.",
+      "nextMatches": "Shows the next matches of the tournament.",
+      "scheduleGroup": "Shows the schedule of one group.",
+      "topScorers": "Shows the top scorer list."
+    },
+    "fieldLabel": "Field {{num}}",
+    "allGroups": "All groups",
+    "groupLabel": "Group {{id}}",
+    "moreItems": "+{{count}} more",
+    "noData": "No data",
+    "noMatches": "No matches",
+    "headlineDefault": "Headline",
+    "sponsorFallback": "Sponsor",
+    "allTeams": "All teams",
+    "placeholderTeamA": "Team A",
+    "placeholderTeamB": "Team B"
   },
   "standings": {
     "table": "Table",

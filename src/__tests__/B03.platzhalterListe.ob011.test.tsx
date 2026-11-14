@@ -23,7 +23,7 @@ describe('@OB-011 Eine Folie ohne Darstellung zeigt keinen Entwickler-Hinweis', 
     const { selectDisplayableSlides } = await import('../features/monitor-display/slideProgramme');
     const slides = selectDisplayableSlides([
       { id: 'a', type: 'unknown-type', duration: 10 },
-      { id: 'b', type: 'sponsor', duration: 10 },
+      { id: 'b', type: 'sponsor', duration: 10, config: { sponsorId: 'sp1' } }, // eingerichtet (@ME-077)
     ]);
     expect(slides.map((slide) => slide.id)).toEqual(['b']);
     const fallback = selectDisplayableSlides([{ id: 'a', type: 'unknown-type', duration: 10 }]);

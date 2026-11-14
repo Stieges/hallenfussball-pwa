@@ -119,9 +119,7 @@ export function validateSlideConfig(
     switch (type) {
         case 'live':
         case 'schedule-field':
-            if (!config.fieldId) {
-                errors.fieldId = 'Spielfeld ist erforderlich';
-            }
+            // fieldId ist optional: ohne Feld gilt Feld 1, wie am Monitor (@ZM-074, @ME-076)
             break;
         case 'standings':
         case 'schedule-group':
