@@ -84,7 +84,7 @@
 
 .note {
   flex: 1 1 100%; /* eigene Zeile unter Meldung, Taste und Schließen */
-  line-height: 1.4;
+  line-height: var(--line-height-body-sm, 16px);
   font-size: var(--font-size-sm, 14px);
   font-weight: var(--font-weight-normal, 400);
 }

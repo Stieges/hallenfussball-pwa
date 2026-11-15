@@ -10,7 +10,7 @@
  */
 import ReactDOM from 'react-dom/client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import '../../../src/i18n';
+import i18n from '../../../src/i18n';
 import '@fontsource-variable/inter';
 import '../../../src/styles/global.css';
 import { HashRouter } from 'react-router-dom';
@@ -71,6 +71,8 @@ function lautsprecherAm(fall: Fall): Antwort | null {
     default: return null;
   }
 }
+
+if (new URLSearchParams(window.location.search).get('lang') === 'en') { void i18n.changeLanguage('en'); }
 
 declare global {
   interface Window { __hallentonPruefstand?: { leitungAntworten: number } }

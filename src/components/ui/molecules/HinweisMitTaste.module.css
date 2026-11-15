@@ -88,8 +88,9 @@
   line-height: var(--line-height-body-sm);
 }
 
-/* kleines Handy: die zweite Zeile entfällt samt Abstand, wo die Taste dasselbe sagt (`zusatzEntfaelltKlein`) */
-@media (max-width: 480px) and (max-height: 700px) {
+/* kleines Handy: die zweite Zeile entfällt samt Abstand, wo die Taste dasselbe sagt (`zusatzEntfaelltKlein`).
+   Höhengrenze wie die Stufe „knapp“ des Cockpits (`cockpitHeightSteps.knapp` = 720, Stufe gilt bei Höhe < 720): 719 px; Zahlen in Media-Queries sind nur hier möglich. */
+@media (max-width: 480px) and (max-height: 719px) {
   .zusatzEntfaelltKlein {
     display: none;
   }

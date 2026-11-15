@@ -282,30 +282,39 @@ test.describe('@OB-087 Lage der Taste im Hinweis („A“: rechts in der Zeile, 
 
     // @OB-087 (Zeile „im Cockpit bleiben auch auf einem Handy mit 360×640 …“): mit dem Hinweis bleiben die Tor-Tasten und die Reihe „Foul · Zeitstrafe · Karte“
     // ganz im Bild, ohne Rollen – die Tastenfläche des Cockpits rollt nur, wo der Platz nicht reicht; hier darf sie es nicht müssen
-    for (const [fall, kasten] of [['kein-netz', 'cockpit-hall-kein-netz'], ['ton-aktivieren', 'cockpit-hall-aus']] as const) {
-      test(`Cockpit „${fall}“ ${l.name}: Tor-Tasten und Reihe Foul · Zeitstrafe · Karte stehen ganz im Bild, ohne Rollen`, async ({ page }) => {
-        await page.setViewportSize({ width: l.width, height: l.height });
-        await page.clock.setFixedTime(new Date(2026, 10, 21, 14, 0));
-        await page.goto(`/tests/e2e/harness/cockpit-hallenton.html?fall=${fall}`);
-        await expect(page.getByTestId(kasten)).toBeVisible({ timeout: 15_000 });
-        await animationenFertig(page);
-        const flaeche = await rechteck(page.getByTestId('cockpit-tastenflaeche'));
-        for (const id of ['goal-button-home', 'goal-button-away', 'team-row3-home', 'team-row3-away']) {
-          const b = await rechteck(page.getByTestId(id));
-          expect(b.y, `${id}: oben im sichtbaren Bereich der Tastenfläche`).toBeGreaterThanOrEqual(flaeche.y - 0.5);
-          expect(b.y + b.height, `${id}: unten im sichtbaren Bereich der Tastenfläche (ohne Rollen)`).toBeLessThanOrEqual(flaeche.y + flaeche.height + 0.5);
-          expect(b.y + b.height, `${id}: im Fenster`).toBeLessThanOrEqual(l.height);
-        }
-        expect(await page.getByTestId('cockpit-tastenflaeche').evaluate((n) => n.scrollTop), 'die Fläche ist nicht gerollt').toBe(0);
-        // die Anweisung an den Spielleiter bleibt immer vollständig stehen
-        if (fall === 'ton-aktivieren') {
-          await expect(page.getByTestId(kasten)).toContainText('Hallen-Lautsprecher aus – Ende selbst anzeigen');
-          await expect(page.getByTestId(kasten).getByTestId('cockpit-hall-ton-aktivieren')).toHaveText('Ton aktivieren');
-          // der Grund entfällt nur auf dem kleinen Handy, wo die Taste dasselbe sagt
-          const grund = page.getByTestId(kasten).getByText('Grund: Ton nicht aktiviert');
-          if (l.height <= 700) { await expect(grund).toBeHidden(); } else { await expect(grund).toBeVisible(); }
-        }
-      });
+    // auch auf Englisch (längere Beschriftungen): dieselbe Anforderung, derselbe Maßstab
+    for (const sprache of ['de', 'en'] as const) {
+      const T = sprache === 'de'
+        ? { anweisung: 'Hallen-Lautsprecher aus – Ende selbst anzeigen', taste: 'Ton aktivieren', verbinden: 'Verbinden', grund: 'Grund: Ton nicht aktiviert' }
+        : { anweisung: 'Hall speaker off – signal the end yourself', taste: 'Activate audio', verbinden: 'Connect', grund: 'Reason: audio not enabled' };
+      for (const [fall, kasten] of [['kein-netz', 'cockpit-hall-kein-netz'], ['ton-aktivieren', 'cockpit-hall-aus']] as const) {
+        test(`Cockpit „${fall}“ ${l.name} (${sprache}): Tor-Tasten und Reihe Foul · Zeitstrafe · Karte stehen ganz im Bild, ohne Rollen`, async ({ page }) => {
+          await page.setViewportSize({ width: l.width, height: l.height });
+          await page.clock.setFixedTime(new Date(2026, 10, 21, 14, 0));
+          await page.goto(`/tests/e2e/harness/cockpit-hallenton.html?fall=${fall}&lang=${sprache}`);
+          await expect(page.getByTestId(kasten)).toBeVisible({ timeout: 15_000 });
+          await animationenFertig(page);
+          const flaeche = await rechteck(page.getByTestId('cockpit-tastenflaeche'));
+          for (const id of ['goal-button-home', 'goal-button-away', 'team-row3-home', 'team-row3-away']) {
+            const b = await rechteck(page.getByTestId(id));
+            expect(b.y, `${id}: oben im sichtbaren Bereich der Tastenfläche`).toBeGreaterThanOrEqual(flaeche.y - 0.5);
+            expect(b.y + b.height, `${id}: unten im sichtbaren Bereich der Tastenfläche (ohne Rollen)`).toBeLessThanOrEqual(flaeche.y + flaeche.height + 0.5);
+            expect(b.y + b.height, `${id}: im Fenster`).toBeLessThanOrEqual(l.height);
+          }
+          expect(await page.getByTestId('cockpit-tastenflaeche').evaluate((n) => n.scrollTop), 'die Fläche ist nicht gerollt').toBe(0);
+          // die Beschriftung der Taste steht vollständig (nicht abgeschnitten)
+          const tasteKnopf = page.getByTestId(kasten).getByTestId(fall === 'kein-netz' ? 'cockpit-hall-verbinden' : 'cockpit-hall-ton-aktivieren');
+          await expect(tasteKnopf).toHaveText(fall === 'kein-netz' ? T.verbinden : T.taste);
+          expect(await tasteKnopf.evaluate((n) => n.scrollWidth - n.clientWidth), 'Beschriftung nicht abgeschnitten').toBeLessThanOrEqual(0);
+          // die Anweisung an den Spielleiter bleibt immer vollständig stehen
+          if (fall === 'ton-aktivieren') {
+            await expect(page.getByTestId(kasten)).toContainText(T.anweisung);
+            // der Grund entfällt nur auf dem kleinen Handy, wo die Taste dasselbe sagt
+            const grund = page.getByTestId(kasten).getByText(T.grund);
+            if (l.height <= 700) { await expect(grund).toBeHidden(); } else { await expect(grund).toBeVisible(); }
+          }
+        });
+      }
     }
 
     test(`Gegenbeispiel Cockpit ${l.name}: auf einem anderen Gerät (ohne Taste) bleibt der Grund stehen`, async ({ page }) => {

@@ -14,7 +14,7 @@ export interface ArbeitsTasteProps {
   variant?: 'primary' | 'secondary';
   icon?: ReactNode;
   /**
-   * Steht in einem `HinweisMitTaste` (@OB-087): 44 px hoch, mindestens `xxl` × 3 breit (bleibt im Zustand „läuft“ gleich breit), Fläche in Seitenfarbe,
+   * Steht in einem `HinweisMitTaste` (@OB-087): 44 px hoch, mindestens `xxl` × 3 breit (der Aufrufer kann `--hinweis-taste-min` enger setzen; bleibt im Zustand „läuft“ gleich breit), Fläche in Seitenfarbe,
    * 2-px-Rand im Ton des Hinweises (`--hinweis-bedien`), Schrift in der normalen Textfarbe. Läuft der Versuch, ist der Rand gestrichelt (nicht Farbe allein).
    */
   imHinweis?: boolean;
