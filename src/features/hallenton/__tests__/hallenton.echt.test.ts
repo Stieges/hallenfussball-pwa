@@ -2,7 +2,7 @@
  * H3b-3 Fixrunde 1 – der Client gegen die echten RPCs der Migration 20261121_001_hallenton.sql (Wegwerf-Container aus
  * `scripts/hallenton-client-check.sh`; ohne `HALLENTON_ECHT_CONTAINER` übersprungen). Jede RPC läuft per `docker exec … psql`
  * als Rolle authenticated mit JWT-Claims; die jsonb-Antwort geht unverändert durch die zod-Prüfung von `hallentonRpc.ts`.
- * Nachweise: Lebenszeichen nach Turnierende (@HT-046, W1), `getDeviceId()` als UUID, volle/schmale Sicht (@HT-039, @HT-040),
+ * Nachweise: Lebenszeichen nach Turnierende (@HT-046, 55000 seit 20261123_001), `getDeviceId()` als UUID, volle/schmale Sicht (@HT-039, @HT-040),
  * Lebenszeichen → Testton → Quittung (@HT-017).
  */
 import { execFileSync } from 'node:child_process';
@@ -64,6 +64,12 @@ function client(uid: string): Client {
 }
 
 const olli = (): Client => client(OLLI);
+function mitClient(c: Client): NonNullable<Client> {
+  if (c === null) {
+    throw new Error('kein Client');
+  }
+  return c;
+}
 const geraet = getDeviceId(new FalscherSpeicher());
 
 describe.skipIf(C === '')('Hallenton-Client gegen die echten RPCs (Wegwerf-Container)', () => {
@@ -114,11 +120,39 @@ describe.skipIf(C === '')('Hallenton-Client gegen die echten RPCs (Wegwerf-Conta
     expect(schmal).toMatchObject({ ok: true, sicht: 'schmal', speakers: [{ field: 1, state: 'ready' }] });
   });
 
-  it('W1 nach dem Turnierende antwortet das Lebenszeichen weiter „ok“ (kein 55000); Testton anfordern ist gesperrt', async () => {
+  it('H4-3 @HT-054 @HT-055 Rückwärtsverträglichkeit: neue Zustände vom echten Server werden gelesen (volle und schmale Sicht), das alte Lebenszeichen „ready“ gilt weiter', async () => {
+    for (const zustand of ['output_lost', 'output_unconfirmed'] as const) {
+      const hb = await hallSpeakerHeartbeat(olli(), { p_tournament_id: TID, p_device_id: geraet, p_fields: [1], p_state: zustand, p_output_changed: false });
+      expect(hb).toMatchObject({ ok: true, status: 'ok', fields: [{ field: 1, status: 'ok' }] });
+      const voll = await hallSoundStatus(olli(), { p_tournament_id: TID, p_device_id: geraet });
+      const schmal = await hallSoundStatus(client(MIA), { p_tournament_id: TID, p_device_id: geraet });
+      expect(voll.ok && voll.speakers[0]).toMatchObject({ field: 1, state: zustand });
+      expect(schmal.ok && schmal.speakers[0]).toMatchObject({ field: 1, state: zustand });
+    }
+    const alt = await hallSpeakerHeartbeat(olli(), { p_tournament_id: TID, p_device_id: geraet, p_fields: [1], p_state: 'ready', p_output_changed: false });
+    expect(alt).toMatchObject({ ok: true, status: 'ok', fields: [{ field: 1, status: 'ok' }] });
+    const unbekannt = await hallSpeakerHeartbeat(olli(), { p_tournament_id: TID, p_device_id: geraet, p_fields: [1], p_state: 'fast_bereit', p_output_changed: false });
+    expect(unbekannt).toEqual({ ok: false, grund: 'ungueltig' });
+  });
+
+  it('H4-3 @HT-057 die Turnierleitung meldet das Gerät ab: Antwort ohne Kennung, das Gerät sieht „unassigned“ beim nächsten Lebenszeichen', async () => {
+    const aus = await mitClient(olli()).rpc('hall_speaker_unassign', { p_tournament_id: TID, p_fields: [1] });
+    protokoll(`[echt] unassign ${JSON.stringify(aus.data)}`);
+    expect(aus.data).toEqual({ status: 'unassigned', fields: [1] });
+    expect(JSON.stringify(aus.data)).not.toContain(geraet);
+    const danach = await hallSpeakerHeartbeat(olli(), { p_tournament_id: TID, p_device_id: geraet, p_fields: [1], p_state: 'ready', p_output_changed: false });
+    expect(danach).toMatchObject({ ok: true, status: 'ok', fields: [{ field: 1, status: 'unassigned' }] });
+    const mia = await mitClient(client(MIA)).rpc('hall_speaker_unassign', { p_tournament_id: TID, p_fields: [1] });
+    expect(mia.error?.code).toBe('42501');
+    const neu = await hallSpeakerAssign(olli(), { p_tournament_id: TID, p_fields: [1], p_device_id: geraet, p_device_name: 'Rechner der Turnierleitung', p_replace: false });
+    expect(neu).toMatchObject({ ok: true, status: 'assigned', fields: [1] });
+  });
+
+  it('@HT-046 nach dem Turnierende antwortet das Lebenszeichen mit „turnier_beendet“ (55000, seit 20261123_001, Ruling W1); Testton anfordern ist gesperrt', async () => {
     psql(`BEGIN;\nSET LOCAL app.lifecycle_write = 'on';\nUPDATE public.tournaments SET lifecycle_status = 'finished', finished_at = now() WHERE id = '${TID}';\nCOMMIT;\n`);
     const hb = await hallSpeakerHeartbeat(olli(), { p_tournament_id: TID, p_device_id: geraet, p_fields: [1], p_state: 'not_activated', p_output_changed: false });
     protokoll(`[echt] heartbeat nach Turnierende ${JSON.stringify(hb)}`);
-    expect(hb).toMatchObject({ ok: true, status: 'ok', fields: [{ field: 1, status: 'ok' }] });
+    expect(hb).toEqual({ ok: false, grund: 'turnier_beendet' });
     const test = await hallTestToneRequest(olli(), { p_tournament_id: TID, p_field: 1 });
     expect(test).toEqual({ ok: false, grund: 'turnier_beendet' });
     const voll = await hallSoundStatus(olli(), { p_tournament_id: TID, p_device_id: geraet });

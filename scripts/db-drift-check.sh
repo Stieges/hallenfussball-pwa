@@ -254,6 +254,10 @@ pending_assertions_for() {
     20261123_001_hallenton_torhymne.sql)
       echo "hallenton-goal-anthems-rpc-authenticated-only hallenton-goal-anthems-column-checked hallenton-heartbeat-closed-tournament"
       ;;
+    # Hallenton Zustaende des Ausgangs und Abmelden (@HT-053 bis @HT-055, @HT-057): zwei neue Zustaende, hall_speaker_unassign
+    20261125_001_hallenton_ausgang_zustaende.sql)
+      echo "hallenton-output-states-heartbeat hallenton-speaker-unassign-rpc-authenticated-only"
+      ;;
     *)
       return 1
       ;;
@@ -781,6 +785,9 @@ PRIVILEGE_ASSERTION_NAMES=(
   # Leibchen Schritt 2a (20261124_002_leibchen_schritt2.sql, @SL-150, @SL-201 bis @SL-236): eigener Block am Ende von db_privilege_assertions.sql
   "leibchen-kit-set-rpc-authenticated-only"
   "leibchen-kit-set-shape"
+  # Hallenton Zustaende des Ausgangs und Abmelden (20261125_001_hallenton_ausgang_zustaende.sql, @HT-053 bis @HT-055, @HT-057): eigener Block am Ende von db_privilege_assertions.sql
+  "hallenton-output-states-heartbeat"
+  "hallenton-speaker-unassign-rpc-authenticated-only"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then

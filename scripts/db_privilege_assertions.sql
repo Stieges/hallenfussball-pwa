@@ -1571,7 +1571,10 @@ SELECT 'hallenton-internal-no-client-execute',
 -- (5) Lebenszeichen ohne Browser-Kennzeichen: Grund aus fester Liste, Geraetename 1-60 Zeichen, keine Spalte user_agent.
 UNION ALL
 SELECT 'hallenton-heartbeat-fixed-reasons-no-user-agent',
-       coalesce((SELECT pg_get_constraintdef(con.oid) = 'CHECK (((state IS NULL) OR (state = ANY (ARRAY[''ready''::text, ''not_activated''::text, ''background''::text, ''slept''::text, ''custom_sound_failed''::text, ''volume_zero''::text]))))'
+       -- sechs Zustaende (20261121_001) ODER acht (seit 20261125_001: dazu output_lost, output_unconfirmed) -- die Zeile gilt vor und nach
+       -- dem Einspielen; die strenge Pruefung der acht steht in hallenton-output-states-heartbeat
+       coalesce((SELECT pg_get_constraintdef(con.oid) IN ('CHECK (((state IS NULL) OR (state = ANY (ARRAY[''ready''::text, ''not_activated''::text, ''background''::text, ''slept''::text, ''custom_sound_failed''::text, ''volume_zero''::text]))))',
+                                                          'CHECK (((state IS NULL) OR (state = ANY (ARRAY[''ready''::text, ''not_activated''::text, ''background''::text, ''slept''::text, ''custom_sound_failed''::text, ''volume_zero''::text, ''output_lost''::text, ''output_unconfirmed''::text]))))')
                    FROM pg_constraint con WHERE con.conrelid = to_regclass('public.hall_speakers') AND con.conname = 'hall_speakers_state_check'), false)
        AND coalesce((SELECT position('char_length(device_name) >= 1' IN pg_get_constraintdef(con.oid)) > 0
                             AND position('char_length(device_name) <= 60' IN pg_get_constraintdef(con.oid)) > 0
@@ -1779,4 +1782,34 @@ SELECT 'leibchen-kit-set-shape',
                             AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
                             AND NOT has_function_privilege('service_role', p.oid, 'EXECUTE')
                        FROM pg_proc p WHERE p.oid = to_regprocedure('public.match_kit_team_color(uuid)')), false)
+
+-- ---------------------------------------------------------------------------------------------------------------
+-- Hallenton Zustaende des Ausgangs und Abmelden (20261125_001_hallenton_ausgang_zustaende.sql, Record Hallenton @HT-053, @HT-054,
+-- @HT-055, @HT-057): Pruefskript scripts/hallenton-check.sh (Kategorie A), Rollen-Zeilen scripts/rls-matrix.d/spur-hallenton.sh.
+-- Vor dem Live-Einspielen "f" (vom Drift-Check bis dahin ausgelassen).
+-- ---------------------------------------------------------------------------------------------------------------
+-- (1) Zustand aus fester Liste mit genau acht Werten (die sechs bisherigen, dazu output_lost und output_unconfirmed) -- in der
+--     Pruefregel UND im Lebenszeichen (sonst meldet die Tabelle 23514 statt 22023); das Lebenszeichen sperrt weiter nach dem Ende.
+UNION ALL
+SELECT 'hallenton-output-states-heartbeat',
+       coalesce((SELECT pg_get_constraintdef(con.oid) = 'CHECK (((state IS NULL) OR (state = ANY (ARRAY[''ready''::text, ''not_activated''::text, ''background''::text, ''slept''::text, ''custom_sound_failed''::text, ''volume_zero''::text, ''output_lost''::text, ''output_unconfirmed''::text]))))'
+                   FROM pg_constraint con WHERE con.conrelid = to_regclass('public.hall_speakers') AND con.conname = 'hall_speakers_state_check'), false)
+       AND coalesce((SELECT position('p_state NOT IN (''ready'', ''not_activated'', ''background'', ''slept'', ''custom_sound_failed'', ''volume_zero'', ''output_lost'', ''output_unconfirmed'')' IN p.prosrc) > 0
+                            AND position('PERFORM public.hall_require_open(p_tournament_id);' IN p.prosrc) > 0
+                            AND position('PERFORM public.hall_require(p_tournament_id, ''manageScreens'');' IN p.prosrc) > 0
+                       FROM pg_proc p WHERE p.oid = to_regprocedure('public.hall_speaker_heartbeat(uuid,uuid,integer[],text,boolean)')), false)
+-- (2) hall_speaker_unassign: SECURITY DEFINER, search_path fest, EXECUTE nur authenticated (anon nicht, service_role nicht, kein
+--     PUBLIC); prueft manageScreens und das offene Turnier (55000), bevor es loescht; gibt keine Geraete-Kennung heraus.
+UNION ALL
+SELECT 'hallenton-speaker-unassign-rpc-authenticated-only',
+       coalesce((SELECT p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                        AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('service_role', p.oid, 'EXECUTE')
+                        AND p.proacl IS NOT NULL
+                        AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+                        AND position('PERFORM public.hall_require(p_tournament_id, ''manageScreens'');' IN p.prosrc) > 0
+                        AND position('PERFORM public.hall_require_open(p_tournament_id);' IN p.prosrc) > 0
+                        AND position('device_id' IN p.prosrc) = 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.hall_speaker_unassign(uuid,integer[])')), false)
 ;
