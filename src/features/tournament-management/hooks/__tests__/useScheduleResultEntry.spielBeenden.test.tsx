@@ -10,6 +10,7 @@ import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
 import type { ReactNode } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { AKTUALISIEREN_FRIST_MS } from '../../../../lib/jetztAktualisieren';
 import { act, renderHook } from '@testing-library/react';
 
 vi.unmock('i18next');
@@ -28,6 +29,10 @@ vi.mock('../../../../core/repositories/fieldControlStateRpc', async (importOrigi
   readForeignFieldHolder: holder.read,
 }));
 
+const sw = vi.hoisted(() => ({ reload: vi.fn() }));
+vi.mock('../../../../lib/swRegistration', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../../../lib/swRegistration')>()), requestUrgentReload: sw.reload }));
+
+import { addReloadGateHolder } from '../../../../lib/swSetupSlots';
 import { initRealDeI18n } from '../../../../test/realDeI18n';
 import { MatchEngineContext } from '../../../match-engine/matchEngineContextInstance';
 import { MatchCommands, type EngineEventWithSeq } from '../../../../core/match/client';
@@ -425,6 +430,70 @@ describe('Spiel beenden und Ergebnis eintragen (Spielplan)', () => {
     expect(await done).toBe(false);
     expect(lastWarning(showWarning)).toBe('App aktualisieren');
     expect(await outboxEmpty(h, SPIEL_9)).toBe(true);
+  });
+
+  type Aktion = { label: string; onClick: () => unknown };
+  type HinweisOptionen = { id?: string; duration?: number; action?: Aktion } | undefined;
+  async function veralteterHinweis(): Promise<HinweisOptionen> {
+    confirmed(h, [anpfiff(480_000)]);
+    h.api.mockResolvedValueOnce({ error: 'CLIENT_OUTDATED', minClientFormat: 9, serverTime: NOW });
+    const { enter, answer, showWarning } = render(h);
+    const done = enter(SPIEL_9, 3, 1);
+    await act(async () => { await settle(); });
+    await answer('yes');
+    expect(await done).toBe(false);
+    return showWarning.mock.calls.at(-1)?.[1] as HinweisOptionen;
+  }
+
+  it('@OB-087 Zeile 4: Olli trägt im Spielplan ein Ergebnis ein, die App ist veraltet → der Hinweis trägt „Jetzt aktualisieren“; ein Tipp stößt das Neuladen an, der Hinweis bleibt mit Arbeitsanzeige stehen und steht nur einmal da (feste Kennung)', async () => {
+    const options = await veralteterHinweis();
+    expect(options?.action?.label).toBe('Jetzt aktualisieren');
+    expect(options?.duration).toBe(0); // bleibt stehen, bis die Person schließt oder die App neu lädt
+    expect(options?.id).toBe('app-veraltet');
+    expect(sw.reload).not.toHaveBeenCalled();
+    expect(options?.action?.onClick()).toEqual({ busyLabel: 'Lade...', danach: expect.any(Promise) });
+    expect(sw.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('@OB-087 Frist: findet die App keine neue Fassung, meldet der Hinweis nach AKTUALISIEREN_FRIST_MS den Satz „Neue Fassung ist noch nicht da …“ (gefälschte Uhr); vorher nicht', async () => {
+    const options = await veralteterHinweis();
+    vi.useFakeTimers({ toFake: ['setTimeout'] });
+    try {
+      const ergebnis = options?.action?.onClick() as { busyLabel: string; danach: Promise<unknown> };
+      let fertig = false;
+      void ergebnis.danach.then(() => { fertig = true; });
+      await vi.advanceTimersByTimeAsync(AKTUALISIEREN_FRIST_MS - 1);
+      expect(fertig, 'vor Ablauf der Frist bleibt die Arbeitsanzeige').toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(fertig).toBe(true);
+      await expect(ergebnis.danach).resolves.toEqual({ note: 'Neue Fassung ist noch nicht da – bitte gleich noch einmal tippen.' });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('@OB-087 Zeile 4 Gegenbeispiel: ist das Gerät bereiter Hallen-Lautsprecher (das Tor blockt), stößt der Tipp nichts an und der Hinweis nennt den Grund statt der Arbeitsanzeige', async () => {
+    const abmelden = addReloadGateHolder({ allowsReload: () => false, blocksUrgent: true });
+    try {
+      const options = await veralteterHinweis();
+      const ergebnis = options?.action?.onClick();
+      expect(ergebnis).toEqual({ note: expect.stringContaining('Hallen-Lautsprecher') });
+      expect(sw.reload).not.toHaveBeenCalled();
+    } finally {
+      abmelden();
+    }
+  });
+
+  it('@OB-087 Zeile 4 Gegenbeispiel: andere Hinweise des Notwegs (Netz weg) tragen keine „Jetzt aktualisieren“-Taste', async () => {
+    confirmed(h, [anpfiff(480_000)]);
+    h.api.mockRejectedValueOnce(networkError());
+    const { enter, answer, showWarning } = render(h);
+    const done = enter(SPIEL_9, 3, 1);
+    await act(async () => { await settle(); });
+    await answer('yes');
+    expect(await done).toBe(false);
+    expect(lastWarning(showWarning)).toBe('Nicht gesendet – bitte erneut versuchen');
+    expect(showWarning.mock.calls.at(-1)?.[1]).toBeUndefined();
   });
 
   it('N3 angenommen, der Abgleich danach scheitert → keine Fehlermeldung, das Ende gilt', async () => {

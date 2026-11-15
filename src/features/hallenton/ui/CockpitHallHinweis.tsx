@@ -17,9 +17,15 @@ import type { CockpitZustand } from '../../../components/live-cockpit/model/cock
 import { useTranslation } from 'react-i18next';
 import { iconSizeValues } from '../../../design-tokens';
 import { Icons } from '../../../components/ui/Icons';
+import { ArbeitsTaste } from '../../../components/ui/molecules/ArbeitsTaste';
+import { HinweisMitTaste } from '../../../components/ui/molecules/HinweisMitTaste';
+import { useSperreAktion } from '../../../hooks/useSperreAktion';
 import { cockpitHallZeile, cockpitHallZeileAusServer, type CockpitHallZeile } from '../cockpitHallZeile';
+import { tontAufDiesemGeraet } from '../hallAnzeige';
 import { feldNummer } from '../runtime/hallStatusAuswertung';
+import { VerbindenTaste } from '../../match-engine/VerbindenTaste';
 import { useHallCockpitHinweis } from '../useHallCockpitHinweis';
+import { useHallLautsprecher } from '../useHallLautsprecher';
 import { useHallStatus } from '../useHallStatus';
 import { useUhrAbgeglichen } from '../useUhrAbgeglichen';
 import { formatUhrzeit } from './uhrzeit';
@@ -38,50 +44,77 @@ export interface CockpitHallHinweisProps {
 /** Ohne Spiel, nach dem Abpfiff und bei offener Besetzung gibt es keinen Hinweis (@HT-016, @HT-035 letzte Zeile). */
 const OHNE_HINWEIS: ReadonlySet<CockpitZustand> = new Set<CockpitZustand>(['abgepfiffen', 'keinSpiel', 'wartetAufHerkunft']);
 
-interface KastenProps { symbol: ReactNode; titel: string; grund?: string; ruhig?: boolean; testid: string }
-
-export function CockpitHallKasten({ symbol, titel, grund, ruhig = false, testid }: KastenProps): ReactElement {
-  return (
-    <div className={ruhig ? `${styles.kasten} ${styles.ruhig}` : styles.kasten} role="status" data-testid={testid}>
-      <span className={styles.symbol} aria-hidden="true">{symbol}</span>
-      <span className={styles.text}>
-        <span className={styles.titel}>{titel}</span>
-        {grund !== undefined ? <span className={styles.grund}>{grund}</span> : null}
-      </span>
-    </div>
-  );
+interface KastenProps {
+  symbol: ReactNode;
+  titel: string;
+  grund?: string;
+  /** Mit Taste entfällt der Grund auf dem kleinen Handy (die Taste „Ton aktivieren“ sagt dasselbe; der Platz gehört den Tor-Tasten). */
+  grundEntfaelltKlein?: boolean;
+  ruhig?: boolean;
+  testid: string;
+  /** Taste, die das Problem löst (@OB-087), rechts in der Zeile. */
+  taste?: ReactNode;
 }
 
-function ZeileAnsicht({ zeile }: { zeile: CockpitHallZeile }): ReactElement {
+/** Der Kasten ist der gemeinsame `HinweisMitTaste` (@OB-087): mit Taste in der Zeile, ohne Taste derselbe Kasten ohne Aktion. */
+export function CockpitHallKasten({ symbol, titel, grund, grundEntfaelltKlein = false, ruhig = false, testid, taste }: KastenProps): ReactElement {
+  return <HinweisMitTaste ton={ruhig ? 'ruhig' : 'warn'} symbol={symbol} titel={titel} zusatz={grund} zusatzEntfaelltKlein={grundEntfaelltKlein} taste={taste} data-testid={testid} />;
+}
+
+/**
+ * „Ton aktivieren“ (@OB-087 Zeile 5): nur wenn DIESES Gerät selbst der Hallen-Lautsprecher des Felds ist – ein Browser lässt den Ton nur per Tipp
+ * am Gerät selbst zu (@HT-012), fernbedienen geht nicht. Auf jedem anderen Gerät steht der Kasten ohne Taste. Tönt das Gerät für das Feld
+ * wirklich (`tontAufDiesemGeraet`: Laufzeit läuft, kein anderes Fenster, Feld bereit), steht der Server-Stand nur noch nicht nach: der Kasten tritt zurück.
+ */
+function AusKastenMitTon({ tournamentId, feld, grund }: { tournamentId: string; feld: number; grund: string }): ReactElement | null {
+  const { t } = useTranslation('hallenton');
+  const lautsprecher = useHallLautsprecher(tournamentId);
+  const { starte, laeuft } = useSperreAktion(() => lautsprecher.tonAktivieren());
+  const laufzeit = lautsprecher.laufzeit;
+  const eigenes = lautsprecher.rolle === 'diesesTurnier' && lautsprecher.felder.includes(feld);
+  if (eigenes && tontAufDiesemGeraet(laufzeit === null ? null : { felder: lautsprecher.felder, rolle: laufzeit.rolle, zustandJeFeld: laufzeit.zustandJeFeld }, feld)) {
+    return null;
+  }
+  const taste = eigenes
+    ? <ArbeitsTaste imHinweis laeuft={laeuft} onClick={starte} data-testid="cockpit-hall-ton-aktivieren">{t('aktivieren.taste')}</ArbeitsTaste>
+    : undefined;
+  return <CockpitHallKasten symbol={<Icons.SpeakerOff size={iconSizeValues.md} />} titel={t('cockpit.titel')} grund={grund} grundEntfaelltKlein={taste !== undefined} testid="cockpit-hall-aus" taste={taste} />;
+}
+
+function ZeileAnsicht({ zeile, tournamentId, feld }: { zeile: CockpitHallZeile; tournamentId: string; feld: number | null }): ReactElement {
   const { t, i18n } = useTranslation('hallenton');
   const symbol = iconSizeValues.md;
   switch (zeile.art) {
     case 'keinNetz':
-      return <CockpitHallKasten symbol={<Icons.WifiOff size={symbol} />} titel={t('cockpit.keinNetz')} testid="cockpit-hall-kein-netz" />;
+      return (
+        <CockpitHallKasten
+          symbol={<Icons.WifiOff size={symbol} />} titel={t('cockpit.keinNetz')} testid="cockpit-hall-kein-netz"
+          taste={<VerbindenTaste data-testid="cockpit-hall-verbinden" />}
+        />
+      );
     case 'ausgangGeaendert':
       return <CockpitHallKasten ruhig symbol={<Icons.SpeakerQuestion size={symbol} />} titel={t('cockpit.ausgangGeaendert')} testid="cockpit-hall-ausgang-geaendert" />;
     case 'aus': {
       const wort = zeile.grund === 'meldetSichNicht'
         ? t('feld.zustand.meldetSichNicht', { zeit: zeile.zuletztServerMs === null ? '–' : formatUhrzeit(zeile.zuletztServerMs, i18n.language) })
         : zeile.grund === null ? undefined : t(`feld.grund.${zeile.grund}`);
-      return (
-        <CockpitHallKasten
-          symbol={<Icons.SpeakerOff size={symbol} />} titel={t('cockpit.titel')}
-          grund={wort === undefined ? undefined : t('cockpit.grund', { grund: wort })} testid="cockpit-hall-aus"
-        />
-      );
+      const grund = wort === undefined ? undefined : t('cockpit.grund', { grund: wort });
+      if (zeile.grund === 'tonNichtAktiviert' && feld !== null && grund !== undefined) {
+        return <AusKastenMitTon tournamentId={tournamentId} feld={feld} grund={grund} />;
+      }
+      return <CockpitHallKasten symbol={<Icons.SpeakerOff size={symbol} />} titel={t('cockpit.titel')} grund={grund} testid="cockpit-hall-aus" />;
     }
   }
 }
 
-function Zeilen({ zeile, uhr }: { zeile: CockpitHallZeile | null; uhr: boolean }): ReactElement | null {
+function Zeilen({ zeile, uhr, tournamentId, feld }: { zeile: CockpitHallZeile | null; uhr: boolean; tournamentId: string; feld: number | null }): ReactElement | null {
   const { t } = useTranslation('hallenton');
   if (zeile === null && !uhr) {
     return null;
   }
   return (
     <div className={styles.liste} data-testid="cockpit-hall-hinweise">
-      {zeile === null ? null : <ZeileAnsicht zeile={zeile} />}
+      {zeile === null ? null : <ZeileAnsicht zeile={zeile} tournamentId={tournamentId} feld={feld} />}
       {uhr ? <CockpitHallKasten symbol={<Icons.Clock size={iconSizeValues.md} />} titel={t('cockpit.uhrNichtAbgeglichen')} testid="cockpit-hall-uhr" /> : null}
     </div>
   );
@@ -97,7 +130,7 @@ function MitServerStand({ tournamentId, feld, leitungZeile, serverFrage, imSpiel
   const status = useHallStatus(tournamentId);
   const lage = status.stand === 'aktuell' ? status.felder[feld] : undefined;
   const zeile = leitungZeile ?? (serverFrage ? cockpitHallZeileAusServer(lage, imSpiel) : null);
-  return <Zeilen zeile={zeile} uhr={uhrZeile && lage !== undefined} />;
+  return <Zeilen zeile={zeile} uhr={uhrZeile && lage !== undefined} tournamentId={tournamentId} feld={feld} />;
 }
 
 export function CockpitHallHinweis({ tournamentId, feldId, zustand, kannSteuern }: CockpitHallHinweisProps): ReactElement | null {
@@ -111,5 +144,5 @@ export function CockpitHallHinweis({ tournamentId, feldId, zustand, kannSteuern 
   if (feld !== null && (serverFrage || uhrZeile)) {
     return <MitServerStand tournamentId={tournamentId} feld={feld} leitungZeile={leitungZeile} serverFrage={serverFrage} imSpiel={!vorAnpfiff} uhrZeile={uhrZeile} />;
   }
-  return <Zeilen zeile={leitungZeile} uhr={false} />;
+  return <Zeilen zeile={leitungZeile} uhr={false} tournamentId={tournamentId} feld={feld} />;
 }

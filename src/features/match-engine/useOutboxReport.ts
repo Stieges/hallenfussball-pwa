@@ -12,13 +12,14 @@
  * - beim Start (neu geladen, Kontowechsel) einmal je Turnier mit Kopien, auch 0 (Abgleich).
  * Abmelden oder Kontowechsel leert den Feld-Stand des vorigen Kontos (Review #392 m1).
  */
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { getDeviceId } from '../../core/device/deviceId';
 import { dueOutboxReports, type OutboxReport } from '../../core/fieldControl/outboxReport';
 import { clearOwnFields, ownFieldsByTournament } from '../../core/fieldControl/ownFields';
 import { reportDeviceOutbox } from '../../core/repositories/deviceOutboxReportRpc';
 import type { OutboxStatus } from '../../core/match/client/outboxTypes';
 import { isSupabaseConfigured, supabase } from '../../lib/supabase';
+import { loescheRueckkehr } from '../auth/utils/loginRueckkehr';
 
 export const OUTBOX_REPORT_INTERVAL_MS = 30000;
 /** Entprellung der Meldung bei Änderung: mehrere Einträge eines Sende-Laufs ergeben eine Meldung. */
@@ -40,6 +41,16 @@ export function useOutboxReport({ sender, accountId }: OutboxReportInput): void 
 
   // m1: der Feld-Stand gehört zum Konto – beim Wechsel (auch Abmelden → Gast) und beim Verlassen leeren
   useEffect(() => () => { clearOwnFields(); }, [accountId]);
+
+  // @OB-087: der gemerkte Rückweg nach der Anmeldung gehört zum Konto, das ihn gemerkt hat – bei einem Wechsel von einem Konto auf ein anderes
+  // vergessen (Abmelden räumt `logoutAction` auf; Gast → Konto ist gerade die Anmeldung, die den Rückweg braucht)
+  const vorigesKonto = useRef(accountId);
+  useEffect(() => {
+    if (vorigesKonto.current !== accountId && vorigesKonto.current !== 'guest' && accountId !== 'guest') {
+      loescheRueckkehr();
+    }
+    vorigesKonto.current = accountId;
+  }, [accountId]);
 
   useEffect(() => {
     if (!active) {

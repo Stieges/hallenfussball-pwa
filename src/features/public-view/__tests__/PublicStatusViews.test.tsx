@@ -28,12 +28,12 @@ describe('PublicStatusViews (B-13d1)', () => {
   });
 
   it('Fehler zeigt die Fehlermeldung, sonst den Standardtext', () => {
-    const { unmount } = render(<PublicErrorView errorMessage="Netz weg" />);
+    const { unmount } = render(<PublicErrorView errorMessage="Netz weg" onRetry={() => Promise.resolve()} />);
     expect(screen.getByText('Netz weg')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Erneut versuchen' })).toBeInTheDocument();
     unmount();
 
-    render(<PublicErrorView errorMessage={null} />);
+    render(<PublicErrorView errorMessage={null} onRetry={() => Promise.resolve()} />);
     expect(screen.getByText('Ein unbekannter Fehler ist aufgetreten.')).toBeInTheDocument();
   });
 });

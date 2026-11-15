@@ -1111,7 +1111,6 @@
     "fieldsAlreadyOptimal": "Felder bereits optimal verteilt",
     "matchesSwapped": "Spiele {{match1}} und {{match2}} getauscht",
     "matchAlreadyFinished": "Dieses Spiel ist bereits beendet. Verwende \"Ergebnis korrigieren\".",
-    "liveMatchWarning": "WARNUNG: Dieses Spiel läuft gerade LIVE in der Turnierleitung!\n\nWenn du hier das Ergebnis änderst, wird es die Live-Verwaltung überschreiben.\n\nMöchtest du trotzdem fortfahren?",
     "changesSaved": "Spielplan-Änderungen gespeichert",
     "refereesRedistributed_one": "Schiedsrichter von {{count}} Spiel neu verteilt",
     "refereesRedistributed_other": "Schiedsrichter von {{count}} Spielen neu verteilt",

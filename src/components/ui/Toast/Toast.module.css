@@ -15,6 +15,7 @@
   color: #fff;
   font-size: var(--font-size-md, 16px);
   font-weight: var(--font-weight-medium, 500);
+  flex-wrap: wrap;
   min-width: 300px;
   max-width: 500px;
   animation: slideIn 0.3s ease-out;
@@ -55,26 +56,47 @@
 }
 
 .message {
-  flex: 1;
+  flex: 1 1 8rem;
+  min-width: 0;
   line-height: 1.4;
   word-break: break-word;
   white-space: pre-line;
 }
 
 .actionButton {
+  /* @OB-087 „A“: die Taste rechts in der Zeile des Hinweises, 44 px hoch, mindestens xxl × 3 breit (bleibt im Zustand „läuft“ gleich breit),
+     2-px-Rand in der Textfarbe des Hinweises; bricht die Meldung um, steht sie rechtsbündig darunter */
+  margin-left: auto;
+  flex: none;
+  min-width: calc(var(--spacing-xxl, 48px) * 3);
   background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: var(--border-radius-sm, 4px);
+  border: var(--border-width-medium, 2px) solid currentColor;
+  border-radius: var(--border-radius-md, 8px);
   color: inherit;
-  padding: var(--spacing-xs, 4px) var(--spacing-sm, 8px);
-  font-size: var(--font-size-sm, 14px);
-  font-weight: var(--font-weight-semibold, 600);
+  padding: 0 var(--spacing-md, 16px);
+  min-height: var(--touch-target-minimum); /* @OB-087: eine Taste am Hinweis ist mindestens 44 px hoch */
+  font-size: var(--font-size-md, 16px);
+  font-weight: var(--font-weight-bold, 700);
   cursor: pointer;
   transition: background 0.2s ease;
   white-space: nowrap;
 }
 
-.actionButton:hover {
+.note {
+  flex: 1 1 100%; /* eigene Zeile unter Meldung, Taste und Schließen */
+  line-height: var(--line-height-body-sm, 16px);
+  font-size: var(--font-size-sm, 14px);
+  font-weight: var(--font-weight-normal, 400);
+}
+
+/* läuft: gestrichelter Rand, nicht Farbe allein */
+.actionButton:disabled {
+  cursor: progress;
+  opacity: 0.7;
+  border-style: dashed;
+}
+
+.actionButton:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.3);
 }
 
@@ -105,7 +127,6 @@
 
 .warning .actionButton {
   background: rgba(0, 0, 0, 0.1);
-  border-color: rgba(0, 0, 0, 0.2);
   color: #000;
 }
 
@@ -165,4 +186,19 @@
     font-size: var(--font-size-sm, 14px);
     padding: var(--spacing-sm, 8px) var(--spacing-md, 16px);
   }
+
+  /* Hinweis mit Taste (@OB-087): Symbol, Text und Schließen oben, die Taste rechtsbündig darunter, ein Satz darunter über die ganze Breite –
+     Text und Taste überschneiden sich nie */
+  .mitAktion {
+    width: calc(100vw - var(--spacing-lg) * 2); /* wie der Abstand des Behälters (lg rechts): der Hinweis füllt die Breite, die Taste hat Platz */
+    display: grid;
+    grid-template-columns: var(--icon-size-md) minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .mitAktion .icon { grid-column: 1; grid-row: 1; }
+  .mitAktion .message { grid-column: 2; grid-row: 1; }
+  .mitAktion .dismissButton { grid-column: 3; grid-row: 1; }
+  .mitAktion .actionButton { grid-column: 1 / -1; grid-row: 2; justify-self: end; }
+  .mitAktion .note { grid-column: 1 / -1; grid-row: 3; }
 }
