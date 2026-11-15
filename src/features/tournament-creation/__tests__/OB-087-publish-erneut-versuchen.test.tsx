@@ -223,6 +223,8 @@ describe('@OB-087 Zeile 6 – „Erneut versuchen“ beim gescheiterten Veröffe
     expect(hinweis).toHaveTextContent('Speichern fehlgeschlagen: Server nicht erreichbar');
     expect(screen.getByTestId('publish-error-close')).toHaveTextContent('Schließen');
     const taste = screen.getByTestId('publish-error-retry');
+    // Tab-Reihenfolge: die lösende Taste steht im DOM vor „Schließen“ (optisch bleibt „Erneut versuchen“ rechts)
+    expect(taste.compareDocumentPosition(screen.getByTestId('publish-error-close')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(taste).toHaveStyle({ minHeight: touchTargets.minimum });
     expect(spies.publishTournament).toHaveBeenCalledTimes(1);
     expect(spies.onSave).not.toHaveBeenCalled();

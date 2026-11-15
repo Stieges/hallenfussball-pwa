@@ -217,11 +217,12 @@ async function rechteck(l: Locator): Promise<Rechteck> {
   return b as Rechteck;
 }
 
-/** Lage der Taste im Hinweis: rechtsbündig im Kasten; `zeile` = rechts neben dem Text, auf Höhe der Zeile; `darunter` = unter dem Text, nicht volle Breite. Immer: ≥ 44 × 144 px, keine Überschneidung. */
-async function pruefeLage(kasten: Locator, text: Locator, taste: Locator, wo: 'zeile' | 'darunter'): Promise<void> {
+/** Lage der Taste im Hinweis: rechtsbündig im Kasten; `zeile` = rechts neben dem Text, auf Höhe der Zeile; `darunter` = unter dem Text, nicht volle Breite. Immer: ≥ 44 px hoch, ≥ `minBreite` breit (144 px; im Cockpit auf dem kleinen Handy schmaler), keine Überschneidung. */
+async function pruefeLage(kasten: Locator, text: Locator, taste: Locator, wo: 'zeile' | 'darunter', minBreite = 144): Promise<void> {
   const [k, t, b] = [await rechteck(kasten), await rechteck(text), await rechteck(taste)];
   expect(b.height, 'Taste ≥ 44 px hoch').toBeGreaterThanOrEqual(44);
-  expect(b.width, 'Taste ≥ 144 px breit').toBeGreaterThanOrEqual(143.5);
+  expect(b.width, `Taste ≥ ${String(minBreite)} px breit`).toBeGreaterThanOrEqual(minBreite - 0.5);
+  expect(await taste.first().evaluate((n) => n.scrollWidth <= n.clientWidth), 'volle Beschriftung, nichts abgeschnitten').toBe(true);
   expect(schneiden(t, b), 'Text und Taste überschneiden sich nicht').toBe(false);
   expect(b.x + b.width, 'Taste rechtsbündig (Abstand zum rechten Rand ≤ Innenabstand + Rand)').toBeGreaterThan(k.x + k.width - 24);
   expect(b.x + b.width, 'Taste im Kasten').toBeLessThanOrEqual(k.x + k.width);
@@ -236,9 +237,16 @@ async function pruefeLage(kasten: Locator, text: Locator, taste: Locator, wo: 'z
   }
 }
 
+/**
+ * Wo die Taste steht, folgt dem Platz: passt sie (mit 8 px Abstand) neben eine Textspalte von mindestens 9,5 rem (152 px), steht sie in der Zeile, sonst rechtsbündig darunter.
+ * Gemessene freie Breite neben der Taste (Innenbreite des Kastens − Taste − Abstand) in Klammern.
+ *  390×844: Cockpit 194 px, „Bitte neu anmelden“ 194 px, Sichtbarkeit 322 − 157 − 8 = 157 px, Helfer ohne Netz 170 px → Zeile; Veröffentlichen (Taste 282 px mit „Schließen“: 32 px) → darunter.
+ *  360×640: Cockpit 212 px (Taste 96–117 px) und „Bitte neu anmelden“ 164 px → Zeile; Veröffentlichen (2 px), Sichtbarkeit (127 px), Helfer (140 px) → darunter.
+ * Die Meldung „App aktualisieren“ (Toast) hat ein eigenes Gitter: auf dem Handy immer darunter.
+ */
 const LAGEN = [
-  { name: '390×844', width: 390, height: 844, wo: { cockpit: 'zeile', anmelden: 'zeile', toast: 'darunter', fehler: 'darunter', helfer: 'darunter' } },
-  { name: '360×640', width: 360, height: 640, wo: { cockpit: 'darunter', anmelden: 'darunter', toast: 'darunter', fehler: 'darunter', helfer: 'darunter' } },
+  { name: '390×844', width: 390, height: 844, wo: { cockpit: 'zeile', anmelden: 'zeile', toast: 'darunter', veroeffentlichen: 'darunter', sichtbarkeit: 'zeile', helfer: 'zeile' } },
+  { name: '360×640', width: 360, height: 640, wo: { cockpit: 'zeile', anmelden: 'zeile', toast: 'darunter', veroeffentlichen: 'darunter', sichtbarkeit: 'darunter', helfer: 'darunter' } },
 ] as const;
 
 test.describe('@OB-087 Lage der Taste im Hinweis („A“: rechts in der Zeile, sonst rechtsbündig darunter)', () => {
@@ -262,7 +270,8 @@ test.describe('@OB-087 Lage der Taste im Hinweis („A“: rechts in der Zeile, 
           const k = page.getByTestId(kasten);
           await expect(k).toBeVisible({ timeout: 15_000 });
           await animationenFertig(page);
-          await pruefeLage(k, k.locator('[data-hinweis="kopf"]'), k.getByTestId(taste), l.wo[was]);
+          // kleines Handy (≤ 480 × 700 px): die Taste im Cockpit darf schmaler sein als 144 px, aber nie niedriger als 44 px und mit voller Beschriftung
+          await pruefeLage(k, k.locator('[data-hinweis="kopf"]'), k.getByTestId(taste), l.wo[was], l.height <= 700 ? 88 : 144);
           // nichts verdeckt: die Tor-Tasten liegen unter dem Kasten, nicht darüber
           for (const seite of ['home', 'away']) {
             expect(schneiden(await rechteck(k), await rechteck(page.getByTestId(`goal-button-${seite}`)))).toBe(false);
@@ -270,6 +279,44 @@ test.describe('@OB-087 Lage der Taste im Hinweis („A“: rechts in der Zeile, 
         });
       }
     }
+
+    // @OB-087 (Zeile „im Cockpit bleiben auch auf einem Handy mit 360×640 …“): mit dem Hinweis bleiben die Tor-Tasten und die Reihe „Foul · Zeitstrafe · Karte“
+    // ganz im Bild, ohne Rollen – die Tastenfläche des Cockpits rollt nur, wo der Platz nicht reicht; hier darf sie es nicht müssen
+    for (const [fall, kasten] of [['kein-netz', 'cockpit-hall-kein-netz'], ['ton-aktivieren', 'cockpit-hall-aus']] as const) {
+      test(`Cockpit „${fall}“ ${l.name}: Tor-Tasten und Reihe Foul · Zeitstrafe · Karte stehen ganz im Bild, ohne Rollen`, async ({ page }) => {
+        await page.setViewportSize({ width: l.width, height: l.height });
+        await page.clock.setFixedTime(new Date(2026, 10, 21, 14, 0));
+        await page.goto(`/tests/e2e/harness/cockpit-hallenton.html?fall=${fall}`);
+        await expect(page.getByTestId(kasten)).toBeVisible({ timeout: 15_000 });
+        await animationenFertig(page);
+        const flaeche = await rechteck(page.getByTestId('cockpit-tastenflaeche'));
+        for (const id of ['goal-button-home', 'goal-button-away', 'team-row3-home', 'team-row3-away']) {
+          const b = await rechteck(page.getByTestId(id));
+          expect(b.y, `${id}: oben im sichtbaren Bereich der Tastenfläche`).toBeGreaterThanOrEqual(flaeche.y - 0.5);
+          expect(b.y + b.height, `${id}: unten im sichtbaren Bereich der Tastenfläche (ohne Rollen)`).toBeLessThanOrEqual(flaeche.y + flaeche.height + 0.5);
+          expect(b.y + b.height, `${id}: im Fenster`).toBeLessThanOrEqual(l.height);
+        }
+        expect(await page.getByTestId('cockpit-tastenflaeche').evaluate((n) => n.scrollTop), 'die Fläche ist nicht gerollt').toBe(0);
+        // die Anweisung an den Spielleiter bleibt immer vollständig stehen
+        if (fall === 'ton-aktivieren') {
+          await expect(page.getByTestId(kasten)).toContainText('Hallen-Lautsprecher aus – Ende selbst anzeigen');
+          await expect(page.getByTestId(kasten).getByTestId('cockpit-hall-ton-aktivieren')).toHaveText('Ton aktivieren');
+          // der Grund entfällt nur auf dem kleinen Handy, wo die Taste dasselbe sagt
+          const grund = page.getByTestId(kasten).getByText('Grund: Ton nicht aktiviert');
+          if (l.height <= 700) { await expect(grund).toBeHidden(); } else { await expect(grund).toBeVisible(); }
+        }
+      });
+    }
+
+    test(`Gegenbeispiel Cockpit ${l.name}: auf einem anderen Gerät (ohne Taste) bleibt der Grund stehen`, async ({ page }) => {
+      await page.setViewportSize({ width: l.width, height: l.height });
+      await page.clock.setFixedTime(new Date(2026, 10, 21, 14, 0));
+      await page.goto('/tests/e2e/harness/cockpit-hallenton.html?fall=halbzeit');
+      const kasten = page.getByTestId('cockpit-hall-aus');
+      await expect(kasten).toBeVisible({ timeout: 15_000 });
+      await expect(kasten).toContainText('Hallen-Lautsprecher aus – Ende selbst anzeigen');
+      await expect(kasten.getByText('Grund: Ton nicht aktiviert')).toBeVisible();
+    });
 
     test(`Gegenbeispiel Cockpit ${l.name}: der Kasten OHNE Aktion („Uhr nicht abgeglichen“) trägt keine Taste und hat denselben Rahmen wie ein Kasten mit Taste`, async ({ page }) => {
       await page.setViewportSize({ width: l.width, height: l.height });
@@ -313,8 +360,8 @@ test.describe('@OB-087 Lage der Taste im Hinweis („A“: rechts in der Zeile, 
     });
 
     for (const [fall, kasten, taste, was] of [
-      ['veroeffentlichen', 'publish-error-notice', 'publish-error-retry', 'fehler'],
-      ['sichtbarkeit', 'visibility-error', 'visibility-error-retry', 'fehler'],
+      ['veroeffentlichen', 'publish-error-notice', 'publish-error-retry', 'veroeffentlichen'],
+      ['sichtbarkeit', 'visibility-error', 'visibility-error-retry', 'sichtbarkeit'],
       ['helfer-offline', 'needs-network', 'needs-network-verbinden', 'helfer'],
     ] as const) {
       test(`${fall} ${l.name}: Lage der Taste (${l.wo[was]})`, async ({ page }) => {

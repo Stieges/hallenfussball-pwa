@@ -80,6 +80,16 @@ export const Toast: React.FC<ToastProps> = ({
   }, [duration, handleDismiss]);
 
   const [busyLabel, setBusyLabel] = useState<string | null>(null);
+  // Fokus der Taste: eine gesperrte Taste verliert ihn; wird sie nach der Frist wieder frei, bekommt sie ihn zurück (nur wenn sie ihn vor dem Sperren hatte
+  // und er inzwischen nirgends sonst liegt)
+  const aktionsTaste = useRef<HTMLButtonElement>(null);
+  const hatteFokus = useRef(false);
+  useEffect(() => {
+    if (busyLabel !== null || !hatteFokus.current) { return; }
+    hatteFokus.current = false;
+    const aktiv = document.activeElement;
+    if (aktiv === null || aktiv === document.body) { aktionsTaste.current?.focus(); }
+  }, [busyLabel]);
   const [note, setNote] = useState<string | null>(null);
 
   const anwenden = (result: ToastActionResult): void => {
@@ -99,6 +109,7 @@ export const Toast: React.FC<ToastProps> = ({
 
   const handleAction = () => {
     if (busyLabel !== null) { return; }
+    hatteFokus.current = document.activeElement === aktionsTaste.current;
     anwenden(action?.onClick());
   };
 
@@ -114,6 +125,7 @@ export const Toast: React.FC<ToastProps> = ({
       <span className={styles.message}>{message}</span>
       {action && (
         <button
+          ref={aktionsTaste}
           className={styles.actionButton}
           onClick={handleAction}
           disabled={busyLabel !== null}

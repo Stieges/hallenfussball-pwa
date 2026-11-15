@@ -44,11 +44,21 @@ export interface CockpitHallHinweisProps {
 /** Ohne Spiel, nach dem Abpfiff und bei offener Besetzung gibt es keinen Hinweis (@HT-016, @HT-035 letzte Zeile). */
 const OHNE_HINWEIS: ReadonlySet<CockpitZustand> = new Set<CockpitZustand>(['abgepfiffen', 'keinSpiel', 'wartetAufHerkunft']);
 
-interface KastenProps { symbol: ReactNode; titel: string; grund?: string; ruhig?: boolean; testid: string; /** Taste, die das Problem löst (@OB-087), rechts in der Zeile. */ taste?: ReactNode }
+interface KastenProps {
+  symbol: ReactNode;
+  titel: string;
+  grund?: string;
+  /** Mit Taste entfällt der Grund auf dem kleinen Handy (die Taste „Ton aktivieren“ sagt dasselbe; der Platz gehört den Tor-Tasten). */
+  grundEntfaelltKlein?: boolean;
+  ruhig?: boolean;
+  testid: string;
+  /** Taste, die das Problem löst (@OB-087), rechts in der Zeile. */
+  taste?: ReactNode;
+}
 
 /** Der Kasten ist der gemeinsame `HinweisMitTaste` (@OB-087): mit Taste in der Zeile, ohne Taste derselbe Kasten ohne Aktion. */
-export function CockpitHallKasten({ symbol, titel, grund, ruhig = false, testid, taste }: KastenProps): ReactElement {
-  return <HinweisMitTaste ton={ruhig ? 'ruhig' : 'warn'} symbol={symbol} titel={titel} zusatz={grund} taste={taste} data-testid={testid} />;
+export function CockpitHallKasten({ symbol, titel, grund, grundEntfaelltKlein = false, ruhig = false, testid, taste }: KastenProps): ReactElement {
+  return <HinweisMitTaste ton={ruhig ? 'ruhig' : 'warn'} symbol={symbol} titel={titel} zusatz={grund} zusatzEntfaelltKlein={grundEntfaelltKlein} taste={taste} data-testid={testid} />;
 }
 
 /**
@@ -68,7 +78,7 @@ function AusKastenMitTon({ tournamentId, feld, grund }: { tournamentId: string; 
   const taste = eigenes
     ? <ArbeitsTaste imHinweis laeuft={laeuft} onClick={starte} data-testid="cockpit-hall-ton-aktivieren">{t('aktivieren.taste')}</ArbeitsTaste>
     : undefined;
-  return <CockpitHallKasten symbol={<Icons.SpeakerOff size={iconSizeValues.md} />} titel={t('cockpit.titel')} grund={grund} testid="cockpit-hall-aus" taste={taste} />;
+  return <CockpitHallKasten symbol={<Icons.SpeakerOff size={iconSizeValues.md} />} titel={t('cockpit.titel')} grund={grund} grundEntfaelltKlein={taste !== undefined} testid="cockpit-hall-aus" taste={taste} />;
 }
 
 function ZeileAnsicht({ zeile, tournamentId, feld }: { zeile: CockpitHallZeile; tournamentId: string; feld: number | null }): ReactElement {

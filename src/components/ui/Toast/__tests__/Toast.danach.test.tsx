@@ -50,6 +50,25 @@ describe('@OB-087 Toast: nachträglicher Zustand (`danach`)', () => {
     expect(screen.queryByTestId('toast-action-note')).toBeNull();
   });
 
+  it('hatte die Taste den Fokus, bekommt sie ihn zurück, wenn sie nach der Frist wieder frei wird; lag er woanders, bleibt er dort', async () => {
+    let frist: (r: ToastActionResult) => void = () => undefined;
+    const onClick = (): ToastActionResult => ({ busyLabel: 'Lade...', danach: new Promise<ToastActionResult>((ok) => { frist = ok; }) });
+    zeige({ duration: 0, action: { label: 'Jetzt aktualisieren', onClick } });
+    screen.getByTestId('toast-action').focus();
+    fireEvent.click(screen.getByTestId('toast-action'));
+    screen.getByTestId('toast-action').blur(); // die gesperrte Taste verliert den Fokus (wie im Browser)
+    await act(async () => { frist({ note: 'Neue Fassung ist noch nicht da.' }); });
+    expect(screen.getByTestId('toast-action')).toBeEnabled();
+    expect(screen.getByTestId('toast-action')).toHaveFocus();
+
+    // Gegenbeispiel: hatte die Taste den Fokus vor dem Sperren nicht (z. B. Tipp per Maus ohne Fokus), wird nichts erzwungen
+    screen.getByTestId('toast-action').blur();
+    fireEvent.click(screen.getByTestId('toast-action'));
+    expect(document.activeElement).toBe(document.body);
+    await act(async () => { frist({ note: 'Noch nicht da.' }); });
+    expect(screen.getByTestId('toast-action')).not.toHaveFocus();
+  });
+
   it('Gegenbeispiel: ohne `danach` bleibt die Taste gesperrt, auch nach langer Zeit (Bestand)', async () => {
     zeige({ duration: 0, action: { label: 'Jetzt aktualisieren', onClick: () => ({ busyLabel: 'Lade...' }) } });
     fireEvent.click(screen.getByTestId('toast-action'));

@@ -27,7 +27,9 @@ const kreisel: CSSProperties = {
 };
 
 const imHinweisStil: CSSProperties = {
-  minWidth: `calc(${cssVars.spacing.xxl} * 3)`, padding: `0 ${cssVars.spacing.md}`, background: cssVars.colors.background,
+  // Breite und Polster lassen sich für einen engen Ort setzen (`--hinweis-taste-min`, `--hinweis-taste-polster`, z. B. der Kasten im Cockpit auf dem kleinen Handy);
+  // ohne Vorgabe: mindestens xxl × 3, Polster md
+  minWidth: `var(--hinweis-taste-min, calc(${cssVars.spacing.xxl} * 3))`, padding: `0 var(--hinweis-taste-polster, ${cssVars.spacing.md})`, background: cssVars.colors.background,
   color: cssVars.colors.textPrimary, border: `${cssVars.borderWidth.medium} solid var(--hinweis-bedien, ${cssVars.colors.borderControl})`,
 };
 

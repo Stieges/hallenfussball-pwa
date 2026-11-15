@@ -26,6 +26,14 @@ describe('@OB-087 HinweisMitTaste', () => {
     expect(screen.getByTestId('t').getAttribute('style')).toContain('var(--hinweis-bedien');
   });
 
+  it('`zusatzEntfaelltKlein` markiert nur die zweite Zeile (sie entfällt auf dem kleinen Handy), der Titel bleibt immer stehen; ohne die Angabe bleibt sie immer', () => {
+    const { rerender } = render(<HinweisMitTaste symbol={<i />} titel="Titel" zusatz="Grund: x" zusatzEntfaelltKlein data-testid="h" />);
+    expect(screen.getByText('Grund: x').className).toMatch(/zusatzEntfaelltKlein/);
+    expect(screen.getByText('Titel').className).not.toMatch(/zusatzEntfaelltKlein/);
+    rerender(<HinweisMitTaste symbol={<i />} titel="Titel" zusatz="Grund: x" data-testid="h" />);
+    expect(screen.getByText('Grund: x').className).not.toMatch(/zusatzEntfaelltKlein/);
+  });
+
   it('Gegenbeispiel: ohne Taste gibt es keine Aktionsspalte (derselbe Kasten ohne Aktion)', () => {
     render(<HinweisMitTaste symbol={<i />} titel="Uhr nicht abgeglichen" data-testid="h" />);
     expect(screen.getByTestId('h').children).toHaveLength(1);

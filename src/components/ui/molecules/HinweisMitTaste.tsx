@@ -15,6 +15,8 @@ export interface HinweisMitTasteProps {
   titel: ReactNode;
   /** Zweite Zeile (kleiner), z. B. „Grund: …“. */
   zusatz?: ReactNode;
+  /** Auf dem kleinen Handy (Fenster ≤ 480 × 700 px) entfällt die zweite Zeile, wo die Taste dasselbe sagt (der Titel bleibt immer ganz stehen). */
+  zusatzEntfaelltKlein?: boolean;
   /** Die Taste(n), die das Problem lösen; rechts in der Zeile. Mehrere dürfen umbrechen. */
   taste?: ReactNode;
   ton?: HinweisTon;
@@ -23,7 +25,7 @@ export interface HinweisMitTasteProps {
 
 const TON_KLASSE: Record<HinweisTon, string> = { warn: '', ruhig: ` ${styles.ruhig}`, fehler: ` ${styles.fehler}` };
 
-export function HinweisMitTaste({ symbol, titel, zusatz, taste, ton = 'warn', 'data-testid': testId }: HinweisMitTasteProps): ReactElement {
+export function HinweisMitTaste({ symbol, titel, zusatz, zusatzEntfaelltKlein = false, taste, ton = 'warn', 'data-testid': testId }: HinweisMitTasteProps): ReactElement {
   const mitTaste = taste !== undefined && taste !== null;
   return (
     <div
@@ -34,7 +36,7 @@ export function HinweisMitTaste({ symbol, titel, zusatz, taste, ton = 'warn', 'd
         <span className={styles.symbol} aria-hidden="true">{symbol}</span>
         <span className={styles.text}>
           <span className={styles.titel}>{titel}</span>
-          {zusatz === undefined ? null : <span className={styles.zusatz}>{zusatz}</span>}
+          {zusatz === undefined ? null : <span className={`${styles.zusatz}${zusatzEntfaelltKlein ? ` ${styles.zusatzEntfaelltKlein}` : ''}`}>{zusatz}</span>}
         </span>
       </span>
       {mitTaste ? <span className={styles.aktion} data-hinweis="aktion">{taste}</span> : null}

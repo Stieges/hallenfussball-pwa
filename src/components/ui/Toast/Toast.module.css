@@ -190,9 +190,9 @@
   /* Hinweis mit Taste (@OB-087): Symbol, Text und Schließen oben, die Taste rechtsbündig darunter, ein Satz darunter über die ganze Breite –
      Text und Taste überschneiden sich nie */
   .mitAktion {
-    width: calc(100vw - 48px); /* wie der Abstand des Behälters (24 px rechts): der Hinweis füllt die Breite, die Taste hat Platz */
+    width: calc(100vw - var(--spacing-lg) * 2); /* wie der Abstand des Behälters (lg rechts): der Hinweis füllt die Breite, die Taste hat Platz */
     display: grid;
-    grid-template-columns: 24px minmax(0, 1fr) auto;
+    grid-template-columns: var(--icon-size-md) minmax(0, 1fr) auto;
     align-items: center;
   }
 

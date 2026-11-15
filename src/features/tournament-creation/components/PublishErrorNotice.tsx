@@ -32,8 +32,9 @@ export function PublishErrorNotice({ title, message, closeLabel, onRetry, onClos
         ton="fehler" data-testid="publish-error-notice" symbol={<Icons.AlertTriangle size={iconSizeValues.md} />} titel={title} zusatz={message}
         taste={(
           <>
-            <Button variant="ghost" onClick={onClose} data-testid="publish-error-close">{closeLabel}</Button>
+            {/* im DOM zuerst „Erneut versuchen“ (Tab-Reihenfolge: die lösende Taste vor „Schließen“), optisch bleibt es rechts */}
             <ArbeitsTaste imHinweis laeuft={retrying} onClick={onRetry} data-testid="publish-error-retry">{t('actions.retry')}</ArbeitsTaste>
+            <Button variant="ghost" onClick={onClose} style={{ order: -1 }} data-testid="publish-error-close">{closeLabel}</Button>
           </>
         )}
       />
