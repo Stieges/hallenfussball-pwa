@@ -495,6 +495,8 @@ done
 # erweitert, um einen Fehler zu beruhigen -- jede neue Tabelle bekommt in ihrer Migration ein GRANT SELECT ... TO ci_schema_reader.
 # Live haben diese Tabellen das Recht (Datenbank-Programm 21.09.); nur der aus dem Repo gebaute Stand hat es nicht.
 # Die Liste wurde im Container ermittelt (Stand 15.11.2026: 12 Baseline-Tabellen; keine View, keine Tabelle aus einer Migration).
+# Bekannte Luecke: die Ausnahmen gelten per NAME. Wird eine Baseline-Tabelle geloescht und unter gleichem Namen neu angelegt, rutscht sie
+# durch (ein Vergleich per oid waere der spaetere Ausbau).
 CI_READER_EXEMPT=(
   "public.match_events"
   "public.matches"

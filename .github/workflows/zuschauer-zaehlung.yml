@@ -47,7 +47,7 @@ jobs:
       - name: Gegenprobe A (ohne die Migration muessen die Pruefungen ROT sein)
         run: bash scripts/zuschauer-zaehlung-check.sh --without-migration
 
-      - name: Gegenprobe A2 (Stand 003+004 ohne Stufe 1b: die Pruefungen der Stufe 1b muessen ROT sein)
+      - name: 'Gegenprobe A2 (Stand 003+004 ohne Stufe 1b - die Pruefungen der Stufe 1b muessen ROT sein)'
         run: bash scripts/zuschauer-zaehlung-check.sh --without-1b
 
       - name: Gegenprobe B (jede Mutation muss mindestens eine Pruefung ROT machen)

@@ -19,6 +19,10 @@
 # ACHTUNG: Das REVOKE laesst die Zusicherung "zuschauer-zaehlung-rpc-definer-anon" auf f springen; der naechtliche
 # Drift-Check auf main wird dann rot, bis das GRANT wieder gesetzt ist.
 #
+# Auswertung (Stufe 1b): "chrome" umfasst alle Chromium-Browser ausser Edge, Opera und Samsung (auch Brave u. a., die sich als Chrome melden).
+# Zeilen von VOR dem Einspielen von 20261126_001 stehen unter sonstige/sonstige: nach window_start ab dem Einspiel-Zeitpunkt filtern.
+# Kleine Zellen (wenige Aufrufe je Kombination) bei der Auswertung zusammenfassen, sonst sind einzelne Geraete erkennbar.
+#
 # Zweite Migration (20261124_004_zuschauer_zaehlung_ci_leser.sql, Werkzeugkette): Leserecht der Drift-Check-Rolle ci_schema_reader auf
 # die Tabelle. Ohne sie scheitert pg_dump --schema-only live ("permission denied for table public_view_counts"). Hier mit bewiesen:
 # mit dem Recht kann die Rolle die Tabelle sperren/dumpen und liest per SELECT 0 Zeilen (RLS, keine Policy), ohne es scheitert genau
@@ -487,6 +491,37 @@ col_gone() { q "SELECT count(*) FROM information_schema.columns WHERE table_sche
 fn_md5() { q "SELECT md5(prosrc) FROM pg_proc WHERE oid = to_regprocedure('public.count_public_view(text,text,text,text,boolean)');"; }
 
 # Stufe 1b zurueck (<Rueckwegdatei>): Summen vorher = nachher, Schema danach = Stand 004, Funktion = Fassung 003. Zustand davor: 1b drauf.
+# Nebenlaeufiger Schreiber: <Datei> laeuft im Hintergrund, nach 1,5 s ruft ein zweiter Client (anon) count_public_view.
+# Ergebnis in F_RC (Datei), W_RC und W_ERR (Schreiber).
+nebenlaeufig() { # <sqlfile>
+  local bg
+  psql_stdin < "$1" >/dev/null 2>"$WORK/nl_file.err" &
+  bg=$!
+  sleep 1.5
+  W_RC=0
+  W_ERR="$(docker exec -i "$C" psql -U postgres -X -q -v ON_ERROR_STOP=1 <<<"SET ROLE anon; SELECT public.count_public_view('NIKO26','aufruf','qr','handy',false);" 2>&1 >/dev/null)" || W_RC=$?
+  F_RC=0
+  wait "$bg" || F_RC=$?
+}
+# Rueckweg mit gleichzeitigem Schreiber (<Name> <sed-Ausdruck, der eine Pause einbaut> [Rueckwegdatei]): die Sperre haelt den Schreiber
+# bis zum Ende; Summen bleiben, der Rueckweg bricht nicht ab, und ein Aufruf, der erfolgreich war, ist danach auch gezaehlt.
+rueckweg_nebenlaeufig() {
+  local name="$1" expr="$2" rbf="${3:-$NEW_ROLLBACK_FILE}" v_vor v_nach erw
+  seed_tournaments
+  q "TRUNCATE public.public_view_counts;" >/dev/null
+  rest_zaehle "$UA_IPHONE_SAFARI" >/dev/null; rest_zaehle "$UA_IPHONE_SAFARI" >/dev/null; rest_zaehle "$UA_WIN_FIREFOX" >/dev/null
+  v_vor="$(q "SELECT coalesce(sum(views),0) FROM public.public_view_counts;")"
+  sed "$expr" "$rbf" > "$WORK/nl_rb.sql"
+  cmp -s "$rbf" "$WORK/nl_rb.sql" && { echo "::error::nebenlaeufig $name: sed greift nicht" >&2; DEVS[2]=$((DEVS[2] + 1)); return 0; }
+  nebenlaeufig "$WORK/nl_rb.sql"
+  v_nach="$(q "SELECT coalesce(sum(views),0) FROM public.public_view_counts;")"
+  [[ "$W_RC" == "0" ]] && erw=$((v_vor + 1)) || erw="$v_vor"
+  [[ "${QUIET:-0}" == "1" ]] || echo "INFO        Schreiber waehrend des Rueckwegs ($name): Exit $W_RC ${W_ERR:0:120}; Summe $v_vor -> $v_nach"
+  check R "1b Rueckweg mit gleichzeitigem Schreiber ($name): Rueckweg ohne Abbruch, Summe vorher = nachher, ein erfolgreicher Aufruf ist auch gezaehlt" "0|$erw" "$F_RC|$v_nach"
+  psql_stdin < "$NEW_FILE" >/dev/null 2>&1 || true
+  start_rest
+}
+
 rueckweg_1b() {
   local rbf="${1:-$NEW_ROLLBACK_FILE}" rc=0 s_vor k_vor n_vor
   seed_tournaments
@@ -513,6 +548,8 @@ rueckweg_1b() {
 run_rueckweg() {
   local sql_pv="SELECT coalesce(has_table_privilege('ci_schema_reader', to_regclass('public.public_view_counts'), 'SELECT')::text, 'keine Tabelle');"
   # ---- Stufe 1b: Rueckweg, Idempotenz, wieder vorwaerts (Zustand beim Eintritt: 1b eingespielt) ----
+  rueckweg_nebenlaeufig "Schreiber nach dem Zusammenfuehren" 's#^         GROUP BY tournament_id, window_start, channel, device_class, installed;#& PERFORM pg_sleep(4);#'
+  rueckweg_nebenlaeufig "Schreiber nach dem Leeren der Tabelle" 's#^      DELETE FROM public.public_view_counts;#& PERFORM pg_sleep(4);#'
   rueckweg_1b
   check R "1b Rueckweg zweimal hintereinander laeuft sauber, nichts aendert sich" "0|" \
     "$(psql_stdin < "$NEW_ROLLBACK_FILE" >/dev/null 2>&1; echo -n "$?|"; schema_dump | diff "$WORK/schema_004.sql" - || true)"
@@ -610,6 +647,7 @@ MUTATIONEN_RB1B=(
   "M39|s#sum(views)::bigint AS views#max(views)::bigint AS views#"
   "M40|s#GRANT EXECUTE ON FUNCTION public.count_public_view(text, text, text, text, boolean) TO anon, authenticated, service_role;##"
   "M41|s#DROP FUNCTION IF EXISTS public.public_view_agent_families(text);##"
+  "M42|/LOCK TABLE public.public_view_counts IN ACCESS EXCLUSIVE MODE;/d"
 )
 
 # Vor dem Einspielen von 20261126_001 (Stand 003 + 004): der ausgelieferte Client zaehlt; Bestandszeilen; Fail-fast; Sperre
@@ -643,8 +681,12 @@ vor_1b() {
     "$rc|$([[ $((t1 - t0)) -le 8 ]] && echo ja || echo "nein: $((t1 - t0)) s")|$(grep -qi 'lock timeout' "$WORK/lock.err" && echo ja || echo "nein: $(head -c 150 "$WORK/lock.err")")"
   schema_dump > "$WORK/schema_004c.sql"
   check R "1b: nach dem Sperr-Abbruch ist nichts geaendert" "" "$(diff "$WORK/schema_004.sql" "$WORK/schema_004c.sql" || true)"
-  # Einspielen
-  rc=0; psql_stdin < "$NEW_FILE" >/dev/null 2>"$WORK/apply1b.err" || rc=$?
+  # Einspielen -- mit einem ALTEN Aufruf, der waehrend der Migration startet und hinter ihr wartet (Migration haelt ihre Sperre 4 s)
+  sed 's/^COMMIT;/SELECT pg_sleep(4); COMMIT;/' "$NEW_FILE" > "$WORK/neu_mit_pause.sql"
+  nebenlaeufig "$WORK/neu_mit_pause.sql"
+  rc="$F_RC"
+  [[ "${QUIET:-0}" == "1" ]] || echo "INFO        alter Aufruf (Fassung 003) wartet hinter der Migration: Exit $W_RC ${W_ERR:0:200}"
+  check R "1b: Einspielen mit wartendem alten Aufruf: Migration ohne Fehler; der wartende Aufruf der Fassung 003 scheitert nach dem COMMIT mit 42P10 (ON CONFLICT auf den alten Schluessel), diese eine Zaehlung geht verloren" "0|3 42P10" "$rc|$W_RC $([[ "$W_ERR" == *"no unique or exclusion constraint matching the ON CONFLICT"* ]] && echo 42P10 || echo "$W_ERR")"
   check V "1b wird auf dem Bestand eingespielt (Exit 0)" "0" "$rc"
   start_rest
   check V "Bestandszeilen behalten ihre Summen (Aufrufe/Lebenszeichen je Fuenferkombination) und bekommen sonstige/sonstige" "$b_sum|$b_keys|$b_n|sonstige/sonstige" \
@@ -738,7 +780,11 @@ case "$MODE" in
       if cmp -s "$NEW_ROLLBACK_FILE" "$WORK/mutant_rb.sql"; then echo "::error::Mutation $id aendert nichts (sed greift nicht)." >&2; failed=1; continue; fi
       install_stack "$TARGET_FILE" "$GRANT_FILE" "-" || { echo "::error::Grundaufbau fuer $id scheitert." >&2; failed=1; continue; }
       psql_stdin < "$NEW_FILE" >/dev/null; start_rest
-      QUIET=1 rueckweg_1b "$WORK/mutant_rb.sql" > "$WORK/run-$id.log" 2>&1 || true
+      if [[ "$id" == "M42" ]]; then
+        QUIET=1 rueckweg_nebenlaeufig "M42" 's#^         GROUP BY tournament_id, window_start, channel, device_class, installed;#& PERFORM pg_sleep(4);#' "$WORK/mutant_rb.sql" > "$WORK/run-$id.log" 2>&1 || true
+      else
+        QUIET=1 rueckweg_1b "$WORK/mutant_rb.sql" > "$WORK/run-$id.log" 2>&1 || true
+      fi
       if [[ "$(total_dev)" -gt 0 ]]; then
         echo "Mutation $id: rot ($(total_dev) Abweichung(en), z. B. $(grep -m1 '^ABWEICHUNG' "$WORK/run-$id.log" || echo '?'))"
       else

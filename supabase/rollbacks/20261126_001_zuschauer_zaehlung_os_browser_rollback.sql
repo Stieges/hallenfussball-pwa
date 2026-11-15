@@ -6,6 +6,8 @@
 -- Familien werden ADDIERT: kein Datenverlust bei den Summen), entfernt die zwei Spalten und die Hilfsfunktion, stellt den
 -- Primaerschluessel und count_public_view in der Fassung 20261124_003 wieder her (prosrc-md5 859971c10b8dfb7bc30ed9ac8444df14).
 -- Idempotent: ein zweiter Lauf findet nichts mehr zu tun. Ist die Tabelle (003) schon weg, wird count_public_view NICHT neu angelegt.
+-- Sperre: der Rueckweg sperrt die Tabelle ACCESS EXCLUSIVE (unter lock_timeout 5 s), damit Zusammenfuehren und Neuaufbau EINEN Stand sehen.
+-- Aufrufe der neuen Funktion, die im Moment des Rueckwegs unterwegs sind, koennen scheitern (der Client verschluckt das).
 -- Rein ASCII.
 BEGIN;
 SET LOCAL lock_timeout = '5s';
@@ -15,6 +17,7 @@ BEGIN
   IF to_regclass('public.public_view_counts') IS NOT NULL THEN
     -- Summen zusammenfuehren (nur wenn die Spalten noch da sind)
     IF EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'public.public_view_counts'::regclass AND attname = 'os_family' AND NOT attisdropped) THEN
+      LOCK TABLE public.public_view_counts IN ACCESS EXCLUSIVE MODE;
       CREATE TEMP TABLE zaehlung_rueckweg ON COMMIT DROP AS
         SELECT tournament_id, window_start, channel, device_class, installed, sum(views)::bigint AS views, sum(heartbeats)::bigint AS heartbeats
           FROM public.public_view_counts
