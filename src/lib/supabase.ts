@@ -21,6 +21,12 @@ const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | unde
 export const supabaseProjectUrl = supabaseUrl;
 
 /**
+ * Öffentlicher Schlüssel (anon) für Aufrufe ohne den Client, die nichts im Speicher des Geräts anfassen dürfen
+ * (Zuschauer-Zählung, @RZ-027). May be undefined in offline-only mode.
+ */
+export const supabasePublicKey = supabaseAnonKey;
+
+/**
  * Check if Supabase is configured
  *
  * When running in development or CI without Supabase credentials,

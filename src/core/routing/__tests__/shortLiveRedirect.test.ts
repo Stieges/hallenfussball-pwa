@@ -23,3 +23,16 @@ describe('@ZM-208 kurze Zuschauer-Adresse', () => {
     }
   });
 });
+
+describe('@RZ-029 Der Kanal-Zusatz überlebt die Umleitung', () => {
+  it('/live/CODE?k=q wird zu /#/live/CODE?k=q, ebenso k=l und zusammen mit anderen Teilen der Suche', () => {
+    expect(shortLiveTarget('/live/NIKO26', '?k=q', '')).toBe('/#/live/NIKO26?k=q');
+    expect(shortLiveTarget('/live/NIKO26', '?k=l', '')).toBe('/#/live/NIKO26?k=l');
+    expect(shortLiveTarget('/live/NIKO26/', '?k=q&s=finished', '')).toBe('/#/live/NIKO26?k=q&s=finished');
+  });
+
+  it('Gegenbeispiel: die Hash-Adresse mit Zusatz (QR-Code der Monitor-Folie und des PDFs) wird nicht noch einmal umgeleitet', () => {
+    expect(shortLiveTarget('/', '', '#/live/NIKO26?k=q')).toBeNull();
+  });
+});
+
