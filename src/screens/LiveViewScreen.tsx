@@ -89,7 +89,7 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
     return <PublicNotFoundView />;
   }
   if (loadingState === 'error') {
-    return <PublicErrorView errorMessage={errorMessage} />;
+    return <PublicErrorView errorMessage={errorMessage} onRetry={refresh} />;
   }
 
   // Success - show tournament

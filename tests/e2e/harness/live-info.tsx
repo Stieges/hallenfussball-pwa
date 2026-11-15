@@ -16,6 +16,9 @@ const query = new URLSearchParams(window.location.search);
 if (query.get('sprache') === 'en') { void i18n.changeLanguage('en'); }
 const lang = query.get('lang') === '1';
 const noop = (): void => undefined;
+// @OB-087 Zeile 8: zählt die Tipps auf „Zum Cockpit“
+(window as unknown as { __zumCockpit: number }).__zumCockpit = 0;
+const zumCockpit = (): void => { (window as unknown as { __zumCockpit: number }).__zumCockpit += 1; };
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <ThemeProvider>
@@ -28,7 +31,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           awayScore={0}
           onClose={noop}
           onEndAndEnter={noop}
-          onNavigateToCockpit={noop}
+          onNavigateToCockpit={zumCockpit}
         />
       </div>
     </div>

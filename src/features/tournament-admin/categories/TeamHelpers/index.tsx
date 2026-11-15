@@ -10,7 +10,6 @@
  */
 import { useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Icons } from '../../../../components/ui/Icons';
 import { EndStateCard } from '../../../../components/ui/molecules/EndStateCard';
 import { InlineNotice } from '../../../../components/ui/molecules/InlineNotice';
 import { TafelIcons } from '../../../../components/ui/IconsTafel';
@@ -21,6 +20,7 @@ import { useCanState } from '../../../auth/hooks/useCan';
 import { CategoryPage } from '../shared';
 import { AccessChangeDialog, RenewCodeDialog } from './AccessDialogs';
 import { ApproveSheet } from './ApproveSheet';
+import { HelferOhneNetzHinweis } from './HelferOhneNetzHinweis';
 import { HelperCodeCard } from './HelperCodeCard';
 import { HelperList } from './HelperList';
 import { JoinRequestList } from './JoinRequestList';
@@ -124,10 +124,7 @@ export function TeamHelpersCategory({ tournamentId, tournament }: TeamHelpersCat
   const right = (
     <div style={stack}>
       {showOffline ? (
-        <InlineNotice tone="warn" icon={<Icons.WifiOff size={iconSizeValues.sm} />} data-testid="needs-network">
-          <b style={noticeTitle}>{t('teamHelpers.offline.title')}</b>
-          <span style={noticeText}>{t('teamHelpers.offline.text')}</span>
-        </InlineNotice>
+        <HelferOhneNetzHinweis beiEnde={() => { void refresh(); }} />
       ) : null}
       {noticeMessage !== null ? (
         <InlineNotice tone={actions.notice?.kind === 'failed' ? 'error' : 'info'} data-testid="action-notice">

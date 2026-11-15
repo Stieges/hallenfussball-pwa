@@ -10,8 +10,9 @@ import { zIndex } from '../../../design-tokens';
 import { Toast, ToastProps } from './Toast';
 
 interface ToastContainerProps {
-  toasts: Omit<ToastProps, 'onDismiss'>[];
+  toasts: Omit<ToastProps, 'onDismiss' | 'onExit'>[];
   onDismiss: (id: string) => void;
+  onExit?: (id: string) => void;
 }
 
 const containerStyle: CSSProperties = {
@@ -28,13 +29,14 @@ const containerStyle: CSSProperties = {
 export const ToastContainer: React.FC<ToastContainerProps> = ({
   toasts,
   onDismiss,
+  onExit,
 }) => {
   if (toasts.length === 0) {return null;}
 
   return (
     <div style={containerStyle} aria-live="polite" aria-label="Benachrichtigungen">
       {toasts.map((toast) => (
-        <Toast key={toast.id} {...toast} onDismiss={onDismiss} />
+        <Toast key={`${toast.id}:${toast.erneuert ?? 0}`} {...toast} onDismiss={onDismiss} onExit={onExit} />
       ))}
     </div>
   );

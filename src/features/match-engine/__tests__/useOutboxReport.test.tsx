@@ -20,6 +20,8 @@ import { ownFieldsByTournament, resetOwnFieldsForTests } from '../../../core/fie
 import { MatchEngineContext, type MatchEngineContextValue } from '../matchEngineContextInstance';
 import { OUTBOX_REPORT_DEBOUNCE_MS, OUTBOX_REPORT_INTERVAL_MS, useOutboxReport } from '../useOutboxReport';
 import { useFieldControl } from '../useFieldControl';
+import { holeRueckkehr, merkeRueckkehr } from '../../auth/utils/loginRueckkehr';
+import { FalscherSpeicher } from '../../../test/hallenton/falschesGeraet';
 
 const CLARA_FELD_2 = { field: 2, epoch: 4, holderName: 'Clara', holderRole: 'helper', holderDeviceLabel: 'phone', isMine: true, claimedAt: 1_790_000_000_000 };
 
@@ -249,5 +251,40 @@ describe('R3-2b Review #392 M1/m1 – keine veraltete Zahl am Server', () => {
     await weiter(0);
     hook.rerender({ accountId: 'guest' });
     expect(ownFieldsByTournament()).toEqual({});
+  });
+});
+
+/**
+ * @OB-087: der gemerkte Rückweg nach der Anmeldung („Anmelden“ im Cockpit) gehört zum Konto, das ihn gemerkt hat – bei einem Wechsel auf ein anderes Konto
+ * wird er vergessen; Gast → Konto ist gerade die Anmeldung, die ihn braucht, und bleibt unberührt.
+ */
+describe('@OB-087 Kontowechsel vergisst den gemerkten Rückweg', () => {
+  const COCKPIT = '/tournament/live-cup/live?f=2';
+  beforeEach(() => {
+    const speicher = new FalscherSpeicher();
+    vi.mocked(localStorage.getItem).mockImplementation((k: string) => speicher.getItem(k));
+    vi.mocked(localStorage.setItem).mockImplementation((k: string, w: string) => speicher.setItem(k, w));
+    vi.mocked(localStorage.removeItem).mockImplementation((k: string) => speicher.removeItem(k));
+  });
+
+  it('von Clara auf Tom: der Rückweg ist weg', () => {
+    merkeRueckkehr(COCKPIT);
+    const hook = renderHook(({ id }) => useOutboxReport({ sender, accountId: id }), { initialProps: { id: 'clara' } });
+    hook.rerender({ id: 'tom' });
+    expect(holeRueckkehr()).toBeNull();
+  });
+
+  it('Gegenbeispiel: Gast meldet sich an (guest → clara) – der Rückweg bleibt', () => {
+    merkeRueckkehr(COCKPIT);
+    const hook = renderHook(({ id }) => useOutboxReport({ sender, accountId: id }), { initialProps: { id: 'guest' } });
+    hook.rerender({ id: 'clara' });
+    expect(holeRueckkehr()).toBe(COCKPIT);
+  });
+
+  it('Gegenbeispiel: dasselbe Konto bleibt (Neuzeichnen) – der Rückweg bleibt', () => {
+    merkeRueckkehr(COCKPIT);
+    const hook = renderHook(({ id }) => useOutboxReport({ sender, accountId: id }), { initialProps: { id: 'clara' } });
+    hook.rerender({ id: 'clara' });
+    expect(holeRueckkehr()).toBe(COCKPIT);
   });
 });

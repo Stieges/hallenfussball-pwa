@@ -9,7 +9,8 @@ import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { publicPageContainerStyle, publicPageContentStyle } from '../publicPageStyles';
 import { Card } from '../../../components/ui/Card';
-import { Button } from '../../../components/ui/Button';
+import { ArbeitsTaste } from '../../../components/ui/molecules/ArbeitsTaste';
+import { useSperreAktion } from '../../../hooks/useSperreAktion';
 
 const errorContainerStyle: CSSProperties = {
   textAlign: 'center',
@@ -72,8 +73,13 @@ export const PublicNotFoundView: React.FC = () => {
   );
 };
 
-export const PublicErrorView: React.FC<{ errorMessage: string | null }> = ({ errorMessage }) => {
+/**
+ * Fehleransicht (@OB-088): „Erneut versuchen“ wiederholt nur den Abruf (`onRetry` = `pollNow`), ohne die Seite neu zu laden; kommt das Netz
+ * zurück, ruft `usePolling` von selbst noch einmal ab. Solange der Abruf läuft, ist die Taste gesperrt und zeigt den Kreisel.
+ */
+export const PublicErrorView: React.FC<{ errorMessage: string | null; onRetry: () => Promise<void> }> = ({ errorMessage, onRetry }) => {
   const { t } = useTranslation('publicView');
+  const { starte, laeuft } = useSperreAktion(onRetry);
   return (
   <div style={publicPageContainerStyle}>
     <div style={publicPageContentStyle}>
@@ -86,12 +92,7 @@ export const PublicErrorView: React.FC<{ errorMessage: string | null }> = ({ err
           <p style={{ color: cssVars.colors.textMuted, marginBottom: cssVars.spacing.lg }}>
             {errorMessage ?? t('error.unknown')}
           </p>
-          <Button
-            variant="secondary"
-            onClick={() => window.location.reload()}
-          >
-            {t('error.retry')}
-          </Button>
+          <ArbeitsTaste laeuft={laeuft} onClick={starte} data-testid="public-error-retry">{t('error.retry')}</ArbeitsTaste>
         </div>
       </Card>
     </div>

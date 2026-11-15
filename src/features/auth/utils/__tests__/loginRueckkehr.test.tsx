@@ -3,7 +3,7 @@
  * derselbe Unterpunkt ‚Hallenton‘“. Erwartung aus dem Gherkin; dazu die Gegenbeispiele: nichts Fremdes, nur einmal, ohne Merker die Startseite.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { RUECKKEHR_FRIST_MS, RUECKKEHR_SCHLUESSEL, holeRueckkehr, istRueckkehrZiel, merkeRueckkehr } from '../loginRueckkehr';
+import { RUECKKEHR_FRIST_MS, RUECKKEHR_SCHLUESSEL, holeRueckkehr, istRueckkehrZiel, loescheRueckkehr, merkeRueckkehr } from '../loginRueckkehr';
 import { FalscherSpeicher } from '../../../../test/hallenton/falschesGeraet';
 
 const HALLENTON = '/tournament/hallencup-nord/admin/hallenton';
@@ -66,5 +66,47 @@ describe('@HT-026 Rücksprung in den Unterpunkt „Hallenton“', () => {
     expect(holeRueckkehr()).toBeNull();
     window.localStorage.setItem(RUECKKEHR_SCHLUESSEL, JSON.stringify({ pfad: 'https://evil.example/', bis: Date.now() + 60_000 }));
     expect(holeRueckkehr()).toBeNull();
+  });
+});
+
+describe('@OB-087 Zeile 3 Rückkehr ins Cockpit des Felds', () => {
+  const COCKPIT = '/tournament/hallencup-nord/live';
+  it('das Cockpit des Turniers (mit Feld und Spiel) wird gemerkt und nach der Anmeldung zurückgegeben', () => {
+    for (const ziel of [COCKPIT, `${COCKPIT}?f=2`, `${COCKPIT}?matchId=m-11`, `${COCKPIT}?f=2&matchId=m-11`]) {
+      merkeRueckkehr(ziel);
+      expect(holeRueckkehr(), ziel).toBe(ziel);
+    }
+  });
+  it('Gegenbeispiele: manipulierte oder fremde Ziele werden nicht gemerkt und nicht befolgt', () => {
+    const schlecht = [
+      `${COCKPIT}?next=https://evil.example`, `${COCKPIT}?f=2&next=/x`, `${COCKPIT}?f=abc`, `${COCKPIT}?f=2&f=3`, `${COCKPIT}?matchId=a/b`,
+      `${COCKPIT}?matchId=`, `${COCKPIT}?f=2?x=1`, `${COCKPIT}?redirect=//evil.example`, `${COCKPIT}#/evil`, `${COCKPIT}/extra`,
+      `//evil.example${COCKPIT}`, `https://evil.example${COCKPIT}`, `/tournament/hallencup-nord/schedule`, `/tournament/hallencup-nord/standings?f=2`,
+      '/tournament/new', `/tournament/x/admin?f=2`, `${COCKPIT}\\..\\x`,
+    ];
+    for (const ziel of schlecht) {
+      expect(istRueckkehrZiel(ziel), ziel).toBe(false);
+      merkeRueckkehr(ziel);
+      expect(window.localStorage.getItem(RUECKKEHR_SCHLUESSEL), ziel).toBeNull();
+    }
+  });
+});
+
+
+describe('@OB-087 der gemerkte Rückweg gehört zum Konto, das ihn gemerkt hat', () => {
+  const COCKPIT = '/tournament/hallencup-nord/live?f=2';
+  it('loescheRueckkehr vergisst den Rückweg: nach dem Löschen führt die Anmeldung zur Startseite', () => {
+    merkeRueckkehr(COCKPIT);
+    loescheRueckkehr();
+    expect(window.localStorage.getItem(RUECKKEHR_SCHLUESSEL)).toBeNull();
+    expect(holeRueckkehr()).toBeNull();
+  });
+  it('Gegenbeispiel: ohne Löschen bleibt der Rückweg (Gast meldet sich an, Anmelden aus dem Cockpit)', () => {
+    merkeRueckkehr(COCKPIT);
+    expect(holeRueckkehr()).toBe(COCKPIT);
+  });
+  it('nichts wirft, wenn der Speicher gesperrt ist', () => {
+    vi.mocked(localStorage.removeItem).mockImplementation(() => { throw new Error('gesperrt'); });
+    expect(() => loescheRueckkehr()).not.toThrow();
   });
 });

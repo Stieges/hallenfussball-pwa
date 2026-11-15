@@ -23,6 +23,9 @@ vi.mock('react-i18next', () => ({
 }));
 const status = vi.hoisted(() => ({ wert: null as unknown as HallStatus, gelesen: 0 }));
 vi.mock('../../useHallStatus', () => ({ useHallStatus: () => { status.gelesen += 1; return status.wert; } }));
+// @OB-087: der Kasten „Kein Netz“ trägt „Verbinden“ (`useVerbindenVersuch`): Anmeldung und Übertragung sind hier nicht Gegenstand
+vi.mock('../../../auth/hooks/useAuth', () => ({ useAuth: () => ({ reconnect: vi.fn() }) }));
+vi.mock('../../../match-engine/useResyncNow', () => ({ useResyncNow: () => vi.fn() }));
 const uhr = vi.hoisted(() => ({ abgeglichen: true }));
 vi.mock('../../useUhrAbgeglichen', () => ({ useUhrAbgeglichen: () => uhr.abgeglichen }));
 
