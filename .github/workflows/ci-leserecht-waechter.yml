@@ -1,0 +1,36 @@
+name: CI-Leserecht-Waechter
+
+# Werkzeugkette: jede Relation in public und match_engine braucht ein SELECT fuer die Drift-Check-Rolle ci_schema_reader, sonst bricht
+# pg_dump im Drift-Check gegen Live ab (zweimal passiert: 20261110_003 -> _007, 20261124_003 -> _004). Dieser Job spielt Baseline + ALLE
+# Migrationen (auch die noch nicht live eingespielten) in einen Wegwerf-Container und prueft das im Container (scripts/db-drift-check.sh,
+# Abschnitt 2b). Er braucht KEINEN Zugang zur Live-Datenbank und keine Secrets; er laeuft deshalb auch auf Pull Requests aus Forks.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'scripts/db-drift-check.sh'
+      - 'scripts/lib/migrations-since-baseline.sh'
+      - '.github/workflows/ci-leserecht-waechter.yml'
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'scripts/db-drift-check.sh'
+      - 'scripts/lib/migrations-since-baseline.sh'
+      - '.github/workflows/ci-leserecht-waechter.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  ci-leserecht-waechter:
+    name: Neue Relation ohne Leserecht fuer ci_schema_reader (Postgres-Wegwerfcontainer)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Waechter
+        run: bash scripts/db-drift-check.sh --nur-leserecht-waechter

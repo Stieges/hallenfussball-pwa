@@ -1,8 +1,10 @@
 /**
- * Zuschauer-Seite zählen (intern, Stufe 1; @RZ-024 bis @RZ-030, docs/anforderungen/2026-09-26_reichweite-zuschauersicht.md).
+ * Zuschauer-Seite zählen (intern, Stufe 1 und 1b; @RZ-024 bis @RZ-032, docs/anforderungen/2026-09-26_reichweite-zuschauersicht.md).
  * Reine Logik ohne React und ohne Netz: Kanal aus dem Adresszusatz, Geräteart aus Bedienart und kürzerer Bildschirmseite, „installiert“ aus der
  * Anzeigeart und das Versenden einer Zählmeldung, das nie stört (Fehler und Zeitüberschreitung werden verschluckt, kein Wiederholen).
  * Gesendet werden nur diese fünf Felder (die Server-Funktion `count_public_view`); nichts davon liegt auf dem Gerät.
+ * Betriebssystem- und Browser-Familie (@RZ-031) leitet der Server aus der Kennung ab, die der Browser bei jedem Aufruf ohnehin mitschickt;
+ * die Seite liest dafür nichts am Gerät aus und sendet dafür nichts Eigenes.
  */
 import { breakpointValues } from '../../design-tokens/breakpoints';
 

@@ -1857,4 +1857,49 @@ SELECT 'hallenton-speaker-unassign-rpc-authenticated-only',
                         AND position('PERFORM public.hall_require_open(p_tournament_id);' IN p.prosrc) > 0
                         AND position('device_id' IN p.prosrc) = 0
                    FROM pg_proc p WHERE p.oid = to_regprocedure('public.hall_speaker_unassign(uuid,integer[])')), false)
+-- ---------------------------------------------------------------------------------------------------------------
+-- Zuschauer-Zaehlung Stufe 1b (20261126_001_zuschauer_zaehlung_os_browser.sql, Record Reichweite Zuschauersicht @RZ-031, @RZ-032):
+-- Pruefskript scripts/zuschauer-zaehlung-check.sh. Vor dem Live-Einspielen "f" (vom Drift-Check bis dahin ausgelassen).
+-- ---------------------------------------------------------------------------------------------------------------
+-- (1) Tabelle: genau die neun Spalten (nur die zwei Familien kommen dazu, keine Kennung), beide Familien text NOT NULL mit Vorgabe
+--     'sonstige' und fester Werteliste, Primaerschluessel ueber alle sieben Schluesselspalten.
+UNION ALL
+SELECT 'zuschauer-zaehlung-os-browser-columns',
+       coalesce((SELECT string_agg(a.attname, ',' ORDER BY a.attnum)
+                          = 'tournament_id,window_start,channel,device_class,installed,views,heartbeats,os_family,browser_family'
+                   FROM pg_attribute a
+                  WHERE a.attrelid = to_regclass('public.public_view_counts') AND a.attnum > 0 AND NOT a.attisdropped), false)
+       AND coalesce((SELECT count(*) = 2
+                       FROM pg_attribute a
+                       JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
+                      WHERE a.attrelid = to_regclass('public.public_view_counts') AND a.attname IN ('os_family', 'browser_family')
+                        AND a.attnotnull AND a.atttypid = 'text'::regtype
+                        AND pg_get_expr(d.adbin, d.adrelid) = '''sonstige''::text'), false)
+       AND coalesce((SELECT pg_get_constraintdef(con.oid) = 'CHECK ((os_family = ANY (ARRAY[''ios''::text, ''android''::text, ''windows''::text, ''macos''::text, ''sonstige''::text])))'
+                       FROM pg_constraint con WHERE con.conrelid = to_regclass('public.public_view_counts') AND con.conname = 'public_view_counts_os_family_check'), false)
+       AND coalesce((SELECT pg_get_constraintdef(con.oid) = 'CHECK ((browser_family = ANY (ARRAY[''safari''::text, ''chrome''::text, ''firefox''::text, ''samsung''::text, ''sonstige''::text])))'
+                       FROM pg_constraint con WHERE con.conrelid = to_regclass('public.public_view_counts') AND con.conname = 'public_view_counts_browser_family_check'), false)
+       AND coalesce((SELECT string_agg(a.attname, ',' ORDER BY k.ord)
+                            = 'tournament_id,window_start,channel,device_class,installed,os_family,browser_family'
+                       FROM pg_constraint c
+                       CROSS JOIN LATERAL unnest(c.conkey) WITH ORDINALITY AS k(attnum, ord)
+                       JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum
+                      WHERE c.conrelid = to_regclass('public.public_view_counts') AND c.contype = 'p'), false)
+-- (2) Ableitung: die Hilfsfunktion ist unveraenderlich, kein SECURITY DEFINER, fester search_path und fuer PUBLIC/anon/authenticated
+--     NICHT ausfuehrbar (nur count_public_view ruft sie, als Eigentuemer); count_public_view liest die Kennung aus den Kopfzeilen und
+--     enthaelt kein RAISE (nie ein Fehler fuer den Zuschauer, @RZ-032).
+UNION ALL
+SELECT 'zuschauer-zaehlung-os-browser-derive-function',
+       coalesce((SELECT p.provolatile = 'i' AND NOT p.prosecdef AND p.proretset
+                        AND p.proconfig @> ARRAY['search_path=pg_catalog, pg_temp']
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                        AND p.proacl IS NOT NULL
+                        AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.public_view_agent_families(text)')), false)
+       AND coalesce((SELECT position('public_view_agent_families' IN p.prosrc) > 0
+                            AND position('request.headers' IN p.prosrc) > 0
+                            AND position('user-agent' IN p.prosrc) > 0
+                            AND position('RAISE' IN p.prosrc) = 0
+                       FROM pg_proc p WHERE p.oid = to_regprocedure('public.count_public_view(text,text,text,text,boolean)')), false)
 ;
