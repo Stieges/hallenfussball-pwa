@@ -1,5 +1,5 @@
 /**
- * VerbindenTaste – die Taste „Verbinden“ an einem Hinweis „kein Netz“ (@OB-087 Zeilen 1 und 2): gleiche Wirkung wie die Pille im Cockpit
+ * VerbindenTaste – die Taste „Verbinden“ an einem Hinweis „kein Netz“ (@OB-087 Zeilen 1 und 2; steht rechts in der Zeile des Hinweises, `HinweisMitTaste`): gleiche Wirkung wie die Pille im Cockpit
  * (`useVerbindenVersuch`: erneut anmelden, wartende Einträge sofort übertragen). Solange der Versuch läuft, steht „Verbinde …“ auf der
  * gesperrten, arbeitenden Taste; ein zweiter Tipp löst nichts aus (die Sperre liegt im Hook). Der Hinweis selbst verschwindet, wenn sein
  * Aufrufer das Netz wieder sieht; `beiEnde` meldet das Ende des Versuchs (z. B. „Liste neu laden“).
@@ -26,7 +26,7 @@ export function VerbindenTaste({ 'data-testid': testId, beiEnde }: VerbindenTast
     warLaeuft.current = laeuft;
   }, [laeuft]);
   return (
-    <ArbeitsTaste laeuft={laeuft} onClick={verbinde} data-testid={testId}>
+    <ArbeitsTaste imHinweis laeuft={laeuft} onClick={verbinde} data-testid={testId}>
       {laeuft ? t('rahmen.verbindet') : t('rahmen.verbinden')}
     </ArbeitsTaste>
   );

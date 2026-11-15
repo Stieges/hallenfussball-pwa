@@ -1,0 +1,98 @@
+/* Hinweis mit Taste in derselben Zeile (@OB-087, Mockup „hinweise-integration“ Variante A): Text links, Taste rechtsbündig. Passt die Taste nicht
+   neben den Text, steht sie rechtsbündig darunter (Umbruch). Nur Tokens. Die Tonfarbe der Taste kommt über `--hinweis-bedien`. */
+.hinweis {
+  --hinweis-ton: var(--color-warning-solid);
+  --hinweis-bedien: var(--color-warning-solid);
+  --hinweis-tint: var(--color-warning-light);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--spacing-sm);
+  row-gap: var(--spacing-xs);
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: var(--border-width-medium) solid var(--hinweis-ton);
+  border-radius: var(--border-radius-md);
+  background-color: var(--color-background);
+  background-image: linear-gradient(var(--hinweis-tint), var(--hinweis-tint));
+  color: var(--color-text-primary);
+  text-align: left;
+}
+
+.ruhig {
+  --hinweis-ton: var(--color-info);
+  --hinweis-bedien: var(--color-info-strong);
+  --hinweis-tint: var(--color-info-light);
+  border-width: var(--border-width-thin);
+}
+
+.fehler {
+  --hinweis-ton: var(--color-error);
+  --hinweis-bedien: var(--color-error);
+  --hinweis-tint: var(--color-error-light);
+}
+
+/* mit Taste: die Taste (44 px) gibt die Höhe vor, der Rand oben und unten schrumpft */
+.mitTaste {
+  padding-block: var(--spacing-xs);
+}
+
+.kopf {
+  /* 11rem: so schmal darf der Text neben der Taste werden; darunter bricht die Taste rechtsbündig unter den Text (Handy 360 px: darunter, 390 px: daneben) */
+  flex: 1 1 11rem;
+  display: grid;
+  grid-template-columns: var(--icon-size-md) minmax(0, 1fr);
+  gap: var(--spacing-sm);
+  align-items: start;
+  min-width: 0;
+}
+
+.mitTaste .kopf {
+  padding-block: var(--spacing-xs);
+}
+
+.symbol {
+  display: inline-flex;
+  margin-top: calc(var(--spacing-xs) / 2);
+  color: var(--hinweis-ton);
+}
+
+.ruhig .symbol {
+  color: var(--color-info-strong);
+}
+
+.text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.titel {
+  display: block;
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-body-md);
+  font-weight: var(--font-weight-bold);
+}
+
+.ruhig .titel {
+  font-weight: var(--font-weight-semibold);
+}
+
+.zusatz {
+  display: block;
+  margin-top: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body-sm);
+}
+
+.aktion {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  margin-left: auto;
+  max-width: 100%;
+}

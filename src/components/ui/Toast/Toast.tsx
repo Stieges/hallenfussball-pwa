@@ -5,7 +5,7 @@
  * Supports success, error, warning, and info variants.
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icons } from '../Icons';
 import styles from './Toast.module.css';
@@ -15,9 +15,11 @@ export type ToastType = 'success' | 'error' | 'warning' | 'info';
 /**
  * Was die Aktion nach dem Tipp meldet (@OB-087): nichts = Hinweis schließt wie bisher; `busyLabel` = Hinweis bleibt stehen,
  * die Taste ist gesperrt und zeigt die Arbeitsanzeige; `note` = Hinweis bleibt stehen und nennt in einem Satz, warum jetzt
- * nichts geschieht (die Taste bleibt bedienbar).
+ * nichts geschieht (die Taste bleibt bedienbar). `busyLabel` kann mit `danach` ein späteres Ergebnis ankündigen (ein Versprechen, das nie
+ * ablehnt): sobald es erfüllt ist, gilt dessen Ergebnis wie ein neuer Tipp-Ausgang – so gibt der Aufrufer die Taste nach einer Frist wieder frei
+ * (`note`) oder schließt den Hinweis (nichts), ohne dass der Hinweis etwas über die Frist wissen muss. Zu spät (Hinweis schon weg) wird es verworfen.
  */
-export type ToastActionResult = { busyLabel: string } | { note: string } | undefined;
+export type ToastActionResult = { busyLabel: string; danach?: Promise<ToastActionResult> } | { note: string } | undefined;
 
 export interface ToastProps {
   id: string;
@@ -25,6 +27,10 @@ export interface ToastProps {
   message: string;
   onDismiss: (id: string) => void;
   duration?: number;
+  /** Der Hinweis beginnt auszublenden (die Ausblendzeit läuft): der Besitzer merkt sich das, um denselben festen Hinweis neu zu öffnen. */
+  onExit?: (id: string) => void;
+  /** Wie oft ein Hinweis mit derselben festen Kennung während des Ausblendens neu geöffnet wurde (Schlüssel für einen frischen Hinweis). */
+  erneuert?: number;
   action?: {
     label: string;
     onClick: () => ToastActionResult;
@@ -38,54 +44,67 @@ const icons: Record<ToastType, string> = {
   info: '\u2139',    // ℹ
 };
 
+const AUSBLENDEN_MS = 300;
+
 export const Toast: React.FC<ToastProps> = ({
   id,
   type,
   message,
   onDismiss,
+  onExit,
   duration = 4000,
   action,
 }) => {
   const { t } = useTranslation('common');
   const [isExiting, setIsExiting] = useState(false);
+  const entfernen = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const lebt = useRef(true);
+
+  useEffect(() => {
+    lebt.current = true;
+    return () => { lebt.current = false; clearTimeout(entfernen.current); };
+  }, []);
+
+  const handleDismiss = useCallback(() => {
+    setIsExiting(true);
+    onExit?.(id);
+    clearTimeout(entfernen.current);
+    entfernen.current = setTimeout(() => onDismiss(id), AUSBLENDEN_MS);
+  }, [id, onDismiss, onExit]);
 
   useEffect(() => {
     if (duration > 0) {
-      const timer = setTimeout(() => {
-        setIsExiting(true);
-        setTimeout(() => onDismiss(id), 300);
-      }, duration);
-
+      const timer = setTimeout(handleDismiss, duration);
       return () => clearTimeout(timer);
     }
-  }, [id, duration, onDismiss]);
-
-  const handleDismiss = () => {
-    setIsExiting(true);
-    setTimeout(() => onDismiss(id), 300);
-  };
+  }, [duration, handleDismiss]);
 
   const [busyLabel, setBusyLabel] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
 
-  const handleAction = () => {
-    if (busyLabel !== null) { return; }
-    const result = action?.onClick();
+  const anwenden = (result: ToastActionResult): void => {
     if (result && 'busyLabel' in result) {
       setNote(null);
       setBusyLabel(result.busyLabel);
+      void result.danach?.then((spaeter) => { if (lebt.current) { anwenden(spaeter); } });
       return;
     }
     if (result && 'note' in result) {
+      setBusyLabel(null);
       setNote(result.note);
       return;
     }
     handleDismiss();
   };
 
+  const handleAction = () => {
+    if (busyLabel !== null) { return; }
+    anwenden(action?.onClick());
+  };
+
   return (
     <div
-      className={`${styles.toast} ${styles[type]} ${isExiting ? styles.exiting : ''}`}
+      className={`${styles.toast} ${styles[type]} ${action ? styles.mitAktion : ''} ${isExiting ? styles.exiting : ''}`}
       role="alert"
       aria-live="polite"
     >

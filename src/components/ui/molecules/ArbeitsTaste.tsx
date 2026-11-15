@@ -13,6 +13,11 @@ export interface ArbeitsTasteProps {
   laeuft?: boolean;
   variant?: 'primary' | 'secondary';
   icon?: ReactNode;
+  /**
+   * Steht in einem `HinweisMitTaste` (@OB-087): 44 px hoch, mindestens `xxl` × 3 breit (bleibt im Zustand „läuft“ gleich breit), Fläche in Seitenfarbe,
+   * 2-px-Rand im Ton des Hinweises (`--hinweis-bedien`), Schrift in der normalen Textfarbe. Läuft der Versuch, ist der Rand gestrichelt (nicht Farbe allein).
+   */
+  imHinweis?: boolean;
   'data-testid': string;
 }
 
@@ -21,11 +26,21 @@ const kreisel: CSSProperties = {
   border: `${cssVars.borderWidth.medium} solid currentColor`, borderRightColor: 'transparent', animation: 'spin 1s linear infinite',
 };
 
-export function ArbeitsTaste({ children, onClick, laeuft = false, variant = 'secondary', icon, 'data-testid': testId }: ArbeitsTasteProps): ReactElement {
+const imHinweisStil: CSSProperties = {
+  minWidth: `calc(${cssVars.spacing.xxl} * 3)`, padding: `0 ${cssVars.spacing.md}`, background: cssVars.colors.background,
+  color: cssVars.colors.textPrimary, border: `${cssVars.borderWidth.medium} solid var(--hinweis-bedien, ${cssVars.colors.borderControl})`,
+};
+
+export function ArbeitsTaste({ children, onClick, laeuft = false, variant = 'secondary', icon, imHinweis = false, 'data-testid': testId }: ArbeitsTasteProps): ReactElement {
+  const stil: CSSProperties = {
+    ...(imHinweis ? imHinweisStil : {}),
+    ...(imHinweis && laeuft ? { borderStyle: 'dashed' } : {}),
+    ...(laeuft ? { cursor: 'progress' } : {}),
+  };
   return (
     <Button
       variant={variant} busy={laeuft} onClick={onClick} icon={laeuft ? <span style={kreisel} /> : icon}
-      style={laeuft ? { cursor: 'progress' } : undefined} data-testid={testId}
+      style={Object.keys(stil).length === 0 ? undefined : stil} data-testid={testId}
     >
       {children}
     </Button>

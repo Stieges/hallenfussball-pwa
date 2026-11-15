@@ -8,9 +8,11 @@
  */
 import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '../../../components/ui/Button';
+import { Icons } from '../../../components/ui/Icons';
+import { ArbeitsTaste } from '../../../components/ui/molecules/ArbeitsTaste';
+import { HinweisMitTaste } from '../../../components/ui/molecules/HinweisMitTaste';
 import type { OutboxStatus } from '../../../core/match/client/outboxTypes';
-import { cssVars } from '../../../design-tokens';
+import { cssVars, iconSizeValues } from '../../../design-tokens';
 import { afterFinishTotal, reviewTotal } from './useOutboxStatus';
 
 export type OutboxNoticeKind = 'clientOutdated' | 'authRequired' | 'notReady' | 'tournamentFinished' | 'review';
@@ -74,19 +76,23 @@ export function OutboxNotice({ status, matchId, onReload, onLogin }: OutboxNotic
       : kind === 'tournamentFinished'
         ? t('outbox.notice.tournamentFinished', { count: afterFinishCountOf(status, matchId) })
         : t(`outbox.notice.${kind}`);
+  // Mit Taste (@OB-087, „A“): die Taste steht rechts in der Zeile des Hinweises (`HinweisMitTaste`); die Hinweise ohne Aktion bleiben, wie sie waren.
+  const taste = kind === 'clientOutdated'
+    ? <ArbeitsTaste imHinweis onClick={onReload} data-testid="outbox-notice-reload">{t('outbox.notice.reloadNow')}</ArbeitsTaste>
+    : kind === 'authRequired' && onLogin !== undefined
+      ? <ArbeitsTaste imHinweis onClick={onLogin} data-testid="outbox-notice-login">{t('actions.login')}</ArbeitsTaste>
+      : null;
+  if (taste !== null) {
+    const symbol = kind === 'authRequired' ? <Icons.Lock size={iconSizeValues.md} /> : <Icons.AlertTriangle size={iconSizeValues.md} />;
+    return (
+      <div data-testid="outbox-notice" data-kind={kind}>
+        <HinweisMitTaste symbol={symbol} titel={text} taste={taste} />
+      </div>
+    );
+  }
   return (
     <div data-testid="outbox-notice" data-kind={kind} role="status" style={noticeStyle}>
       <span>{text}</span>
-      {kind === 'clientOutdated' && (
-        <Button data-testid="outbox-notice-reload" variant="secondary" onClick={onReload}>
-          {t('outbox.notice.reloadNow')}
-        </Button>
-      )}
-      {kind === 'authRequired' && onLogin !== undefined && (
-        <Button data-testid="outbox-notice-login" variant="secondary" onClick={onLogin}>
-          {t('actions.login')}
-        </Button>
-      )}
     </div>
   );
 }

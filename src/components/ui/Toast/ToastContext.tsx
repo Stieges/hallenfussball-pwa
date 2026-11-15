@@ -37,7 +37,7 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
-type ToastData = Omit<ToastProps, 'onDismiss'>
+type ToastData = Omit<ToastProps, 'onDismiss' | 'onExit'>
 
 interface ToastProviderProps {
   children: ReactNode;
@@ -50,6 +50,8 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children, suppress
   // Ref statt Abhängigkeit: die Funktionen bleiben stabil, auch wenn die Route wechselt.
   const suppressedRef = useRef(suppressed);
   suppressedRef.current = suppressed;
+  // Hinweise, die gerade ausblenden (300 ms): ein neuer Hinweis mit derselben festen Kennung ersetzt sie, statt verworfen zu werden.
+  const ausblendend = useRef<Set<string>>(new Set());
 
   const addToast = useCallback((type: ToastType, message: string, options?: ToastOptions): string => {
     if (suppressedRef.current) { return ''; }
@@ -63,17 +65,26 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children, suppress
       action: options?.action,
     };
 
-    // feste Kennung: schon vorhanden = nicht doppelt öffnen
-    setToasts((prev) => (prev.some((existing) => existing.id === id) ? prev : [...prev, toast]));
+    // feste Kennung: schon vorhanden = nicht doppelt öffnen; blendet der vorhandene gerade aus, tritt der neue an seine Stelle (frische Instanz)
+    const ersetzen = ausblendend.current.delete(id);
+    setToasts((prev) => {
+      const vorhanden = prev.find((existing) => existing.id === id);
+      if (vorhanden === undefined) { return [...prev, toast]; }
+      return ersetzen ? prev.map((existing) => (existing.id === id ? { ...toast, erneuert: (vorhanden.erneuert ?? 0) + 1 } : existing)) : prev;
+    });
 
     return id;
   }, []);
 
+  const exitStart = useCallback((id: string) => { ausblendend.current.add(id); }, []);
+
   const dismiss = useCallback((id: string) => {
+    ausblendend.current.delete(id);
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
   const dismissAll = useCallback(() => {
+    ausblendend.current.clear();
     setToasts([]);
   }, []);
 
@@ -139,7 +150,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children, suppress
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <ToastContainer toasts={toasts} onDismiss={dismiss} />
+      <ToastContainer toasts={toasts} onDismiss={dismiss} onExit={exitStart} />
     </ToastContext.Provider>
   );
 };

@@ -10,18 +10,17 @@
  */
 import { useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Icons } from '../../../../components/ui/Icons';
 import { EndStateCard } from '../../../../components/ui/molecules/EndStateCard';
 import { InlineNotice } from '../../../../components/ui/molecules/InlineNotice';
 import { TafelIcons } from '../../../../components/ui/IconsTafel';
 import { breakpointValues, cssVars, dialogWidths, iconSizeValues } from '../../../../design-tokens';
 import type { Tournament } from '../../../../types/tournament';
-import { VerbindenTaste } from '../../../match-engine/VerbindenTaste';
 import { useAuth } from '../../../auth/hooks/useAuth';
 import { useCanState } from '../../../auth/hooks/useCan';
 import { CategoryPage } from '../shared';
 import { AccessChangeDialog, RenewCodeDialog } from './AccessDialogs';
 import { ApproveSheet } from './ApproveSheet';
+import { HelferOhneNetzHinweis } from './HelferOhneNetzHinweis';
 import { HelperCodeCard } from './HelperCodeCard';
 import { HelperList } from './HelperList';
 import { JoinRequestList } from './JoinRequestList';
@@ -125,14 +124,7 @@ export function TeamHelpersCategory({ tournamentId, tournament }: TeamHelpersCat
   const right = (
     <div style={stack}>
       {showOffline ? (
-        <InlineNotice
-          tone="warn" icon={<Icons.WifiOff size={iconSizeValues.sm} />} data-testid="needs-network"
-          // @OB-087 Zeile 2: „Verbinden“ versucht die Verbindung sofort neu; danach lädt die Liste der Helfer von selbst (nicht erst im nächsten 2-s-Takt)
-          footer={<div><VerbindenTaste data-testid="needs-network-verbinden" beiEnde={() => { void refresh(); }} /></div>}
-        >
-          <b style={noticeTitle}>{t('teamHelpers.offline.title')}</b>
-          <span style={noticeText}>{t('teamHelpers.offline.text')}</span>
-        </InlineNotice>
+        <HelferOhneNetzHinweis beiEnde={() => { void refresh(); }} />
       ) : null}
       {noticeMessage !== null ? (
         <InlineNotice tone={actions.notice?.kind === 'failed' ? 'error' : 'info'} data-testid="action-notice">

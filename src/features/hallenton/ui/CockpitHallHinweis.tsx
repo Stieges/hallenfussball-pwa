@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { iconSizeValues } from '../../../design-tokens';
 import { Icons } from '../../../components/ui/Icons';
 import { ArbeitsTaste } from '../../../components/ui/molecules/ArbeitsTaste';
+import { HinweisMitTaste } from '../../../components/ui/molecules/HinweisMitTaste';
 import { useSperreAktion } from '../../../hooks/useSperreAktion';
 import { cockpitHallZeile, cockpitHallZeileAusServer, type CockpitHallZeile } from '../cockpitHallZeile';
 import { tontAufDiesemGeraet } from '../hallAnzeige';
@@ -43,19 +44,11 @@ export interface CockpitHallHinweisProps {
 /** Ohne Spiel, nach dem Abpfiff und bei offener Besetzung gibt es keinen Hinweis (@HT-016, @HT-035 letzte Zeile). */
 const OHNE_HINWEIS: ReadonlySet<CockpitZustand> = new Set<CockpitZustand>(['abgepfiffen', 'keinSpiel', 'wartetAufHerkunft']);
 
-interface KastenProps { symbol: ReactNode; titel: string; grund?: string; ruhig?: boolean; testid: string; /** Taste, die das Problem löst (@OB-087), unter dem Text. */ taste?: ReactNode }
+interface KastenProps { symbol: ReactNode; titel: string; grund?: string; ruhig?: boolean; testid: string; /** Taste, die das Problem löst (@OB-087), rechts in der Zeile. */ taste?: ReactNode }
 
+/** Der Kasten ist der gemeinsame `HinweisMitTaste` (@OB-087): mit Taste in der Zeile, ohne Taste derselbe Kasten ohne Aktion. */
 export function CockpitHallKasten({ symbol, titel, grund, ruhig = false, testid, taste }: KastenProps): ReactElement {
-  return (
-    <div className={ruhig ? `${styles.kasten} ${styles.ruhig}` : styles.kasten} role="status" data-testid={testid}>
-      <span className={styles.symbol} aria-hidden="true">{symbol}</span>
-      <span className={styles.text}>
-        <span className={styles.titel}>{titel}</span>
-        {grund !== undefined ? <span className={styles.grund}>{grund}</span> : null}
-        {taste === undefined ? null : <span className={styles.taste}>{taste}</span>}
-      </span>
-    </div>
-  );
+  return <HinweisMitTaste ton={ruhig ? 'ruhig' : 'warn'} symbol={symbol} titel={titel} zusatz={grund} taste={taste} data-testid={testid} />;
 }
 
 /**
@@ -73,7 +66,7 @@ function AusKastenMitTon({ tournamentId, feld, grund }: { tournamentId: string; 
     return null;
   }
   const taste = eigenes
-    ? <ArbeitsTaste laeuft={laeuft} onClick={starte} data-testid="cockpit-hall-ton-aktivieren">{t('aktivieren.taste')}</ArbeitsTaste>
+    ? <ArbeitsTaste imHinweis laeuft={laeuft} onClick={starte} data-testid="cockpit-hall-ton-aktivieren">{t('aktivieren.taste')}</ArbeitsTaste>
     : undefined;
   return <CockpitHallKasten symbol={<Icons.SpeakerOff size={iconSizeValues.md} />} titel={t('cockpit.titel')} grund={grund} testid="cockpit-hall-aus" taste={taste} />;
 }

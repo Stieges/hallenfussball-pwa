@@ -6,8 +6,10 @@
  */
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Icons } from '../../../../components/ui/Icons';
 import { ArbeitsTaste } from '../../../../components/ui/molecules/ArbeitsTaste';
-import { cssVars } from '../../../../design-tokens';
+import { HinweisMitTaste } from '../../../../components/ui/molecules/HinweisMitTaste';
+import { cssVars, iconSizeValues } from '../../../../design-tokens';
 
 export interface VisibilityErrorNoticeProps {
   message: string;
@@ -18,16 +20,11 @@ export interface VisibilityErrorNoticeProps {
 export function VisibilityErrorNotice({ message, onRetry, retrying }: VisibilityErrorNoticeProps): ReactElement {
   const { t } = useTranslation('common');
   return (
-    <div
-      role="alert" data-testid="visibility-error"
-      style={{
-        padding: cssVars.spacing.md, background: cssVars.colors.errorLight, border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.errorBorder}`,
-        borderRadius: cssVars.borderRadius.md, color: cssVars.colors.error, marginBottom: cssVars.spacing.md,
-        display: 'grid', gap: cssVars.spacing.sm, justifyItems: 'start',
-      }}
-    >
-      <span>{message}</span>
-      {onRetry !== undefined && <ArbeitsTaste laeuft={retrying} onClick={onRetry} data-testid="visibility-error-retry">{t('actions.retry')}</ArbeitsTaste>}
+    <div style={{ marginBottom: cssVars.spacing.md }}>
+      <HinweisMitTaste
+        ton="fehler" data-testid="visibility-error" symbol={<Icons.AlertTriangle size={iconSizeValues.md} />} titel={message}
+        taste={onRetry === undefined ? undefined : <ArbeitsTaste imHinweis laeuft={retrying} onClick={onRetry} data-testid="visibility-error-retry">{t('actions.retry')}</ArbeitsTaste>}
+      />
     </div>
   );
 }
