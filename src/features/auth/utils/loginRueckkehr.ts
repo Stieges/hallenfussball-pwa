@@ -72,6 +72,18 @@ export function merkeRueckkehr(pfad: string): void {
   }
 }
 
+/**
+ * Vergisst den gemerkten Rückweg: beim Abmelden und beim Wechsel auf ein anderes Konto (@OB-087). Er gehört zum Konto, das ihn gemerkt hat – ein
+ * anderes Konto soll nicht in dessen Cockpit landen. Nichts wirft.
+ */
+export function loescheRueckkehr(): void {
+  try {
+    speicher()?.removeItem(RUECKKEHR_SCHLUESSEL);
+  } catch {
+    // gesperrt: nichts zu löschen
+  }
+}
+
 /** Die gemerkte Adresse (und löscht sie); `null`, wenn keine, eine abgelaufene oder eine unzulässige gemerkt ist. */
 export function holeRueckkehr(): string | null {
   const s = speicher();

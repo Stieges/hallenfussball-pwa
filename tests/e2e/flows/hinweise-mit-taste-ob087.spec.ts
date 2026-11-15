@@ -6,6 +6,8 @@
  *  - OB-087 Zeile 1: „Verbinden“ im Kasten „Kein Netz – Halle zeigt alten Stand“ (echtes Live-Cockpit, echte Leitung mit gefälschtem Server).
  *  - OB-087 Zeile 5: „Ton aktivieren“ im Kasten nur am eigenen Gerät (Gegenbeispiel: ein anderes Gerät).
  *  - OB-087 Zeile 3: „Anmelden“ am Hinweis „Bitte neu anmelden“; Zeile 4: „Jetzt aktualisieren“ an der Meldung; Zeilen 6 und 7: „Erneut versuchen“.
+ *  - Lage („A ist besser“): die Taste steht rechtsbündig in DERSELBEN ZEILE wie der Text, passt sie nicht daneben, rechtsbündig UNTER dem Text; sie ist ≥ 44 px
+ *    hoch, ≥ 144 px breit, und Text und Taste überschneiden sich nie (Bounding-Boxen, Handy 390×844 und 360×640).
  * Jede Taste ist mindestens 44 px hoch und nichts läuft über. Keine festen Wartezeiten: es wird auf Zustände gewartet. Läuft nur im Projekt `desktop` am Dev-Server.
  */
 import type { Locator, Page } from '@playwright/test';
@@ -13,7 +15,6 @@ import { test, expect } from '../helpers/test-fixtures';
 import { GERAETE } from '../helpers/hallentonPruefstand';
 import { animationenFertig } from '../helpers/animationenFertig';
 
-type Fenster = typeof GERAETE[number];
 const THEMEN = ['light', 'dark'] as const;
 const HINWEISE = '/tests/e2e/harness/hinweise-taste.html';
 const HINWEISE_NEU = '/tests/e2e/harness/hinweise-taste-neu.html';
@@ -29,7 +30,7 @@ const stelle = (page: Page, schluessel: string, wert: boolean, onlineMelden = fa
     if (o) { window.dispatchEvent(new Event('online')); }
   }, [schluessel, wert, onlineMelden] as const);
 
-async function richteEin(page: Page, g: Fenster, thema: 'light' | 'dark'): Promise<void> {
+async function richteEin(page: Page, g: { width: number; height: number }, thema: 'light' | 'dark'): Promise<void> {
   await page.setViewportSize({ width: g.width, height: g.height });
   await page.emulateMedia({ colorScheme: thema });
 }
@@ -204,6 +205,140 @@ test.describe('@OB-087 @OB-088 Hinweise mit Taste (Prüfstände)', () => {
       await expect(kasten).toBeVisible({ timeout: 15_000 });
       await expect(kasten).toContainText('Grund: Ton nicht aktiviert');
       await expect(page.getByTestId('cockpit-hall-ton-aktivieren')).toHaveCount(0);
+    });
+  }
+});
+
+type Rechteck = { x: number; y: number; width: number; height: number };
+const schneiden = (a: Rechteck, b: Rechteck): boolean => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+async function rechteck(l: Locator): Promise<Rechteck> {
+  const b = await l.first().boundingBox();
+  expect(b, 'Rechteck vorhanden').not.toBeNull();
+  return b as Rechteck;
+}
+
+/** Lage der Taste im Hinweis: rechtsbündig im Kasten; `zeile` = rechts neben dem Text, auf Höhe der Zeile; `darunter` = unter dem Text, nicht volle Breite. Immer: ≥ 44 × 144 px, keine Überschneidung. */
+async function pruefeLage(kasten: Locator, text: Locator, taste: Locator, wo: 'zeile' | 'darunter'): Promise<void> {
+  const [k, t, b] = [await rechteck(kasten), await rechteck(text), await rechteck(taste)];
+  expect(b.height, 'Taste ≥ 44 px hoch').toBeGreaterThanOrEqual(44);
+  expect(b.width, 'Taste ≥ 144 px breit').toBeGreaterThanOrEqual(143.5);
+  expect(schneiden(t, b), 'Text und Taste überschneiden sich nicht').toBe(false);
+  expect(b.x + b.width, 'Taste rechtsbündig (Abstand zum rechten Rand ≤ Innenabstand + Rand)').toBeGreaterThan(k.x + k.width - 24);
+  expect(b.x + b.width, 'Taste im Kasten').toBeLessThanOrEqual(k.x + k.width);
+  expect(b.y, 'Taste im Kasten (oben)').toBeGreaterThanOrEqual(k.y);
+  expect(b.y + b.height, 'Taste im Kasten (unten)').toBeLessThanOrEqual(k.y + k.height);
+  if (wo === 'zeile') {
+    expect(b.x, 'Taste rechts neben dem Text').toBeGreaterThanOrEqual(t.x + t.width - 0.5);
+    expect(b.y < t.y + t.height && b.y + b.height > t.y, 'Taste auf Höhe des Textes (gleiche Zeile)').toBe(true);
+  } else {
+    expect(b.y, 'Taste unter dem Text').toBeGreaterThanOrEqual(t.y + t.height - 0.5);
+    expect(b.width, 'nicht volle Breite').toBeLessThan(k.width - 64);
+  }
+}
+
+const LAGEN = [
+  { name: '390×844', width: 390, height: 844, wo: { cockpit: 'zeile', anmelden: 'zeile', toast: 'darunter', fehler: 'darunter', helfer: 'darunter' } },
+  { name: '360×640', width: 360, height: 640, wo: { cockpit: 'darunter', anmelden: 'darunter', toast: 'darunter', fehler: 'darunter', helfer: 'darunter' } },
+] as const;
+
+test.describe('@OB-087 Lage der Taste im Hinweis („A“: rechts in der Zeile, sonst rechtsbündig darunter)', () => {
+  test.beforeEach(({ browserName, page }, testInfo) => {
+    page.on('pageerror', (e) => { testInfo.annotations.push({ type: 'seitenfehler', description: e.message.slice(0, 300) }); });
+    test.skip(testInfo.project.name !== 'desktop' || browserName !== 'chromium', 'setzt Fenstergröße selbst');
+    test.skip(!!process.env.CI_E2E_USE_PREVIEW, 'Prüfstände nur am Dev-Server (im gebauten Stand nicht vorhanden)');
+  });
+
+  for (const l of LAGEN) {
+    for (const thema of THEMEN) {
+      for (const [fall, kasten, taste, was] of [
+        ['kein-netz', 'cockpit-hall-kein-netz', 'cockpit-hall-verbinden', 'cockpit'],
+        ['ton-aktivieren', 'cockpit-hall-aus', 'cockpit-hall-ton-aktivieren', 'cockpit'],
+      ] as const) {
+        test(`Cockpit „${fall}“ ${l.name}, ${thema}: Lage der Taste (${l.wo[was]})`, async ({ page }) => {
+          await page.setViewportSize({ width: l.width, height: l.height });
+          await page.emulateMedia({ colorScheme: thema });
+          await page.clock.setFixedTime(new Date(2026, 10, 21, 14, 0));
+          await page.goto(`/tests/e2e/harness/cockpit-hallenton.html?fall=${fall}`);
+          const k = page.getByTestId(kasten);
+          await expect(k).toBeVisible({ timeout: 15_000 });
+          await animationenFertig(page);
+          await pruefeLage(k, k.locator('[data-hinweis="kopf"]'), k.getByTestId(taste), l.wo[was]);
+          // nichts verdeckt: die Tor-Tasten liegen unter dem Kasten, nicht darüber
+          for (const seite of ['home', 'away']) {
+            expect(schneiden(await rechteck(k), await rechteck(page.getByTestId(`goal-button-${seite}`)))).toBe(false);
+          }
+        });
+      }
+    }
+
+    test(`Gegenbeispiel Cockpit ${l.name}: der Kasten OHNE Aktion („Uhr nicht abgeglichen“) trägt keine Taste und hat denselben Rahmen wie ein Kasten mit Taste`, async ({ page }) => {
+      await page.setViewportSize({ width: l.width, height: l.height });
+      await page.clock.setFixedTime(new Date(2026, 10, 21, 14, 0));
+      await page.goto('/tests/e2e/harness/cockpit-hallenton.html?fall=kombi'); // vor dem Anpfiff: „Ton aktivieren“ UND „Uhr nicht abgeglichen“ untereinander
+      const mit = page.getByTestId('cockpit-hall-aus');
+      const ohne = page.getByTestId('cockpit-hall-uhr');
+      await expect(mit).toBeVisible({ timeout: 15_000 });
+      await expect(ohne).toBeVisible();
+      await expect(ohne.getByRole('button')).toHaveCount(0);
+      await animationenFertig(page);
+      const [a, b] = [await rechteck(mit), await rechteck(ohne)];
+      expect(a.x, 'gleicher linker Rand').toBeCloseTo(b.x, 0);
+      expect(a.width, 'gleiche Breite').toBeCloseTo(b.width, 0);
+      const rand = (el: Locator) => el.evaluate((n) => { const c = getComputedStyle(n); return `${c.borderTopWidth} ${c.borderTopColor} ${c.borderRadius}`; });
+      expect(await rand(ohne), 'gleicher Rand wie der Kasten mit Taste').toBe(await rand(mit));
+    });
+
+    for (const [fall, kasten, taste] of [
+      ['anmelden', 'outbox-notice', 'outbox-notice-login'],
+    ] as const) {
+      test(`„Bitte neu anmelden“ ${l.name}: Lage der Taste (${l.wo.anmelden})`, async ({ page }) => {
+        await richteEin(page, l, 'light');
+        await page.goto(`${HINWEISE}?fall=${fall}`);
+        const k = page.getByTestId(kasten);
+        await expect(k).toBeVisible();
+        await pruefeLage(k.locator('[role="status"]'), k.locator('[data-hinweis="kopf"]'), k.getByTestId(taste), l.wo.anmelden);
+      });
+    }
+
+    test(`„App aktualisieren“ (Meldung) ${l.name}: Lage der Taste (${l.wo.toast}), Text und Taste überschneiden sich nie`, async ({ page }) => {
+      await richteEin(page, l, 'light');
+      await page.goto(`${HINWEISE}?fall=aktualisieren`);
+      const meldung = page.getByRole('alert');
+      await expect(meldung).toContainText('App aktualisieren');
+      await animationenFertig(page);
+      await pruefeLage(meldung, meldung.locator('> span').nth(1), page.getByTestId('toast-action'), l.wo.toast);
+      // Schließen steht oben rechts, nicht unter oder über der Taste
+      const schliessen = await rechteck(meldung.getByRole('button', { name: 'Hinweis schließen' }));
+      expect(schneiden(schliessen, await rechteck(page.getByTestId('toast-action'))), 'Schließen und Taste überschneiden sich nicht').toBe(false);
+    });
+
+    for (const [fall, kasten, taste, was] of [
+      ['veroeffentlichen', 'publish-error-notice', 'publish-error-retry', 'fehler'],
+      ['sichtbarkeit', 'visibility-error', 'visibility-error-retry', 'fehler'],
+      ['helfer-offline', 'needs-network', 'needs-network-verbinden', 'helfer'],
+    ] as const) {
+      test(`${fall} ${l.name}: Lage der Taste (${l.wo[was]})`, async ({ page }) => {
+        await richteEin(page, l, 'light');
+        await page.goto(`${HINWEISE_NEU}?fall=${fall}`);
+        const k = page.getByTestId(kasten);
+        await expect(k).toBeVisible();
+        await pruefeLage(k, k.locator('[data-hinweis="kopf"]'), k.getByTestId(taste), l.wo[was]);
+      });
+    }
+
+    test(`„Jetzt aktualisieren“ ${l.name}: nach der Frist steht der Satz am Hinweis, die Taste ist wieder frei und überschneidet nichts`, async ({ page }) => {
+      await richteEin(page, l, 'light');
+      await page.goto(`${HINWEISE}?fall=aktualisieren&frist=1500`);
+      const taste = page.getByTestId('toast-action');
+      await animationenFertig(page);
+      await taste.click();
+      await expect(taste).toBeDisabled(); // Arbeitsanzeige
+      await expect(page.getByTestId('toast-action-note')).toHaveText('Neue Fassung ist noch nicht da – bitte gleich noch einmal tippen.');
+      await expect(taste).toBeEnabled();
+      await expect(taste).toHaveText('Jetzt aktualisieren');
+      const [n, b] = [await rechteck(page.getByTestId('toast-action-note')), await rechteck(taste)];
+      expect(schneiden(n, b), 'Satz und Taste überschneiden sich nicht').toBe(false);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
     });
   }
 });

@@ -33,7 +33,7 @@ import { routeForStatus } from './scoreChangeHelpers';
 import { useResultEntryAck } from './useResultEntryAck';
 import { readEventAuthorNames } from '../../../core/repositories/eventAuthorNamesRpc';
 import { supabase } from '../../../lib/supabase';
-import { aktualisiereJetzt } from '../../../lib/jetztAktualisieren';
+import { aktualisiereJetzt, aktualisierenFrist } from '../../../lib/jetztAktualisieren';
 import type { ToastOptions } from '../../../components/ui/Toast';
 import { readForeignFieldHolder } from '../../../core/repositories/fieldControlStateRpc';
 import { getDeviceId } from '../../../core/device/deviceId';
@@ -176,7 +176,8 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
   /**
    * @OB-087 Zeile 4: der Hinweis „App aktualisieren“ trägt „Jetzt aktualisieren“ (Eilpfad des Neulade-Wegs, `aktualisiereJetzt`;
    * das Cockpit dagegen ruft `window.location.reload()`). Er steht nur einmal da (feste Kennung) und bleibt stehen: nach dem
-   * Tipp mit Arbeitsanzeige, bis die App neu lädt; blockiert das Tor (Gerät ist Hallen-Lautsprecher), mit dem Grund.
+   * Tipp mit Arbeitsanzeige, bis die App neu lädt, höchstens `AKTUALISIEREN_FRIST_MS`: findet sie keine neue Fassung, steht danach der Satz
+   * „Neue Fassung ist noch nicht da – bitte gleich noch einmal tippen.“ und die Taste ist frei; blockiert das Tor (Gerät ist Hallen-Lautsprecher), mit dem Grund.
    */
   const updateAction = useCallback((): ToastOptions => ({
     id: 'app-veraltet',
@@ -185,7 +186,7 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
       label: tCommon('outbox.notice.reloadNow'),
       onClick: () => (aktualisiereJetzt() === 'blockiert'
         ? { note: tCommon('outbox.notice.reloadBlocked') }
-        : { busyLabel: tCommon('loading.generic') }),
+        : { busyLabel: tCommon('loading.generic'), danach: aktualisierenFrist().then(() => ({ note: tCommon('outbox.notice.reloadNotYet') })) }),
     },
   }), [tCommon]);
 

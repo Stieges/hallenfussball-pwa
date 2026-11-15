@@ -16,6 +16,7 @@ import { safeLocalStorage } from '../../../core/utils/safeStorage';
 import { clearProfileCache } from '../services/profileCacheService';
 import { captureFeatureError, setUserContext as setSentryUserContext } from '../../../lib/sentry';
 import { isAuthApiError, isAuthRetryableFetchError } from '@supabase/supabase-js';
+import { loescheRueckkehr } from '../utils/loginRueckkehr';
 import { clearSignedOutElsewhere, isSessionRejectedByServer, markOwnSignOut } from './remoteSignOut';
 
 export interface LogoutOptions {
@@ -53,6 +54,7 @@ function cleanupLocal(deps: LogoutDeps): void {
     safeLocalStorage.removeItem(key);
   }
   void clearProfileCache();
+  loescheRueckkehr(); // @OB-087: der gemerkte Rückweg nach der Anmeldung gehört zum abgemeldeten Konto
   deps.setUser(null);
   setSentryUserContext(null);
   deps.setSession(null);

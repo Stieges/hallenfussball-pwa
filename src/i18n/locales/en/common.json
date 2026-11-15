@@ -229,6 +229,7 @@
       "clientOutdated": "Update the app",
       "reloadNow": "Update now",
       "reloadBlocked": "This device is currently the hall speaker. Reloading would stop the sound – please update after the match.",
+      "reloadNotYet": "The new version is not there yet – please tap again in a moment.",
       "authRequired": "Please sign in again",
       "notReady": "Game not ready yet (teams open)",
       "review": "$t(sport:outbox.awaitingReview) ({{count}})",

@@ -6,7 +6,7 @@
  * echten `useHallStatus`; nur der Server-Aufruf ist gefälscht, der Ton je Gerät kommt aus `useCockpitTon` (echter `localStorage`).
  * Daten wie im Mockup: Hallencup Süd, Feld 1, Spiel 11, FC Nord – SV Süd, 14:02; 2:1, 2. Halbzeit, Restzeit 4:32 (Fall `halbzeit`: Pause).
  * Nur Testumgebung, nicht Teil des Builds.
- * Aufruf: `?fall=kein-netz|lautsprecher-aus|ausgang-geaendert|halbzeit|anpfiff|uhr|dialog|admin|ohne|ton-aktivieren` (+ `&lang=en`, `&lang=de`).
+ * Aufruf: `?fall=kein-netz|lautsprecher-aus|ausgang-geaendert|halbzeit|anpfiff|uhr|dialog|admin|ohne|ton-aktivieren|kombi` (kombi: vor dem Anpfiff „Ton aktivieren“ UND „Uhr nicht abgeglichen“ untereinander; + `&lang=en`, `&lang=de`).
  */
 import ReactDOM from 'react-dom/client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -45,7 +45,7 @@ const MIN = 60_000;
 /** Zeitpunkt des Anpfiffs: 14:02 (Mockup). */
 const ANPFIFF = new Date(2026, 10, 21, 14, 2).getTime();
 const SERVER_JETZT = ANPFIFF + 30_000;
-const FAELLE = ['kein-netz', 'lautsprecher-aus', 'ausgang-geaendert', 'halbzeit', 'anpfiff', 'uhr', 'dialog', 'admin', 'ohne', 'ton-aktivieren'] as const;
+const FAELLE = ['kein-netz', 'lautsprecher-aus', 'ausgang-geaendert', 'halbzeit', 'anpfiff', 'uhr', 'dialog', 'admin', 'ohne', 'ton-aktivieren', 'kombi'] as const;
 type Fall = (typeof FAELLE)[number];
 /** Fälle mit Lautsprecher-Antwort der Leitung im Spiel (angepfiffen). */
 const LEITUNG_FAELLE: readonly Fall[] = ['kein-netz', 'lautsprecher-aus', 'ausgang-geaendert', 'halbzeit', 'anpfiff', 'ton-aktivieren'];
@@ -64,6 +64,7 @@ function lautsprecherAm(fall: Fall): Antwort | null {
     case 'ausgang-geaendert': return { state: 'ready', ageMs: 1000, hint: true };
     case 'halbzeit':
     case 'ton-aktivieren':
+    case 'kombi':
     case 'anpfiff': return { state: 'not_activated', ageMs: 1000, hint: false };
     case 'kein-netz':
     case 'uhr': return { state: 'ready', ageMs: 1000, hint: false };
@@ -112,7 +113,7 @@ function starteServerStand(fall: Fall): void {
 /** Baut Engine, Speicher und Spiel auf. Der Zeitstand ist fest (`jetzt.wert`), damit die Tafel in jedem Bild dasselbe zeigt. */
 async function baueKontext(fall: Fall, jetzt: { wert: number }): Promise<MatchEngineContextValue> {
   const store = new LocalMatchStore();
-  const abgeglichen = fall !== 'uhr';
+  const abgeglichen = fall !== 'uhr' && fall !== 'kombi';
   const clock = new ClockSync(
     () => Promise.resolve(jetzt.wert), () => jetzt.wert,
     { get: () => (abgeglichen ? JSON.stringify({ offsetMs: 0, measuredAt: 1 }) : null), set: () => undefined },
@@ -127,7 +128,7 @@ async function baueKontext(fall: Fall, jetzt: { wert: number }): Promise<MatchEn
   await engine.start(konto);
   await engine.ensureMatch(SPIEL, CTX, TID);
   const kontext = { engine, store, clock, sender, accountId: konto } as unknown as MatchEngineContextValue;
-  const imSpiel = !['anpfiff', 'uhr', 'admin'].includes(fall);
+  const imSpiel = !['anpfiff', 'uhr', 'kombi', 'admin'].includes(fall);
   if (imSpiel) {
     const befehle = new MatchCommands({ engine, store, sender: sender, accountId: konto });
     const regeln = serverRules({ durationMinutes: null, phase: null, groupPhaseDuration: 12, finalRoundDuration: null, config: { gamePeriods: 2, halftimeBreak: 1 }, finalsConfig: null });
@@ -183,10 +184,10 @@ export function Seite() {
     let abgebrochen = false;
     void baueKontext(fall, { wert: ANPFIFF }).then((k) => {
       if (abgebrochen) { return; }
-      if (LEITUNG_FAELLE.includes(fall) || fall === 'uhr' || fall === 'admin') { starteServerStand(fall); }
+      if (LEITUNG_FAELLE.includes(fall) || fall === 'uhr' || fall === 'kombi' || fall === 'admin') { starteServerStand(fall); }
       if (LEITUNG_FAELLE.includes(fall)) { starteLeitung(fall, k); }
       // @OB-087 Zeile 5: dieses Gerät ist selbst Hallen-Lautsprecher von Feld 1
-      if (fall === 'ton-aktivieren') { setzeEinschaltung({ turnierId: TID, felder: [1], name: 'Handy Tom' }); }
+      if (fall === 'ton-aktivieren' || fall === 'kombi') { setzeEinschaltung({ turnierId: TID, felder: [1], name: 'Handy Tom' }); }
       setKontext(k);
     });
     return () => { abgebrochen = true; };

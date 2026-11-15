@@ -185,6 +185,15 @@ describe('@OB-087 Zeile 5 – „Ton aktivieren“ am Kasten „Hallen-Lautsprec
     expect(screen.queryByTestId('cockpit-hall-aus')).toBeNull();
   });
 
+  it('@OB-087 Zeile 5: meldet das eigene Gerät „eigener Ton nicht ladbar“ (Hupe 1 tönt trotzdem), tritt der Kasten zurück – die Halle hört etwas', () => {
+    geraet.wert.rolle = 'diesesTurnier';
+    geraet.wert.felder = [1];
+    geraet.wert.laufzeit = { rolle: 'toent', zustandJeFeld: { 'field-1': 'custom_sound_failed' } };
+    setzeLeitung(leitung(stand('not_activated')));
+    zeige();
+    expect(screen.queryByTestId('cockpit-hall-aus')).toBeNull();
+  });
+
   // Gegenbeispiele: nur wenn dieses Gerät wirklich tönt, tritt der Kasten zurück (Review 🟡2)
   it.each([
     ['still', 'stehengebliebenes ready bei Rolle still'],

@@ -10,6 +10,7 @@ import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
 import type { ReactNode } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { AKTUALISIEREN_FRIST_MS } from '../../../../lib/jetztAktualisieren';
 import { act, renderHook } from '@testing-library/react';
 
 vi.unmock('i18next');
@@ -450,8 +451,25 @@ describe('Spiel beenden und Ergebnis eintragen (Spielplan)', () => {
     expect(options?.duration).toBe(0); // bleibt stehen, bis die Person schließt oder die App neu lädt
     expect(options?.id).toBe('app-veraltet');
     expect(sw.reload).not.toHaveBeenCalled();
-    expect(options?.action?.onClick()).toEqual({ busyLabel: 'Lade...' });
+    expect(options?.action?.onClick()).toEqual({ busyLabel: 'Lade...', danach: expect.any(Promise) });
     expect(sw.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('@OB-087 Frist: findet die App keine neue Fassung, meldet der Hinweis nach AKTUALISIEREN_FRIST_MS den Satz „Neue Fassung ist noch nicht da …“ (gefälschte Uhr); vorher nicht', async () => {
+    const options = await veralteterHinweis();
+    vi.useFakeTimers({ toFake: ['setTimeout'] });
+    try {
+      const ergebnis = options?.action?.onClick() as { busyLabel: string; danach: Promise<unknown> };
+      let fertig = false;
+      void ergebnis.danach.then(() => { fertig = true; });
+      await vi.advanceTimersByTimeAsync(AKTUALISIEREN_FRIST_MS - 1);
+      expect(fertig, 'vor Ablauf der Frist bleibt die Arbeitsanzeige').toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(fertig).toBe(true);
+      await expect(ergebnis.danach).resolves.toEqual({ note: 'Neue Fassung ist noch nicht da – bitte gleich noch einmal tippen.' });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('@OB-087 Zeile 4 Gegenbeispiel: ist das Gerät bereiter Hallen-Lautsprecher (das Tor blockt), stößt der Tipp nichts an und der Hinweis nennt den Grund statt der Arbeitsanzeige', async () => {

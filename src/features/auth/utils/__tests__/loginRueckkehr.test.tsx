@@ -3,7 +3,7 @@
  * derselbe Unterpunkt ‚Hallenton‘“. Erwartung aus dem Gherkin; dazu die Gegenbeispiele: nichts Fremdes, nur einmal, ohne Merker die Startseite.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { RUECKKEHR_FRIST_MS, RUECKKEHR_SCHLUESSEL, holeRueckkehr, istRueckkehrZiel, merkeRueckkehr } from '../loginRueckkehr';
+import { RUECKKEHR_FRIST_MS, RUECKKEHR_SCHLUESSEL, holeRueckkehr, istRueckkehrZiel, loescheRueckkehr, merkeRueckkehr } from '../loginRueckkehr';
 import { FalscherSpeicher } from '../../../../test/hallenton/falschesGeraet';
 
 const HALLENTON = '/tournament/hallencup-nord/admin/hallenton';
@@ -92,3 +92,21 @@ describe('@OB-087 Zeile 3 Rückkehr ins Cockpit des Felds', () => {
   });
 });
 
+
+describe('@OB-087 der gemerkte Rückweg gehört zum Konto, das ihn gemerkt hat', () => {
+  const COCKPIT = '/tournament/hallencup-nord/live?f=2';
+  it('loescheRueckkehr vergisst den Rückweg: nach dem Löschen führt die Anmeldung zur Startseite', () => {
+    merkeRueckkehr(COCKPIT);
+    loescheRueckkehr();
+    expect(window.localStorage.getItem(RUECKKEHR_SCHLUESSEL)).toBeNull();
+    expect(holeRueckkehr()).toBeNull();
+  });
+  it('Gegenbeispiel: ohne Löschen bleibt der Rückweg (Gast meldet sich an, Anmelden aus dem Cockpit)', () => {
+    merkeRueckkehr(COCKPIT);
+    expect(holeRueckkehr()).toBe(COCKPIT);
+  });
+  it('nichts wirft, wenn der Speicher gesperrt ist', () => {
+    vi.mocked(localStorage.removeItem).mockImplementation(() => { throw new Error('gesperrt'); });
+    expect(() => loescheRueckkehr()).not.toThrow();
+  });
+});
