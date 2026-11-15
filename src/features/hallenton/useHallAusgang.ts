@@ -12,6 +12,8 @@
  *   gespeicherte Wahl wieder, ohne neue Wahl. `false`, wenn das Mikrofon abgelehnt wird (dann bleibt es bei „Ausgang bestätigen“).
  * - `zustand`: `standard` | `ok` | `lost` (Ausgang verschwunden, @HT-054) | `unconfirmed` (@HT-055).
  * Name und Kennung verlassen das Gerät nie (nicht ins Lebenszeichen, nicht in Sentry, nicht in Logs).
+ * „Standard“ wählen und „Ausgang bestätigen“ ohne Wahl stoßen zusätzlich die anderen Tabs an (`pruefenAnstossen`): ein gescheiterter Wechsel auf „Standard“ lebt nur im Wächter des
+ * tönenden Tabs, und ohne gespeicherte Wahl löst `removeItem` kein `storage`-Ereignis aus (H4-11b). Das liest nichts und fragt kein Mikrofon.
  * Beim Einbinden liest der Hook nichts. Nach `lesen()` (Oberfläche: „Ändern“) liest der Wächter bei jedem `devicechange` neu mit (folgenlos, nur die Liste
  * wird aktuell), bis `lesenBeenden()` („Schließen“) – außer das Gerät hat eine gespeicherte Wahl, dann bleibt er wach.
  */
@@ -90,6 +92,7 @@ export function useHallAusgang(): HallAusgang {
     if (id === null || id === STANDARD_AUSGANG_ID) {
       const ok = wahl.setzen(null);
       waechter.standardErneut(); // ist ein früherer Wechsel auf „Standard“ gescheitert, versucht dieser Tipp ihn erneut
+      wahl.pruefenAnstossen(); // …auch im tönenden ANDEREN Tab: `removeItem` auf einen fehlenden Schlüssel löst kein `storage`-Ereignis aus (H4-11b)
       return ok;
     }
     const eintrag = waechter.liste().eintraege.find((e) => e.id === id);
@@ -98,10 +101,11 @@ export function useHallAusgang(): HallAusgang {
 
   const bestaetigen = useCallback(async (): Promise<boolean> => {
     const ton = tonAktivierenAmGeraet(); // `resume()` synchron in der Geste, vor dem ersten `await`
-    const { waechter } = browserAusgang();
+    const { waechter, wahl } = browserAusgang();
     if (waechter.wahl() === null) {
       // „Standard“ gewählt, der Wechsel dahin ist gescheitert (H4-11): kein Mikrofon nötig, ein Tipp versucht den Wechsel erneut
       waechter.standardErneut();
+      wahl.pruefenAnstossen(); // der Fehler lebt im Wächter des tönenden Tabs: dieser Tab muss ihn anstoßen (H4-11b)
       await ton;
       return true;
     }
