@@ -306,19 +306,13 @@ test.describe('Editiermodus 2.0 - Positiv-Tests', () => {
     await expect(fieldsDistributeButton).toBeVisible({ timeout: 3000 });
   });
 
-  test('View-Mode Toggle zeigt Tabelle/Grid Optionen', async ({ page }) => {
-    // GIVEN - Navigate to Spielplan
+  test('View-Mode Toggle zeigt Tabelle/Grid Optionen (@ZP-111: bei 1280 Bildpunkten und zwei Feldern)', async ({ page }) => {
+    // GIVEN - Navigate to Spielplan (Fenster 1280 × 720, zwei Felder)
     await navigateToSpielplan(page);
 
-    // THEN - View mode toggle buttons should be visible
-    const tabelleButton = page.getByRole('button', { name: t('tournament:toolbar.viewTable') }).first();
-    const gridButton = page.getByRole('button', { name: t('tournament:toolbar.viewGrid') }).first();
-
-    const hasTabelle = await tabelleButton.isVisible().catch(() => false);
-    const hasGrid = await gridButton.isVisible().catch(() => false);
-
-    // At least one of the view mode buttons should be visible
-    expect(hasTabelle || hasGrid).toBeTruthy();
+    // THEN - beide Tasten des Umschalters sind da (wartend, nicht nur ein Blick)
+    await expect(page.getByRole('button', { name: t('tournament:toolbar.viewTable') }).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('button', { name: t('tournament:toolbar.viewGrid') }).first()).toBeVisible({ timeout: 10000 });
   });
 });
 

@@ -68,9 +68,9 @@ const FAELLE: Fall[] = [
       await expect(page.getByRole('dialog')).toBeVisible();
       await page.waitForTimeout(600);
     },
+    // @ZP-111: der Dialog gehört zur Rasteransicht (Taste „Fehler / Warnungen“); die gibt es nur ab 1280 Bildpunkten, am Handy nicht mehr
     geraete: [
       { name: 'laptop-1280x720', width: 1280, height: 720, art: 'desktop', scrollt: true },
-      { name: 'handy-360x640', width: 360, height: 640, art: 'handy', scrollt: true },
     ],
   },
   {
