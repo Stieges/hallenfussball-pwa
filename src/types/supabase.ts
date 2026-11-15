@@ -18,11 +18,15 @@
  * 2026-11-08 (Hallenton Torhymne, Branch feat/hallenton-torhymne): nach dem Einspielen von 20261123_001 aus der Produktion
  * per Supabase-MCP (generate_typescript_types) erzeugt: Spalte hall_sound_settings.goal_anthem_paths und die Funktion
  * hall_goal_anthems_set. Damit wieder deckungsgleich mit der Produktion.
+ * 2026-11-15 (Hallenton Ausgang-Zustände, H4-3): hall_speaker_unassign von Hand ergänzt (nach dem Muster der erzeugten Einträge) -- bis zum
+ * Einspielen von 20261125_001 in der Produktion meldet der Typ-Drift-Check genau diese Zeilen; danach neu erzeugen.
  * NICHT MANUELL BEARBEITEN!
  *
  * Regenerieren mit:
  * npx supabase gen types typescript --project-id amtlqicosscsjnnthvzm > src/types/supabase.ts
  * (Kopf danach wieder voranstellen — der Drift-Check blendet ihn beidseitig aus.)
+ * 2026-11-24 (Zuschauer-Zaehlung, PR #535, @RZ-024): nach dem Einspielen von 20261124_003 und 20261125_001 aus der Produktion per Supabase-MCP
+ * (generate_typescript_types) neu erzeugt.
  */
 export type Json =
   | string
@@ -1305,6 +1309,44 @@ export type Database = {
         }
         Relationships: []
       }
+      public_view_counts: {
+        Row: {
+          channel: string
+          device_class: string
+          heartbeats: number
+          installed: boolean
+          tournament_id: string
+          views: number
+          window_start: string
+        }
+        Insert: {
+          channel: string
+          device_class: string
+          heartbeats?: number
+          installed: boolean
+          tournament_id: string
+          views?: number
+          window_start: string
+        }
+        Update: {
+          channel?: string
+          device_class?: string
+          heartbeats?: number
+          installed?: boolean
+          tournament_id?: string
+          views?: number
+          window_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_view_counts_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       revoked_device_contacts: {
         Row: {
           first_contact_at: string
@@ -2373,6 +2415,10 @@ export type Database = {
           p_fields: number[]
           p_tournament_id: string
         }
+        Returns: Json
+      }
+      hall_speaker_unassign: {
+        Args: { p_fields: number[]; p_tournament_id: string }
         Returns: Json
       }
       hall_test_tone_ack: {
