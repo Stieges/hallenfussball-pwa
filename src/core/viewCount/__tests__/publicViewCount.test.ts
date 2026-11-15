@@ -23,35 +23,48 @@ describe('@RZ-024 Kanal aus dem Adresszusatz', () => {
   });
 });
 
-describe('@RZ-024 Geräteart aus der kürzeren Bildschirmseite und dem Zeiger', () => {
-  // [Gerät, Breite, Höhe, Finger als Hauptbedienung, Geräteart]
+describe('@RZ-024 Geräteart aus der Hauptbedienung und der kürzeren Bildschirmseite', () => {
+  // Regel: feiner Zeiger (Maus/Touchpad) → groß, auch bei hoher Skalierung; sonst kürzere Seite < 600 → Handy;
+  // sonst grober Zeiger (Finger) → Tablet; weder fein noch grob (TV, Kiosk, unbekannt) und ≥ 600 → groß (kein Touch-Gerät).
+  const umgebung = (breite: number, hoehe: number, zeiger: 'fine' | 'coarse' | 'keiner') => ({
+    screenWidth: breite,
+    screenHeight: hoehe,
+    matchMedia: (q: string) => ({ matches: (zeiger === 'fine' && q === '(pointer: fine)') || (zeiger === 'coarse' && q === '(pointer: coarse)') }),
+  });
+  // [Gerät, Breite, Höhe, Hauptbedienung, Geräteart]
   it.each([
-    ['iPhone hoch', 390, 844, true, 'handy'],
-    ['iPhone quer', 844, 390, true, 'handy'],
-    ['großes Android hoch', 412, 915, true, 'handy'],
-    ['großes Android quer', 915, 412, true, 'handy'],
-    ['iPad hoch', 768, 1024, true, 'tablet'],
-    ['iPad quer', 1024, 768, true, 'tablet'],
-    ['iPad Air hoch', 820, 1180, true, 'tablet'],
-    ['iPad Air quer', 1180, 820, true, 'tablet'],
-    ['Laptop 1280×720 mit Maus', 1280, 720, false, 'gross'],
-    ['Laptop 1366×768 mit Maus', 1366, 768, false, 'gross'],
-    ['Desktop 1920×1080', 1920, 1080, false, 'gross'],
-  ] as const)('%s (%i×%i, Finger: %s) → %s', (_geraet, breite, hoehe, finger, art) => {
-    expect(deviceClassFromEnvironment({
-      screenWidth: breite, screenHeight: hoehe, matchMedia: (q) => ({ matches: finger && q === '(pointer: coarse)' }),
-    })).toBe(art);
+    ['iPhone hoch', 390, 844, 'coarse', 'handy'],
+    ['iPhone quer', 844, 390, 'coarse', 'handy'],
+    ['großes Android hoch', 412, 915, 'coarse', 'handy'],
+    ['großes Android quer', 915, 412, 'coarse', 'handy'],
+    ['iPad hoch', 768, 1024, 'coarse', 'tablet'],
+    ['iPad quer', 1024, 768, 'coarse', 'tablet'],
+    ['iPad Air hoch', 820, 1180, 'coarse', 'tablet'],
+    ['iPad Air quer', 1180, 820, 'coarse', 'tablet'],
+    ['Laptop 1280×720 mit Maus', 1280, 720, 'fine', 'gross'],
+    ['Laptop 1366×768 mit Maus', 1366, 768, 'fine', 'gross'],
+    ['Windows-Laptop 150 % Skalierung 853×533', 853, 533, 'fine', 'gross'],
+    ['Windows-Laptop 200 % Skalierung 960×540', 960, 540, 'fine', 'gross'],
+    ['Desktop 1920×1080', 1920, 1080, 'fine', 'gross'],
+    ['weder fein noch grob, kürzere Seite 539 (z. B. kleines Gerät ohne Angabe)', 960, 539, 'keiner', 'handy'],
+    ['weder fein noch grob, kürzere Seite 600 (z. B. TV, Kiosk)', 1920, 1080, 'keiner', 'gross'],
+  ] as const)('%s (%i×%i, Bedienung: %s) → %s', (_geraet, breite, hoehe, zeiger, art) => {
+    expect(deviceClassFromEnvironment(umgebung(breite, hoehe, zeiger))).toBe(art);
   });
 
-  it('Grenze: kürzere Seite 599 → Handy, 600 → nach Zeiger', () => {
-    expect(deviceClassFromScreen(599, false)).toBe('handy');
-    expect(deviceClassFromScreen(600, true)).toBe('tablet');
-    expect(deviceClassFromScreen(600, false)).toBe('gross');
+  it('Grenze: kürzere Seite 599 → Handy, 600 → nach Zeiger; feiner Zeiger schlägt die Seite', () => {
+    expect(deviceClassFromScreen(599, 'coarse')).toBe('handy');
+    expect(deviceClassFromScreen(599, 'unknown')).toBe('handy');
+    expect(deviceClassFromScreen(599, 'fine')).toBe('gross');
+    expect(deviceClassFromScreen(600, 'coarse')).toBe('tablet');
+    expect(deviceClassFromScreen(600, 'unknown')).toBe('gross');
+    expect(deviceClassFromScreen(600, 'fine')).toBe('gross');
   });
 
   it('Gegenbeispiel: nichts lesbar (keine Maße, werfende matchMedia) → groß, kein Fehler', () => {
     expect(deviceClassFromEnvironment({})).toBe('gross');
     expect(deviceClassFromEnvironment({ screenWidth: 800, screenHeight: 1200, matchMedia: () => { throw new Error('x'); } })).toBe('gross');
+    expect(deviceClassFromEnvironment({ screenWidth: 390, screenHeight: 844, matchMedia: () => { throw new Error('x'); } })).toBe('handy');
   });
 });
 

@@ -41,12 +41,12 @@ beforeEach(() => {
   gesendet = anzeigeAus();
   sichtbar = true; bildschirm = { breite: 390, hoehe: 844 }; finger = true; standalone = false; navStandalone = undefined;
   Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => (sichtbar ? 'visible' : 'hidden') });
-  // Die Geräteart kommt aus der kürzeren Bildschirmseite und dem Zeiger; die Fensterbreite zählt bewusst nicht (Gegenprobe: innerWidth 1440).
+  // Die Geräteart kommt aus der Hauptbedienung (fein = Maus/Touchpad → groß) und der kürzeren Bildschirmseite; die Fensterbreite zählt bewusst nicht (Gegenprobe: innerWidth 1440).
   Object.defineProperty(window, 'innerWidth', { configurable: true, get: () => 1440 });
   Object.defineProperty(window, 'screen', { configurable: true, value: { get width() { return bildschirm.breite; }, get height() { return bildschirm.hoehe; } } });
   Object.defineProperty(window, 'matchMedia', {
     configurable: true,
-    value: (q: string) => ({ matches: (standalone && q === '(display-mode: standalone)') || (finger && q === '(pointer: coarse)') }),
+    value: (q: string) => ({ matches: (standalone && q === '(display-mode: standalone)') || (finger && q === '(pointer: coarse)') || (!finger && q === '(pointer: fine)') }),
   });
   Object.defineProperty(navigator, 'standalone', { configurable: true, get: () => navStandalone });
 });
@@ -60,6 +60,7 @@ describe('@RZ-024 Jedes Öffnen wird als Summe gezählt – Beispielzeilen', () 
     ['/live/NIKO26?k=irgendwas', 'Tablet im Browser', () => { bildschirm = { breite: 820, hoehe: 1180 }; }, 'direkt', 'tablet', false],
     ['/live/NIKO26', 'Handy im Querformat (844×390)', () => { bildschirm = { breite: 844, hoehe: 390 }; }, 'direkt', 'handy', false],
     ['/live/NIKO26', 'iPad im Querformat (1024×768)', () => { bildschirm = { breite: 1024, hoehe: 768 }; }, 'direkt', 'tablet', false],
+    ['/live/NIKO26', 'Windows-Laptop mit 150 % Skalierung (853×533, feiner Zeiger)', () => { bildschirm = { breite: 853, hoehe: 533 }; finger = false; }, 'direkt', 'gross', false],
     ['/live/NIKO26', 'Laptop 1366×768 mit Maus', () => { bildschirm = { breite: 1366, hoehe: 768 }; finger = false; }, 'direkt', 'gross', false],
     ['/live/NIKO26', 'iPhone-App über navigator.standalone', () => { navStandalone = true; }, 'direkt', 'handy', true],
   ];
