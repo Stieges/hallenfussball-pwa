@@ -1,6 +1,6 @@
 /**
  * E2E (G3-N, Regel T2-UI): @ZP-115 Im Raster lässt sich ein Spiel nicht auf einen freien Platz der anderen Phase ziehen
- * (Gruppenspiel nicht neben das Finale, Finalspiel nicht in die Gruppenphase); innerhalb der eigenen Phase geht es.
+ * (geprüft: Gruppenspiel nicht neben das Halbfinale der Finalrunde; die Gegenrichtung deckt Vitest ab); innerhalb der eigenen Phase geht es.
  * Dazu @ZP-111: Wird das Fenster im Bearbeiten-Modus des Rasters schmaler, zeigt der Spielplan die Liste, der Entwurf bleibt
  * („1 Änderung nicht gespeichert“) und die Liste lässt sich bedienen. Offline (Gast = Turnierleitung), 1280×720.
  *
@@ -60,7 +60,8 @@ async function ziehe(page: Page, vonNr: number, ziel: { x: number; y: number }) 
 }
 
 test.describe('@ZP-115 Raster: freie Plätze der anderen Phase sind gesperrt', () => {
-  test.beforeEach(async ({ page, seedIndexedDB }) => {
+  test.beforeEach(async ({ page, seedIndexedDB }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop', 'setzt die Fenstergröße selbst (1280 px) – Handy- und Tablet-Projekte bringen keine zusätzliche Aussage');
     await seedIndexedDB({ tournaments: [turnier()] });
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto(`/#/tournament/${ID}/schedule`);
