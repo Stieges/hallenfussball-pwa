@@ -34,6 +34,8 @@ export interface LautsprecherFeldKarteProps {
   geraet?: FeldGeraet;
   /** Zusatz neben dem Zustand (z. B. die Pille „Prüfen“). */
   pille?: ReactNode;
+  /** Unter dem Gerät: die Rückfrage „Gehört?“ und die Prüfpunkte nach „🔈? Prüfen“ (H4-11). */
+  extra?: ReactNode;
   'data-testid'?: string;
 }
 
@@ -72,7 +74,7 @@ const geraetStil: CSSProperties = { display: 'flex', alignItems: 'center', gap: 
 const nameStil: CSSProperties = { color: cssVars.colors.textPrimary, fontWeight: cssVars.fontWeights.semibold };
 const hinweisStil: CSSProperties = { margin: 0, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm, lineHeight: cssVars.lineHeights.bodySm };
 
-export function LautsprecherFeldKarte({ feld, zustand, geraet, pille, 'data-testid': testId = `lautsprecher-feld-${feld}` }: LautsprecherFeldKarteProps): ReactElement {
+export function LautsprecherFeldKarte({ feld, zustand, geraet, pille, extra, 'data-testid': testId = `lautsprecher-feld-${feld}` }: LautsprecherFeldKarteProps): ReactElement {
   const { t } = useTranslation('hallenton');
   const aussehen = AUSSEHEN[zustand.art];
   const text = zustandText(zustand, t);
@@ -93,6 +95,7 @@ export function LautsprecherFeldKarte({ feld, zustand, geraet, pille, 'data-test
           </span>
         </div>
       ) : null}
+      {extra}
       {zustand.art === 'keinLautsprecher' ? <p style={hinweisStil}>{t('feld.keinLautsprecherHinweis')}</p> : null}
     </article>
   );

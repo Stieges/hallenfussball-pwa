@@ -97,3 +97,23 @@ describe('@HT-033 Zeile 8 anderes Fenster tönt: ruhig, nicht „nicht bereit“
     expect(k[0]).toMatchObject({ zustand: { art: 'bereit' }, anderesFenster: true });
   });
 });
+
+describe('@HT-039 (H4-11) die Gründe „Ausgang verloren“ und „Ausgang bestätigen“', () => {
+  it.each([
+    ['output_lost', 'ausgangVerloren'],
+    ['output_unconfirmed', 'ausgangBestaetigen'],
+  ] as const)('Server meldet %s auf einem anderen Gerät → im Unterpunkt der Grund %s', (state, grund) => {
+    const k = karten({ 1: lage(state, 2000) });
+    expect(k[0]?.zustand).toEqual({ art: 'nichtBereit', grund });
+  });
+
+  it.each([
+    ['output_lost', 'ausgangVerloren'],
+    ['output_unconfirmed', 'ausgangBestaetigen'],
+  ] as const)('eigenes Gerät im lokalen Zustand %s → derselbe Grund, sofort, ohne auf den Server zu warten', (state, grund) => {
+    const k = karten({ 1: lage('ready', 2000) }, { eigenerName: 'Laptop Turnierleitung', lokalerZustand: { 'field-1': state } }, {
+      lokal: { felder: [1], rolle: 'toent', zustandJeFeld: { 'field-1': state } },
+    });
+    expect(k[0]?.zustand).toEqual({ art: 'nichtBereit', grund });
+  });
+});

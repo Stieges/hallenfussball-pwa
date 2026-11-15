@@ -24,6 +24,8 @@ import { AnhoerenRueckfrageDialog } from './AnhoerenRueckfrageDialog';
 import { useAnhoeren } from './useAnhoeren';
 import { useAnhoerenRueckfrage, type AnhoerenRueckfrage } from './useAnhoerenRueckfrage';
 import { TesttonAbschnitt } from './TesttonAbschnitt';
+import { TesttonHalleKontext } from './TesttonHalleKontext';
+import { useTesttonHalle } from './useTesttonHalle';
 
 export interface HallentonSeiteProps {
   tournamentId: string;
@@ -63,7 +65,7 @@ export function HallentonSeite({ tournamentId, felderAnzahl, seitenleisteBreite 
 export interface HallentonSeiteAnsichtProps {
   karten: readonly FeldKarte[];
   keinLautsprecherImTurnier: boolean;
-  status: Pick<HallStatus, 'stand' | 'antwort' | 'testtonAnfordern'>;
+  status: Pick<HallStatus, 'stand' | 'antwort' | 'testtonAnfordern' | 'gehoert'>;
   /** `useCan('manageScreens')` ohne Ausnahme: nach dem Turnierende falsch, dann steht nur der Status. */
   darfAendern: boolean;
   abgeschlossen: boolean;
@@ -83,7 +85,9 @@ export interface HallentonSeiteAnsichtProps {
 export function HallentonSeiteAnsicht({ karten, keinLautsprecherImTurnier, status, darfAendern, abgeschlossen, hierAnhoeren, hierHinweis = null, geraetName, rueckfrage, geraet = null, geraetOben = false }: HallentonSeiteAnsichtProps): ReactElement {
   const { t } = useTranslation('hallenton');
   const keinNetz = status.stand === 'unbekannt';
+  const testton = useTesttonHalle(karten, status, rueckfrage); // einmal je Seite: Taste, Empfehlung nach der Wahl und „🔈? Prüfen“ teilen Auftrag und Quittung
   return (
+    <TesttonHalleKontext.Provider value={testton}>
     <div style={seiteStil} data-testid="hallenton-seite">
       {abgeschlossen ? <TournamentClosedHint live data-testid="hallenton-abgeschlossen" /> : null}
       {keinNetz ? (
@@ -93,10 +97,11 @@ export function HallentonSeiteAnsicht({ karten, keinLautsprecherImTurnier, statu
         </InlineNotice>
       ) : null}
       {geraetOben ? geraet : null}
-      <FeldKartenAbschnitt karten={karten} keinLautsprecherImTurnier={keinLautsprecherImTurnier && status.stand === 'aktuell'} />
-      {darfAendern ? <TesttonAbschnitt karten={karten} status={status} hierAnhoeren={hierAnhoeren} hierHinweis={hierHinweis} geraetName={geraetName} rueckfrage={rueckfrage} /> : null}
+      <FeldKartenAbschnitt karten={karten} keinLautsprecherImTurnier={keinLautsprecherImTurnier && status.stand === 'aktuell'} testton={testton} status={status} darfAendern={darfAendern} />
+      {darfAendern ? <TesttonAbschnitt karten={karten} status={status} hierAnhoeren={hierAnhoeren} hierHinweis={hierHinweis} geraetName={geraetName} testton={testton} /> : null}
       {geraetOben ? null : geraet}
       <AnhoerenRueckfrageDialog frage={rueckfrage.frage} onJa={rueckfrage.ja} onNein={rueckfrage.nein} />
     </div>
+    </TesttonHalleKontext.Provider>
   );
 }

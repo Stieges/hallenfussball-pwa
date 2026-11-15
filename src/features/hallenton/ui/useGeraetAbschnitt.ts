@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { useTranslation } from 'react-i18next';
 import type { HallFehlerGrund } from '../../../core/repositories/hallentonRpc';
 import type { HallentonDaten } from '../useHallentonDaten';
+import { useHallAusgang, type HallAusgang } from '../useHallAusgang';
 import { ladeTurnierLokal } from '../lokalesTurnier';
 import { abonniereInstallAngebot, installAngebotVorhanden, installiereApp, starteInstallAngebot } from '../runtime/installAngebot';
 import { baueGeraetBanner, type GeraetBanner } from './geraetBanner';
@@ -41,6 +42,8 @@ export interface GeraetAbschnitt {
   angehaltenBestaetigen: () => void;
   /** Regler „Lautstärke dieses Geräts“ (@HT-023): nur, wenn dieses Gerät Lautsprecher ist; sonst `null`. */
   regler: LautstaerkeReglerProps | null;
+  /** Die Zeile „Ausgang“ (H4-11): in jedem Zustand mit Lautsprecher-Gerät (G8); sonst `null`. Der Hook liest beim Einbinden nichts. */
+  ausgang: HallAusgang | null;
   felder: readonly number[];
   gewaehlt: readonly number[];
   an: boolean;
@@ -81,6 +84,7 @@ interface OffenerWechsel { felder: readonly number[]; turnierName: string | null
 export function useGeraetAbschnitt({ daten, felderAnzahl, darfAendern, anhoeren }: GeraetAbschnittEingabe): GeraetAbschnitt {
   const { t } = useTranslation('hallenton');
   const { lautsprecher, anzeige, karten, status, keinLautsprecherImTurnier } = daten;
+  const ausgang = useHallAusgang();
   const standardName = istHandy() ? t('geraet.standardNameHandy') : t('geraet.standardNameLaptop');
   const [vorgemerkt, setVorgemerkt] = useState(false);
   const [name, setName] = useState(() => lautsprecher.name ?? gespeicherterGeraetename() ?? standardName);
@@ -204,6 +208,7 @@ export function useGeraetAbschnitt({ daten, felderAnzahl, darfAendern, anhoeren 
     regler: istLautsprecher
       ? { lautstaerke, gesperrt: !darfAendern, onLautstaerke: setzeLautstaerke, onAnhoeren: (art) => anhoeren.anhoeren(art, 'regler'), hinweis: anhoeren.hinweis }
       : null,
+    ausgang: istLautsprecher ? ausgang : null,
     felder, gewaehlt, an: istLautsprecher || vorgemerkt, name, setzeName: setName, nameVerlassen, schalterUmlegen, feldUmschalten,
     beschaeftigt, fehler, handy: istHandy(), installiert: laeuftAlsApp(), installAngebot, installieren: () => { void installiereApp(); },
     schalterErledigt: istLautsprecher, tonErledigt: istLautsprecher && eigeneAnzeige.some((f) => f.anzeige.art === 'bereit'),

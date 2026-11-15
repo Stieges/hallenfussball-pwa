@@ -9,7 +9,7 @@ import type { Page } from '@playwright/test';
 import { test, expect } from './helpers/test-fixtures';
 import { GERAETE, hartBefunde, speichereBild } from './helpers/hallentonPruefstand';
 
-const FAELLE = ['kein-netz', 'lautsprecher-aus', 'ausgang-geaendert', 'halbzeit', 'anpfiff', 'uhr'] as const;
+const FAELLE = ['kein-netz', 'lautsprecher-aus', 'ausgang-geaendert', 'ausgang-verloren', 'halbzeit', 'anpfiff', 'uhr'] as const;
 type Fall = (typeof FAELLE)[number];
 const KASTEN: Record<Fall, { id: string; text: RegExp }> = {
   'kein-netz': { id: 'cockpit-hall-kein-netz', text: /Kein Netz – Halle zeigt alten Stand/ },
@@ -17,6 +17,7 @@ const KASTEN: Record<Fall, { id: string; text: RegExp }> = {
   anpfiff: { id: 'cockpit-hall-aus', text: /Hallen-Lautsprecher aus – Ende selbst anzeigen\s*Grund: Ton nicht aktiviert/ },
   halbzeit: { id: 'cockpit-hall-aus', text: /Hallen-Lautsprecher aus – Ende selbst anzeigen\s*Grund: Ton nicht aktiviert/ },
   'ausgang-geaendert': { id: 'cockpit-hall-ausgang-geaendert', text: /Hallenton-Ausgang geändert/ },
+  'ausgang-verloren': { id: 'cockpit-hall-aus', text: /Hallen-Lautsprecher aus – Ende selbst anzeigen\s*Grund: Ausgang verloren/ }, // H4-11, @HT-039
   uhr: { id: 'cockpit-hall-uhr', text: /Uhr nicht abgeglichen – Hallenton kann abweichen/ },
 };
 /** Vor dem Anpfiff: das Spiel ist noch nicht angepfiffen (Kasten kommt aus dem Server-Stand, @HT-039). */

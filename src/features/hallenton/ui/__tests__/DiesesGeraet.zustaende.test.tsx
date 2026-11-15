@@ -402,3 +402,30 @@ describe('@HT-023 jede Taste hat ihre eigene Zeile', () => {
     expect(screen.queryByTestId('testton-hier-hinweis')).toBeNull();
   });
 });
+
+describe('@HT-039 (H4-11) „Ausgang verloren“ und „Ausgang bestätigen“ am eigenen Gerät', () => {
+  it.each([
+    ['output_lost', 'Grund: Ausgang verloren', 'nicht bereit – Ausgang verloren'],
+    ['output_unconfirmed', 'Grund: Ausgang bestätigen', 'nicht bereit – Ausgang bestätigen'],
+  ] as const)('%s → groß „Lautsprecher nicht bereit“ mit „%s“, die Karte von Feld 1 nennt „%s“; die Sperre bleibt (Rolle „tönt“), keine Fußleiste „Ton aktivieren“', (zustand, grund, karte) => {
+    doppel.lautsprecher = eigenerLautsprecher(zustand, 'toent');
+    render(seite());
+    expect(zustandsBanner()).toHaveTextContent('Lautsprecher nicht bereit');
+    expect(zustandsBanner()).toHaveTextContent(grund);
+    expect(zustandsBanner()).toHaveAttribute('data-ton', 'warn');
+    expect(screen.getByTestId('lautsprecher-feld-1-zustand')).toHaveTextContent(karte);
+    expect(screen.queryByTestId('hallenton-fussleiste')).toBeNull();
+  });
+
+  it('die Zeile „Ausgang“ steht in jedem Zustand mit Lautsprecher-Gerät (G8): bereit, nicht aktiviert, Lautstärke 0 %, schlafen gelegt – und nicht, wenn dieses Gerät kein Lautsprecher ist', () => {
+    for (const zustand of ['ready', 'not_activated', 'volume_zero', 'slept'] as const) {
+      doppel.lautsprecher = eigenerLautsprecher(zustand);
+      const { unmount } = render(seite());
+      expect(screen.getByTestId('ausgang-zeile'), zustand).toBeInTheDocument();
+      unmount();
+    }
+    doppel.lautsprecher = lautsprecherDoppel();
+    render(seite());
+    expect(screen.queryByTestId('ausgang-zeile')).toBeNull();
+  });
+});

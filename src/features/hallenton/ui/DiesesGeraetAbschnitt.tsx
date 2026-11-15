@@ -12,6 +12,7 @@ import { cssVars } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
 import { InlineNotice } from '../../../components/ui/molecules/InlineNotice';
 import type { GeraetAbschnitt } from './useGeraetAbschnitt';
+import { AusgangZeile } from './AusgangZeile';
 import { AnleitungSchlafenlegen } from './AnleitungSchlafenlegen';
 import { erkenneBrowser } from './browserErkennung';
 import { EinrichtungSchritte } from './EinrichtungSchritte';
@@ -113,6 +114,7 @@ export function DiesesGeraetAbschnitt({ abschnitt: a, darfAendern, leisteLinks =
           <div style={kastenStil}>
             <Banner abschnitt={{ ...a, banner: sichtbareBanner }} />
             {darfAendern ? schalter(true) : <p style={textStil} data-testid="geraet-gesperrt">{t('geraet.gesperrt')}</p>}
+            {a.ausgang === null ? null : <AusgangZeile ausgang={a.ausgang} darfAendern={darfAendern} felder={a.gewaehlt} />}
             <LaeuftAls installiert={a.installiert} />
             {a.regler === null ? null : <LautstaerkeRegler {...a.regler} />}
           </div>

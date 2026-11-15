@@ -6,7 +6,7 @@
  * - Hat die Verwaltung selbst kein Netz (`statusUnbekannt`), steht bei fremden Feldern „Status unbekannt“ statt eines alten „bereit“
  *   (@HT-041); am eigenen Gerät gilt der lokale Zustand weiter (G7).
  * - Im Unterpunkt stehen die Gründe (@HT-039: auf anderen Geräten nur die Pille, hier der Grund); die Gründe „Ausgang verloren“ und
- *   „Ausgang bestätigen“ kennt die Karte schon, ihre Quelle liefert H4-6.
+ *   „Ausgang bestätigen“ kommen seit H4-11 vom Server (`output_lost`, `output_unconfirmed`) und vom eigenen Gerät.
  * - Das Gerät des Lautsprechers kennt nur die volle Sicht; die Art des Geräts (Laptop/Monitor/Handy) meldet der Server nicht, die Karte
  *   zeigt das Laptop-Symbol.
  */
@@ -53,6 +53,8 @@ const SERVER_GRUND: Record<string, FeldGrund | undefined> = {
   background: 'hintergrund',
   slept: 'schlafenGelegt',
   volume_zero: 'lautstaerkeNull',
+  output_lost: 'ausgangVerloren', // H4-11 (@HT-039): die Gründe aus der Wahl des Ausgangs (@HT-054, @HT-055)
+  output_unconfirmed: 'ausgangBestaetigen',
 };
 
 const LOKAL_GRUND: Partial<Record<LokalerZustand, FeldGrund>> = {
@@ -60,6 +62,8 @@ const LOKAL_GRUND: Partial<Record<LokalerZustand, FeldGrund>> = {
   background: 'hintergrund',
   slept: 'schlafenGelegt',
   volume_zero: 'lautstaerkeNull',
+  output_lost: 'ausgangVerloren',
+  output_unconfirmed: 'ausgangBestaetigen',
   keineVerbindung: 'keineVerbindung',
 };
 

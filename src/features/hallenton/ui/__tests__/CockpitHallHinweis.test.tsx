@@ -43,7 +43,7 @@ function leitung(stand: LeitungStand | null, o: { gescheitert?: boolean; jetzt?:
   };
 }
 const stand = (speaker: LeitungStand['speaker']): LeitungStand => ({ status: 'ok', speaker, serverNow: SERVER_JETZT, empfangenUm: 900 });
-const lautsprecher = (state: 'ready' | 'not_activated' | 'background' | 'slept' | 'volume_zero' | 'custom_sound_failed', o: { ageMs?: number; hint?: boolean } = {}) =>
+const lautsprecher = (state: 'ready' | 'not_activated' | 'background' | 'slept' | 'volume_zero' | 'custom_sound_failed' | 'output_lost' | 'output_unconfirmed', o: { ageMs?: number; hint?: boolean } = {}) =>
   stand({ state, ageMs: o.ageMs ?? 2000, outputHint: o.hint ?? false });
 
 function zeige(o: { zustand?: CockpitZustand; feldId?: string | null; kannSteuern?: boolean } = {}) {
@@ -64,6 +64,8 @@ describe('@HT-039 Spalte Cockpit – Kasten „Hallen-Lautsprecher aus – Ende 
     ['Hintergrund', lautsprecher('background'), 'Grund: Hintergrund'],
     ['schlafen gelegt', lautsprecher('slept'), 'Grund: schlafen gelegt'],
     ['Lautstärke 0 %', lautsprecher('volume_zero'), 'Grund: Lautstärke 0 %'],
+    ['Ausgang verloren (H4-11, @HT-039)', lautsprecher('output_lost'), 'Grund: Ausgang verloren'],
+    ['Ausgang bestätigen (H4-11, @HT-039)', lautsprecher('output_unconfirmed'), 'Grund: Ausgang bestätigen'],
   ];
   for (const [name, s, grund] of FAELLE) {
     it(`${name}: Titel und „${grund}“`, () => {
@@ -198,6 +200,8 @@ describe('@HT-039 Kasten schon vor dem Anpfiff – aus dem Server-Stand, solange
     ['Hintergrund', { art: 'nichtBereit', grund: 'background', pruefen: false }, 'Grund: Hintergrund'],
     ['schlafen gelegt', { art: 'nichtBereit', grund: 'slept', pruefen: false }, 'Grund: schlafen gelegt'],
     ['Lautstärke 0 %', { art: 'nichtBereit', grund: 'volume_zero', pruefen: false }, 'Grund: Lautstärke 0 %'],
+    ['Ausgang verloren', { art: 'nichtBereit', grund: 'output_lost', pruefen: false }, 'Grund: Ausgang verloren'],
+    ['Ausgang bestätigen', { art: 'nichtBereit', grund: 'output_unconfirmed', pruefen: false }, 'Grund: Ausgang bestätigen'],
   ];
   for (const [name, lage, grund] of GRUENDE) {
     it(`vor dem Anpfiff, ${name}: Titel und „${grund}“ – Kopfzeile und Cockpit zeigen es schon vor dem Anpfiff`, () => {
@@ -215,7 +219,6 @@ describe('@HT-039 Kasten schon vor dem Anpfiff – aus dem Server-Stand, solange
     expect(screen.getByTestId(GRUND_KASTEN)).toHaveTextContent('Grund: meldet sich nicht (zuletzt 14:02)');
   });
 
-  it.todo('@HT-039 „Ausgang verloren“ und „Ausgang bestätigen“ als Grund im Kasten – wartet auf H4-11 (der Server kennt die Zustände noch nicht)');
 
   it('@HT-039 pfeift Tom trotzdem an: Zustand läuft ohne Stand der Leitung → Kasten aus dem Server-Stand; kommt der Stand der Leitung, bleibt der Kasten ohne Lücke', () => {
     serverStand({ 1: { art: 'nichtBereit', grund: 'not_activated', pruefen: false } });

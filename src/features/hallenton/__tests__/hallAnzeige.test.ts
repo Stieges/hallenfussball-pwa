@@ -36,6 +36,10 @@ describe('@HT-012 @HT-011 @HT-037 am eigenen Gerät gilt der lokale Zustand, mit
     expect(hallAnzeige(eingabe({ lokal: lokal('background') })).felder[0]?.anzeige).toEqual({ art: 'nichtBereit' });
     expect(hallAnzeige(eingabe({ lokal: lokal('volume_zero') })).felder[0]?.anzeige).toEqual({ art: 'nichtBereit' });
   });
+  it('@HT-039 (H4-11) „Ausgang verloren“ und „Ausgang bestätigen“ am eigenen Gerät: wie Hintergrund nur die Pille „nicht bereit“ (der Grund steht im Unterpunkt und im Cockpit, nicht in der Kopfzeile)', () => {
+    expect(hallAnzeige(eingabe({ lokal: lokal('output_lost', 'toent') })).felder[0]?.anzeige).toEqual({ art: 'nichtBereit' });
+    expect(hallAnzeige(eingabe({ lokal: lokal('output_unconfirmed', 'toent') })).felder[0]?.anzeige).toEqual({ art: 'nichtBereit' });
+  });
   it('@HT-033 Zeile 8: hält ein anderes Fenster die Sperre, steht „läuft schon in einem anderen Fenster“', () => {
     expect(hallAnzeige(eingabe({ lokal: lokal('ready', 'andererTab') })).felder[0]?.anzeige).toEqual({ art: 'anderesFenster' });
   });
@@ -50,7 +54,7 @@ describe('@HT-012 @HT-011 @HT-037 am eigenen Gerät gilt der lokale Zustand, mit
 });
 
 describe('@HT-039 @HT-042 auf anderen Geräten: Pille ohne Grund, Alter vom Server', () => {
-  it.each(['not_activated', 'background', 'slept', 'volume_zero'] as const)('Server-Zustand %s → nur „nicht bereit“, kein Grund', (state) => {
+  it.each(['not_activated', 'background', 'slept', 'volume_zero', 'output_lost', 'output_unconfirmed'] as const)('Server-Zustand %s → nur „nicht bereit“, kein Grund', (state) => {
     const lage = lautsprecherLage({ state, ageMs: 2000, outputHint: false }, T0);
     expect(hallAnzeige(eingabe({ server: server({ 1: lage }) })).felder[0]).toEqual({ feld: 1, anzeige: { art: 'nichtBereit' }, eigenesGeraet: false });
   });

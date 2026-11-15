@@ -3,13 +3,13 @@
  * (`useHallCockpitHinweis`) die eine Zeile, die das Cockpit unter der Tafel zeigt – oder keine. Rein, ohne Hooks.
  * - `keinNetz`: das leitende Gerät hat selbst kein Netz – „Kein Netz – Halle zeigt alten Stand“.
  * - `aus`: „Hallen-Lautsprecher aus – Ende selbst anzeigen“ mit „Grund: …“. `grund: null` = ein Zustand, den dieser App-Stand nicht kennt
- *   (nur die Zeile, kein Wortgrund, @HT-039). „Ausgang verloren/bestätigen“ gibt es erst, wenn der Server diese Zustände kennt (H4-6, H4-11).
+ *   (nur die Zeile, kein Wortgrund, @HT-039). „Ausgang verloren“ und „Ausgang bestätigen“ sind seit H4-11 Wortgründe (@HT-039).
  * - `ausgangGeaendert`: ruhige Zeile (@HT-050), keine Störung.
  * Kein Lautsprecher am Feld (`keiner`) oder bereit ohne Hinweis → keine Zeile (@HT-016, @HT-038).
  */
 import type { CockpitHinweis, LautsprecherLage } from './runtime/hallStatusAuswertung';
 
-export type CockpitGrundText = 'tonNichtAktiviert' | 'hintergrund' | 'schlafenGelegt' | 'lautstaerkeNull';
+export type CockpitGrundText = 'tonNichtAktiviert' | 'hintergrund' | 'schlafenGelegt' | 'lautstaerkeNull' | 'ausgangVerloren' | 'ausgangBestaetigen';
 
 export type CockpitHallZeile =
   | { art: 'keinNetz' }
@@ -21,13 +21,14 @@ const GRUND_TEXT: Record<string, CockpitGrundText | undefined> = {
   background: 'hintergrund',
   slept: 'schlafenGelegt',
   volume_zero: 'lautstaerkeNull',
+  output_lost: 'ausgangVerloren', // @HT-039 Spalte Cockpit (H4-11)
+  output_unconfirmed: 'ausgangBestaetigen',
 };
 
 /**
  * Die Zeile aus dem Server-Stand des Lautsprechers (`hall_sound_status`), solange die Leitung noch keinen eigenen Stand hat: vor dem
  * Anpfiff und in der kurzen Lücke danach (@HT-039, Fassung 14.11.). Nie `keinNetz` – „Kein Netz – Halle zeigt alten Stand“ gilt nur im
  * laufenden Spiel (@HT-035). „Prüfen“ (Ausgang geändert) nur im Spiel, ohne Spiel kein Hinweis (@HT-050 Z3).
- * „Ausgang verloren/bestätigen“ gibt es erst, wenn der Server diese Zustände kennt (H4-11).
  */
 export function cockpitHallZeileAusServer(lage: LautsprecherLage | undefined, imSpiel: boolean): CockpitHallZeile | null {
   if (lage === undefined) {

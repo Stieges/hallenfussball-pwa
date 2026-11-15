@@ -5,15 +5,15 @@
  * - `verfuegbar`: der Browser kann den Ausgang wählen (`AudioContext.setSinkId`); sonst bleibt es bei „Standard“, `liste` ist leer.
  * - `gewaehlt`: Kennung, Name und Gruppen-ID der Wahl dieses Geräts oder `null` = „Standard (Ausgang des Systems)“. Lokal je Gerät,
  *   nie am Server; die Wahl erreicht jeden Tab des Geräts, auch den tönenden.
- * - `liste`: alle Ausgänge mit Namen, „Standard“ zuerst, virtuelle am Ende; leer, solange das Mikrofon nicht freigegeben ist
- *   (dann nur „Standard“, `mikrofonErlauben()` fragt einmal und beendet den Strom sofort).
+ * - `liste`: alle Ausgänge mit Namen, „Standard“ zuerst, virtuelle am Ende; leer, solange nicht gelesen wurde (`lesen()`, erst auf „Ändern“)
+ *   oder das Mikrofon nicht freigegeben ist (dann nur „Standard“, `mikrofonErlauben()` fragt einmal und beendet den Strom sofort).
  * - `waehle(id | null)`: setzt die Wahl (`null` = Standard); eine unbekannte Kennung ändert nichts.
  * - `bestaetigen()` (@HT-055): ein Tipp ist die Nutzergeste für „Ton aktivieren“ UND die Mikrofon-Freigabe; danach gilt die
  *   gespeicherte Wahl wieder, ohne neue Wahl. `false`, wenn das Mikrofon abgelehnt wird (dann bleibt es bei „Ausgang bestätigen“).
  * - `zustand`: `standard` | `ok` | `lost` (Ausgang verschwunden, @HT-054) | `unconfirmed` (@HT-055).
  * Name und Kennung verlassen das Gerät nie (nicht ins Lebenszeichen, nicht in Sentry, nicht in Logs).
  */
-import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
+import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { STANDARD_AUSGANG_ID, type AusgangEintrag, type AusgangLage, type GewaehlterAusgang } from '../../core/hallenton';
 import { browserAusgang, ausgangWaehlbar } from './runtime/ausgang/browserAusgang';
 import { tonAktivierenAmGeraet } from './lautsprecherGeraet';
@@ -23,6 +23,11 @@ export interface HallAusgang {
   gewaehlt: GewaehlterAusgang | null;
   liste: readonly AusgangEintrag[];
   zustand: AusgangLage;
+  /**
+   * Die Ausgänge jetzt lesen (`enumerateDevices`, `permissions.query`; nie ein Mikrofon-Dialog): die Oberfläche ruft es erst, wenn Olli „Ändern“
+   * tippt (H4-11). Beim bloßen Einbinden des Hooks liest nichts – ein Gerät ohne gespeicherte Wahl verhält sich wie auf main.
+   */
+  lesen(): Promise<void>;
   mikrofonErlauben(): Promise<boolean>;
   /** `false`: nichts geändert (Browser ohne Wahl, unbekannte Kennung oder der Speicher verweigert das Schreiben). */
   waehle(id: string | null): boolean;
@@ -57,11 +62,7 @@ export function useHallAusgang(): HallAusgang {
   const aktuell = useSyncExternalStore(abonniere, stand, () => KEIN_STAND);
   const verfuegbar = ausgangWaehlbar();
 
-  useEffect(() => {
-    if (verfuegbar) {
-      void browserAusgang().waechter.neuLesen(); // lesen ohne Nachfrage: ohne Freigabe nur „Standard“
-    }
-  }, [verfuegbar]);
+  const lesen = useCallback((): Promise<void> => (verfuegbar ? browserAusgang().waechter.neuLesen() : Promise.resolve()), [verfuegbar]);
 
   const mikrofonErlauben = useCallback(async (): Promise<boolean> => {
     const { liste, wahl, waechter } = browserAusgang();
@@ -97,8 +98,9 @@ export function useHallAusgang(): HallAusgang {
     gewaehlt: aktuell.gewaehlt,
     liste: verfuegbar ? aktuell.liste : [],
     zustand: aktuell.zustand,
+    lesen,
     mikrofonErlauben,
     waehle,
     bestaetigen,
-  }), [verfuegbar, aktuell, mikrofonErlauben, waehle, bestaetigen]);
+  }), [verfuegbar, aktuell, lesen, mikrofonErlauben, waehle, bestaetigen]);
 }
