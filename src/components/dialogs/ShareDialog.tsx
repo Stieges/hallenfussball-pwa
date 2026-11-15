@@ -17,6 +17,7 @@ import {
   generateShortLiveUrl,
   generateTournamentUrl,
   getShareMessage,
+  withViewChannel,
 } from '../../utils/shareUtils';
 import {
   shareDialogCss,
@@ -76,11 +77,16 @@ export const ShareDialog = ({
   const hasDeepLinkOption = !!deepLinkUrl && deepLinkUrl !== canonicalUrl;
   const activeUrl = (hasDeepLinkOption && useDeepLink) ? deepLinkUrl : canonicalUrl;
 
+  // Kanal der Zuschauer-Seite (@RZ-029): QR-Code → k=q, kopierter und geteilter Link → k=l; der angezeigte Link bleibt ohne Zusatz
+  const countsChannel = Boolean(hasShareCode) && activeUrl === canonicalUrl;
+  const qrUrl = countsChannel ? withViewChannel(activeUrl, 'q') : activeUrl;
+  const linkUrl = countsChannel ? withViewChannel(activeUrl, 'l') : activeUrl;
+
   // Generate QR code when dialog opens or URL changes
   useEffect(() => {
     if (isOpen) {
       setIsGenerating(true);
-      generateQRCode(activeUrl)
+      generateQRCode(qrUrl)
         .then((dataUrl) => {
           setQrCode(dataUrl);
         })
@@ -91,7 +97,7 @@ export const ShareDialog = ({
           setIsGenerating(false);
         });
     }
-  }, [isOpen, activeUrl]);
+  }, [isOpen, qrUrl]);
 
   // Clear feedback after 3 seconds
   useEffect(() => {
@@ -102,13 +108,13 @@ export const ShareDialog = ({
   }, [feedback]);
 
   const handleCopyLink = async () => {
-    const success = await copyToClipboard(activeUrl);
+    const success = await copyToClipboard(linkUrl);
     setFeedback(success ? t('share.copySuccess') : t('share.copyError'));
   };
 
   const handleNativeShare = async () => {
     const result = await shareUrl({
-      url: activeUrl,
+      url: linkUrl,
       title: t('share.nativeShareTitle', { title: tournamentTitle }),
       text: t('share.nativeShareText', { title: tournamentTitle }),
     });

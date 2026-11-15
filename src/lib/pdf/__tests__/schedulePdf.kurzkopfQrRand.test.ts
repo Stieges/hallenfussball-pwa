@@ -14,7 +14,7 @@ import type { Box, LayoutLine, LayoutPage } from './pdfjsLayout';
 
 const TOL = 0.05;
 const GEO = pageGeometry('a4', 'portrait');
-const MODULES = QRCode.create(`${BASE_URL}/#/live/${FALL_SHARE_CODE}`).modules.size;
+const MODULES = QRCode.create(`${BASE_URL}/#/live/${FALL_SHARE_CODE}?k=q`).modules.size;
 
 /** Schwarze Module des QR im Kurzkopf: kleine schwarze Füllungen oben in der rechten Hälfte. */
 function qrBoxOf(page: LayoutPage): Box {

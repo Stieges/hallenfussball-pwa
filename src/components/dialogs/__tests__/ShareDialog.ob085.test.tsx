@@ -39,16 +39,17 @@ describe('@OB-085 öffentlicher Zustand', () => {
     expect(link.textContent).not.toContain('…');
   });
 
-  it('der QR-Code trägt dieselbe kurze Adresse wie der Link', async () => {
+  it('der QR-Code führt auf dieselbe kurze Adresse wie der Link, nur mit dem Kanal-Zusatz ?k=q (@RZ-029)', async () => {
     mount();
     await waitFor(() => expect(qrAufrufe.length).toBeGreaterThan(0));
-    expect(qrAufrufe.at(-1)).toBe(kurz);
+    expect(qrAufrufe.at(-1)).toBe(`${kurz}?k=q`);
+    expect(new URL(qrAufrufe.at(-1) ?? '').pathname).toBe(new URL(kurz).pathname);
   });
 
-  it('„Link kopieren“ kopiert genau diese Adresse und meldet „kopiert“', async () => {
+  it('„Link kopieren“ kopiert dieselbe Adresse mit ?k=l und meldet „kopiert“ (@RZ-029)', async () => {
     mount();
     fireEvent.click(screen.getByTestId('share-dialog-copy'));
-    await waitFor(() => expect(schreiben).toHaveBeenCalledWith(kurz));
+    await waitFor(() => expect(schreiben).toHaveBeenCalledWith(`${kurz}?k=l`));
     expect((await screen.findByTestId('share-dialog-feedback')).textContent).toBe('dashboard:share.copySuccess');
   });
 
@@ -91,5 +92,43 @@ describe('@OB-085 Gegenbeispiele', () => {
   it('eine übergebene Basisadresse ersetzt die erzeugte, wie bisher', () => {
     mount({ baseUrl: 'https://example.org/x' });
     expect(screen.getByTestId('share-dialog-link').textContent).toBe('https://example.org/x');
+  });
+});
+
+describe('@RZ-029 QR-Code und Link tragen den Kanal', () => {
+  const kurz = `${window.location.origin}/live/NIKO26`;
+  beforeEach(() => {
+    qrAufrufe.length = 0;
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: vi.fn(() => Promise.resolve()) }, configurable: true });
+  });
+
+  it('der angezeigte Link im Dialog bleibt die kurze Adresse ohne Zusatz', async () => {
+    mount();
+    await waitFor(() => expect(qrAufrufe.length).toBeGreaterThan(0));
+    expect(screen.getByTestId('share-dialog-link').textContent).toBe(kurz);
+    expect(screen.getByTestId('share-dialog-link').textContent).not.toContain('k=');
+  });
+
+  it('System-Teilen („Teilen“-Taste) gibt die Adresse mit ?k=l weiter', async () => {
+    const teilen = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, 'share', { value: teilen, configurable: true });
+    try {
+      mount();
+      fireEvent.click(screen.getByTestId('share-dialog-native'));
+      await waitFor(() => expect(teilen).toHaveBeenCalledTimes(1));
+      expect(teilen).toHaveBeenCalledWith(expect.objectContaining({ url: `${kurz}?k=l` }));
+    } finally {
+      Reflect.deleteProperty(navigator, 'share');
+    }
+  });
+
+  it('Gegenbeispiel: nicht geteiltes Turnier – interne Adresse in QR, Link und Kopie ohne Zusatz', async () => {
+    const schreiben = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: schreiben }, configurable: true });
+    mount({ isPublic: false, shareCode: null });
+    const intern = `${window.location.origin}/#/tournament/t-1`;
+    await waitFor(() => expect(qrAufrufe.at(-1)).toBe(intern));
+    fireEvent.click(screen.getByTestId('share-dialog-copy'));
+    await waitFor(() => expect(schreiben).toHaveBeenCalledWith(intern));
   });
 });

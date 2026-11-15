@@ -138,7 +138,8 @@ test.describe('@OB-085 Teilen-Dialog am Handy', () => {
     const link = (await page.getByTestId('share-dialog-link').textContent()) ?? '';
     await page.getByTestId('share-dialog-copy').click();
     await expect(page.getByTestId('share-dialog-feedback')).toBeVisible();
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(link);
+    // @RZ-029: dieselbe Zieladresse, nur mit dem Kanal-Zusatz „Link“; der angezeigte Link bleibt ohne Zusatz
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(`${link}?k=l`);
     expect(link).toMatch(new RegExp(`/live/${CODE}$`));
     // Der QR-Code trägt die Adresse im Bild; die Lesbarkeit prüft der Vitest (qrCodeGenerator-Aufruf), hier: Bild ist da und quadratisch
     const qr = await messe(page);

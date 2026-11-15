@@ -61,12 +61,12 @@ describe('MonitorDisplayPage — Zuschauer-QR zeigt die Live-Adresse (F-03)', ()
     localGet.mockResolvedValue(null);
   });
 
-  it('QR-Wert ist die öffentliche Zuschauer-Adresse /#/live/ABC123 und enthält nie /tournament/', async () => {
+  it('QR-Wert ist die öffentliche Zuschauer-Adresse /#/live/ABC123 (mit Kanal-Zusatz ?k=q, @RZ-029) und enthält nie /tournament/', async () => {
     supabaseGet.mockResolvedValue(tournamentWith({ isPublic: true, shareCode: 'ABC123' }));
     render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await waitFor(() => expect(screen.getByTestId('qr-code')).toBeInTheDocument());
     const value = screen.getByTestId('qr-code').getAttribute('data-value') ?? '';
-    expect(value).toMatch(/\/#\/live\/ABC123$/);
+    expect(value).toMatch(/\/#\/live\/ABC123\?k=q$/);
     expect(value).not.toMatch(/\/tournament\//);
   });
 

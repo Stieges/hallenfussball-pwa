@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { printFont, printLimits, printUnit } from '../../../design-tokens/print';
 import { printHeader } from '../../../design-tokens/print-header';
 import { printNotice } from '../../../design-tokens/print-notice';
-import { generateLiveUrl, generateTournamentUrl } from '../../../utils/shareUtils';
+import { generateLiveUrl, generateTournamentUrl, withViewChannel } from '../../../utils/shareUtils';
 import { buildNoticePdf } from '../notice';
 import { toPdfInput } from '../pdfInput';
 import { shortViewerAddress } from '../../qr/publicQr';
@@ -24,6 +24,8 @@ const matrixOf = (url: string): boolean[][] => {
   return Array.from({ length: modules.size }, (_, r) => Array.from({ length: modules.size }, (_, c) => Boolean(modules.get(r, c))));
 };
 const LIVE = generateLiveUrl('ABC123', NOTICE_BASE_URL);
+/** Der QR im Aushang trägt den Kanal QR (@RZ-029); die Adresse zum Abtippen bleibt `LIVE`. */
+const LIVE_QR = withViewChannel(LIVE, 'q');
 const MIN_EDGE = 120;
 
 describe('@BM-001 @BM-007 A4 hoch, eine Seite', () => {
@@ -40,14 +42,17 @@ describe('@BM-043 @BM-007 der QR trägt die Zuschauer-Adresse und misst mindeste
   it('die gezeichnete Matrix ist QRCode.create(volle https-Adresse /live/CODE), Zelle für Zelle', async () => {
     const { page } = await noticePdf();
 
-    expect(drawnNoticeMatrix(page, matrixOf(LIVE).length)).toEqual(matrixOf(LIVE));
+    expect(drawnNoticeMatrix(page, matrixOf(LIVE_QR).length)).toEqual(matrixOf(LIVE_QR));
   });
 
   it('Gegenbeispiel: nie die Verwaltungs-, Anzeige- oder Beitrittsadresse', async () => {
     const { page } = await noticePdf();
-    const drawn = drawnNoticeMatrix(page, matrixOf(LIVE).length);
+    const drawn = drawnNoticeMatrix(page, matrixOf(LIVE_QR).length);
 
     expect(LIVE).toMatch(/^https:\/\/.+\/#\/live\/ABC123$/);
+    expect(LIVE_QR, '@RZ-029: derselbe Weg, nur mit Kanal-Zusatz').toBe(`${LIVE}?k=q`);
+    expect(drawn, 'nicht die nackte Adresse und nicht der Kanal Link').not.toEqual(matrixOf(LIVE));
+    expect(drawn).not.toEqual(matrixOf(withViewChannel(LIVE, 'l')));
     for (const fremd of [generateTournamentUrl('ABC123', NOTICE_BASE_URL), `${NOTICE_BASE_URL}/join/ABC123`, `${NOTICE_BASE_URL}/#/display/ABC123`, `${NOTICE_BASE_URL}/#/tv`]) {
       expect(drawn, fremd).not.toEqual(matrixOf(fremd));
     }
