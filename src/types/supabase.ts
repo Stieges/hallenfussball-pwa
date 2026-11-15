@@ -27,6 +27,8 @@
  * (Kopf danach wieder voranstellen — der Drift-Check blendet ihn beidseitig aus.)
  * 2026-11-24 (Zuschauer-Zaehlung, PR #535, @RZ-024): nach dem Einspielen von 20261124_003 und 20261125_001 aus der Produktion per Supabase-MCP
  * (generate_typescript_types) neu erzeugt.
+ * 2026-11-15 (Zuschauer-Zaehlung 1b, @RZ-031): nach dem Einspielen von 20261126_001 aus der Produktion per Supabase-MCP
+ * (generate_typescript_types) erzeugt: Spalten public_view_counts.os_family/browser_family und public_view_agent_families.
  */
 export type Json =
   | string
