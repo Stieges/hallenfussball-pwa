@@ -7,21 +7,10 @@
 import { useEffect, useState } from 'react';
 import type { ScheduleViewMode } from '../components/ScheduleToolbar';
 import { breakpointValues } from '../../../design-tokens/breakpoints';
-
-const widthNow = (): number => (typeof window !== 'undefined' ? window.innerWidth : breakpointValues.wide);
+import { useBreakpoint } from '../../../hooks/useBreakpoint';
 
 export function useGridViewAllowed(numberOfFields: number): boolean {
-  const [width, setWidth] = useState(widthNow);
-  useEffect(() => {
-    const onResize = () => setWidth(widthNow());
-    onResize();
-    window.addEventListener('resize', onResize, { passive: true });
-    window.addEventListener('orientationchange', onResize);
-    return () => {
-      window.removeEventListener('resize', onResize);
-      window.removeEventListener('orientationchange', onResize);
-    };
-  }, []);
+  const { width } = useBreakpoint();
   return width >= breakpointValues.wide && numberOfFields >= 2;
 }
 

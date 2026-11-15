@@ -246,6 +246,8 @@ describe('@ZP-115 Im Raster auf einen freien Platz einer anderen Phase ziehen ge
     const vorher = h.r().draft.draftTournament.matches.map((m) => [m.id, m.field, new Date(m.scheduledTime!).getTime()]);
     ziehe(h, 's1', 60, 2);
     expect(h.r().draft.changeCount).toBe(0);
+    expect(h.r().draft.canUndo).toBe(false);
+    expect(h.r().draft.canRedo).toBe(false);
     expect(h.showWarning).toHaveBeenCalledWith('tournament:draft.groupStaysInGroupPhase');
     expect(h.r().draft.draftTournament.matches.map((m) => [m.id, m.field, new Date(m.scheduledTime!).getTime()])).toEqual(vorher);
   });
@@ -257,6 +259,24 @@ describe('@ZP-115 Im Raster auf einen freien Platz einer anderen Phase ziehen ge
     expect(h.r().draft.changeCount).toBe(1);
     ziehe(h, 's1', 60, 2);
     expect(h.r().draft.changeCount).toBe(1);
+    expect(h.r().draft.canUndo).toBe(true);
+    expect(h.r().draft.canRedo).toBe(false);
+  });
+
+  it('@ZP-115 mit vorhandenem Wiederholen-Stapel: das abgewiesene Verschieben leert ihn nicht, Rückgängig und Wiederholen bleiben wie vorher', () => {
+    const h = setup(mitHalbfinale());
+    act(() => { h.r().draft.startEditing(); });
+    act(() => { h.r().edit.handleMatchSwap('s9', 's6'); });
+    act(() => { h.r().edit.handleRefereeAssignment('s4', 3); });
+    act(() => { h.r().draft.undo(); });
+    expect(h.r().draft.canUndo).toBe(true);
+    expect(h.r().draft.canRedo).toBe(true);
+    ziehe(h, 's1', 60, 2);
+    expect(h.r().draft.changeCount).toBe(1);
+    expect(h.r().draft.canUndo).toBe(true);
+    expect(h.r().draft.canRedo).toBe(true);
+    act(() => { h.r().draft.redo(); });
+    expect(h.r().draft.changeCount).toBe(2);
   });
 
   it('@ZP-115 Gegenbeispiel: Spiel 1 auf einen freien Platz innerhalb der Gruppenphase (15:48, Feld 2) lässt sich ziehen', () => {

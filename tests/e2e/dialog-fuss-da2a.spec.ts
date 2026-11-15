@@ -39,6 +39,24 @@ function turnierMitKonflikten() {
   });
 }
 
+/** Drei Zeitslots ohne Konflikt (zwei Spiele je Slot, vier verschiedene Teams): erst die Änderung in der Liste löst Konflikte aus. */
+function turnierOhneKonflikte() {
+  const matches: VisualMatchOverride[] = [];
+  for (let i = 0; i < 3; i++) {
+    const zeit = `2026-03-14T09:${String(i * 20).padStart(2, '0')}:00.000Z`;
+    matches.push({ id: `s${i}a`, round: i + 1, teamA: TEAM[0], teamB: TEAM[1], field: 1, matchStatus: 'scheduled', scheduledTime: zeit });
+    matches.push({ id: `s${i}b`, round: i + 1, teamA: TEAM[2], teamB: TEAM[3], field: 2, matchStatus: 'scheduled', scheduledTime: zeit });
+  }
+  return buildVisualTournament({
+    id: ID, title: 'Nordstadt Hallencup', matches,
+    extra: {
+      numberOfFields: 2,
+      fields: [{ id: 'field-1', defaultName: 'Feld 1' }, { id: 'field-2', defaultName: 'Feld 2' }],
+      refereeConfig: { mode: 'organizer', numberOfReferees: 2 },
+    },
+  });
+}
+
 type Seed = (d: Record<string, unknown>) => Promise<void>;
 
 interface Fall {
@@ -71,6 +89,31 @@ const FAELLE: Fall[] = [
     // @ZP-111: der Dialog gehört zur Rasteransicht (Taste „Fehler / Warnungen“); die gibt es nur ab 1280 Bildpunkten, am Handy nicht mehr
     geraete: [
       { name: 'laptop-1280x720', width: 1280, height: 720, art: 'desktop', scrollt: true },
+    ],
+  },
+  {
+    // @ZP-105: Speichern in der Liste (am Handy der einzige Weg, @ZP-111) fragt nach neuen Konflikten: Dialog der Rückfragen des Bearbeitens
+    name: 'konflikte-speichern-liste',
+    titel: 'Konflikte gefunden',
+    tasten: ['Zurück zur Bearbeitung', 'Trotzdem speichern'],
+    hatKreuz: false,
+    oeffne: async (page, seed) => {
+      await seed({ tournaments: [turnierOhneKonflikte()] });
+      await page.goto(`/#/tournament/${ID}/schedule`);
+      await page.getByTestId('schedule-edit-start').click();
+      // in jedem Slot das zweite Spiel auf Feld 1 legen: drei neue Konflikte (zwei Spiele zugleich auf einem Feld)
+      const felder = page.getByRole('combobox', { name: 'Feld', exact: true }).filter({ visible: true });
+      for (const nr of [1, 3, 5]) {
+        await felder.nth(nr).selectOption('1');
+        await expect(page.getByTestId('schedule-unsaved-count')).toContainText(`${(nr + 1) / 2} Änderung`);
+      }
+      await page.getByTestId('schedule-edit-save').click();
+      await expect(page.getByRole('dialog')).toBeVisible();
+      await page.waitForTimeout(600);
+    },
+    geraete: [
+      { name: 'handy-360x640', width: 360, height: 640, art: 'handy', scrollt: false },
+      { name: 'handy-360x420', width: 360, height: 420, art: 'handy', scrollt: true },
     ],
   },
   {
