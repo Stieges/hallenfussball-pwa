@@ -194,6 +194,10 @@ pending_assertions_for() {
     20261118_001_verschieben_server.sql)
       echo "matches-guard-schedule-times-trigger-active matches-guard-schedule-times-invoker-no-client-execute matches-bump-change-revision-counts-original-start"
       ;;
+    20261124_003_zuschauer_zaehlung.sql)
+      # Zuschauer-Zaehlung (@RZ-024..030): neue Tabelle ohne Client-Recht + eine Funktion; Pruefung in scripts/zuschauer-zaehlung-check.sh,
+      # keine Assertion der Rechte-Matrix.
+      ;;
     20261118_005_endstand_tabellenwerte.sql)
       # R3-5b: nur CREATE OR REPLACE match_engine.final_standing_row_valid (tableValues) -- keine eigene Rechte-Assertion
       ;;

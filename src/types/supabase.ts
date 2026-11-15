@@ -2111,6 +2111,16 @@ export type Database = {
         Returns: Json
       }
       compute_match_state: { Args: { p_match_id: string }; Returns: Json }
+      count_public_view: {
+        Args: {
+          p_art: string
+          p_geraet: string
+          p_installiert: boolean
+          p_kanal: string
+          p_share_code: string
+        }
+        Returns: undefined
+      }
       create_gathering: { Args: { p_name: string }; Returns: Json }
       create_gathering_screen: {
         Args: {
