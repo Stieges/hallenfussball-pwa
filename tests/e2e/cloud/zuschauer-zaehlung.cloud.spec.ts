@@ -46,7 +46,9 @@ test.describe('Zuschauer-Zählung am lokalen Stack', () => {
       await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible({ timeout: 30_000 });
       await expect.poll(async () => (await countRows(cup.id)).reduce((s, r) => s + r.views, 0), { timeout: 20_000 }).toBe(1);
       const rows = await countRows(cup.id);
-      expect(rows).toEqual([{ channel: 'qr', device_class: 'gross', installed: false, views: 1, heartbeats: 0 }]);
+      // Aufrufe exakt; Lebenszeichen nicht: bei langsamem Laden kann schon eines kommen (derselbe Schlüssel, dieselbe Zeile).
+      expect(rows.map(({ heartbeats: _h, ...rest }) => rest)).toEqual([{ channel: 'qr', device_class: 'gross', installed: false, views: 1 }]);
+      expect(rows[0].heartbeats).toBeGreaterThanOrEqual(0);
       expect(new URL(page.url()).hash, 'der Zusatz steht nicht mehr in der Adresszeile').toBe(`#/live/${cup.code}`);
 
       // @RZ-030 niemand liest oder schreibt über die Schnittstelle

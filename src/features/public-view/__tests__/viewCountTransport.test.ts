@@ -67,3 +67,24 @@ describe('@RZ-026 Die Funktion fehlt am Server (noch nicht eingespielt)', () => 
     warnAusgabe.mockRestore();
   });
 });
+
+describe('@RZ-026 Schalter am Turniertag: Recht auf die Funktion entzogen (REVOKE EXECUTE)', () => {
+  it('401 / 403 / 42501: still, genau ein Versuch, kein Wiederholen, keine Fehlerausgabe', async () => {
+    const fehlerAusgabe = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const warnAusgabe = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const antworten = [
+      new Response(JSON.stringify({ code: '42501', message: 'permission denied for function count_public_view' }), { status: 401 }),
+      new Response(JSON.stringify({ code: '42501', message: 'permission denied for function count_public_view' }), { status: 403 }),
+    ];
+    for (const antwort of antworten) {
+      const fetchSpy = vi.fn(() => Promise.resolve(antwort));
+      vi.stubGlobal('fetch', fetchSpy);
+      await expect(sendViewCount(createFetchViewCountTransport('https://p.example.test', 'k'), ARGS)).resolves.toBeUndefined();
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    }
+    expect(fehlerAusgabe).not.toHaveBeenCalled();
+    expect(warnAusgabe).not.toHaveBeenCalled();
+    fehlerAusgabe.mockRestore();
+    warnAusgabe.mockRestore();
+  });
+});

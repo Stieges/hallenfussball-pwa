@@ -4,7 +4,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  channelFromParam, deviceClassFromWidth, isInstalledApp, sendViewCount, VIEW_COUNT_TIMEOUT_MS,
+  channelFromParam, deviceClassFromEnvironment, deviceClassFromScreen, isInstalledApp, sendViewCount, VIEW_COUNT_TIMEOUT_MS,
   type ViewCountArgs, type ViewCountTransport,
 } from '../publicViewCount';
 
@@ -23,13 +23,35 @@ describe('@RZ-024 Kanal aus dem Adresszusatz', () => {
   });
 });
 
-describe('@RZ-024 Geräteart aus der Fensterbreite (Breakpoints der Oberfläche)', () => {
+describe('@RZ-024 Geräteart aus der kürzeren Bildschirmseite und dem Zeiger', () => {
+  // [Gerät, Breite, Höhe, Finger als Hauptbedienung, Geräteart]
   it.each([
-    [360, 'handy'], [390, 'handy'], [767, 'handy'],
-    [768, 'tablet'], [820, 'tablet'], [1023, 'tablet'],
-    [1024, 'gross'], [1440, 'gross'], [1920, 'gross'],
-  ] as const)('%i px → %s', (breite, art) => {
-    expect(deviceClassFromWidth(breite)).toBe(art);
+    ['iPhone hoch', 390, 844, true, 'handy'],
+    ['iPhone quer', 844, 390, true, 'handy'],
+    ['großes Android hoch', 412, 915, true, 'handy'],
+    ['großes Android quer', 915, 412, true, 'handy'],
+    ['iPad hoch', 768, 1024, true, 'tablet'],
+    ['iPad quer', 1024, 768, true, 'tablet'],
+    ['iPad Air hoch', 820, 1180, true, 'tablet'],
+    ['iPad Air quer', 1180, 820, true, 'tablet'],
+    ['Laptop 1280×720 mit Maus', 1280, 720, false, 'gross'],
+    ['Laptop 1366×768 mit Maus', 1366, 768, false, 'gross'],
+    ['Desktop 1920×1080', 1920, 1080, false, 'gross'],
+  ] as const)('%s (%i×%i, Finger: %s) → %s', (_geraet, breite, hoehe, finger, art) => {
+    expect(deviceClassFromEnvironment({
+      screenWidth: breite, screenHeight: hoehe, matchMedia: (q) => ({ matches: finger && q === '(pointer: coarse)' }),
+    })).toBe(art);
+  });
+
+  it('Grenze: kürzere Seite 599 → Handy, 600 → nach Zeiger', () => {
+    expect(deviceClassFromScreen(599, false)).toBe('handy');
+    expect(deviceClassFromScreen(600, true)).toBe('tablet');
+    expect(deviceClassFromScreen(600, false)).toBe('gross');
+  });
+
+  it('Gegenbeispiel: nichts lesbar (keine Maße, werfende matchMedia) → groß, kein Fehler', () => {
+    expect(deviceClassFromEnvironment({})).toBe('gross');
+    expect(deviceClassFromEnvironment({ screenWidth: 800, screenHeight: 1200, matchMedia: () => { throw new Error('x'); } })).toBe('gross');
   });
 });
 

@@ -10,7 +10,7 @@
 import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  channelFromParam, deviceClassFromWidth, isInstalledApp, sendViewCount, HEARTBEAT_INTERVAL_MS,
+  channelFromParam, deviceClassFromEnvironment, isInstalledApp, sendViewCount, HEARTBEAT_INTERVAL_MS,
   type ViewCountKind, type ViewCountTransport, type ViewChannel, type DeviceClass,
 } from '../../core/viewCount/publicViewCount';
 import { defaultViewCountTransport } from './viewCountTransport';
@@ -25,12 +25,11 @@ interface DeviceFacts { device: DeviceClass; installed: boolean }
 /** Geräteart und „installiert“ beim Öffnen der Seite. */
 function readDeviceFacts(): DeviceFacts {
   const nav = typeof navigator === 'undefined' ? undefined : (navigator as Navigator & { standalone?: boolean });
+  const matchMedia = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? (q: string) => window.matchMedia(q) : undefined;
+  const screenInfo = typeof window === 'undefined' ? undefined : window.screen;
   return {
-    device: deviceClassFromWidth(typeof window === 'undefined' ? 0 : window.innerWidth),
-    installed: isInstalledApp({
-      matchMedia: typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? (q) => window.matchMedia(q) : undefined,
-      navigatorStandalone: nav?.standalone,
-    }),
+    device: deviceClassFromEnvironment({ screenWidth: screenInfo?.width, screenHeight: screenInfo?.height, matchMedia }),
+    installed: isInstalledApp({ matchMedia, navigatorStandalone: nav?.standalone }),
   };
 }
 

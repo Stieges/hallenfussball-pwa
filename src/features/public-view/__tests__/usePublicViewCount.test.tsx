@@ -11,7 +11,8 @@ import { usePublicViewCount } from '../usePublicViewCount';
 import type { ViewCountArgs, ViewCountTransport } from '../../../core/viewCount/publicViewCount';
 
 let sichtbar = true;
-let breite = 390;
+let bildschirm = { breite: 390, hoehe: 844 };
+let finger = true;
 let standalone = false;
 let navStandalone: boolean | undefined;
 
@@ -38,10 +39,15 @@ const vergehen = async (ms: number) => { await act(async () => { await vi.advanc
 beforeEach(() => {
   vi.useFakeTimers();
   gesendet = anzeigeAus();
-  sichtbar = true; breite = 390; standalone = false; navStandalone = undefined;
+  sichtbar = true; bildschirm = { breite: 390, hoehe: 844 }; finger = true; standalone = false; navStandalone = undefined;
   Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => (sichtbar ? 'visible' : 'hidden') });
-  Object.defineProperty(window, 'innerWidth', { configurable: true, get: () => breite });
-  Object.defineProperty(window, 'matchMedia', { configurable: true, value: (q: string) => ({ matches: standalone && q === '(display-mode: standalone)' }) });
+  // Die Geräteart kommt aus der kürzeren Bildschirmseite und dem Zeiger; die Fensterbreite zählt bewusst nicht (Gegenprobe: innerWidth 1440).
+  Object.defineProperty(window, 'innerWidth', { configurable: true, get: () => 1440 });
+  Object.defineProperty(window, 'screen', { configurable: true, value: { get width() { return bildschirm.breite; }, get height() { return bildschirm.hoehe; } } });
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    value: (q: string) => ({ matches: (standalone && q === '(display-mode: standalone)') || (finger && q === '(pointer: coarse)') }),
+  });
   Object.defineProperty(navigator, 'standalone', { configurable: true, get: () => navStandalone });
 });
 afterEach(() => { vi.useRealTimers(); });
@@ -49,9 +55,12 @@ afterEach(() => { vi.useRealTimers(); });
 describe('@RZ-024 Jedes Öffnen wird als Summe gezählt – Beispielzeilen', () => {
   const zeilen: Array<[string, string, () => void, string, string, boolean]> = [
     ['/live/NIKO26?k=q', 'Handy im Browser', () => undefined, 'qr', 'handy', false],
-    ['/live/NIKO26?k=l', 'Laptop im Browser', () => { breite = 1440; }, 'link', 'gross', false],
+    ['/live/NIKO26?k=l', 'Laptop im Browser', () => { bildschirm = { breite: 1440, hoehe: 900 }; finger = false; }, 'link', 'gross', false],
     ['/live/NIKO26', 'Handy, App vom Startbildschirm', () => { standalone = true; }, 'direkt', 'handy', true],
-    ['/live/NIKO26?k=irgendwas', 'Tablet im Browser', () => { breite = 820; }, 'direkt', 'tablet', false],
+    ['/live/NIKO26?k=irgendwas', 'Tablet im Browser', () => { bildschirm = { breite: 820, hoehe: 1180 }; }, 'direkt', 'tablet', false],
+    ['/live/NIKO26', 'Handy im Querformat (844×390)', () => { bildschirm = { breite: 844, hoehe: 390 }; }, 'direkt', 'handy', false],
+    ['/live/NIKO26', 'iPad im Querformat (1024×768)', () => { bildschirm = { breite: 1024, hoehe: 768 }; }, 'direkt', 'tablet', false],
+    ['/live/NIKO26', 'Laptop 1366×768 mit Maus', () => { bildschirm = { breite: 1366, hoehe: 768 }; finger = false; }, 'direkt', 'gross', false],
     ['/live/NIKO26', 'iPhone-App über navigator.standalone', () => { navStandalone = true; }, 'direkt', 'handy', true],
   ];
   it.each(zeilen)('%s auf %s → Kanal %s, Geräteart %s, installiert %s', (adresse, _geraet, vorbereiten, kanal, art, installiert) => {

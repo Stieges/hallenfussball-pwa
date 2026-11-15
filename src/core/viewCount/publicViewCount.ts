@@ -1,6 +1,6 @@
 /**
  * Zuschauer-Seite zählen (intern, Stufe 1; @RZ-024 bis @RZ-030, docs/anforderungen/2026-09-26_reichweite-zuschauersicht.md).
- * Reine Logik ohne React und ohne Netz: Kanal aus dem Adresszusatz, Geräteart aus der Fensterbreite, „installiert“ aus der
+ * Reine Logik ohne React und ohne Netz: Kanal aus dem Adresszusatz, Geräteart aus der kürzeren Bildschirmseite und dem Zeiger, „installiert“ aus der
  * Anzeigeart und das Versenden einer Zählmeldung, das nie stört (Fehler und Zeitüberschreitung werden verschluckt, kein Wiederholen).
  * Gesendet werden nur diese fünf Felder (die Server-Funktion `count_public_view`); nichts davon liegt auf dem Gerät.
  */
@@ -35,12 +35,41 @@ export function channelFromParam(value: string | null | undefined): ViewChannel 
   return value === 'l' ? 'link' : 'direkt';
 }
 
-/** Geräteart nach den Breakpoints der Oberfläche: unter Tablet = Handy, unter Desktop = Tablet, sonst groß. */
-export function deviceClassFromWidth(widthPx: number): DeviceClass {
-  if (widthPx < breakpointValues.tablet) {
+/**
+ * Geräteart aus der KÜRZEREN Bildschirmseite und der Hauptbedienung (nicht aus der Fensterbreite: ein Handy im Querformat bleibt
+ * ein Handy, ein iPad quer ein Tablet). Handy = kürzere Seite unter dem Breakpoint `sheet` (600 px; iPhone 390×844, großes
+ * Android 412×915). Darüber: Tablet, wenn ein grober Zeiger (Finger) die Hauptbedienung ist (iPad 768×1024 und 820×1180);
+ * sonst groß (Laptop 1280×720 oder 1366×768 mit Maus/Touchpad, auch wenn die kürzere Seite über 600 liegt).
+ */
+export function deviceClassFromScreen(shortSidePx: number, coarsePointer: boolean): DeviceClass {
+  if (shortSidePx < breakpointValues.sheet) {
     return 'handy';
   }
-  return widthPx < breakpointValues.desktop ? 'tablet' : 'gross';
+  return coarsePointer ? 'tablet' : 'gross';
+}
+
+export interface DeviceEnvironment {
+  /** `screen.width` / `screen.height` (oder Ersatz: Fenstermaße); nicht lesbar = weglassen */
+  screenWidth?: number;
+  screenHeight?: number;
+  matchMedia?: (query: string) => { matches: boolean };
+}
+
+function hasCoarsePointer(matchMedia: DeviceEnvironment['matchMedia']): boolean {
+  try {
+    return matchMedia?.('(pointer: coarse)').matches === true;
+  } catch {
+    return false;
+  }
+}
+
+/** Liest nur die kürzere Bildschirmseite und „Finger als Hauptbedienung“; sonst nichts vom Gerät (@RZ-027). Unlesbar → groß. */
+export function deviceClassFromEnvironment(env: DeviceEnvironment): DeviceClass {
+  const sides = [env.screenWidth, env.screenHeight].filter((v): v is number => typeof v === 'number' && v > 0);
+  if (sides.length === 0) {
+    return 'gross';
+  }
+  return deviceClassFromScreen(Math.min(...sides), hasCoarsePointer(env.matchMedia));
 }
 
 export interface DisplayModeEnvironment {

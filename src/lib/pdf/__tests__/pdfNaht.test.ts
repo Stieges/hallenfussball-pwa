@@ -99,8 +99,9 @@ export function layoutDigest(pages: LayoutPage[]): string {
  * Neu aufgenommen 04.11. (Fixrunde 2 zu PR #444, @DR-035): Tabellen auch mit Ergebnissen mit grauem Raster statt Zebra. Verglichen mit dem
  * Stand davor (12 und 20 Spiele DE, 12 EN): gleiche Seiten und Textstücke an gleicher Stelle; nur auf der Tabellenseite fallen die vier
  * Zebra-Flächen weg, dazu 32 bzw. 34 graue Rasterlinien (#8c8c8c). Stände davor: eb36e29082e2, cb15518a4350, EN 54751521beb2.
- * Neu aufgenommen 15.11. (@RZ-029): der QR trägt den Kanal-Zusatz „?k=q“ (längere Adresse, größere Matrix, höherer Kopf). Text-für-Text verglichen
- * (12 Spiele, hoch, mit und ohne Zusatz): gleiche Seiten, gleiche Textstücke, alles unter dem Kopf rückt um den größeren QR nach unten; die Adresse
+ * Neu aufgenommen 15.11. (@RZ-029): der QR trägt den Kanal-Zusatz „?k=q“. Die neue Prüfsumme kommt daher, dass die TEST-Vorlage mit relativer
+ * Adresse dadurch eine größere QR-Matrix (höherer Kopf) bekommt; für die Produktions-Adresse bleibt die Matrix gleich (Version 4). Text-für-Text verglichen
+ * (12 Spiele, hoch, mit und ohne Zusatz): gleiche Seiten, gleiche Textstücke, in der Test-Vorlage rückt alles unter dem Kopf um den größeren QR nach unten; die Adresse
  * zum Abtippen und der antippbare Link bleiben ohne Zusatz. Stände davor: bb0eb12c2174, ef7548de2ddf, EN a715392c7a0c.
  */
 const VORHER: Record<string, string> = {
