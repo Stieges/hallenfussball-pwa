@@ -168,6 +168,11 @@ export function erzeugeSenke({ ausgang, kontext, geaendert: geaendertRoh, beiVer
       return; // ein Gerät ohne Wahl rührt bei einem spontanen `sinkchange` nichts an
     }
     angewendet = typeof k.sinkId === 'string' ? k.sinkId : KEINER;
+    const wahlId = ausgang.wahl()?.id;
+    if (wahlId !== undefined && angewendet === wahlId) {
+      // H4-11: ein `setSinkId`, das erst nach der Zeitgrenze antwortet, hat den gewählten Ausgang doch gesetzt – der gemerkte Fehler gilt nicht mehr
+      ausgang.senkeMelden(wahlId, false);
+    }
     geaendert();
     void ausgang.neuLesen().then(anwenden); // fehlt der gewählte Ausgang jetzt, wird die Lage `lost`; sonst setzen wir ihn wieder
   };
@@ -215,6 +220,11 @@ export function erzeugeSenke({ ausgang, kontext, geaendert: geaendertRoh, beiVer
         if (gewaehlt !== undefined && (ausstehend > 0 || (k !== null && (angewendet ?? '') !== gewaehlt) || (k !== null && !kontextLaeuft(k) && ausgang.zeitgeber.jetzt() < pruefBis))) {
           return 'output_unconfirmed';
         }
+      }
+      // H4-11: Wechsel von einem gewählten Ausgang auf „Standard“: bis `setSinkId('')` durch ist, bleibt die Sperre (kein Durchgang durch „Ton nicht
+      // aktiviert“, kein Ton über den alten Ausgang). Ein Gerät, das nie eine Wahl hatte (`angewendet` leer), berührt das nie.
+      if (l === 'standard' && ausgang && kontext() !== null && angewendet !== undefined && angewendet !== '') {
+        return 'output_unconfirmed';
       }
       return l === 'lost' ? 'output_lost' : l === 'unconfirmed' ? 'output_unconfirmed' : null;
     },
