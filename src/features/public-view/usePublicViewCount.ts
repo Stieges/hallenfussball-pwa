@@ -6,6 +6,7 @@
  * - „Lebenszeichen“ jede Minute, nur solange die Seite sichtbar ist.
  * - Eigener Aufruf, nie im Lade-Pfad, ohne Warten; Fehler und Zeitüberschreitung werden verschluckt, nichts wird wiederholt.
  * - Nichts auf dem Gerät: kein Speicher, kein Cookie, keine Kennung (@RZ-027).
+ * - Betriebssystem- und Browser-Familie (@RZ-031) kommen vom Server aus der Kennung, die der Browser ohnehin mitschickt; hier wird dafür nichts gelesen.
  */
 import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
