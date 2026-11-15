@@ -1115,6 +1115,19 @@ SELECT 'lifecycle-guard-triggers-complete',
                                       to_regprocedure('public.hall_output_heard(uuid,integer)'))), false)
                              AND coalesce((SELECT position('IF public.tournament_is_closed(p_tournament_id) THEN' IN p.prosrc) > 0
                                              FROM pg_proc p WHERE p.oid = to_regprocedure('public.hall_require_open(uuid)')), false))
+                    -- Zuschauer-Zaehlung (20261124_003): public_view_counts ohne Sperr-Trigger, weil das Zaehlen nach dem Abschluss
+                    -- weitergeht (Zuschauer sehen den Endstand weiter an; ein Sperr-Trigger wuerde jeden Aufruf mit 55000 abweisen).
+                    -- Die Ausnahme gilt NUR, solange kein Client ein Recht auf die Tabelle hat (RLS an, keine Policy, nichts fuer
+                    -- anon/authenticated/PUBLIC) und der einzige Schreibweg count_public_view SECURITY DEFINER ist -- sonst
+                    -- verlangt diese Zeile wieder den Sperr-Trigger (Assertionen zuschauer-zaehlung-*).
+                    AND NOT (cl.relname = 'public_view_counts'
+                             AND cl.relrowsecurity
+                             AND NOT EXISTS (SELECT 1 FROM pg_policy pol WHERE pol.polrelid = cl.oid)
+                             AND NOT has_table_privilege('anon', cl.oid, 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN')
+                             AND NOT has_table_privilege('authenticated', cl.oid, 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN')
+                             AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(cl.relacl, acldefault('r', cl.relowner))) a WHERE a.grantee = 0)
+                             AND coalesce((SELECT p.prosecdef FROM pg_proc p
+                                            WHERE p.oid = to_regprocedure('public.count_public_view(text,text,text,text,boolean)')), false))
                     AND NOT EXISTS (SELECT 1 FROM pg_trigger t
                                      WHERE t.tgrelid = cl.oid AND t.tgname = cl.relname || '_guard_closed'
                                        AND t.tgfoid = to_regprocedure('public.guard_closed_tournament()')
@@ -1779,4 +1792,30 @@ SELECT 'leibchen-kit-set-shape',
                             AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
                             AND NOT has_function_privilege('service_role', p.oid, 'EXECUTE')
                        FROM pg_proc p WHERE p.oid = to_regprocedure('public.match_kit_team_color(uuid)')), false)
+
+-- ---------------------------------------------------------------------------------------------------------------
+-- Zuschauer-Zaehlung (20261124_003_zuschauer_zaehlung.sql, Record Reichweite Zuschauersicht @RZ-024 bis @RZ-030): Pruefskript
+-- scripts/zuschauer-zaehlung-check.sh. Vor dem Live-Einspielen "f".
+-- ---------------------------------------------------------------------------------------------------------------
+-- (1) Tabelle: RLS an, keine Policy, kein Tabellenrecht fuer PUBLIC/anon/authenticated (@RZ-030: niemand liest oder schreibt
+--     ueber die Schnittstelle); SELECT nur fuer service_role (der Betreiber liest direkt).
+UNION ALL
+SELECT 'zuschauer-zaehlung-table-no-client-access',
+       coalesce((SELECT c.relrowsecurity
+                        AND NOT EXISTS (SELECT 1 FROM pg_policy pol WHERE pol.polrelid = c.oid)
+                        AND NOT has_table_privilege('anon', c.oid, 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN')
+                        AND NOT has_table_privilege('authenticated', c.oid, 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN')
+                        AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(c.relacl, acldefault('r', c.relowner))) a WHERE a.grantee = 0)
+                        AND has_table_privilege('service_role', c.oid, 'SELECT')
+                   FROM pg_class c WHERE c.oid = to_regclass('public.public_view_counts')), false)
+-- (2) count_public_view: SECURITY DEFINER, search_path fest, EXECUTE nur anon/authenticated/service_role, nicht PUBLIC.
+UNION ALL
+SELECT 'zuschauer-zaehlung-rpc-definer-anon',
+       coalesce((SELECT p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                        AND has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                        AND has_function_privilege('service_role', p.oid, 'EXECUTE')
+                        AND p.proacl IS NOT NULL
+                        AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.count_public_view(text,text,text,text,boolean)')), false)
 ;

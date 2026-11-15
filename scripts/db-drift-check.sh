@@ -195,8 +195,9 @@ pending_assertions_for() {
       echo "matches-guard-schedule-times-trigger-active matches-guard-schedule-times-invoker-no-client-execute matches-bump-change-revision-counts-original-start"
       ;;
     20261124_003_zuschauer_zaehlung.sql)
-      # Zuschauer-Zaehlung (@RZ-024..030): neue Tabelle ohne Client-Recht + eine Funktion; Pruefung in scripts/zuschauer-zaehlung-check.sh,
-      # keine Assertion der Rechte-Matrix.
+      echo "zuschauer-zaehlung-table-no-client-access zuschauer-zaehlung-rpc-definer-anon"
+      # Zuschauer-Zaehlung (@RZ-024..030): neue Tabelle ohne Client-Recht + eine Funktion; Verhalten in scripts/zuschauer-zaehlung-check.sh,
+      # Rechte als Assertionen am Ende von db_privilege_assertions.sql (die Ausnahme in lifecycle-guard-triggers-complete haengt daran).
       ;;
     20261118_005_endstand_tabellenwerte.sql)
       # R3-5b: nur CREATE OR REPLACE match_engine.final_standing_row_valid (tableValues) -- keine eigene Rechte-Assertion
@@ -785,6 +786,9 @@ PRIVILEGE_ASSERTION_NAMES=(
   # Leibchen Schritt 2a (20261124_002_leibchen_schritt2.sql, @SL-150, @SL-201 bis @SL-236): eigener Block am Ende von db_privilege_assertions.sql
   "leibchen-kit-set-rpc-authenticated-only"
   "leibchen-kit-set-shape"
+  # Zuschauer-Zaehlung (20261124_003_zuschauer_zaehlung.sql, @RZ-024 bis @RZ-030): eigener Block am Ende von db_privilege_assertions.sql
+  "zuschauer-zaehlung-table-no-client-access"
+  "zuschauer-zaehlung-rpc-definer-anon"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then

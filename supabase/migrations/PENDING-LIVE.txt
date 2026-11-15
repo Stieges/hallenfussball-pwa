@@ -5,3 +5,7 @@
 # Format je Zeile: <dateiname> <frist YYYY-MM-DD> <commit-vorher (origin/main vor dem Merge)>
 # Nach dem Einspielen im Fenster entfernt der Controller die Zeile (Freigabe-Unterlage des Pakets, § 2).
 20261124_003_zuschauer_zaehlung.sql 2026-11-22 447beedb8a027e4d04e4abada88ae8ed18abf210
+# Schalter am Turniertag (20261124_003_zuschauer_zaehlung.sql): Zaehlung abstellen, ohne Zahlen zu verlieren =
+#   REVOKE EXECUTE ON FUNCTION public.count_public_view(text,text,text,text,boolean) FROM anon, authenticated;
+# Der Client bleibt dabei still (401/404 wird verschluckt, durch Test belegt). Wieder einschalten =
+#   GRANT EXECUTE ON FUNCTION public.count_public_view(text,text,text,text,boolean) TO anon, authenticated;

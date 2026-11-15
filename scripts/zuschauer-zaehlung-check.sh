@@ -80,6 +80,7 @@ U='00000000-0000-4000-8000-0000000000a1'
 T_PUB='00000000-0000-4000-8000-0000000000b1'
 T_PRIV='00000000-0000-4000-8000-0000000000b2'
 T_TRASH='00000000-0000-4000-8000-0000000000b3'
+T_FIN='00000000-0000-4000-8000-0000000000b4'
 
 prepare() {
   docker run -d --name "$C" -e POSTGRES_PASSWORD=postgres "$POSTGRES_IMAGE" >/dev/null
@@ -104,12 +105,18 @@ SQL
 
 seed_tournaments() {
   psql_stdin <<SQL
-DELETE FROM public.tournaments WHERE id IN ('$T_PUB', '$T_PRIV', '$T_TRASH');
+DELETE FROM public.tournaments WHERE id IN ('$T_PUB', '$T_PRIV', '$T_TRASH', '$T_FIN');
 INSERT INTO public.tournaments (id, owner_id, title, date, start_time, number_of_teams, number_of_fields, group_phase_duration,
                                 location_name, location_city, status, is_public, share_code, config, deleted_at)
 VALUES ('$T_PUB',   '$U', 'Nikolaus-Turnier', current_date, '09:00', 2, 1, 10, 'Halle', 'Waging', 'published', true,  'NIKO26', '{"publishedAt":"2026-11-01T00:00:00.000Z"}', NULL),
        ('$T_PRIV',  '$U', 'Privat',           current_date, '09:00', 2, 1, 10, 'Halle', 'Waging', 'published', false, 'PRIV01', '{}', NULL),
-       ('$T_TRASH', '$U', 'Papierkorb',       current_date, '09:00', 2, 1, 10, 'Halle', 'Waging', 'published', true,  'TRASH1', '{"publishedAt":"2026-11-01T00:00:00.000Z"}', now());
+       ('$T_TRASH', '$U', 'Papierkorb',       current_date, '09:00', 2, 1, 10, 'Halle', 'Waging', 'published', true,  'TRASH1', '{"publishedAt":"2026-11-01T00:00:00.000Z"}', now()),
+       ('$T_FIN',   '$U', 'Abgeschlossen',    current_date, '09:00', 2, 1, 10, 'Halle', 'Waging', 'published', true,  'FIN001', '{"publishedAt":"2026-11-01T00:00:00.000Z"}', NULL);
+-- Abschluss wie in der Server-Funktion finish_tournament: Schalter app.lifecycle_write (transaktionslokal, nur ausserhalb der Client-Rollen)
+BEGIN;
+SET LOCAL app.lifecycle_write = 'on';
+UPDATE public.tournaments SET lifecycle_status = 'finished', finished_at = now() WHERE id = '$T_FIN';
+COMMIT;
 SQL
 }
 apply_target() { # <datei|leer>
@@ -144,6 +151,15 @@ run_checks() {
   # @RZ-025 Lebenszeichen
   zaehle NIKO26 lebenszeichen qr handy false
   check Z "@RZ-025 Lebenszeichen zaehlt in derselben Zeile als heartbeats, nicht als Aufruf" "6/1/5" "$(count $T_PUB "$ROW")"
+
+  # Abgeschlossenes Turnier: Zuschauer sehen den Endstand weiter an, also zaehlt der Aufruf weiter (kein Sperr-Trigger, kein Abweisen)
+  check Z "Vorbedingung: das Turnier FIN001 ist abgeschlossen (lifecycle_status finished)" "finished" \
+    "$(q "SELECT lifecycle_status FROM public.tournaments WHERE id = '$T_FIN';")"
+  zaehle FIN001 aufruf qr handy false
+  zaehle FIN001 lebenszeichen qr handy false
+  check Z "@RZ-024 abgeschlossenes Turnier (finished): Aufruf und Lebenszeichen zaehlen weiter, ohne Fehler" "1/1/1" "$(count $T_FIN "$ROW")"
+  check Z "abgeschlossenes Turnier: kein Fehler 55000 fuer anon" "1" \
+    "$(as_role anon "SELECT 1 FROM (SELECT public.count_public_view('FIN001','aufruf','link','tablet',false)) x;")"
 
   # Fenster
   check Z "@RZ-024 Fensterbeginn liegt auf voller 5-Minuten-Marke (kein genauerer Zeitpunkt)" "0" \
@@ -195,6 +211,15 @@ run_checks() {
   check Z "im Papierkorb zaehlt nichts mehr dazu" "1" "$(q "SELECT sum(views) FROM public.public_view_counts;")"
   q "DELETE FROM public.tournaments WHERE id = '$T_PUB';" >/dev/null
   check Z "@RZ-030 endgueltiges Loeschen des Turniers loescht seine Zahlen" "0" "$(q "SELECT count(*) FROM public.public_view_counts;")"
+
+  # Rechte-Assertionen: db_privilege_assertions.sql vollstaendig als ci_schema_reader, jede Zeile |t (darunter die zwei neuen;
+  # die Ausnahme in lifecycle-guard-triggers-complete haengt an ihnen)
+  local priv red own
+  priv="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } \
+    | docker exec -i -e PGOPTIONS="-c client_min_messages=warning" "$C" psql -U postgres -X -q -tA -v ON_ERROR_STOP=1 2>&1 || true)"
+  red="$( (grep -v '|t$' <<<"$priv" || true) | head -5 | tr '\n' ';')"
+  own="$( (grep -E '^zuschauer-zaehlung-[a-z-]+\|t$' <<<"$priv" || true) | grep -c . || true)"
+  check S "db_privilege_assertions.sql als ci_schema_reader: jede Zeile |t, darunter die zwei zuschauer-zaehlung-*" "keine|2" "${red:-keine}|$own"
 }
 
 run_rueckweg() {
@@ -221,6 +246,8 @@ MUTATIONEN=(
   "M8|s/IF v_id IS NULL THEN RETURN; END IF;/IF v_id IS NULL THEN RAISE EXCEPTION 'x'; END IF;/"
   "M9|s/ALTER TABLE public.public_view_counts ENABLE ROW LEVEL SECURITY;/ALTER TABLE public.public_view_counts DISABLE ROW LEVEL SECURITY;\nGRANT SELECT ON public.public_view_counts TO anon;/"
   "M10|s/IF p_geraet IS NULL OR p_geraet NOT IN ('handy', 'tablet', 'gross') THEN RETURN; END IF;//"
+  "M11|s/^COMMIT;/CREATE TRIGGER public_view_counts_guard_closed BEFORE INSERT OR UPDATE OR DELETE ON public.public_view_counts FOR EACH ROW EXECUTE FUNCTION public.guard_closed_tournament('tournament_id');\nCOMMIT;/"
+  "M12|s/AND t.deleted_at IS NULL;/AND t.deleted_at IS NULL AND t.lifecycle_status <> 'finished';/"
 )
 
 prepare
