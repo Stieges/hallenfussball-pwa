@@ -1,6 +1,6 @@
 /**
  * Client der Hallenton-Funktionen (`supabase/migrations/20261121_001_hallenton.sql`, Torhymne
- * `20261123_001_hallenton_torhymne.sql`, Record `docs/anforderungen/2026-10-15_hallenton.md`). Muster `fieldControlRpc.ts`: nur `.rpc`, Zeitlimit
+ * `20261123_001_hallenton_torhymne.sql`, Ausgang-Zustände `20261125_001_hallenton_ausgang_zustaende.sql`, Record `docs/anforderungen/2026-10-15_hallenton.md`). Muster `fieldControlRpc.ts`: nur `.rpc`, Zeitlimit
  * `withCloudReadTimeout`, jede `Json`-Antwort per zod genau nach der Antwortform der SQL-Funktion geprüft.
  *
  * Fehlerbild als Ergebnisart, nie ein Wurf:
@@ -31,12 +31,15 @@ export interface HallFehler { ok: false; grund: HallFehlerGrund }
 export type HallErgebnis<T> = ({ ok: true } & T) | HallFehler;
 
 /** Zustand eines Lautsprechers aus fester Liste (CHECK `hall_speakers_state_check`); `null` = noch kein Lebenszeichen. */
-export const HALL_SPEAKER_STATES = ['ready', 'not_activated', 'background', 'slept', 'custom_sound_failed', 'volume_zero'] as const;
+export const HALL_SPEAKER_STATES = [
+  'ready', 'not_activated', 'background', 'slept', 'custom_sound_failed', 'volume_zero', 'output_lost', 'output_unconfirmed',
+] as const;
 export type HallSpeakerState = (typeof HALL_SPEAKER_STATES)[number];
 /**
- * Gelesener Zustand: ein Wert, den dieser App-Stand nicht kennt (der Server kann die Liste später erweitern, z. B. um
- * `output_lost`), wird `'zustandUnbekannt'`. Nur ein Lesewert – gesendet wird weiter nur `HallSpeakerState`, darum steht er nicht in
- * `HALL_SPEAKER_STATES`. `'zustandUnbekannt'` ist nicht bereit und kein „Status unbekannt“ der Verwaltung (@HT-039, @HT-041).
+ * Gelesener Zustand: ein Wert, den dieser App-Stand nicht kennt (der Server kann die Liste später erweitern), wird
+ * `'zustandUnbekannt'`. Nur ein Lesewert – gesendet wird weiter nur `HallSpeakerState`, darum steht er nicht in
+ * `HALL_SPEAKER_STATES`. `output_lost` und `output_unconfirmed` (Migration 20261125_001, H4-3) stehen seit H4-3 in der Liste und werden
+ * gelesen; GESENDET werden sie erst ab H4-6, angezeigt ab H4-11 (bis dahin wie ein unbekannter Zustand: nicht bereit, ohne Wortgrund). `'zustandUnbekannt'` ist nicht bereit und kein „Status unbekannt“ der Verwaltung (@HT-039, @HT-041).
  */
 export type HallSpeakerStateGelesen = HallSpeakerState | 'zustandUnbekannt';
 

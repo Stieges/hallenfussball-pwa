@@ -18,6 +18,8 @@
  * 2026-11-08 (Hallenton Torhymne, Branch feat/hallenton-torhymne): nach dem Einspielen von 20261123_001 aus der Produktion
  * per Supabase-MCP (generate_typescript_types) erzeugt: Spalte hall_sound_settings.goal_anthem_paths und die Funktion
  * hall_goal_anthems_set. Damit wieder deckungsgleich mit der Produktion.
+ * 2026-11-15 (Hallenton Ausgang-Zustände, H4-3): hall_speaker_unassign von Hand ergänzt (nach dem Muster der erzeugten Einträge) -- bis zum
+ * Einspielen von 20261125_001 in der Produktion meldet der Typ-Drift-Check genau diese Zeilen; danach neu erzeugen.
  * NICHT MANUELL BEARBEITEN!
  *
  * Regenerieren mit:
@@ -2360,6 +2362,13 @@ export type Database = {
       hall_speaker_release: {
         Args: {
           p_device_id: string
+          p_fields: number[]
+          p_tournament_id: string
+        }
+        Returns: Json
+      }
+      hall_speaker_unassign: {
+        Args: {
           p_fields: number[]
           p_tournament_id: string
         }
