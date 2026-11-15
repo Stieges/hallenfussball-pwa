@@ -68,6 +68,9 @@
 #
 # Nutzung:
 #   scripts/db-drift-check.sh                       # normaler Lauf, braucht SUPABASE_ACCESS_TOKEN
+#   scripts/db-drift-check.sh --nur-leserecht-waechter  # ohne Zugang zur Live-Datenbank: spielt Baseline + ALLE Migrationen
+#                                                     # (auch die in PENDING-LIVE.txt) in den Wegwerf-Container und prueft nur den
+#                                                     # Waechter "jede Relation hat SELECT fuer ci_schema_reader" (siehe unten).
 #   scripts/db-drift-check.sh --live-dump-file FILE  # Testmodus: FILE wird statt eines echten
 #                                                     # Live-Dumps als "Live-Schema" verwendet.
 #                                                     # Für den Rot-Beweis (künstliche Abweichung),
@@ -97,6 +100,7 @@ BASELINE_BASENAME="$(basename "$BASELINE_FILE")"
 WORKDIR="$(mktemp -d)"
 CONTAINER_NAME="db-drift-check-$$"
 LIVE_DUMP_OVERRIDE=""
+GUARD_ONLY=""
 PUBLICATION_ONLY_FILE=""
 HOST_PORT=""
 
@@ -111,6 +115,11 @@ while [[ $# -gt 0 ]]; do
     --live-dump-file)
       LIVE_DUMP_OVERRIDE="$2"
       shift 2
+      ;;
+    --nur-leserecht-waechter)
+      # Waechter ohne Live-Zugang (laeuft auf jedem PR mit Migration, siehe .github/workflows/ci-leserecht-waechter.yml)
+      GUARD_ONLY=1
+      shift
       ;;
     --realtime-publication-from)
       # Testmodus (A-13b-S M1): nur Abschnitt 4d gegen eine Datei mit `schema.tabelle` je Zeile (statt live), nach dem
@@ -293,7 +302,7 @@ PENDING_ASSERTIONS=()
 PENDING_PUBLICATION_TABLES=()
 PENDING_JSON_COMMIT=""
 TODAY_UTC="$(date -u +%Y-%m-%d)"
-if [[ -f "$PENDING_FILE" ]]; then
+if [[ -f "$PENDING_FILE" && -z "$GUARD_ONLY" ]]; then
   while IFS= read -r pending_raw || [[ -n "$pending_raw" ]]; do
     pending_line="${pending_raw%%#*}"
     pending_line="$(echo "$pending_line" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
@@ -332,7 +341,9 @@ if [[ -f "$PENDING_FILE" ]]; then
     echo "PENDING-LIVE:   role_permissions live wird gegen $JSON_REL_PATH aus Commit $p_commit verglichen"
   done < "$PENDING_FILE"
 fi
-if [[ ${#PENDING_NAMES[@]} -eq 0 ]]; then
+if [[ -n "$GUARD_ONLY" ]]; then
+  echo "Waechter-Modus: PENDING-LIVE.txt wird nicht gelesen, ALLE Migrationen werden nachgespielt (kein Live-Zugang noetig)."
+elif [[ ${#PENDING_NAMES[@]} -eq 0 ]]; then
   echo "PENDING-LIVE: keine Ausnahmen -- alle Migrationen werden geprüft."
 fi
 
@@ -472,6 +483,63 @@ for f in "${NEWER_MIGRATIONS[@]:-}"; do
   [[ -z "$f" ]] && continue
   docker exec -i "$CONTAINER_NAME" psql -U postgres -v ON_ERROR_STOP=1 -q < "$f"
 done
+
+# --- 2b. Waechter: jede neue Relation braucht ein Leserecht fuer ci_schema_reader ------------------------------------------
+# Warum: pg_dump --schema-only sperrt jede Relation mit LOCK TABLE ... IN ACCESS SHARE MODE, das braucht SELECT. Die Drift-Check-Rolle
+# ci_schema_reader bekommt ihr Recht bewusst je Tabelle (kein ALTER DEFAULT PRIVILEGES, Datenbank-Programm 21.09.). Zweimal ging eine
+# neue Tabelle live, ohne dass die Migration das Recht vergab (20261110_003 -> _007, 20261124_003 -> _004); der Drift-Check brach erst
+# GEGEN LIVE ab ("permission denied for table ..."). Dieser Waechter faengt das schon im Container ab, ohne Live-Zugang.
+# Geprueft: alle Relationen (r, p, v, m, f) in public und match_engine, auf die ci_schema_reader kein SELECT hat.
+# Ausnahmen: die Baseline-Tabellen, denen das Recht im Repo-Stand bewusst fehlt (Baseline traegt keine GRANT-Zeilen; Kopfkommentar von
+# 20261110_007_ci_schema_reader_grants.sql, Freigabe-Unterlage ci-grants-sql-freigabe.md). Die Liste ist EINGEFROREN: sie wird nie
+# erweitert, um einen Fehler zu beruhigen -- jede neue Tabelle bekommt in ihrer Migration ein GRANT SELECT ... TO ci_schema_reader.
+# Live haben diese Tabellen das Recht (Datenbank-Programm 21.09.); nur der aus dem Repo gebaute Stand hat es nicht.
+# Die Liste wurde im Container ermittelt (Stand 15.11.2026: 12 Baseline-Tabellen; keine View, keine Tabelle aus einer Migration).
+CI_READER_EXEMPT=(
+  "public.match_events"
+  "public.matches"
+  "public.monitor_heartbeats"
+  "public.monitors"
+  "public.profiles"
+  "public.sponsors"
+  "public.sync_queue"
+  "public.team_players"
+  "public.teams"
+  "public.tournament_collaborators"
+  "public.tournament_templates"
+  "public.tournaments"
+)
+check_ci_reader_select() {
+  local raw rel missing=()
+  raw="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -q -tA -v ON_ERROR_STOP=1 <<'SQL'
+SELECT n.nspname || '.' || c.relname
+  FROM pg_class c
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+ WHERE n.nspname IN ('public', 'match_engine')
+   AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
+   AND NOT has_table_privilege('ci_schema_reader', c.oid, 'SELECT')
+ ORDER BY 1;
+SQL
+)" || { echo "::error::Waechter ci_schema_reader konnte die Relationen nicht lesen." >&2; return 1; }
+  while IFS= read -r rel; do
+    [[ -z "$rel" ]] && continue
+    local ex skip=""
+    for ex in "${CI_READER_EXEMPT[@]}"; do [[ "$ex" == "$rel" ]] && skip=1; done
+    [[ -z "$skip" ]] && missing+=("$rel")
+  done <<< "$raw"
+  if [[ ${#missing[@]} -gt 0 ]]; then
+    for rel in "${missing[@]}"; do
+      echo "::error::Waechter: ${rel} hat kein SELECT fuer ci_schema_reader. Die Migration, die ${rel} anlegt, braucht ein 'GRANT SELECT ON TABLE ${rel} TO ci_schema_reader;' -- sonst bricht pg_dump im Drift-Check gegen Live mit 'permission denied for table' ab (Vorbilder: 20261110_007, 20261124_004; bewusst kein ALTER DEFAULT PRIVILEGES)." >&2
+    done
+    return 1
+  fi
+  echo "Waechter gruen: jede Relation in public und match_engine hat SELECT fuer ci_schema_reader (ausser den ${#CI_READER_EXEMPT[@]} eingefrorenen Baseline-Tabellen)."
+  return 0
+}
+check_ci_reader_select || exit 1
+if [[ -n "$GUARD_ONLY" ]]; then
+  exit 0
+fi
 
 # --- 3. Rekonstruierten Dump über dieselbe CLI-Pipeline ziehen ----------------------------
 # `supabase db dump --db-url` startet intern einen eigenen Docker-Hilfscontainer, der den
