@@ -11,7 +11,7 @@ import type { Tournament } from '../../../types/tournament';
 import { useConfirmDialog, type ConfirmDialogProps } from '../../../components/ui/ConfirmDialog';
 import { isStartedMatch } from '../../schedule-editor/utils/startedGuard';
 import { redistributeFields } from '../../schedule-editor/utils/autoReassign';
-import { applyDraftSteps, diffStep, fieldStep, refereeStep, swapPhaseOf, swapStep, type DraftStep } from '../schedule-draft/draftSteps';
+import { applyDraftSteps, blockedMovePhase, diffStep, fieldStep, refereeStep, swapPhaseOf, swapStep, type DraftStep } from '../schedule-draft/draftSteps';
 import { matchNumberLookup } from '../schedule-draft/draftTexts';
 import { redistributeOpenReferees } from '../schedule-draft/refereeRedistribution';
 import { conflictsOf, type ScheduleDraftControls } from './useScheduleDraft';
@@ -125,6 +125,10 @@ export function useScheduleEditActions({ tournament, draft, onTournamentUpdate, 
     const step = diffStep(working.matches, next.matches);
     // @ZP-107: ein Ablegen, das Spiele verschiedener Phasen tauscht, tauscht nichts
     if (step && !samePhase(working, step.patches.map((p) => p.matchId))) { showWarning(t('draft.samePhaseOnly')); return; }
+    // @ZP-115: ein einzelnes Spiel auf einen freien Platz einer anderen Phase gezogen: nichts verschoben
+    const [only] = step?.patches.length === 1 ? step.patches : [];
+    const blocked = only?.scheduledTime ? blockedMovePhase(working.matches, only.matchId, only.scheduledTime) : null;
+    if (blocked) { showWarning(t(blocked === 'group' ? 'draft.groupStaysInGroupPhase' : 'draft.finalsStayInFinals')); return; }
     addStep(step);
   }, [isEditing, working, addStep, showWarning, t]);
 

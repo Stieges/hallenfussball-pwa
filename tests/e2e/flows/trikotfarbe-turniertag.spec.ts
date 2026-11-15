@@ -173,7 +173,7 @@ test.describe('@W3-028 Trikotfarbe am Turniertag: Bedienung am Handy', () => {
   test('@W3-028 Handy: aus dem Spielplan in fünf Tipps zur Farbe (Mehr, Teams, Team, Farbwähler, Farbe), Tasten mindestens 44 px, Änderung bleibt nach Neuladen', async ({ page, seedIndexedDB }) => {
     await oeffne(page, seedIndexedDB, GERAETE[0]);
     await page.goto(`/#/tournament/${TURNIER_ID}/schedule`);
-    await expect(page.getByTestId('schedule-view-table')).toBeVisible({ timeout: 30000 });
+    await expect(page.getByTestId('schedule-filter-bar')).toBeVisible({ timeout: 30000 });
     await page.getByRole('button', { name: 'Mehr' }).click(); // 1
     await page.getByText('Teams verwalten').click(); // 2
     await page.getByTestId(`team-expand-toggle-${TEAM_NORD}`).click(); // 3

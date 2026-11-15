@@ -49,11 +49,15 @@ const base = createMockTournament({
 const schedule = generateFullSchedule(base);
 const tournament: Tournament = { ...base, matches: schedule.allMatches as unknown as Tournament['matches'] };
 
-function renderTab() {
+/** @ZP-111: das Raster gibt es ab 1280 Bildpunkten und ab zwei Feldern; die Gitter-Fälle unten brauchen beides */
+const zweiFelder: Tournament = { ...tournament, numberOfFields: 2 };
+const fensterBreite = (breite: number) => { Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: breite }); };
+
+function renderTab(shown: Tournament = tournament) {
   render(
     <MemoryRouter><ToastProvider>
       <ScheduleTab
-        tournament={tournament} schedule={schedule} currentStandings={[]}
+        tournament={shown} schedule={schedule} currentStandings={[]}
         onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} onMatchesUpdate={vi.fn()}
         onNavigateToCockpit={vi.fn()}
       />
@@ -65,7 +69,7 @@ const editButton = () => screen.queryByTestId('schedule-edit-start');
 const shiftButton = () => screen.queryByTestId('schedule-shift-button');
 const refereeEditor = () => screen.queryByText(/Manuelle Schiedsrichter-Zuweisung/);
 
-beforeEach(() => { vi.clearAllMocks(); vi.mocked(localStorage.getItem).mockReturnValue(null); resetClosedTournaments(); displayProps.current = {}; });
+beforeEach(() => { vi.clearAllMocks(); vi.mocked(localStorage.getItem).mockReturnValue(null); resetClosedTournaments(); displayProps.current = {}; fensterBreite(1024); });
 afterEach(() => { resetClosedTournaments(); });
 
 describe('@ZP-087 @LZ-036 Spielplan nach dem Abschluss: ändert niemand den Zeitplan', () => {
@@ -109,7 +113,8 @@ describe('@ZP-087 @LZ-036 Spielplan nach dem Abschluss: ändert niemand den Zeit
 
   it('die Gitter-Ansicht (Schedule Editor) wird abgeschlossen nicht mehr gezeigt, auch wenn sie vorher gewählt war', async () => {
     const user = userEvent.setup();
-    renderTab();
+    fensterBreite(1280);
+    renderTab(zweiFelder);
     await user.click(screen.getByTestId('schedule-view-grid'));
     expect(screen.getByTestId('schedule-editor-stub')).toBeInTheDocument();
     act(() => setTournamentClosed('hallencup-ost', true));
@@ -118,7 +123,8 @@ describe('@ZP-087 @LZ-036 Spielplan nach dem Abschluss: ändert niemand den Zeit
   });
 
   it('Review #394 m-2: abgeschlossen ist die Umschaltung Tabelle/Gitter weg (es gibt nur die Tabelle), offen ist sie da', () => {
-    renderTab();
+    fensterBreite(1280);
+    renderTab(zweiFelder);
     expect(screen.getByTestId('schedule-view-grid')).toBeInTheDocument();
     act(() => setTournamentClosed('hallencup-ost', true));
     expect(screen.queryByTestId('schedule-view-grid')).not.toBeInTheDocument();

@@ -2074,7 +2074,9 @@
     "saveFailed": "Speichern fehlgeschlagen – die Änderungen sind noch nicht gespeichert und bleiben im Entwurf.",
     "conflictHint_one": "{{count}} Konflikt im Spielplan",
     "conflictHint_other": "{{count}} Konflikte im Spielplan",
-    "samePhaseOnly": "Nur Spiele derselben Phase lassen sich tauschen"
+    "samePhaseOnly": "Nur Spiele derselben Phase lassen sich tauschen",
+    "groupStaysInGroupPhase": "Gruppenspiele bleiben in der Gruppenphase",
+    "finalsStayInFinals": "Finalspiele bleiben in der Finalrunde"
   },
   "scheduleEditor": {
     "autoAssignReferees": "Schiedsrichter automatisch zuweisen",

@@ -231,7 +231,7 @@
         "pflicht"
       ],
       "app": "/#/tournament/hallencup-messlauf/schedule",
-      "erwarte": "[data-testid=\"schedule-view-table\"]",
+      "erwarte": "[data-testid=\"schedule-filter-bar\"]",
       "profil": "app"
     },
     {
@@ -274,7 +274,7 @@
         "pflicht"
       ],
       "app": "/#/tournament/nikolaus-alle-beendet/schedule",
-      "erwarte": "[data-testid=\"schedule-view-table\"]",
+      "erwarte": "[data-testid=\"schedule-filter-bar\"]",
       "profil": "app",
       "saat": "nikolaus-alle-beendet"
     },

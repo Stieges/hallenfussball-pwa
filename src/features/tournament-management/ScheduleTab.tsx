@@ -23,7 +23,8 @@ import { Tournament, Standing, Match } from '../../types/tournament';
 import { MatchUpdate } from '../../core/models/types';
 import { useScheduleDraft, useScheduleEditActions, useScheduleTabActions, useScheduleFilters, getFilterOptions } from './hooks';
 import { useScheduleView } from './hooks/useScheduleView';
-import { ScheduleToolbar, ScheduleViewMode } from './components';
+import { useGridViewMode } from './hooks/useGridViewMode';
+import { ScheduleToolbar } from './components';
 import { ScheduleEditDialogs } from './components/ScheduleEditDialogs';
 import { ScheduleSwapWith } from './components/ScheduleSwapWith';
 import { ScheduleResultEntryPrompt } from './components/ScheduleResultEntryPrompt';
@@ -92,7 +93,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   const { showWarning, showSuccess, showError } = useToast();
 
   // View mode: 'table' (classic) or 'grid' (new schedule editor)
-  const [viewMode, setViewMode] = useState<ScheduleViewMode>('table');
+  // @ZP-111: Raster nur ab 1280 Bildpunkten und ab zwei Feldern, sonst immer die Liste (der Entwurf liegt in useScheduleDraft und bleibt)
+  const { gridAllowed, viewMode, setViewMode } = useGridViewMode(tournament.numberOfFields);
 
   // ==========================================================================
   // CUSTOM HOOKS
@@ -278,7 +280,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
             tournament={tournament}
             schedule={schedule}
             standings={currentStandings}
-            canEditSchedule={canSchedule} canCreateNotice={canNotice} canCreateFinal={canFinal} hideViewToggle={closed}
+            canEditSchedule={canSchedule} canCreateNotice={canNotice} canCreateFinal={canFinal} hideViewToggle={closed || !gridAllowed}
           />
 
           {/* US-VIEWER-FILTERS: Filter Bar */}

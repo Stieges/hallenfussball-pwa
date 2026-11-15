@@ -290,7 +290,7 @@ test.describe('A-11 Helfer und Zeitplan', () => {
     await page.goto(`/#/tournament/${E2E_LIVE_CUP_ID}`);
     await expect(page.getByText(E2E_LIVE_CUP_TITLE, { exact: true }).first()).toBeVisible({ timeout: 15000 });
     // Positiver Anker: die Werkzeugleiste des Spielplans steht, die Rolle ist geladen -- erst dann sagt „kein Knopf“ etwas.
-    await expect(page.locator('[data-testid="schedule-view-table"]')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('[data-testid="schedule-filter-bar"]')).toBeVisible({ timeout: 15000 });
     await page.waitForLoadState('networkidle');
     await expect(page.locator('[data-testid="schedule-edit-start"]')).toHaveCount(0);
 
