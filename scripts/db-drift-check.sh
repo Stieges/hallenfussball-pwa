@@ -267,6 +267,10 @@ pending_assertions_for() {
     20261125_001_hallenton_ausgang_zustaende.sql)
       echo "hallenton-output-states-heartbeat hallenton-speaker-unassign-rpc-authenticated-only"
       ;;
+    # Zuschauer-Zaehlung Stufe 1b (@RZ-031, @RZ-032): Spalten os_family/browser_family, Hilfsfunktion der Ableitung (scripts/zuschauer-zaehlung-check.sh)
+    20261126_001_zuschauer_zaehlung_os_browser.sql)
+      echo "zuschauer-zaehlung-os-browser-columns zuschauer-zaehlung-os-browser-derive-function"
+      ;;
     *)
       return 1
       ;;
@@ -802,6 +806,9 @@ PRIVILEGE_ASSERTION_NAMES=(
   # Hallenton Zustaende des Ausgangs und Abmelden (20261125_001_hallenton_ausgang_zustaende.sql, @HT-053 bis @HT-055, @HT-057): eigener Block am Ende von db_privilege_assertions.sql
   "hallenton-output-states-heartbeat"
   "hallenton-speaker-unassign-rpc-authenticated-only"
+  # Zuschauer-Zaehlung Stufe 1b (20261126_001_zuschauer_zaehlung_os_browser.sql, @RZ-031, @RZ-032): gleicher Block am Ende von db_privilege_assertions.sql
+  "zuschauer-zaehlung-os-browser-columns"
+  "zuschauer-zaehlung-os-browser-derive-function"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then

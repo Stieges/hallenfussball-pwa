@@ -48,7 +48,12 @@ ausgang_assertions() { # <erwartet t|f>
   done
   check A "Rechte-Assertion hallenton-heartbeat-fixed-reasons-no-user-agent gilt vor und nach der Migration (|t)" \
     "hallenton-heartbeat-fixed-reasons-no-user-agent|t" "$(grep -E "^hallenton-heartbeat-fixed-reasons-no-user-agent\|" <<<"$priv" || true)"
-  [[ "$1" == t ]] && check A "Rechte-Assertion nach der Migration: keine Zeile |f" "" "$(grep -v '|t$' <<<"$priv" || true)"
+  # Migrationen NACH 20261125_001 (z. B. 20261126_001 Zuschauer-Zaehlung Stufe 1b) sind zu diesem Zeitpunkt noch nicht eingespielt: ihre
+  # Zeilen (Namen aus der Zuordnung in db-drift-check.sh) zaehlen hier nicht -- sie stehen im Pruefskript ihres eigenen Harness.
+  local later="" lf
+  for lf in ${AFTER[@]+"${AFTER[@]}"}; do [[ "$(basename "$lf")" > "$AUSG_NAME" ]] && later="$later $(after_assertions "$(basename "$lf")")"; done
+  [[ "$1" == t ]] && check A "Rechte-Assertion nach der Migration: keine Zeile |f (ausser den Zeilen spaeterer Migrationen)" "" \
+    "$(grep -v '|t$' <<<"$priv" | grep -vE "^($(echo $later | tr ' ' '|'))\\|" || true)"
   [[ "$1" == t ]] && check A "Drift-Check-Zuordnung: pending_assertions_for nennt fuer $AUSG_NAME genau die neuen Namen" \
     "$AUSG_ASSERTIONS" "$(after_assertions "$AUSG_NAME")"
   return 0

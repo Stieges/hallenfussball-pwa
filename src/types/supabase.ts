@@ -1311,28 +1311,34 @@ export type Database = {
       }
       public_view_counts: {
         Row: {
+          browser_family: string
           channel: string
           device_class: string
           heartbeats: number
           installed: boolean
+          os_family: string
           tournament_id: string
           views: number
           window_start: string
         }
         Insert: {
+          browser_family?: string
           channel: string
           device_class: string
           heartbeats?: number
           installed: boolean
+          os_family?: string
           tournament_id: string
           views?: number
           window_start: string
         }
         Update: {
+          browser_family?: string
           channel?: string
           device_class?: string
           heartbeats?: number
           installed?: boolean
+          os_family?: string
           tournament_id?: string
           views?: number
           window_start?: string
@@ -2549,6 +2555,13 @@ export type Database = {
       public_tournament: {
         Args: { share_code: string; since_version?: number }
         Returns: Json
+      }
+      public_view_agent_families: {
+        Args: { p_agent: string }
+        Returns: {
+          browser_family: string
+          os_family: string
+        }[]
       }
       record_monitor_heartbeat: {
         Args: {
