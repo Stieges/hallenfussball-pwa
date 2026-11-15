@@ -51,14 +51,27 @@ export class FalscherAudioKontext implements AudioKontext {
     this.setSinkId = undefined;
   }
 
-  /** `setSinkId` antwortet nie. */
+  /** `setSinkId` antwortet nie (bis `spaetAntworten()`). */
   setSinkIdHaengt = false;
+  private readonly spaeteAntworten: Array<() => void> = [];
+
+  /** Die hängenden `setSinkId`-Aufrufe antworten jetzt: der Ausgang wird gesetzt, `sinkchange` kommt (H4-11, Antwort nach der Zeitgrenze). */
+  spaetAntworten(): void {
+    for (const antwort of this.spaeteAntworten.splice(0)) {
+      antwort();
+    }
+  }
 
   private sinkSetzen(kennung: string): Promise<void> {
     this.setSinkIdAufrufe.push(kennung);
     if (this.setSinkIdHaengt) {
-      return new Promise(() => undefined);
+      // antwortet nie – oder erst, wenn der Test `spaetAntworten()` aufruft (der Browser setzt den Ausgang dann doch, wie bei Chrome unter Last)
+      return new Promise<void>((fertig) => { this.spaeteAntworten.push(() => { this.setSinkIdHaengt = false; fertig(); this.sinkAnwenden(kennung).catch(() => undefined); }); });
     }
+    return this.sinkAnwenden(kennung);
+  }
+
+  private sinkAnwenden(kennung: string): Promise<void> {
     if (kennung !== '' && this.vorhandeneAusgaenge !== null && !this.vorhandeneAusgaenge.has(kennung)) {
       return Promise.reject(new DOMException(`Kein Ausgang mit der Kennung ${kennung}`, 'NotFoundError'));
     }

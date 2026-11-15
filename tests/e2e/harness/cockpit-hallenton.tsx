@@ -6,7 +6,7 @@
  * echten `useHallStatus`; nur der Server-Aufruf ist gefälscht, der Ton je Gerät kommt aus `useCockpitTon` (echter `localStorage`).
  * Daten wie im Mockup: Hallencup Süd, Feld 1, Spiel 11, FC Nord – SV Süd, 14:02; 2:1, 2. Halbzeit, Restzeit 4:32 (Fall `halbzeit`: Pause).
  * Nur Testumgebung, nicht Teil des Builds.
- * Aufruf: `?fall=kein-netz|lautsprecher-aus|ausgang-geaendert|halbzeit|anpfiff|uhr|dialog|admin|ohne|ton-aktivieren|kombi` (kombi: vor dem Anpfiff „Ton aktivieren“ UND „Uhr nicht abgeglichen“ untereinander; + `&lang=en`, `&lang=de`).
+ * Aufruf: `?fall=kein-netz|lautsprecher-aus|ausgang-geaendert|ausgang-verloren|halbzeit|anpfiff|uhr|dialog|admin|ohne|ton-aktivieren|kombi` (kombi: vor dem Anpfiff „Ton aktivieren“ UND „Uhr nicht abgeglichen“ untereinander; + `&lang=en`, `&lang=de`).
  */
 import ReactDOM from 'react-dom/client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -45,10 +45,10 @@ const MIN = 60_000;
 /** Zeitpunkt des Anpfiffs: 14:02 (Mockup). */
 const ANPFIFF = new Date(2026, 10, 21, 14, 2).getTime();
 const SERVER_JETZT = ANPFIFF + 30_000;
-const FAELLE = ['kein-netz', 'lautsprecher-aus', 'ausgang-geaendert', 'halbzeit', 'anpfiff', 'uhr', 'dialog', 'admin', 'ohne', 'ton-aktivieren', 'kombi'] as const;
+const FAELLE = ['kein-netz', 'lautsprecher-aus', 'ausgang-geaendert', 'ausgang-verloren', 'halbzeit', 'anpfiff', 'uhr', 'dialog', 'admin', 'ohne', 'ton-aktivieren', 'kombi'] as const;
 type Fall = (typeof FAELLE)[number];
 /** Fälle mit Lautsprecher-Antwort der Leitung im Spiel (angepfiffen). */
-const LEITUNG_FAELLE: readonly Fall[] = ['kein-netz', 'lautsprecher-aus', 'ausgang-geaendert', 'halbzeit', 'anpfiff', 'ton-aktivieren'];
+const LEITUNG_FAELLE: readonly Fall[] = ['kein-netz', 'lautsprecher-aus', 'ausgang-geaendert', 'ausgang-verloren', 'halbzeit', 'anpfiff', 'ton-aktivieren'];
 
 const turnier = {
   id: TID, name: 'Hallencup Süd', groupPhaseGameDuration: 12, gamePeriods: 2, halftimeBreak: 1,
@@ -56,12 +56,13 @@ const turnier = {
   teams: [{ id: 'fc-nord', name: 'FC Nord' }, { id: 'sv-sued', name: 'SV Süd' }],
 } as unknown as Tournament;
 
-type Antwort = { state: 'ready' | 'not_activated'; ageMs: number; hint: boolean };
+type Antwort = { state: 'ready' | 'not_activated' | 'output_lost'; ageMs: number; hint: boolean };
 /** Der Server-Stand des Lautsprechers je Fall (Leitung und Abfrage `hall_sound_status` antworten gleich). */
 function lautsprecherAm(fall: Fall): Antwort | null {
   switch (fall) {
     case 'lautsprecher-aus': return { state: 'ready', ageMs: 12_000, hint: false }; // meldet sich seit 14:02 nicht mehr
     case 'ausgang-geaendert': return { state: 'ready', ageMs: 1000, hint: true };
+    case 'ausgang-verloren': return { state: 'output_lost', ageMs: 1000, hint: false }; // H4-11: das Dock wurde abgezogen (@HT-054)
     case 'halbzeit':
     case 'ton-aktivieren':
     case 'kombi':

@@ -158,16 +158,16 @@ describe('Regel 3 (nur Datenebene) – ein unbekannter Zustand gilt nicht als be
 });
 
 /** H4-3: Die Liste kennt die zwei neuen Zustände der Migration 20261125_001 – gelesen werden sie als sie selbst, die Anzeige bleibt wie bei
- *  einem unbekannten Zustand (nicht bereit, kein Wortgrund, nie „bereit“); Wortgründe und Anzeige kommen mit H4-11, Senden mit H4-6. */
+ *  einem unbekannten Zustand (nicht bereit, kein Wortgrund, nie „bereit“); Die Wortgründe „Ausgang verloren/bestätigen“ gelten seit H4-11 (@HT-039), Senden seit H4-6. */
 describe('H4-3 @HT-054 @HT-055 die neuen Zustände „output_lost“ und „output_unconfirmed“ (nur Lesen)', () => {
-  it.each(['output_lost', 'output_unconfirmed'])('„%s“ wird als er selbst gelesen, ist nicht bereit und hat keinen Wortgrund', async (zustand) => {
+  it.each([['output_lost', 'ausgangVerloren'], ['output_unconfirmed', 'ausgangBestaetigen']])('„%s“ wird als er selbst gelesen, ist nicht bereit und hat seit H4-11 den Wortgrund %s (@HT-039 Spalte Cockpit)', async (zustand, wortgrund) => {
     const stand = await lies({ ...SCHMAL, speakers: [sprecher(1, zustand), sprecher(2, 'ready')] });
     expect(stand.stand).toBe('aktuell');
     expect(stand.felder[2]).toEqual({ art: 'bereit', pruefen: false });
     expect(stand.felder[1]).toEqual({ art: 'nichtBereit', grund: zustand, pruefen: false });
     expect(stand.felder[1]?.art).not.toBe('bereit');
-    expect(cockpitHallZeileAusServer(stand.felder[1], true)).toEqual({ art: 'aus', grund: null, zuletztServerMs: null });
-    expect(cockpitHallZeile(cockpitHinweisAus(stand.felder[1] ?? { art: 'keiner' }))).toEqual({ art: 'aus', grund: null, zuletztServerMs: null });
+    expect(cockpitHallZeileAusServer(stand.felder[1], true)).toEqual({ art: 'aus', grund: wortgrund, zuletztServerMs: null });
+    expect(cockpitHallZeile(cockpitHinweisAus(stand.felder[1] ?? { art: 'keiner' }))).toEqual({ art: 'aus', grund: wortgrund, zuletztServerMs: null });
   });
 
   it('Gegenbeispiel: ein Zustand mit anderer Schreibweise („Output_Lost“) bleibt unbekannt', async () => {

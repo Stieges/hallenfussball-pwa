@@ -45,6 +45,7 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher, aus
   let jetztZaehler = 0;
   let letzterZustand: SpielerZustand = 'not_activated';
   const geplant = new Map<string, Geplant>();
+  const natuerlichBeendet = new Set<string>(); // Töne, die bis zu ihrem Ende klangen (nicht abgebrochen); `endeVerbrauchen` räumt auf
   const zuhoerer = new Set<(zustand: SpielerZustand) => void>();
 
   /** Zustand ohne den Ausgang (wie vor H4-6); der gewählte Ausgang muss gesetzt sein, sonst „Ton nicht aktiviert“. */
@@ -152,6 +153,7 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher, aus
       return false;
     }
     abbrechen(id);
+    natuerlichBeendet.delete(id);
     vorschau.beendenUm(startAtAudioSec); // ein echter Ton beendet jedes Anhören zu seinem Beginn
     const k = kontext();
     const quelle = k.createBufferSource();
@@ -164,6 +166,7 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher, aus
     quelle.onended = () => {
       if (geplant.get(id) === eintrag) {
         geplant.delete(id);
+        natuerlichBeendet.add(id); // nicht abgebrochen (ein Abbruch nimmt den Eintrag vorher aus `geplant`): der Ton hat geklungen
       }
       trennen(eintrag);
     };
@@ -257,6 +260,9 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher, aus
       return () => zuhoerer.delete(fn);
     },
     geplant: () => [...geplant.keys()],
+    endeVerbrauchen(id) {
+      return natuerlichBeendet.delete(id);
+    },
     audioKontext: kontext,
     hymnen,
   };

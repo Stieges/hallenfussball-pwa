@@ -67,7 +67,7 @@ export function Seite() {
     felder: [1, 2], anzeige, serverLagen: lagen, eigenerName: null, lokalerZustand: {}, uhrzeit: (ms) => formatUhrzeit(ms, 'de'),
     sprecher: f.antwort?.speakers.map((s) => ({ field: s.field, deviceName: s.deviceName })) ?? [],
   });
-  const status: Pick<HallStatus, 'stand' | 'antwort' | 'testtonAnfordern'> = { stand: f.stand, antwort: aktuell, testtonAnfordern: () => {
+  const status: Pick<HallStatus, 'stand' | 'antwort' | 'testtonAnfordern' | 'gehoert'> = { stand: f.stand, antwort: aktuell, gehoert: () => Promise.resolve({ ok: false as const, grund: 'netz' as const }), testtonAnfordern: () => {
       if (fall !== 'testton') { return Promise.resolve({ ok: false as const, grund: 'netz' as const }); }
       window.setTimeout(() => setGespielt(true), 0); // die Quittung folgt der Antwort auf den Auftrag
       return Promise.resolve({ ok: true, status: 'requested', testId: 'x1', requestedAt: SERVER_JETZT, serverNow: SERVER_JETZT });
