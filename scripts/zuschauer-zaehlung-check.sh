@@ -18,6 +18,11 @@
 # ACHTUNG: Das REVOKE laesst die Zusicherung "zuschauer-zaehlung-rpc-definer-anon" auf f springen; der naechtliche
 # Drift-Check auf main wird dann rot, bis das GRANT wieder gesetzt ist.
 #
+# Zweite Migration (20261124_004_zuschauer_zaehlung_ci_leser.sql, Werkzeugkette): Leserecht der Drift-Check-Rolle ci_schema_reader auf
+# die Tabelle. Ohne sie scheitert pg_dump --schema-only live ("permission denied for table public_view_counts"). Hier mit bewiesen:
+# mit dem Recht kann die Rolle die Tabelle sperren/dumpen und liest per SELECT 0 Zeilen (RLS, keine Policy), ohne es scheitert genau
+# das; nur SELECT, nichts Schreibendes; Rueckweg in beiden Reihenfolgen sauber (siehe run_rueckweg).
+#
 # Aendert NICHTS an der Produktionsdatenbank und nichts am lokalen Supabase-Stack: eigener Container, am Ende entfernt.
 set -euo pipefail
 
@@ -36,9 +41,13 @@ BASELINE_FILE="$MIGRATIONS_DIR/00000000000000_baseline_live_schema.sql"
 TARGET_NAME="20261124_003_zuschauer_zaehlung.sql"
 TARGET_FILE="$MIGRATIONS_DIR/$TARGET_NAME"
 ROLLBACK_FILE="$REPO_ROOT/supabase/rollbacks/20261124_003_zuschauer_zaehlung_rollback.sql"
+GRANT_NAME="20261124_004_zuschauer_zaehlung_ci_leser.sql"
+GRANT_FILE="$MIGRATIONS_DIR/$GRANT_NAME"
+GRANT_ROLLBACK_FILE="$REPO_ROOT/supabase/rollbacks/20261124_004_zuschauer_zaehlung_ci_leser_rollback.sql"
 C="zaehlung-check-$$-db"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/zaehlung-check.XXXXXX")"
 [[ -f "$TARGET_FILE" ]] || { echo "::error::$TARGET_NAME fehlt." >&2; exit 1; }
+[[ -f "$GRANT_FILE" && -f "$GRANT_ROLLBACK_FILE" ]] || { echo "::error::$GRANT_NAME oder sein Rueckweg fehlt." >&2; exit 1; }
 
 source "$REPO_ROOT/scripts/lib/migrations-since-baseline.sh"
 # Spaetere Migration mit eigenem Harness (hallenton-check.sh): sie aendert hall_speaker_heartbeat und stuende nach dem Rueckweg als
@@ -52,6 +61,7 @@ while IFS= read -r line; do
   if [[ "$(basename "$line")" == "$TARGET_NAME" ]]; then SEEN=1
   elif [[ "$SEEN" -eq 0 ]]; then BEFORE+=("$line")
   elif [[ "$(basename "$line")" == "$OWN_HARNESS_LATER" ]]; then :
+  elif [[ "$(basename "$line")" == "$GRANT_NAME" ]]; then :   # wird gesondert eingespielt (apply_target), damit --without-migration sie nicht braucht
   else AFTER+=("$line"); fi
 done <<< "$(migrations_newer_than_baseline "$MIGRATIONS_DIR" "$BASELINE_FILE")"
 [[ "$SEEN" -eq 1 ]] || { echo "::error::$TARGET_NAME nicht in der Liste 'neuer als Baseline'." >&2; exit 1; }
@@ -71,6 +81,11 @@ q() {
   if grep -q '^ERROR' <<<"$out"; then grep -m1 '^ERROR' <<<"$out"; else tail -1 <<<"$out"; fi
 }
 as_role() { q "SET ROLE $1; $2"; }  # letzte Ausgabezeile des Aufrufers
+dump_as_reader() { # Ausgabe "<Exitcode>|<Anzahl CREATE TABLE public_view_counts>" bzw. die erste Fehlermeldung von pg_dump
+  local out rc
+  out="$(docker exec "$C" pg_dump -U postgres --role=ci_schema_reader --schema-only --table=public.public_view_counts postgres 2>&1)" && rc=0 || rc=$?
+  if [[ "$rc" -ne 0 ]]; then grep -m1 'permission denied' <<<"$out" || echo "rc=$rc $out" | head -1; else echo "$rc|$(grep -c 'CREATE TABLE public.public_view_counts' <<<"$out" || true)"; fi
+}
 schema_dump() { docker exec "$C" pg_dump -U postgres --schema-only --schema=public postgres | grep -vE '^\\(un)?restrict '; }
 
 CATS=(Z S R)   # Z zaehlen/nicht zaehlen, S Schema/Rechte, R Rueckweg/idempotent
@@ -134,6 +149,7 @@ SQL
 apply_target() { # <datei|leer>
   if [[ -n "$1" ]]; then psql_stdin < "$1" >/dev/null; fi
   local f; for f in ${AFTER[@]+"${AFTER[@]}"}; do psql_stdin < "$f" >/dev/null; done
+  if [[ -n "$1" ]]; then psql_stdin < "${2:-$GRANT_FILE}" >/dev/null; fi   # 004: Leserecht der Drift-Check-Rolle (setzt die Tabelle voraus)
 }
 
 count() { q "SELECT $2 FROM public.public_view_counts WHERE tournament_id = '$1';"; }
@@ -143,6 +159,7 @@ run_checks() {
   local ROW="coalesce(sum(views),0) || '/' || coalesce(sum(heartbeats),0) || '/' || count(*)"
   seed_tournaments
   q "TRUNCATE public.public_view_counts;" >/dev/null
+  q "GRANT ci_schema_reader TO postgres;" >/dev/null   # damit SET ROLE ci_schema_reader / pg_dump --role gehen (Testaufbau, nicht Teil der Migration)
 
   # @RZ-024 Aufruf zaehlt, je Beispielzeile eine Kombination
   zaehle NIKO26 aufruf qr handy false
@@ -197,6 +214,22 @@ run_checks() {
   zaehle NIKO26 aufruf qr handy NULL
   check Z "installiert NULL zaehlt als nein" "f" "$(q "SELECT installed FROM public.public_view_counts WHERE tournament_id='$T_PUB';")"
 
+  # 004: Drift-Check-Rolle ci_schema_reader -- pg_dump sperrt jede Tabelle (ACCESS SHARE), das braucht SELECT; Zeilen sieht sie nicht
+  # (RLS an, keine Policy, Rolle ohne BYPASSRLS). Hier liegt genau eine Zaehlzeile.
+  check S "004: Zaehlzeile vorhanden (Vorbedingung fuer die RLS-Probe)" "1" "$(q "SELECT count(*) FROM public.public_view_counts;")"
+  check S "004: ci_schema_reader kann die Tabelle sperren (LOCK ... ACCESS SHARE MODE, wie pg_dump)" "gesperrt" \
+    "$(as_role ci_schema_reader "BEGIN; LOCK TABLE public.public_view_counts IN ACCESS SHARE MODE; SELECT 'gesperrt';")"
+  check S "004: ci_schema_reader liest per SELECT 0 Zeilen, obwohl Zaehlzeilen existieren (RLS, keine Policy)" "0" \
+    "$(as_role ci_schema_reader "SELECT count(*) FROM public.public_view_counts;")"
+  check S "004: pg_dump --schema-only der Tabelle als ci_schema_reader gelingt und enthaelt sie" "0|1" \
+    "$(dump_as_reader)"
+  check S "004: ci_schema_reader kann nicht schreiben (INSERT)" "ERROR:  permission denied for table public_view_counts" \
+    "$(as_role ci_schema_reader "INSERT INTO public.public_view_counts VALUES ('$T_PUB', now(), 'qr', 'handy', true, 1, 1);")"
+  check S "004: ci_schema_reader kann nicht aendern oder loeschen (DELETE)" "ERROR:  permission denied for table public_view_counts" \
+    "$(as_role ci_schema_reader "DELETE FROM public.public_view_counts;")"
+  check S "004: Rolle ci_schema_reader hat nur SELECT (kein INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER/MAINTAIN), kein BYPASSRLS" "true|false|false" \
+    "$(q "SELECT has_table_privilege('ci_schema_reader', 'public.public_view_counts', 'SELECT') || '|' || has_table_privilege('ci_schema_reader', 'public.public_view_counts', 'INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN') || '|' || (SELECT rolbypassrls FROM pg_roles WHERE rolname = 'ci_schema_reader');")"
+
   # @RZ-030 niemand liest ueber die Schnittstelle
   check S "@RZ-030 anon kann die Tabelle nicht lesen" "ERROR:  permission denied for table public_view_counts" \
     "$(as_role anon "SELECT count(*) FROM public.public_view_counts;")"
@@ -224,7 +257,7 @@ run_checks() {
   q "DELETE FROM public.tournaments WHERE id = '$T_PUB';" >/dev/null
   check Z "@RZ-030 endgueltiges Loeschen des Turniers loescht seine Zahlen" "0" "$(q "SELECT count(*) FROM public.public_view_counts;")"
 
-  # Rechte-Assertionen: db_privilege_assertions.sql vollstaendig als ci_schema_reader, jede Zeile |t (darunter die zwei neuen;
+  # Rechte-Assertionen: db_privilege_assertions.sql vollstaendig als ci_schema_reader, jede Zeile |t (darunter die drei neuen;
   # die Ausnahme in lifecycle-guard-triggers-complete haengt an ihnen)
   local priv red own
   priv="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } \
@@ -232,17 +265,37 @@ run_checks() {
   # Die zwei hallenton-*-Zeilen von 20261125_001 sind hier ausser Betracht (Migration laeuft in hallenton-check.sh, siehe OWN_HARNESS_LATER)
   red="$( (grep -v '|t$' <<<"$priv" | grep -vE '^hallenton-(output-states-heartbeat|speaker-unassign-rpc-authenticated-only)\|f$' || true) | head -5 | tr '\n' ';')"
   own="$( (grep -E '^zuschauer-zaehlung-[a-z-]+\|t$' <<<"$priv" || true) | grep -c . || true)"
-  check S "db_privilege_assertions.sql als ci_schema_reader: jede Zeile |t, darunter die zwei zuschauer-zaehlung-*" "keine|2" "${red:-keine}|$own"
+  check S "db_privilege_assertions.sql als ci_schema_reader: jede Zeile |t, darunter die drei zuschauer-zaehlung-* (inkl. ci-schema-reader-select)" "keine|3" "${red:-keine}|$own"
 }
 
 run_rueckweg() {
+  local sql_pv="SELECT coalesce(has_table_privilege('ci_schema_reader', to_regclass('public.public_view_counts'), 'SELECT')::text, 'keine Tabelle');"
   check R "zweites Einspielen der Migration laeuft sauber (idempotent)" "0" "$(psql_stdin < "$TARGET_FILE" >/dev/null 2>&1; echo $?)"
-  check R "Rueckweg laeuft sauber" "0" "$(psql_stdin < "$ROLLBACK_FILE" >/dev/null 2>&1; echo $?)"
+  check R "004: zweites Einspielen laeuft sauber (idempotent), Recht bleibt" "0|true" \
+    "$(psql_stdin < "$GRANT_FILE" >/dev/null 2>&1; echo -n "$?|"; q "$sql_pv")"
+  # Rueckweg 004 allein: Recht weg, Tabelle und Zeilen bleiben, andere Rechte unberuehrt; danach wieder vorwaerts: Recht da
+  check R "004: Rueckweg laeuft sauber, Recht ist weg, service_role behaelt SELECT, Tabelle bleibt" "0|false|true|true" \
+    "$(psql_stdin < "$GRANT_ROLLBACK_FILE" >/dev/null 2>&1; echo -n "$?|"; q "SELECT has_table_privilege('ci_schema_reader', 'public.public_view_counts', 'SELECT') || '|' || has_table_privilege('service_role', 'public.public_view_counts', 'SELECT') || '|' || (to_regclass('public.public_view_counts') IS NOT NULL);")"
+  check R "004 ohne Recht: pg_dump der Tabelle als ci_schema_reader scheitert (genau der Fehler aus dem Drift-Check)" "pg_dump: error: query failed: ERROR:  permission denied for table public_view_counts" \
+    "$(dump_as_reader)"
+  check R "004: Rueckweg zweimal hintereinander laeuft sauber" "0" "$(psql_stdin < "$GRANT_ROLLBACK_FILE" >/dev/null 2>&1; echo $?)"
+  check R "004: wieder vorwaerts -- Recht ist da, pg_dump gelingt" "0|true|0|1" \
+    "$(psql_stdin < "$GRANT_FILE" >/dev/null 2>&1; echo -n "$?|"; q "$sql_pv" | tr -d '\n'; echo -n "|"; dump_as_reader)"
+  # Rueckweg 003 bei eingespielter 004: das Recht verschwindet mit der Tabelle
+  check R "Rueckweg von 003 laeuft sauber, auch wenn 004 schon eingespielt ist" "0" "$(psql_stdin < "$ROLLBACK_FILE" >/dev/null 2>&1; echo $?)"
   schema_dump > "$WORK/schema_nachher.sql"
-  check R "nach dem Rueckweg ist das Schema wie vorher" "" "$(diff "$WORK/schema_vorher.sql" "$WORK/schema_nachher.sql" || true)"
+  check R "nach dem Rueckweg (004 war drauf) ist das Schema wie vorher" "" "$(diff "$WORK/schema_vorher.sql" "$WORK/schema_nachher.sql" || true)"
   check R "nach dem Rueckweg gibt es weder Tabelle noch Funktion" "||" \
     "$(q "SELECT coalesce(to_regclass('public.public_view_counts')::text,'') || '|' || coalesce(to_regprocedure('public.count_public_view(text,text,text,text,boolean)')::text,'') || '|';")"
+  # Rueckweg 004 NACH dem von 003: nichts zu tun, kein Fehler, nichts halb zurueckgelassen
+  check R "004: Rueckweg NACH dem von 003 laeuft sauber (Tabelle fehlt, nichts zu tun)" "0" "$(psql_stdin < "$GRANT_ROLLBACK_FILE" >/dev/null 2>&1; echo $?)"
+  schema_dump > "$WORK/schema_nachher2.sql"
+  check R "004: nach beiden Rueckwegen ist das Schema wie vorher" "" "$(diff "$WORK/schema_vorher.sql" "$WORK/schema_nachher2.sql" || true)"
+  # 004 vorwaerts ohne Tabelle: Fail-fast, keine Aenderung
+  check R "004 ohne Tabelle: Fail-fast (Einspielen scheitert) und es bleibt nichts zurueck" "3|" \
+    "$(psql_stdin < "$GRANT_FILE" >/dev/null 2>&1; echo -n "$?|"; schema_dump | diff "$WORK/schema_vorher.sql" - || true)"
   psql_stdin < "$TARGET_FILE" >/dev/null   # wieder herstellen
+  psql_stdin < "$GRANT_FILE" >/dev/null
 }
 
 summary() { local i; echo ""; for i in "${!CATS[@]}"; do echo "[${CATS[$i]}] ${OKS[$i]} ok, ${DEVS[$i]} Abweichung(en)"; done; }
@@ -261,6 +314,13 @@ MUTATIONEN=(
   "M10|s/IF p_geraet IS NULL OR p_geraet NOT IN ('handy', 'tablet', 'gross') THEN RETURN; END IF;//"
   "M11|s/^COMMIT;/CREATE TRIGGER public_view_counts_guard_closed BEFORE INSERT OR UPDATE OR DELETE ON public.public_view_counts FOR EACH ROW EXECUTE FUNCTION public.guard_closed_tournament('tournament_id');\nCOMMIT;/"
   "M12|s/AND t.deleted_at IS NULL;/AND t.deleted_at IS NULL AND t.lifecycle_status <> 'finished';/"
+)
+# Mutationen an 004: GRANT weglassen / zu viel vergeben / Policy dazu (dann sieht die Rolle Zeilen)
+MUTATIONEN_004=(
+  "M13|/^GRANT SELECT ON TABLE public.public_view_counts TO ci_schema_reader;/d"
+  "M14|s/^GRANT SELECT ON TABLE public.public_view_counts TO ci_schema_reader;/GRANT SELECT, INSERT ON TABLE public.public_view_counts TO ci_schema_reader;/"
+  "M15|s/^GRANT SELECT ON TABLE public.public_view_counts TO ci_schema_reader;/GRANT SELECT ON TABLE public.public_view_counts TO ci_schema_reader, anon;/"
+  "M16|s/^GRANT SELECT ON TABLE public.public_view_counts TO ci_schema_reader;/GRANT SELECT ON TABLE public.public_view_counts TO ci_schema_reader;\nCREATE POLICY ci_leser ON public.public_view_counts FOR SELECT TO ci_schema_reader USING (true);/"
 )
 
 prepare
@@ -291,9 +351,28 @@ case "$MODE" in
       if ! psql_stdin < "$WORK/mutant.sql" >/dev/null 2>"$WORK/apply.log"; then
         echo "Mutation $id: Einspielen scheitert ($(tail -1 "$WORK/apply.log")) -- gilt als rot"; continue
       fi
+      psql_stdin < "$GRANT_FILE" >/dev/null   # 004 unveraendert (isoliert die Mutation von 003)
       QUIET=1 run_checks > "$WORK/run-$id.log" 2>&1 || true
       if [[ "$(total_dev)" -gt 0 ]]; then
         [[ -z "${ZAEHLUNG_DEBUG:-}" ]] || head -12 "$WORK/run-$id.log"
+        echo "Mutation $id: rot ($(total_dev) Abweichung(en), z. B. $(grep -m1 '^ABWEICHUNG' "$WORK/run-$id.log" || echo '?'))"
+      else
+        echo "::error::Mutation $id bleibt gruen -- keine Pruefung faengt sie." >&2; failed=1
+      fi
+    done
+    # Mutationen an 004 (003 unveraendert): jede muss mindestens eine Pruefung rot machen
+    for m in "${MUTATIONEN_004[@]}"; do
+      id="${m%%|*}"; expr="${m#*|}"
+      q "DROP TABLE IF EXISTS public.public_view_counts CASCADE; DROP FUNCTION IF EXISTS public.count_public_view(text,text,text,text,boolean);" >/dev/null
+      reset_counts
+      sed "$expr" "$GRANT_FILE" > "$WORK/mutant4.sql"
+      if cmp -s "$GRANT_FILE" "$WORK/mutant4.sql"; then echo "::error::Mutation $id aendert nichts (sed greift nicht)." >&2; failed=1; continue; fi
+      psql_stdin < "$TARGET_FILE" >/dev/null
+      if ! psql_stdin < "$WORK/mutant4.sql" >/dev/null 2>"$WORK/apply.log"; then
+        echo "Mutation $id: Einspielen scheitert ($(tail -1 "$WORK/apply.log")) -- gilt als rot"; continue
+      fi
+      QUIET=1 run_checks > "$WORK/run-$id.log" 2>&1 || true
+      if [[ "$(total_dev)" -gt 0 ]]; then
         echo "Mutation $id: rot ($(total_dev) Abweichung(en), z. B. $(grep -m1 '^ABWEICHUNG' "$WORK/run-$id.log" || echo '?'))"
       else
         echo "::error::Mutation $id bleibt gruen -- keine Pruefung faengt sie." >&2; failed=1

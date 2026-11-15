@@ -1811,6 +1811,14 @@ SELECT 'zuschauer-zaehlung-table-no-client-access',
                         AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(c.relacl, acldefault('r', c.relowner))) a WHERE a.grantee = 0)
                         AND has_table_privilege('service_role', c.oid, 'SELECT')
                    FROM pg_class c WHERE c.oid = to_regclass('public.public_view_counts')), false)
+-- (1b) 20261124_004_zuschauer_zaehlung_ci_leser.sql (Werkzeugkette): die Drift-Check-Rolle MUSS die Tabelle lesen duerfen (sonst
+--     scheitert pg_dump --schema-only mit "permission denied for table public_view_counts") und sonst nichts (kein INSERT, UPDATE,
+--     DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN). Vor dem Live-Einspielen "f".
+UNION ALL
+SELECT 'zuschauer-zaehlung-ci-schema-reader-select',
+       coalesce((SELECT has_table_privilege('ci_schema_reader', c.oid, 'SELECT')
+                        AND NOT has_table_privilege('ci_schema_reader', c.oid, 'INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN')
+                   FROM pg_class c WHERE c.oid = to_regclass('public.public_view_counts')), false)
 -- (2) count_public_view: SECURITY DEFINER, search_path fest, EXECUTE nur anon/authenticated/service_role, nicht PUBLIC.
 UNION ALL
 SELECT 'zuschauer-zaehlung-rpc-definer-anon',

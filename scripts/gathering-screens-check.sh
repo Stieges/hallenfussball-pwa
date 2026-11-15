@@ -86,9 +86,10 @@ done <<< "$(migrations_newer_than_baseline "$MIGRATIONS_DIR" "$BASELINE_FILE")"
 #   20261123_001_hallenton_torhymne.sql (hall_sound_settings.goal_anthem_paths, hall_goal_anthems_set) -> scripts/hallenton-check.sh
 #   20261124_002_leibchen_schritt2.sql (matches.kit_decision, match_kit_set, Trigger auf matches) -> scripts/leibchen-kit-check.sh
 #   20261124_003_zuschauer_zaehlung.sql (public_view_counts, count_public_view) -> scripts/zuschauer-zaehlung-check.sh
+#   20261124_004_zuschauer_zaehlung_ci_leser.sql (GRANT auf public_view_counts, setzt 003 voraus) -> scripts/zuschauer-zaehlung-check.sh
 #   20261125_001_hallenton_ausgang_zustaende.sql (hall_speakers_state_check, hall_speaker_heartbeat, hall_speaker_unassign; setzt die
 #     Torhymne voraus, die hier nicht eingespielt wird) -> scripts/hallenton-check.sh (Kategorie A)
-OWN_HARNESS_LATER=" 20261123_001_hallenton_torhymne.sql 20261124_001_zeitstrafe_endet_bei_gegentor.sql 20261124_002_leibchen_schritt2.sql 20261124_003_zuschauer_zaehlung.sql 20261125_001_hallenton_ausgang_zustaende.sql "
+OWN_HARNESS_LATER=" 20261123_001_hallenton_torhymne.sql 20261124_001_zeitstrafe_endet_bei_gegentor.sql 20261124_002_leibchen_schritt2.sql 20261124_003_zuschauer_zaehlung.sql 20261124_004_zuschauer_zaehlung_ci_leser.sql 20261125_001_hallenton_ausgang_zustaende.sql "
 KEPT=()
 for f in ${AFTER[@]+"${AFTER[@]}"}; do [[ "$OWN_HARNESS_LATER" == *" $(basename "$f") "* ]] || KEPT+=("$f"); done
 AFTER=(${KEPT[@]+"${KEPT[@]}"})
