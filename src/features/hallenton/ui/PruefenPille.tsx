@@ -45,6 +45,9 @@ export function usePruefen({ feld, aktiv, darfAendern, testton, gehoert }: Pruef
   const [schritt, setSchritt] = useState<Schritt>({ art: 'ruhe' });
   const ergebnis = testton.ergebnisse[feld];
   if (!aktiv) {
+    if (schritt.art !== 'ruhe') {
+      setSchritt({ art: 'ruhe' }); // der Hinweis ist weg: ein späterer neuer Hinweis beginnt mit der Pille, nicht mit alten Prüfpunkten
+    }
     return { pille: null, extra: null };
   }
   const tippen = (): void => {

@@ -19,6 +19,7 @@ import { AusgangBestaetigen } from './AusgangBestaetigen';
 import { baueAusgangOptionen, type AusgangOption } from './baueAusgangOptionen';
 import { AusgangOptionen } from './AusgangOptionen';
 import { MikrofonHinweis } from './MikrofonHinweis';
+import styles from './AusgangZeile.module.css';
 import { useTesttonHalleKontext } from './TesttonHalleKontext';
 
 export interface AusgangZeileProps {
@@ -45,6 +46,8 @@ export function AusgangZeile({ ausgang, darfAendern, felder }: AusgangZeileProps
   const [gewaehltJetzt, setGewaehltJetzt] = useState(false);
   const [mikrofonFrei, setMikrofonFrei] = useState(false);
   const [mikrofonFragt, setMikrofonFragt] = useState(false);
+  const [liest, setLiest] = useState(false); // „Ändern“ gerade getippt, die Liste wird noch gelesen
+  const [blockiert, setBlockiert] = useState(false); // das Mikrofon wurde abgelehnt oder ist gesperrt
   const optionen = useMemo(() => baueAusgangOptionen(ausgang.liste, ausgang.gewaehlt, ausgang.zustand), [ausgang.liste, ausgang.gewaehlt, ausgang.zustand]);
   const name = ausgang.gewaehlt?.name ?? t('ausgang.standard');
   const lesbar = ausgang.liste.length > 0;
@@ -59,10 +62,14 @@ export function AusgangZeile({ ausgang, darfAendern, felder }: AusgangZeileProps
   }
 
   const aendern = (): void => {
-    if (!offen) {
-      void ausgang.lesen(); // erst jetzt wird gelesen (kein Mikrofon-Dialog, nur die Liste, die der Browser ohne Freigabe herausgibt)
+    if (offen) {
+      ausgang.lesenBeenden(); // die Liste wird nicht mehr gebraucht (mit gespeicherter Wahl bleibt der Wächter wach)
+      setOffen(false);
+      return;
     }
-    setOffen(!offen);
+    setLiest(true); // statt des Mikrofon-Hinweises steht „wird gelesen“, bis die Antwort da ist (auch bei dauerhafter Freigabe kein Aufblitzen)
+    void ausgang.lesen().finally(() => setLiest(false)); // erst jetzt wird gelesen (kein Mikrofon-Dialog)
+    setOffen(true);
   };
   const waehle = (o: AusgangOption): void => {
     if (ausgang.waehle(o.id)) {
@@ -71,7 +78,7 @@ export function AusgangZeile({ ausgang, darfAendern, felder }: AusgangZeileProps
   };
   const erlauben = (): void => {
     setMikrofonFragt(true);
-    void ausgang.mikrofonErlauben().then((ok) => { setMikrofonFrei(ok); setMikrofonFragt(false); });
+    void ausgang.mikrofonErlauben().then((ok) => { setMikrofonFrei(ok); setBlockiert(!ok); setMikrofonFragt(false); });
   };
   const testFeld = felder[0];
   const e = testFeld === undefined ? undefined : testton?.ergebnisse[testFeld];
@@ -80,7 +87,7 @@ export function AusgangZeile({ ausgang, darfAendern, felder }: AusgangZeileProps
     <div style={rahmenStil} data-testid="ausgang-zeile" data-offen={offen ? 'true' : 'false'}>
       <div style={kopfStil}>
         <span aria-hidden="true" style={{ display: 'flex' }}><Icons.SpeakerLow size={iconSizeValues.sm} /></span>
-        <span style={{ flex: '1 1 10rem', minWidth: 0, overflowWrap: 'anywhere' }}>{t('ausgang.label')} <strong data-testid="ausgang-name">{name}</strong></span>
+        <span className={styles.name}>{t('ausgang.label')} <strong data-testid="ausgang-name">{name}</strong></span>
         {darfAendern ? (
           <Button variant="ghost" icon={offen ? <Icons.ChevronUp size={iconSizeValues.sm} /> : <Icons.ChevronDown size={iconSizeValues.sm} />} iconPosition="right" onClick={aendern} data-testid="ausgang-aendern">
             {offen ? t('ausgang.schliessen') : t('ausgang.aendern')}
@@ -88,13 +95,14 @@ export function AusgangZeile({ ausgang, darfAendern, felder }: AusgangZeileProps
         ) : null}
       </div>
       {ausgang.zustand === 'unconfirmed' ? (
-        <AusgangBestaetigen onBestaetigen={ausgang.bestaetigen} onStandard={() => { ausgang.waehle(null); }} darfAendern={darfAendern} />
+        <AusgangBestaetigen onBestaetigen={ausgang.bestaetigen} onStandard={() => { ausgang.waehle(null); }} darfAendern={darfAendern} standard={ausgang.gewaehlt === null} />
       ) : null}
       {offen ? (
         <>
           <AusgangOptionen optionen={optionen} onWaehle={waehle} darfAendern={darfAendern} />
           <p style={textStil} data-testid="ausgang-wirkt-sofort">{t('ausgang.wirktSofort')}</p>
-          {!lesbar && darfAendern ? <MikrofonHinweis onErlauben={erlauben} beschaeftigt={mikrofonFragt} /> : null}
+          {!lesbar && darfAendern && liest ? <p style={textStil} role="status" data-testid="ausgang-laedt">{t('ausgang.laedt')}</p> : null}
+          {!lesbar && darfAendern && !liest ? <MikrofonHinweis onErlauben={erlauben} beschaeftigt={mikrofonFragt} blockiert={blockiert} /> : null}
           {lesbar && mikrofonFrei ? <p style={textStil} data-testid="ausgang-mikrofon-frei">{t('ausgang.mikrofonFrei')}</p> : null}
           {ausgang.zustand === 'lost' ? <p style={textStil} data-testid="ausgang-verloren-hinweis">{t('ausgang.verlorenHinweis')}</p> : null}
           {gewaehltJetzt && testton !== null && testFeld !== undefined ? (

@@ -13,12 +13,14 @@ export interface MikrofonHinweisProps {
   onErlauben: () => void;
   /** Die Freigabe wird gerade erfragt. */
   beschaeftigt?: boolean;
+  /** Der Browser hat das Mikrofon abgelehnt oder für diese Website gesperrt: ein weiterer Tipp bliebe still, darum der Hinweis darunter. */
+  blockiert?: boolean;
 }
 
 const stil: CSSProperties = { display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm };
 const textStil: CSSProperties = { margin: 0, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm, lineHeight: cssVars.lineHeights.bodySm };
 
-export function MikrofonHinweis({ onErlauben, beschaeftigt = false }: MikrofonHinweisProps): ReactElement {
+export function MikrofonHinweis({ onErlauben, beschaeftigt = false, blockiert = false }: MikrofonHinweisProps): ReactElement {
   const { t } = useTranslation('hallenton');
   return (
     <div style={stil} data-testid="ausgang-mikrofon-hinweis">
@@ -27,6 +29,7 @@ export function MikrofonHinweis({ onErlauben, beschaeftigt = false }: MikrofonHi
       <div>
         <Button variant="secondary" icon={<Icons.Speaker size={iconSizeValues.sm} />} busy={beschaeftigt} onClick={onErlauben} data-testid="mikrofon-erlauben">{t('ausgang.mikrofonErlauben')}</Button>
       </div>
+      {blockiert ? <p style={textStil} role="status" data-testid="ausgang-mikrofon-blockiert">{t('ausgang.mikrofonBlockiert')}</p> : null}
     </div>
   );
 }

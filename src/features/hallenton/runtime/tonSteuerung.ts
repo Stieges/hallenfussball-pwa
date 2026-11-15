@@ -163,7 +163,8 @@ export function erzeugeTonSteuerung({ takt, spieler }: TonSteuerungDeps): TonSte
       const klingt = (id: string): boolean => spieler.audioKontext().state === 'running' && spieler.geplant().includes(id);
       for (const [id, eintrag] of eintraege) {
         if (eintrag.geplantUm !== null && eintrag.ton.at <= now) {
-          if (ausgabeLaeuft || klingt(id)) {
+          const geklungen = spieler.endeVerbrauchen(id); // schon zu Ende geklungen, bevor dieser Takt kam (Restfall N1)
+          if (ausgabeLaeuft || geklungen || klingt(id)) {
             gespielt.push({ ton: eintrag.ton, at: Math.max(eintrag.ton.at, eintrag.geplantUm) });
           } else {
             spieler.abbrechen(id); // k1: die Ausgabe steht – sonst erklänge der Ton später nach altem Stand

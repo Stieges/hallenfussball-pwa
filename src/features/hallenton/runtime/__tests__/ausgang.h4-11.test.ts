@@ -146,3 +146,136 @@ describe('N3 Wechsel von einem gewählten Ausgang auf „Standard“ (@HT-053, @
     expect(a.tab.kontext.setSinkIdAufrufe).toEqual([]);
   });
 });
+
+describe('Fixrunde 1 🟡1: der Wechsel auf „Standard“ hängt oder scheitert – ein Tipp ohne Neuladen genügt', () => {
+  it('setSinkId(\'\') läuft in die Zeitgrenze → unbestätigt (Wächter und Spieler sagen dasselbe); „Ausgang bestätigen“ (standardErneut) versucht es erneut → bereit über Standard', async () => {
+    const l = lage({ gespeichert: DOCK });
+    const a = tab(l);
+    await a.starte();
+    await a.vor(3000);
+    a.tab.kontext.setSinkIdHaengt = true;
+    a.tab.wahl.setzen(null);
+    await a.vor(2600);
+    expect(zustand(a)).toBe('output_unconfirmed');
+    expect(a.tab.waechter?.lage()).toBe('unconfirmed'); // Zeile (Taste), Karte und Cockpit lesen dieselbe Lage
+    expect(l.geraet.sperren.gehalten()).toBe(true); // die Sperre bleibt, nie ein Ton über den alten Ausgang
+    a.tab.kontext.setSinkIdHaengt = false;
+    a.tab.waechter?.standardErneut(); // der eine Tipp
+    await a.vor(1500);
+    expect(a.tab.kontext.sinkId).toBe('');
+    expect(zustand(a)).toBe('ready');
+    expect(a.tab.waechter?.lage()).toBe('standard');
+  });
+
+  it('kommt die späte Antwort doch noch (sinkchange auf Standard), heilt sie ohne Tipp', async () => {
+    const l = lage({ gespeichert: DOCK });
+    const a = tab(l);
+    await a.starte();
+    await a.vor(3000);
+    a.tab.kontext.setSinkIdHaengt = true;
+    a.tab.wahl.setzen(null);
+    await a.vor(2600);
+    expect(zustand(a)).toBe('output_unconfirmed');
+    a.tab.kontext.spaetAntworten();
+    await a.vor(1500);
+    expect(zustand(a)).toBe('ready');
+  });
+
+  it('steht der Kontext schon auf „Standard“ (die späte Antwort kam ohne sinkchange), genügt der Tipp ohne neuen setSinkId-Aufruf', async () => {
+    const l = lage({ gespeichert: DOCK });
+    const a = tab(l);
+    await a.starte();
+    await a.vor(3000);
+    a.tab.kontext.setSinkIdHaengt = true;
+    a.tab.wahl.setzen(null);
+    await a.vor(2600);
+    expect(zustand(a)).toBe('output_unconfirmed');
+    a.tab.kontext.sinkId = ''; // der Browser hat umgeschaltet, ohne es zu melden
+    a.tab.waechter?.standardErneut();
+    await a.vor(1500);
+    expect(zustand(a)).toBe('ready');
+    expect(a.tab.kontext.setSinkIdAufrufe).toEqual(['dock', '']); // kein weiterer Aufruf
+  });
+
+  it('nach „Ausgang verloren“ „Standard“ wählen (@HT-054 Zeile 3, derselbe Weg wie „Oder ‚Standard‘ wählen“): setSinkId(\'\') hängt → weiter unbestätigt, ein Tipp → bereit', async () => {
+    const l = lage({ gespeichert: DOCK });
+    const a = tab(l);
+    await a.starte();
+    await a.vor(3000);
+    l.medien.abziehen('dock');
+    await a.vor(2000);
+    expect(zustand(a)).toBe('output_lost');
+    a.tab.kontext.setSinkIdHaengt = true;
+    a.tab.wahl.setzen(null);
+    await a.vor(2600);
+    expect(zustand(a)).toBe('output_unconfirmed');
+    expect(a.tab.waechter?.lage()).toBe('unconfirmed');
+    a.tab.kontext.setSinkIdHaengt = false;
+    a.tab.waechter?.standardErneut();
+    await a.vor(1500);
+    expect(zustand(a)).toBe('ready');
+  });
+
+  it('Gegenbeispiel: ein Gerät ohne Wahl ruft weder bei Start noch bei standardErneut setSinkId', async () => {
+    const l = lage();
+    const a = tab(l);
+    await a.starte();
+    await a.vor(5000);
+    a.tab.waechter?.standardErneut();
+    await a.vor(3000);
+    expect(a.tab.kontext.setSinkIdAufrufe).toEqual([]);
+    expect(zustand(a)).toBe('ready');
+  });
+});
+
+describe('Fixrunde 1 🔵1: nach „Schließen“ liest ein Gerät ohne Wahl nicht mehr bei devicechange mit', () => {
+  it('ohne Wahl: lesen, beenden, devicechange → kein weiteres Lesen; mit Wahl bleibt der Wächter wach (er bemerkt das Abziehen)', async () => {
+    const ohne = lage();
+    const a = tab(ohne);
+    await a.starte();
+    await a.tab.waechter!.neuLesen();
+    const gelesen = ohne.medien.leseAufrufe;
+    ohne.medien.geraeteWechsel();
+    await a.vor(100);
+    expect(ohne.medien.leseAufrufe).toBeGreaterThan(gelesen); // offen: liest mit
+    a.tab.waechter!.lesenBeenden();
+    const nachBeenden = ohne.medien.leseAufrufe;
+    ohne.medien.geraeteWechsel();
+    await a.vor(100);
+    expect(ohne.medien.leseAufrufe).toBe(nachBeenden);
+
+    const mit = lage({ gespeichert: DOCK });
+    const b = tab(mit);
+    await b.starte();
+    await b.tab.waechter!.neuLesen();
+    b.tab.waechter!.lesenBeenden();
+    const vorher = mit.medien.leseAufrufe;
+    mit.medien.abziehen('dock');
+    await b.vor(2500);
+    expect(mit.medien.leseAufrufe).toBeGreaterThan(vorher);
+    expect(zustand(b)).toBe('output_lost');
+  });
+});
+
+describe('Fixrunde 1 🟡2 (nur festgehalten, nicht geändert): Zwischenzustand im Lebenszeichen beim Wechsel (@HT-054 Zeile 6)', () => {
+  it('Solange `setSinkId` für den Wechsel läuft, sendet das Lebenszeichen „output_unconfirmed“ (so lange wie `setSinkId` dauert, höchstens die Zeitgrenze von 2 s), danach „ready“; die Sperre bleibt, nie „not_activated“', async () => {
+    const l = lage({ gespeichert: DOCK });
+    const a = tab(l);
+    await a.starte();
+    await a.vor(10_000);
+    const vorher = l.server.lebenszeichen.length;
+    a.tab.kontext.setSinkIdHaengt = true;
+    const t0 = l.uhr.jetzt();
+    a.tab.wahl.setzen(wahlVon(LG));
+    const gesehen: Array<{ nach: number; state: string }> = [];
+    for (let i = 0; i < 40; i += 1) {
+      await a.vor(100, i === 15 ? [{ um: l.uhr.jetzt() + 50, tu: () => a.tab.kontext.spaetAntworten() }] : []);
+      for (const z of l.server.lebenszeichen.slice(vorher + gesehen.length)) {
+        gesehen.push({ nach: l.uhr.jetzt() - t0, state: z.state });
+      }
+    }
+    expect(gesehen.map((g) => g.state)).toEqual(['output_unconfirmed', 'ready']); // der Zwischenzustand ist sichtbar …
+    expect(gesehen[1].nach - gesehen[0].nach).toBeLessThanOrEqual(2000); // … höchstens bis zur Zeitgrenze von `setSinkId`
+    expect(l.geraet.sperren.gehalten()).toBe(true);
+  });
+});

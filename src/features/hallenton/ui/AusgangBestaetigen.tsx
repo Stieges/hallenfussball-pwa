@@ -17,11 +17,13 @@ export interface AusgangBestaetigenProps {
   /** „Oder ‚Standard‘ wählen“. */
   onStandard: () => void;
   darfAendern: boolean;
+  /** „Standard“ ist gewählt, der Wechsel dorthin ist gescheitert (kein gespeicherter Ausgang, kein Mikrofon nötig): anderer Text, ein Tipp versucht es erneut. */
+  standard?: boolean;
 }
 
 const spalte: CSSProperties = { display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm, alignItems: 'flex-start' };
 
-export function AusgangBestaetigen({ onBestaetigen, onStandard, darfAendern }: AusgangBestaetigenProps): ReactElement {
+export function AusgangBestaetigen({ onBestaetigen, onStandard, darfAendern, standard = false }: AusgangBestaetigenProps): ReactElement {
   const { t } = useTranslation('hallenton');
   const [ohneMikrofon, setOhneMikrofon] = useState(false);
   const tippen = (): void => {
@@ -38,7 +40,7 @@ export function AusgangBestaetigen({ onBestaetigen, onStandard, darfAendern }: A
       ) : undefined}
     >
       <strong>{t('ausgang.bestaetigenTitel')}</strong>
-      <span>{t('ausgang.bestaetigenText')}</span>
+      <span>{standard ? t('ausgang.standardGescheitert') : t('ausgang.bestaetigenText')}</span>
     </InlineNotice>
   );
 }

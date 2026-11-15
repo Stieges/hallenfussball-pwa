@@ -1,0 +1,7 @@
+/* Zeile „Ausgang“ (H4-11): der Name neben „Ändern“. 9,5rem wie die Textspalte in `HinweisMitTaste.module.css`: so schmal darf der Name werden, bevor
+   „Ändern“ rechtsbündig darunter umbricht. Nur Tokens sonst. */
+.name {
+  flex: 1 1 9.5rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

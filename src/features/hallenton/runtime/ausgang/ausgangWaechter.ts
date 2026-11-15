@@ -25,13 +25,20 @@ export interface SpielerAusgang {
   wahl(): GewaehlterAusgang | null;
   /** Lage oder Wahl hat sich geändert. */
   beobachten(fn: () => void): () => void;
-  /** `setSinkId` mit der Kennung `id` ist gescheitert (`true`) bzw. gelungen (`false`). */
+  /** `setSinkId` mit der Kennung `id` ist gescheitert (`true`) bzw. gelungen (`false`); `id` leer = der Wechsel auf „Standard“ (H4-11). */
   senkeMelden(id: string, scheitert: boolean): void;
   /** Ausgänge neu lesen (z. B. nach `sinkchange`). */
   neuLesen(): Promise<void>;
 }
 
 export interface AusgangWaechter extends SpielerAusgang {
+  /**
+   * Der Wechsel auf „Standard“ ist gescheitert (Lage `unconfirmed` ohne Wahl): der nächste Tipp („Ausgang bestätigen“, „Oder ‚Standard‘ wählen“)
+   * versucht ihn erneut. Ohne gescheiterten Wechsel ändert der Aufruf nichts.
+   */
+  standardErneut(): void;
+  /** Die Oberfläche braucht die Liste nicht mehr: ohne gespeicherte Wahl liest der Wächter bei `devicechange` nicht mehr mit (H4-11). */
+  lesenBeenden(): void;
   liste(): AusgangsListe;
   erlaubnis(): MikrofonErlaubnis;
   beenden(): void;
@@ -58,6 +65,7 @@ export function erzeugeAusgangWaechter({ liste: quelle, wahl: wahlSpeicher, zeit
   let erlaubnis: MikrofonErlaubnis = null;
   let fehlerId: string | null = null; // `setSinkId` mit dieser Kennung ist gescheitert
   let gesetztId: string | null = null; // diese Kennung wurde in dieser Sitzung erfolgreich gesetzt
+  let standardFehler = false; // der Wechsel auf „Standard“ ist gescheitert (H4-11)
   let liest = wahl !== null;
   let lauf = 0;
   let beendet = false;
@@ -65,7 +73,7 @@ export function erzeugeAusgangWaechter({ liste: quelle, wahl: wahlSpeicher, zeit
 
   const berechneLage = (): AusgangLage => bewerteAusgang({
     wahl, eintraege: liste.eintraege, erlaubnis, senkeScheitert: fehlerId !== null && fehlerId === wahl?.id,
-    inSitzungGesetzt: gesetztId !== null && gesetztId === wahl?.id,
+    inSitzungGesetzt: gesetztId !== null && gesetztId === wahl?.id, standardScheitert: standardFehler,
   });
   let lage: AusgangLage = berechneLage();
 
@@ -135,6 +143,8 @@ export function erzeugeAusgangWaechter({ liste: quelle, wahl: wahlSpeicher, zeit
       gesetztId = null; // eine andere Kennung: in dieser Sitzung noch nicht gesetzt
     }
     wahl = neu;
+    liest = liest || neu !== null; // eine Wahl hält den Wächter wach (Abziehen bemerken)
+    standardFehler = false; // eine neue Wahl versucht es neu
     fehlerId = null; // neue Wahl, „Bestätigen“ in einem anderen Tab: der alte Fehler gilt nicht mehr, `setSinkId` wird neu versucht
     auswerten(true);
     if (neu !== null || liest) {
@@ -167,7 +177,23 @@ export function erzeugeAusgangWaechter({ liste: quelle, wahl: wahlSpeicher, zeit
       };
     },
     neuLesen,
+    lesenBeenden() {
+      liest = wahl !== null;
+    },
+    standardErneut() {
+      if (standardFehler) {
+        standardFehler = false;
+        auswerten(true); // Lage wieder „standard“: die Senke versucht `setSinkId('')` erneut
+      }
+    },
     senkeMelden(id, scheitert) {
+      if (id === '') {
+        if (standardFehler !== scheitert) {
+          standardFehler = scheitert;
+          auswerten(false);
+        }
+        return;
+      }
       if (scheitert ? fehlerId === id && gesetztId !== id : gesetztId === id && fehlerId !== id) {
         return;
       }

@@ -108,6 +108,11 @@ export function erzeugeSenke({ ausgang, kontext, geaendert: geaendertRoh, beiVer
     if (!ausgang || !k || ziel === null || (angewendet ?? '') === ziel) {
       return; // ohne Wahl und ohne frühere Wahl: kein Aufruf
     }
+    if (ziel === '' && k.sinkId === '') {
+      angewendet = ''; // H4-11: der Kontext steht schon auf „Standard“ (ein spätes `setSinkId('')` kam doch an): nichts zu setzen
+      ausgang.senkeMelden('', false);
+      return;
+    }
     if (typeof k.setSinkId !== 'function') {
       if (ziel !== '') {
         ausgang.senkeMelden(ziel, true); // der Browser kann keinen Ausgang wählen: nie still über „Standard“
@@ -118,17 +123,14 @@ export function erzeugeSenke({ ausgang, kontext, geaendert: geaendertRoh, beiVer
     try {
       await mitZeitgrenze(k.setSinkId(ziel), ausgang);
     } catch {
-      if (ziel !== '') {
-        ausgang.senkeMelden(ziel, true); // Kennung nicht mehr gültig, Zeitgrenze o. Ä.: unbestätigt (nie den Browsertext weitergeben)
-      }
+      // Kennung nicht mehr gültig, Zeitgrenze o. Ä.: unbestätigt (nie den Browsertext weitergeben); auch für „Standard“ (H4-11): kein stilles Hängen
+      ausgang.senkeMelden(ziel, true);
       return;
     } finally {
       ausstehend -= 1;
     }
     angewendet = ziel;
-    if (ziel !== '') {
-      ausgang.senkeMelden(ziel, false);
-    }
+    ausgang.senkeMelden(ziel, false);
     if (fehlteZuvor && darfResume()) {
       fehlteZuvor = false;
       void k.resume().catch(() => undefined); // ohne Gewähr; nicht abwarten (der Browser kann es offen lassen)
@@ -168,9 +170,9 @@ export function erzeugeSenke({ ausgang, kontext, geaendert: geaendertRoh, beiVer
       return; // ein Gerät ohne Wahl rührt bei einem spontanen `sinkchange` nichts an
     }
     angewendet = typeof k.sinkId === 'string' ? k.sinkId : KEINER;
-    const wahlId = ausgang.wahl()?.id;
-    if (wahlId !== undefined && angewendet === wahlId) {
-      // H4-11: ein `setSinkId`, das erst nach der Zeitgrenze antwortet, hat den gewählten Ausgang doch gesetzt – der gemerkte Fehler gilt nicht mehr
+    const wahlId = ausgang.wahl()?.id ?? '';
+    if (angewendet === wahlId) {
+      // H4-11: ein `setSinkId`, das erst nach der Zeitgrenze antwortet, hat den gewählten Ausgang (oder „Standard“) doch gesetzt – der gemerkte Fehler gilt nicht mehr
       ausgang.senkeMelden(wahlId, false);
     }
     geaendert();
@@ -223,7 +225,9 @@ export function erzeugeSenke({ ausgang, kontext, geaendert: geaendertRoh, beiVer
       }
       // H4-11: Wechsel von einem gewählten Ausgang auf „Standard“: bis `setSinkId('')` durch ist, bleibt die Sperre (kein Durchgang durch „Ton nicht
       // aktiviert“, kein Ton über den alten Ausgang). Ein Gerät, das nie eine Wahl hatte (`angewendet` leer), berührt das nie.
-      if (l === 'standard' && ausgang && kontext() !== null && angewendet !== undefined && angewendet !== '') {
+      const kStandard = kontext();
+      // der echte `sinkId` des Kontexts zählt (nicht nur, was wir uns gemerkt haben): steht er schon auf „Standard“, ist nichts mehr zu warten
+      if (l === 'standard' && ausgang && kStandard !== null && angewendet !== undefined && (typeof kStandard.sinkId === 'string' ? kStandard.sinkId !== '' : angewendet !== '')) {
         return 'output_unconfirmed';
       }
       return l === 'lost' ? 'output_lost' : l === 'unconfirmed' ? 'output_unconfirmed' : null;

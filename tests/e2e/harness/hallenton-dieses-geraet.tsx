@@ -120,6 +120,7 @@ function richteAusgangEin(): void {
   if (params.get('lang') === 'en') { void i18n.changeLanguage('en'); }
   const medien = new FalscheMedienGeraete(AUSGAENGE_MOCKUP(fall === 'ausgangLang' ? LANGER_NAME : DOCK_NAME));
   medien.ablehnen = params.get('ablehnen') === '1';
+  medien.leseHaengt = params.get('lesenHaengt') === '1'; // „Ändern“ gedrückt, die Liste wird noch gelesen (Zeitgrenze 2 s)
   const speicher = new FalscherSpeicher();
   const mitWahl = ['ausgangGewaehlt', 'ausgangVerloren', 'ausgangBestaetigen', 'ausgangLang'].includes(fall);
   if (mitWahl) {

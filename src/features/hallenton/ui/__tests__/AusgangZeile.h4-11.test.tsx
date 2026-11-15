@@ -9,7 +9,7 @@ import { FalscheMedienGeraete, type FalscherAusgang } from '../../../../test/hal
 import { FalscherSpeicher } from '../../../../test/hallenton/falschesGeraet';
 import { __setzeGeraetFuerTests } from '../../lautsprecherGeraet';
 import { erzeugeAusgangListe } from '../../runtime/ausgang/ausgangListe';
-import { erzeugeAusgangWaechter } from '../../runtime/ausgang/ausgangWaechter';
+import { erzeugeAusgangWaechter, type AusgangWaechter } from '../../runtime/ausgang/ausgangWaechter';
 import { AUSGANG_SCHLUESSEL, erzeugeAusgangWahl } from '../../runtime/ausgang/ausgangWahl';
 import { __setzeAusgangFuerTests } from '../../runtime/ausgang/browserAusgang';
 import type { HallTonSpieler } from '../../runtime/hallTonSpieler';
@@ -42,13 +42,15 @@ const DOCK = AUSGAENGE[1];
 let medien: FalscheMedienGeraete;
 let speicher: FalscherSpeicher;
 let aktivieren: ReturnType<typeof vi.fn>;
+let waechter: AusgangWaechter;
 const ausloesenMock = vi.fn<(feld: number) => void>();
 let testton: TesttonHalle;
 
 function baue(): void {
   const liste = erzeugeAusgangListe({ geraete: medien, berechtigungen: medien });
   const wahl = erzeugeAusgangWahl({ speicher, seite: null });
-  __setzeAusgangFuerTests({ liste, wahl, waechter: erzeugeAusgangWaechter({ liste, wahl }) });
+  waechter = erzeugeAusgangWaechter({ liste, wahl });
+  __setzeAusgangFuerTests({ liste, wahl, waechter });
 }
 
 function Zeile({ darf = true }: { darf?: boolean }) {
@@ -135,6 +137,7 @@ describe('@HT-053 Ausgang wählen', () => {
   it('Zeile 2: Mikrofon einmal erlaubt → alle Ausgänge mit Namen, Standard zuerst, virtuelle am Ende mit „virtuell“, Bluetooth-Hinweis, das Mikrofon ist sofort wieder frei', async () => {
     render(<Zeile />);
     fireEvent.click(screen.getByTestId('ausgang-aendern'));
+    await fertig(); // erst nach dem Lesen steht der Mikrofon-Hinweis da (🔵3a)
     fireEvent.click(screen.getByTestId('mikrofon-erlauben'));
     await fertig();
     const namen = screen.getAllByRole('radio').map((r) => r.textContent ?? '');
@@ -151,6 +154,7 @@ describe('@HT-053 Ausgang wählen', () => {
   it('Zeile 3: Olli wählt „ThinkPad Thunderbolt 3 Dock USB Audio“ → die Wahl wird gespeichert (bleibt nach dem Neuladen), „gewählt“ steht daran, der Unterpunkt empfiehlt einen Testton; eingeklappt steht der Name mit „Ändern“', async () => {
     render(<Zeile />);
     fireEvent.click(screen.getByTestId('ausgang-aendern'));
+    await fertig(); // erst nach dem Lesen steht der Mikrofon-Hinweis da (🔵3a)
     fireEvent.click(screen.getByTestId('mikrofon-erlauben'));
     await fertig();
     const dock = screen.getAllByRole('radio').find((r) => r.textContent?.includes('ThinkPad'));
@@ -191,6 +195,7 @@ describe('@HT-053 Ausgang wählen', () => {
   it('nach der Wahl kein Pflicht-Dialog: die Wahl wirkt ohne Testton (der Testton blockiert nichts)', async () => {
     render(<Zeile />);
     fireEvent.click(screen.getByTestId('ausgang-aendern'));
+    await fertig(); // erst nach dem Lesen steht der Mikrofon-Hinweis da (🔵3a)
     fireEvent.click(screen.getByTestId('mikrofon-erlauben'));
     await fertig();
     fireEvent.click(screen.getAllByRole('radio')[2]);
@@ -304,5 +309,92 @@ describe('Datenschutz: Name und Kennung eines Ausgangs stehen in keinem Attribut
     expect(container.textContent).toContain('ThinkPad Thunderbolt 3 Dock USB Audio'); // sichtbar bleibt der Name
     const ids = Array.from(container.querySelectorAll('[role="radio"]')).map((r) => r.getAttribute('data-testid'));
     expect(ids.every((i) => /^ausgang-wahl-\d+$/.test(i ?? ''))).toBe(true); // neutrale Kennungen (Position)
+  });
+});
+
+describe('Fixrunde 1 🟡1: „Standard“ gewählt, der Wechsel dorthin ist gescheitert', () => {
+  it('Zeile, Hook und Karte sagen dasselbe (unbestätigt): die Taste „Ausgang bestätigen“ steht da, ohne Mikrofon-Text; ein Tipp ruft „Ton aktivieren“ und versucht den Wechsel erneut – ohne Mikrofon-Dialog', async () => {
+    render(<Zeile />);
+    await fertig();
+    expect(screen.queryByTestId('ausgang-bestaetigen')).toBeNull();
+    act(() => { waechter.senkeMelden('', true); }); // `setSinkId('')` ist in die Zeitgrenze gelaufen
+    const kasten = screen.getByTestId('ausgang-bestaetigen');
+    expect(kasten).toHaveTextContent('Der Wechsel auf „Standard“ hat nicht geklappt');
+    expect(kasten).not.toHaveTextContent('Nach dem Neuladen');
+    fireEvent.click(screen.getByTestId('ausgang-bestaetigen-taste'));
+    expect(aktivieren).toHaveBeenCalledTimes(1);
+    await fertig();
+    expect(screen.queryByTestId('ausgang-bestaetigen')).toBeNull();
+    expect(medien.mikrofonAnfragen).toBe(0);
+  });
+
+  it('dasselbe über „Oder ‚Standard‘ wählen“ (Mikrofon abgelehnt, dann scheitert der Wechsel auf „Standard“): ein weiterer Tipp genügt', async () => {
+    speicher.setItem(AUSGANG_SCHLUESSEL, JSON.stringify({ id: DOCK.id, name: DOCK.name, gruppe: DOCK.gruppe }));
+    medien.erlaubt = false;
+    medien.ablehnen = true;
+    baue();
+    render(<Zeile />);
+    await fertig();
+    fireEvent.click(screen.getByTestId('ausgang-bestaetigen-taste'));
+    await fertig();
+    fireEvent.click(screen.getByTestId('ausgang-oder-standard'));
+    await fertig();
+    act(() => { waechter.senkeMelden('', true); });
+    expect(screen.getByTestId('ausgang-bestaetigen')).toHaveTextContent('Der Wechsel auf „Standard“ hat nicht geklappt');
+    fireEvent.click(screen.getByTestId('ausgang-bestaetigen-taste'));
+    await fertig();
+    expect(screen.queryByTestId('ausgang-bestaetigen')).toBeNull();
+    expect(screen.getByTestId('ausgang-name')).toHaveTextContent('Standard (Ausgang des Systems)');
+  });
+});
+
+describe('Fixrunde 1 🔵3a: während „Ändern“ liest, steht „wird gelesen“ statt des Mikrofon-Hinweises', () => {
+  it('Freigabe dauerhaft erteilt: der Hinweis blitzt nie auf (unmittelbar nach dem Tipp „wird gelesen“, danach die Liste ohne Hinweis)', async () => {
+    medien.erlaubt = true;
+    medien.dauerhaft = true;
+    render(<Zeile />);
+    fireEvent.click(screen.getByTestId('ausgang-aendern'));
+    expect(screen.getByTestId('ausgang-laedt')).toHaveTextContent('Ausgänge werden gelesen');
+    expect(screen.queryByTestId('ausgang-mikrofon-hinweis')).toBeNull();
+    await fertig();
+    expect(screen.getAllByRole('radio').length).toBeGreaterThan(1);
+    expect(screen.queryByTestId('ausgang-mikrofon-hinweis')).toBeNull();
+    expect(screen.queryByTestId('ausgang-laedt')).toBeNull();
+  });
+
+  it('Gegenbeispiel: ohne Freigabe erscheint der Hinweis, sobald das Lesen fertig ist', async () => {
+    render(<Zeile />);
+    fireEvent.click(screen.getByTestId('ausgang-aendern'));
+    expect(screen.getByTestId('ausgang-laedt')).toBeVisible();
+    await fertig();
+    expect(screen.queryByTestId('ausgang-laedt')).toBeNull();
+    expect(screen.getByTestId('ausgang-mikrofon-hinweis')).toBeVisible();
+  });
+});
+
+describe('Fixrunde 1 🔵3b: abgelehntes oder gesperrtes Mikrofon', () => {
+  it('nach einer Ablehnung steht unter der Taste, dass das Mikrofon blockiert ist und wo man es erlaubt (oder „Standard“ wählt); vorher steht der Satz nicht da', async () => {
+    medien.ablehnen = true;
+    render(<Zeile />);
+    fireEvent.click(screen.getByTestId('ausgang-aendern'));
+    await fertig();
+    expect(screen.queryByTestId('ausgang-mikrofon-blockiert')).toBeNull();
+    fireEvent.click(screen.getByTestId('mikrofon-erlauben'));
+    await fertig();
+    expect(screen.getByTestId('ausgang-mikrofon-blockiert')).toHaveTextContent('Das Mikrofon ist für diese Website blockiert. Erlaube es in den Website-Einstellungen des Browsers wieder – oder wähle „Standard“.');
+    expect(screen.getByTestId('mikrofon-erlauben')).toBeVisible();
+  });
+});
+
+describe('Fixrunde 1 🔵1: „Schließen“ beendet das Mitlesen (ohne Wahl)', () => {
+  it('Ändern, Schließen, devicechange → kein weiteres Lesen; mit gespeicherter Wahl bleibt es', async () => {
+    render(<Zeile />);
+    fireEvent.click(screen.getByTestId('ausgang-aendern'));
+    await fertig();
+    await act(async () => { medien.geraeteWechsel(); await Promise.resolve(); await Promise.resolve(); });
+    const offen = medien.leseAufrufe;
+    fireEvent.click(screen.getByTestId('ausgang-aendern')); // Schließen
+    await act(async () => { medien.geraeteWechsel(); await Promise.resolve(); await Promise.resolve(); });
+    expect(medien.leseAufrufe).toBe(offen);
   });
 });

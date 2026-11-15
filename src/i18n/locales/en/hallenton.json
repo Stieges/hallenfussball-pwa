@@ -106,7 +106,7 @@
     "halbzeit": "Half-time",
     "tor": "Goal anthem",
     "anhoeren": "Listen",
-    "prozent": "{{wert}} %",
+    "prozent": "{{wert}}\u00a0%",
     "gesperrt": "After the tournament has ended the volume can only be read.",
     "belegt": "A real tone is playing right now. Listen again afterwards.",
     "nichtSpielbar": "Not played: the tone is at 0 % or not loaded yet.",
@@ -244,7 +244,9 @@
     "bestaetigenTitel": "Confirm output",
     "bestaetigenText": "After a reload the app no longer knows the chosen output for sure. No hall tone comes through “Default” until you confirm it with one tap.",
     "bestaetigen": "Confirm output",
-    "oderStandard": "Or choose ‘Default’"
+    "oderStandard": "Or choose ‘Default’",
+    "standardGescheitert": "Switching to “Default” did not work. One tap tries again; no hall tone comes until it has worked.",
+    "mikrofonBlockiert": "The microphone is blocked for this website. Allow it again in the browser’s site settings – or choose “Default”."
   },
   "pruefen": {
     "gespielt": "Played {{zeit}}",

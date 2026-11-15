@@ -79,11 +79,16 @@ export interface AusgangBewertung {
    * Zeile 5). Nach dem Neuladen ist das `false` (@HT-055).
    */
   inSitzungGesetzt?: boolean;
+  /**
+   * Der Wechsel auf „Standard“ (`setSinkId('')`) ist gescheitert oder in die Zeitgrenze gelaufen (H4-11): die Ausgabe steht vielleicht noch auf dem alten Ausgang,
+   * also `unconfirmed` – derselbe Weg wie sonst: „Ausgang bestätigen“ (ein Tipp versucht es erneut), nie ein Ton über einen unklaren Ausgang.
+   */
+  standardScheitert?: boolean;
 }
 
-export function bewerteAusgang({ wahl, eintraege, erlaubnis, senkeScheitert, inSitzungGesetzt = false }: AusgangBewertung): AusgangLage {
+export function bewerteAusgang({ wahl, eintraege, erlaubnis, senkeScheitert, inSitzungGesetzt = false, standardScheitert = false }: AusgangBewertung): AusgangLage {
   if (wahl === null || wahl.id === STANDARD_AUSGANG_ID) {
-    return 'standard';
+    return standardScheitert ? 'unconfirmed' : 'standard';
   }
   if (inSitzungGesetzt && !senkeScheitert) {
     const sichtbar = eintraege.filter((e) => e.id !== '');

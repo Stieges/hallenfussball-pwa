@@ -106,7 +106,7 @@
     "halbzeit": "Halbzeit",
     "tor": "Torhymne",
     "anhoeren": "Anhören",
-    "prozent": "{{wert}} %",
+    "prozent": "{{wert}}\u00a0%",
     "gesperrt": "Nach dem Turnierende lässt sich die Lautstärke nur noch ablesen.",
     "belegt": "Gerade klingt ein echter Ton. Höre es danach noch einmal an.",
     "nichtSpielbar": "Nicht gespielt: Der Ton steht auf 0 % oder ist noch nicht geladen.",
@@ -244,7 +244,9 @@
     "bestaetigenTitel": "Ausgang bestätigen",
     "bestaetigenText": "Nach dem Neuladen kennt die App den gewählten Ausgang nicht mehr sicher. Es kommt kein Hallenton über „Standard“, bis du ihn mit einem Tipp bestätigst.",
     "bestaetigen": "Ausgang bestätigen",
-    "oderStandard": "Oder ‚Standard‘ wählen"
+    "oderStandard": "Oder ‚Standard‘ wählen",
+    "standardGescheitert": "Der Wechsel auf „Standard“ hat nicht geklappt. Ein Tipp versucht es noch einmal; bis es gelungen ist, kommt kein Hallenton.",
+    "mikrofonBlockiert": "Das Mikrofon ist für diese Website blockiert. Erlaube es in den Website-Einstellungen des Browsers wieder – oder wähle „Standard“."
   },
   "pruefen": {
     "gespielt": "Gespielt {{zeit}}",

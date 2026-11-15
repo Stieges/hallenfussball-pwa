@@ -96,7 +96,7 @@ describe('@HT-047 „🔈? Prüfen“ neben „✓ Bereit“', () => {
 });
 
 describe('@HT-049 Rückfrage „Gehört“ / „Nicht gehört“', () => {
-  async function tippeUndSpiele(): Promise<{ rerender: (u: React.ReactElement) => void; testton: ReturnType<typeof anfordernMock>; gehoert: ReturnType<typeof vi.fn> }> {
+  async function tippeUndSpiele(): Promise<{ rerender: (u: React.ReactElement) => void; testton: ReturnType<typeof anfordernMock>; gehoert: ReturnType<typeof vi.fn<() => Promise<{ ok: boolean }>>> }> {
     const testton = anfordernMock();
     const gehoert = vi.fn(() => Promise.resolve({ ok: true }));
     setzeStatus({ state: 'ready', hinweis: true }, testton, gehoert);
@@ -151,6 +151,21 @@ describe('@HT-049 Rückfrage „Gehört“ / „Nicht gehört“', () => {
     setzeStatus({ state: 'ready', hinweis: true, test: { testId: 'x2', playedAt: new Date(2026, 10, 21, 14, 5, 0).getTime() } }, testton);
     rerender(seite());
     expect(screen.getByTestId('ausgang-rueckfrage')).toHaveTextContent('Gespielt 14:05');
+  });
+
+  it('Fixrunde 1 🔵4: geht der Hinweis weg (z. B. „Gehört“ in einem anderen Fenster) und kommt später ein neuer, steht wieder die Pille – nicht die alten Prüfpunkte', async () => {
+    const { rerender, testton, gehoert } = await tippeUndSpiele();
+    fireEvent.click(screen.getByTestId('ausgang-nicht-gehoert'));
+    expect(screen.getByTestId('ausgang-pruefpunkte')).toBeVisible();
+    setzeStatus({ state: 'ready', hinweis: false }, testton, gehoert);
+    rerender(seite());
+    expect(pille()).toBeNull();
+    expect(screen.queryByTestId('ausgang-pruefpunkte')).toBeNull();
+    setzeStatus({ state: 'ready', hinweis: true }, testton, gehoert);
+    rerender(seite());
+    expect(pille()).toBeVisible();
+    expect(screen.queryByTestId('ausgang-pruefpunkte')).toBeNull();
+    expect(screen.queryByTestId('ausgang-rueckfrage')).toBeNull();
   });
 
   it('Zeile 3 „nichts wählt“: die Frage bleibt ruhig stehen, bis Olli antwortet; „bereit“ bleibt, nichts wird gemeldet', async () => {

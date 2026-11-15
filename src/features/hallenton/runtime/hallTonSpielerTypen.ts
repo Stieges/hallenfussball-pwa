@@ -43,6 +43,11 @@ export interface HallTonSpieler {
   tonGeladen(): boolean;
   onZustand(fn: (zustand: SpielerZustand) => void): () => void;
   geplant(): string[];
+  /**
+   * Der Ton `id` hat bis zu seinem Ende geklungen (nicht abgebrochen); ein Aufruf verbraucht die Auskunft (H4-11, Restfall N1: das Ende kam vor dem
+   * nächsten Takt, während `setSinkId` noch lief – der Ton zählt als gespielt und wird nicht nachgeholt).
+   */
+  endeVerbrauchen(id: string): boolean;
   /** Für `ausgangsSignale` (dieselbe Ausgabe). */
   audioKontext(): AudioKontext;
   /** Torhymnen (@HT-024): laden, spielen, stoppen. */

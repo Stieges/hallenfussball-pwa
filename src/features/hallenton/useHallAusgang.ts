@@ -12,6 +12,8 @@
  *   gespeicherte Wahl wieder, ohne neue Wahl. `false`, wenn das Mikrofon abgelehnt wird (dann bleibt es bei „Ausgang bestätigen“).
  * - `zustand`: `standard` | `ok` | `lost` (Ausgang verschwunden, @HT-054) | `unconfirmed` (@HT-055).
  * Name und Kennung verlassen das Gerät nie (nicht ins Lebenszeichen, nicht in Sentry, nicht in Logs).
+ * Beim Einbinden liest der Hook nichts. Nach `lesen()` (Oberfläche: „Ändern“) liest der Wächter bei jedem `devicechange` neu mit (folgenlos, nur die Liste
+ * wird aktuell), bis `lesenBeenden()` („Schließen“) – außer das Gerät hat eine gespeicherte Wahl, dann bleibt er wach.
  */
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { STANDARD_AUSGANG_ID, type AusgangEintrag, type AusgangLage, type GewaehlterAusgang } from '../../core/hallenton';
@@ -28,6 +30,11 @@ export interface HallAusgang {
    * tippt (H4-11). Beim bloßen Einbinden des Hooks liest nichts – ein Gerät ohne gespeicherte Wahl verhält sich wie auf main.
    */
   lesen(): Promise<void>;
+  /**
+   * Die Liste wird nicht mehr gebraucht („Schließen“): ohne gespeicherte Wahl liest der Wächter bei `devicechange` nicht mehr mit. Mit Wahl
+   * bleibt er wach (er muss das Abziehen bemerken, @HT-054).
+   */
+  lesenBeenden(): void;
   mikrofonErlauben(): Promise<boolean>;
   /** `false`: nichts geändert (Browser ohne Wahl, unbekannte Kennung oder der Speicher verweigert das Schreiben). */
   waehle(id: string | null): boolean;
@@ -63,6 +70,7 @@ export function useHallAusgang(): HallAusgang {
   const verfuegbar = ausgangWaehlbar();
 
   const lesen = useCallback((): Promise<void> => (verfuegbar ? browserAusgang().waechter.neuLesen() : Promise.resolve()), [verfuegbar]);
+  const lesenBeenden = useCallback((): void => { browserAusgang().waechter.lesenBeenden(); }, []);
 
   const mikrofonErlauben = useCallback(async (): Promise<boolean> => {
     const { liste, wahl, waechter } = browserAusgang();
@@ -80,7 +88,9 @@ export function useHallAusgang(): HallAusgang {
       return false; // Browser ohne Ausgangswahl: „Standard“, nichts zu wählen
     }
     if (id === null || id === STANDARD_AUSGANG_ID) {
-      return wahl.setzen(null);
+      const ok = wahl.setzen(null);
+      waechter.standardErneut(); // ist ein früherer Wechsel auf „Standard“ gescheitert, versucht dieser Tipp ihn erneut
+      return ok;
     }
     const eintrag = waechter.liste().eintraege.find((e) => e.id === id);
     return eintrag ? wahl.setzen({ id: eintrag.id, name: eintrag.name, gruppe: eintrag.gruppe }) : false;
@@ -88,6 +98,13 @@ export function useHallAusgang(): HallAusgang {
 
   const bestaetigen = useCallback(async (): Promise<boolean> => {
     const ton = tonAktivierenAmGeraet(); // `resume()` synchron in der Geste, vor dem ersten `await`
+    const { waechter } = browserAusgang();
+    if (waechter.wahl() === null) {
+      // „Standard“ gewählt, der Wechsel dahin ist gescheitert (H4-11): kein Mikrofon nötig, ein Tipp versucht den Wechsel erneut
+      waechter.standardErneut();
+      await ton;
+      return true;
+    }
     const erlaubt = await mikrofonErlauben();
     await ton;
     return erlaubt;
@@ -99,8 +116,9 @@ export function useHallAusgang(): HallAusgang {
     liste: verfuegbar ? aktuell.liste : [],
     zustand: aktuell.zustand,
     lesen,
+    lesenBeenden,
     mikrofonErlauben,
     waehle,
     bestaetigen,
-  }), [verfuegbar, aktuell, lesen, mikrofonErlauben, waehle, bestaetigen]);
+  }), [verfuegbar, aktuell, lesen, lesenBeenden, mikrofonErlauben, waehle, bestaetigen]);
 }

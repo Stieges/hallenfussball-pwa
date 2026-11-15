@@ -60,6 +60,21 @@ const FAELLE: readonly Fall[] = [
     },
   },
   {
+    name: 'ausgang-laedt', fall: 'ausgangMikrofon', extra: '&lesenHaengt=1', sprachen: ['de'], async ablauf(page) {
+      await page.getByTestId('ausgang-aendern').click();
+      await expect(page.getByTestId('ausgang-laedt')).toContainText('Ausgänge werden gelesen');
+      await expect(page.getByTestId('ausgang-mikrofon-hinweis')).toHaveCount(0); // kein Aufblitzen des Hinweises
+    },
+  },
+  {
+    name: 'ausgang-mikrofon-abgelehnt', fall: 'ausgangMikrofon', extra: '&ablehnen=1', sprachen: ['de'], async ablauf(page) {
+      await page.getByTestId('ausgang-aendern').click();
+      await page.getByTestId('mikrofon-erlauben').click();
+      await expect(page.getByTestId('ausgang-mikrofon-blockiert')).toContainText('Das Mikrofon ist für diese Website blockiert.');
+      await expect(page.getByTestId('mikrofon-erlauben')).toBeVisible();
+    },
+  },
+  {
     name: 'ausgang-liste', fall: 'ausgangMikrofon', async ablauf(page, s) {
       await page.getByTestId('ausgang-aendern').click();
       await page.getByTestId('mikrofon-erlauben').click();
