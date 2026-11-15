@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { cssVars, displayFontSizes, displaySpacing, displayMonitor } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import { qrTypedAddress, zuschauerUrl } from '../publicVisibility';
+import { withViewChannel } from '../../../utils/shareUtils';
 
 interface QrSlideProps {
   tournament: Tournament;
@@ -27,7 +28,7 @@ export function QrSlide({ tournament, style }: QrSlideProps) {
             {t('slides.qr.headline')}
           </div>
           <QRCodeSVG
-            value={qrUrl}
+            value={withViewChannel(qrUrl, 'q')}
             size={displayMonitor.qr.sizeLarge}
             bgColor={displayMonitor.qr.background}
             fgColor={displayMonitor.qr.foreground}

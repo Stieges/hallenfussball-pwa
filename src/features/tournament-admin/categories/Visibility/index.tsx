@@ -15,7 +15,7 @@ import { CategoryPage, CollapsibleSection } from '../shared';
 import type { Tournament } from '../../../../types/tournament';
 import { useRepository } from '../../../../hooks/useRepository';
 import { useToast } from '../../../../components/ui/Toast';
-import { generateLiveUrl, generateTournamentUrl } from '../../../../utils/shareUtils';
+import { generateLiveUrl, generateTournamentUrl, withViewChannel } from '../../../../utils/shareUtils';
 import { isSupabaseConfigured } from '../../../../lib/supabase';
 import { isReleaseRefusal } from '../../../../core/repositories/OfflineRepository';
 import { useCan } from '../../../auth/hooks/useCan';
@@ -87,6 +87,8 @@ export function VisibilityCategory({
 
   // Generate public URL based on share code (uses HashRouter: /#/live/...)
   const publicUrl = shareCode ? generateLiveUrl(shareCode) : null;
+  // „Kopieren“ trägt den Kanal Link (@RZ-029); der angezeigte Link bleibt ohne Zusatz
+  const copyUrl = publicUrl ? withViewChannel(publicUrl, 'l') : null;
 
   // Make tournament public (generate share code)
   const handleMakePublic = useCallback(async () => {
@@ -200,18 +202,18 @@ export function VisibilityCategory({
 
   // Handle copy to clipboard
   const handleCopy = async () => {
-    if (!publicUrl) {
+    if (!copyUrl) {
       return;
     }
 
     try {
-      await navigator.clipboard.writeText(publicUrl);
+      await navigator.clipboard.writeText(copyUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
       // Fallback for older browsers
       const textArea = document.createElement('textarea');
-      textArea.value = publicUrl;
+      textArea.value = copyUrl;
       document.body.appendChild(textArea);
       textArea.select();
       // eslint-disable-next-line @typescript-eslint/no-deprecated -- Fallback for browsers without Clipboard API

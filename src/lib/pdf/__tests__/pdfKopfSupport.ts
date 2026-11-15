@@ -5,7 +5,7 @@ import QRCode from 'qrcode';
 import { generateFullSchedule, type GeneratedSchedule } from '../../../core/generators';
 import { printFont, printUnit } from '../../../design-tokens/print';
 import type { Tournament } from '../../../types/tournament';
-import { generateLiveUrl } from '../../../utils/shareUtils';
+import { generateLiveUrl, withViewChannel } from '../../../utils/shareUtils';
 import { buildSchedulePdf, type PDFExportOptions } from '../schedulePdf';
 import { hallencupSchedule, hallencupTournament } from './pdfFixture';
 import type { Box, LayoutPage, LayoutText } from './pdfjsLayout';
@@ -69,9 +69,9 @@ export function drawnMatrix(page: LayoutPage, size: number): boolean[][] {
   );
 }
 
-/** Erwartete Matrix der Zuschauer-Adresse. */
+/** Erwartete Matrix der Zuschauer-Adresse mit dem Kanal-Zusatz „?k=q“ (QR-Code im PDF, @RZ-029). */
 export function expectedMatrix(code: string): boolean[][] {
-  const { modules } = QRCode.create(generateLiveUrl(code, BASE_URL));
+  const { modules } = QRCode.create(withViewChannel(generateLiveUrl(code, BASE_URL), 'q'));
   return Array.from({ length: modules.size }, (_, r) => Array.from({ length: modules.size }, (_, c) => Boolean(modules.get(r, c))));
 }
 

@@ -25,6 +25,8 @@
  * Regenerieren mit:
  * npx supabase gen types typescript --project-id amtlqicosscsjnnthvzm > src/types/supabase.ts
  * (Kopf danach wieder voranstellen — der Drift-Check blendet ihn beidseitig aus.)
+ * 2026-11-24 (Zuschauer-Zaehlung, PR #535, @RZ-024): nach dem Einspielen von 20261124_003 und 20261125_001 aus der Produktion per Supabase-MCP
+ * (generate_typescript_types) neu erzeugt.
  */
 export type Json =
   | string
@@ -1307,6 +1309,44 @@ export type Database = {
         }
         Relationships: []
       }
+      public_view_counts: {
+        Row: {
+          channel: string
+          device_class: string
+          heartbeats: number
+          installed: boolean
+          tournament_id: string
+          views: number
+          window_start: string
+        }
+        Insert: {
+          channel: string
+          device_class: string
+          heartbeats?: number
+          installed: boolean
+          tournament_id: string
+          views?: number
+          window_start: string
+        }
+        Update: {
+          channel?: string
+          device_class?: string
+          heartbeats?: number
+          installed?: boolean
+          tournament_id?: string
+          views?: number
+          window_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_view_counts_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       revoked_device_contacts: {
         Row: {
           first_contact_at: string
@@ -2113,6 +2153,16 @@ export type Database = {
         Returns: Json
       }
       compute_match_state: { Args: { p_match_id: string }; Returns: Json }
+      count_public_view: {
+        Args: {
+          p_art: string
+          p_geraet: string
+          p_installiert: boolean
+          p_kanal: string
+          p_share_code: string
+        }
+        Returns: undefined
+      }
       create_gathering: { Args: { p_name: string }; Returns: Json }
       create_gathering_screen: {
         Args: {
@@ -2368,10 +2418,7 @@ export type Database = {
         Returns: Json
       }
       hall_speaker_unassign: {
-        Args: {
-          p_fields: number[]
-          p_tournament_id: string
-        }
+        Args: { p_fields: number[]; p_tournament_id: string }
         Returns: Json
       }
       hall_test_tone_ack: {

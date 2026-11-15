@@ -16,6 +16,7 @@ import type { Standing } from '../../types/tournament';
 import { fontOf } from './fonts';
 import { pageGeometry } from './layout';
 import { qrModules, shortViewerAddress } from '../qr/publicQr';
+import { withViewChannel } from '../../utils/shareUtils';
 import type { PDFExportOptions, PdfAccent } from './pdfOptions';
 import { openDocument, toPdfInput, type SchedulePdfInput } from './pdfInput';
 import { dayOf } from './headerFacts';
@@ -114,7 +115,7 @@ export async function buildSchedulePdf(source: SchedulePdfInput): Promise<Schedu
   });
   const notes = hintNotes(hints, t);
   // Zuschauer-QR nur bei online geteiltem Turnier (@ZM-064)
-  const qr = content.qrUrl === null ? undefined : { url: content.qrUrl, modules: qrModules(content.qrUrl) };
+  const qr = content.qrUrl === null ? undefined : { url: content.qrUrl, modules: qrModules(withViewChannel(content.qrUrl, 'q')) };
 
   // Fußzeile und Kurzkopf vor dem Seitenmaß messen: sie bestimmen, wo der Satzspiegel endet bzw. Folgeseiten beginnen
   const footer: FooterContent = {

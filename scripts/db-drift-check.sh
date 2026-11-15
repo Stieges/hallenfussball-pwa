@@ -194,6 +194,15 @@ pending_assertions_for() {
     20261118_001_verschieben_server.sql)
       echo "matches-guard-schedule-times-trigger-active matches-guard-schedule-times-invoker-no-client-execute matches-bump-change-revision-counts-original-start"
       ;;
+    20261124_003_zuschauer_zaehlung.sql)
+      echo "zuschauer-zaehlung-table-no-client-access zuschauer-zaehlung-rpc-definer-anon"
+      # Zuschauer-Zaehlung (@RZ-024..030): neue Tabelle ohne Client-Recht + eine Funktion; Verhalten in scripts/zuschauer-zaehlung-check.sh,
+      # Rechte als Assertionen am Ende von db_privilege_assertions.sql (die Ausnahme in lifecycle-guard-triggers-complete haengt daran).
+      ;;
+    20261124_004_zuschauer_zaehlung_ci_leser.sql)
+      echo "zuschauer-zaehlung-ci-schema-reader-select"
+      # Werkzeugkette: Leserecht der Drift-Check-Rolle auf public_view_counts (ohne es scheitert pg_dump live); Beweis in scripts/zuschauer-zaehlung-check.sh
+      ;;
     20261118_005_endstand_tabellenwerte.sql)
       # R3-5b: nur CREATE OR REPLACE match_engine.final_standing_row_valid (tableValues) -- keine eigene Rechte-Assertion
       ;;
@@ -785,6 +794,11 @@ PRIVILEGE_ASSERTION_NAMES=(
   # Leibchen Schritt 2a (20261124_002_leibchen_schritt2.sql, @SL-150, @SL-201 bis @SL-236): eigener Block am Ende von db_privilege_assertions.sql
   "leibchen-kit-set-rpc-authenticated-only"
   "leibchen-kit-set-shape"
+  # Zuschauer-Zaehlung (20261124_003_zuschauer_zaehlung.sql, @RZ-024 bis @RZ-030): eigener Block am Ende von db_privilege_assertions.sql
+  "zuschauer-zaehlung-table-no-client-access"
+  "zuschauer-zaehlung-rpc-definer-anon"
+  # Zuschauer-Zaehlung, Leserecht der Drift-Check-Rolle (20261124_004_zuschauer_zaehlung_ci_leser.sql): gleicher Block in db_privilege_assertions.sql
+  "zuschauer-zaehlung-ci-schema-reader-select"
   # Hallenton Zustaende des Ausgangs und Abmelden (20261125_001_hallenton_ausgang_zustaende.sql, @HT-053 bis @HT-055, @HT-057): eigener Block am Ende von db_privilege_assertions.sql
   "hallenton-output-states-heartbeat"
   "hallenton-speaker-unassign-rpc-authenticated-only"

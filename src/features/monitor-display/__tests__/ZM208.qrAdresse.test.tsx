@@ -15,7 +15,7 @@ vi.mock('qrcode.react', () => ({
 }));
 
 describe('@ZM-208 Adresse unter dem QR-Code', () => {
-  it('die Adresse steht ohne „https://“ in einer Zeile, mindestens 3 % der Bildhöhe groß; der QR-Code trägt weiter die volle Adresse', () => {
+  it('die Adresse steht ohne „https://“ in einer Zeile, mindestens 3 % der Bildhöhe groß; der QR-Code trägt weiter die volle Adresse mit Kanal-Zusatz (@RZ-029)', () => {
     render(<QrSlide tournament={createMockTournament({ isPublic: true, shareCode: 'ABC123', title: 'Nikolaus-Turnier' })} style={{}} />);
     const adresse = screen.getByTestId('qr-address');
     expect(adresse.textContent).toBe(`${window.location.host}/live/ABC123`);
@@ -25,7 +25,7 @@ describe('@ZM-208 Adresse unter dem QR-Code', () => {
     expect(displayFontSizes.qrAddress).toMatch(/^\d+(\.\d+)?vh$/);
     expect(parseFloat(displayFontSizes.qrAddress)).toBeGreaterThanOrEqual(3);
     expect(adresse.style.fontSize).toBe(displayFontSizes.qrAddress);
-    expect(screen.getByTestId('qr-code').getAttribute('data-value')).toBe(`${window.location.origin}/#/live/ABC123`);
+    expect(screen.getByTestId('qr-code').getAttribute('data-value')).toBe(`${window.location.origin}/#/live/ABC123?k=q`);
   });
 
   it('der QR-Code hat einen Alternativtext', () => {

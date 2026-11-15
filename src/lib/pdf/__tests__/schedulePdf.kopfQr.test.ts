@@ -9,7 +9,7 @@ import { pageGeometry } from '../layout';
 import { hallencupTournament } from './pdfFixture';
 import QRCode from 'qrcode';
 import { BASE_URL, bboxOf, drawnMatrix, expectedMatrix, headBottom, kopfPdf, qrRects, TOL, textBox } from './pdfKopfSupport';
-import { generateLiveUrl, generateTournamentUrl } from '../../../utils/shareUtils';
+import { generateLiveUrl, generateTournamentUrl, withViewChannel } from '../../../utils/shareUtils';
 import { generateFullSchedule } from '../../../core/generators';
 import { squash } from './pdfjsText';
 import { testUuid } from '../../../test/testIds';
@@ -18,7 +18,7 @@ const MIN_EDGE_MM = 30;
 const CAPTION = 'Live-Ergebnisse';
 
 describe('@DR-003 @BM-009 @BM-043 geteiltes Turnier: der QR steht auf Seite 1', () => {
-  it('die gezeichnete Matrix ist QRCode.create(generateLiveUrl(code)), Zelle für Zelle', async () => {
+  it('die gezeichnete Matrix ist QRCode.create(generateLiveUrl(code) + „?k=q“), Zelle für Zelle (@RZ-029)', async () => {
     const { pages } = await kopfPdf();
     const expected = expectedMatrix('ABC123');
 
@@ -34,7 +34,9 @@ describe('@DR-003 @BM-009 @BM-043 geteiltes Turnier: der QR steht auf Seite 1', 
     };
 
     expect(generateLiveUrl('ABC123', BASE_URL)).toMatch(/^https:\/\/.+\/#\/live\/ABC123$/);
-    expect(drawn).toEqual(matrixOf(generateLiveUrl('ABC123', BASE_URL)));
+    expect(drawn).toEqual(matrixOf(withViewChannel(generateLiveUrl('ABC123', BASE_URL), 'q')));
+    expect(drawn, 'der QR trägt den Kanal-Zusatz, nicht die nackte Adresse').not.toEqual(matrixOf(generateLiveUrl('ABC123', BASE_URL)));
+    expect(drawn).not.toEqual(matrixOf(withViewChannel(generateLiveUrl('ABC123', BASE_URL), 'l')));
     expect(drawn).not.toEqual(matrixOf('/#/live/ABC123'));
     expect(drawn).not.toEqual(matrixOf(generateTournamentUrl('ABC123', BASE_URL)));
   });
