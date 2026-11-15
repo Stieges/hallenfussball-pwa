@@ -2074,7 +2074,9 @@
     "saveFailed": "Saving failed – the changes are not saved yet and stay in the draft.",
     "conflictHint_one": "{{count}} conflict in the schedule",
     "conflictHint_other": "{{count}} conflicts in the schedule",
-    "samePhaseOnly": "Only matches of the same phase can be swapped"
+    "samePhaseOnly": "Only matches of the same phase can be swapped",
+    "groupStaysInGroupPhase": "Group matches stay in the group phase",
+    "finalsStayInFinals": "Final-round matches stay in the final round"
   },
   "scheduleEditor": {
     "autoAssignReferees": "Assign referees automatically",
