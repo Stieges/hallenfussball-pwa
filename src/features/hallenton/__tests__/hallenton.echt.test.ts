@@ -11,7 +11,7 @@ import { execFileSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 import { getDeviceId } from '../../../core/device/deviceId';
 import {
-  hallFieldLeadHeartbeat, hallSoundStatus, hallSpeakerAssign, hallSpeakerHeartbeat, hallTestToneAck, hallTestToneRequest,
+  hallFieldLeadHeartbeat, hallSoundStatus, hallSpeakerAssign, hallSpeakerHeartbeat, hallSpeakerUnassign, hallTestToneAck, hallTestToneRequest,
 } from '../../../core/repositories/hallentonRpc';
 import { FalscheMedienGeraete, AUSGAENGE } from '../../../test/hallenton/falscheMedienGeraete';
 import { FalscherSpeicher } from '../../../test/hallenton/falschesGeraet';
@@ -68,12 +68,6 @@ function client(uid: string): Client {
 }
 
 const olli = (): Client => client(OLLI);
-function mitClient(c: Client): NonNullable<Client> {
-  if (c === null) {
-    throw new Error('kein Client');
-  }
-  return c;
-}
 const geraet = getDeviceId(new FalscherSpeicher());
 
 describe.skipIf(C === '')('Hallenton-Client gegen die echten RPCs (Wegwerf-Container)', () => {
@@ -139,15 +133,24 @@ describe.skipIf(C === '')('Hallenton-Client gegen die echten RPCs (Wegwerf-Conta
     expect(unbekannt).toEqual({ ok: false, grund: 'ungueltig' });
   });
 
-  it('H4-3 @HT-057 die Turnierleitung meldet das Gerät ab: Antwort ohne Kennung, das Gerät sieht „unassigned“ beim nächsten Lebenszeichen', async () => {
-    const aus = await mitClient(olli()).rpc('hall_speaker_unassign', { p_tournament_id: TID, p_fields: [1] });
-    protokoll(`[echt] unassign ${JSON.stringify(aus.data)}`);
-    expect(aus.data).toEqual({ status: 'unassigned', fields: [1] });
-    expect(JSON.stringify(aus.data)).not.toContain(geraet);
+  it('H4-11b @HT-057 der Client-Aufruf hallSpeakerUnassign: mit Recht löscht er, die Antwort kennt keine Kennung, das Gerät sieht „unassigned“ beim nächsten Lebenszeichen; ohne Recht 42501, unbekanntes Feld 22023', async () => {
+    const mia = await hallSpeakerUnassign(client(MIA), { p_tournament_id: TID, p_fields: [1] });
+    protokoll(`[echt] unassign ohne Recht ${JSON.stringify(mia)}`);
+    expect(mia).toEqual({ ok: false, grund: 'kein_recht' });
+    const nochDa = await hallSoundStatus(olli(), { p_tournament_id: TID, p_device_id: geraet });
+    expect(nochDa.ok && nochDa.speakers[0]).toMatchObject({ field: 1, isThisDevice: true }); // ohne Recht nichts verändert
+    const unbekannt = await hallSpeakerUnassign(olli(), { p_tournament_id: TID, p_fields: [99] });
+    expect(unbekannt).toEqual({ ok: false, grund: 'ungueltig' });
+    const aus = await hallSpeakerUnassign(olli(), { p_tournament_id: TID, p_fields: [1] });
+    protokoll(`[echt] unassign ${JSON.stringify(aus)}`);
+    expect(aus).toEqual({ ok: true, status: 'unassigned', fields: [1] });
+    expect(JSON.stringify(aus)).not.toContain(geraet);
     const danach = await hallSpeakerHeartbeat(olli(), { p_tournament_id: TID, p_device_id: geraet, p_fields: [1], p_state: 'ready', p_output_changed: false });
     expect(danach).toMatchObject({ ok: true, status: 'ok', fields: [{ field: 1, status: 'unassigned' }] });
-    const mia = await mitClient(client(MIA)).rpc('hall_speaker_unassign', { p_tournament_id: TID, p_fields: [1] });
-    expect(mia.error?.code).toBe('42501');
+    const leer = await hallSoundStatus(olli(), { p_tournament_id: TID, p_device_id: geraet });
+    expect(leer.ok && leer.speakers).toEqual([]); // @HT-016: die Karte zeigt gleich „kein Hallen-Lautsprecher“
+    const wieder = await hallSpeakerUnassign(olli(), { p_tournament_id: TID, p_fields: [1] });
+    expect(wieder).toEqual({ ok: true, status: 'unassigned', fields: [] }); // schon ohne Lautsprecher: nichts zu tun, kein Fehler
     const neu = await hallSpeakerAssign(olli(), { p_tournament_id: TID, p_fields: [1], p_device_id: geraet, p_device_name: 'Rechner der Turnierleitung', p_replace: false });
     expect(neu).toMatchObject({ ok: true, status: 'assigned', fields: [1] });
   });
@@ -209,6 +212,8 @@ describe.skipIf(C === '')('Hallenton-Client gegen die echten RPCs (Wegwerf-Conta
     expect(hb).toEqual({ ok: false, grund: 'turnier_beendet' });
     const test = await hallTestToneRequest(olli(), { p_tournament_id: TID, p_field: 1 });
     expect(test).toEqual({ ok: false, grund: 'turnier_beendet' });
+    const abmelden = await hallSpeakerUnassign(olli(), { p_tournament_id: TID, p_fields: [1] });
+    expect(abmelden).toEqual({ ok: false, grund: 'turnier_beendet' }); // @HT-046: nach dem Turnierende lässt sich der Lautsprecher nicht mehr abmelden
     const voll = await hallSoundStatus(olli(), { p_tournament_id: TID, p_device_id: geraet });
     expect(voll).toMatchObject({ ok: true, sicht: 'voll', closed: true });
   });

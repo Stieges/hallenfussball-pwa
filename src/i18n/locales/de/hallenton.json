@@ -120,7 +120,28 @@
     "abbrechen": "Abbrechen",
     "testton": "{{lage}} Testton trotzdem in der Halle spielen?",
     "testtonTitel": "Testton, obwohl ein Spiel läuft",
-    "testtonBestaetigen": "Testton spielen"
+    "testtonBestaetigen": "Testton spielen",
+    "abmelden": "{{lage}} Trotzdem abmelden? Danach ertönt für dieses Feld kein Abpfiff.",
+    "abmeldenTitel": "Abmelden, obwohl ein Spiel läuft",
+    "abmeldenBestaetigen": "Abmelden"
+  },
+  "abmelden": {
+    "taste": "Abmelden",
+    "tasteLesetext": "Hallen-Lautsprecher für Feld {{feld}} abmelden",
+    "titel": "Hallen-Lautsprecher abmelden?",
+    "frage": "Soll „{{name}}“ als Hallen-Lautsprecher für Feld {{feld}} abgemeldet werden?",
+    "folge": "Für Feld {{feld}} ertönt danach kein Hallenton, bis ein Gerät wieder eingeschaltet wird.",
+    "folgeEigenes": "Das ist dieses Gerät. Für Feld {{feld}} ertönt danach kein Hallenton, bis du es wieder einschaltest.",
+    "bestaetigen": "Abmelden",
+    "abbrechen": "Abbrechen",
+    "nochmal": "Erneut versuchen",
+    "fehler": {
+      "netz": "Nicht abgemeldet: kein Netz. Der Lautsprecher für Feld {{feld}} ist unverändert.",
+      "kein_recht": "Nicht abgemeldet: dafür fehlt dir das Recht.",
+      "turnier_beendet": "Nicht abgemeldet: das Turnier ist beendet.",
+      "ungueltig": "Nicht abgemeldet: Feld {{feld}} wurde nicht gefunden.",
+      "antwort_unbekannt": "Nicht abgemeldet: das hat nicht geklappt. Der Lautsprecher für Feld {{feld}} ist unverändert."
+    }
   },
   "seite": {
     "felderTitel": "Lautsprecher je Feld",

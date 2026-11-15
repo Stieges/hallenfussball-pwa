@@ -120,7 +120,28 @@
     "abbrechen": "Cancel",
     "testton": "{{lage}} Play the test tone in the hall anyway?",
     "testtonTitel": "Test tone although a match is running",
-    "testtonBestaetigen": "Play test tone"
+    "testtonBestaetigen": "Play test tone",
+    "abmelden": "{{lage}} Remove it anyway? There will be no final whistle on this field afterwards.",
+    "abmeldenTitel": "Remove although a match is running",
+    "abmeldenBestaetigen": "Remove"
+  },
+  "abmelden": {
+    "taste": "Remove",
+    "tasteLesetext": "Remove the hall speaker for field {{feld}}",
+    "titel": "Remove hall speaker?",
+    "frage": "Remove “{{name}}” as the hall speaker for field {{feld}}?",
+    "folge": "Afterwards there is no hall tone for field {{feld}} until a device is switched on again.",
+    "folgeEigenes": "This is this device. Afterwards there is no hall tone for field {{feld}} until you switch it on again.",
+    "bestaetigen": "Remove",
+    "abbrechen": "Cancel",
+    "nochmal": "Try again",
+    "fehler": {
+      "netz": "Not removed: no connection. The speaker for field {{feld}} is unchanged.",
+      "kein_recht": "Not removed: you do not have permission.",
+      "turnier_beendet": "Not removed: the tournament has ended.",
+      "ungueltig": "Not removed: field {{feld}} was not found.",
+      "antwort_unbekannt": "Not removed: that did not work. The speaker for field {{feld}} is unchanged."
+    }
   },
   "seite": {
     "felderTitel": "Speaker per field",

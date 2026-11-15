@@ -41,6 +41,8 @@ export class LzTab {
   readonly name: string;
   readonly geraete = new FalscheGeraeteMelder();
   readonly abgeloest: number[][] = [];
+  /** Die verlorenen Felder je Verlust mit Art (`abgeloest` = übernommen, `abgemeldet`), wie das Lebenszeichen sie meldet (H4-11b). */
+  readonly verloren: Array<Array<{ feld: number; art: 'abgeloest' | 'abgemeldet' }>> = [];
   nachLebenszeichen = 0;
   netz = true;
   /** Nur die Quittung scheitert am Netz. */
@@ -79,9 +81,10 @@ export class LzTab {
       beiFehler: (grund) => {
         this.fehler.push(grund);
       },
-      abgeloest: (bleiben) => {
+      abgeloest: (bleiben, verloren) => {
         this.tab.laufzeit.stop();
         this.abgeloest.push(bleiben);
+        this.verloren.push([...verloren]);
       },
       nachLebenszeichen: () => {
         this.nachLebenszeichen += 1;
