@@ -14,6 +14,7 @@
  */
 import type { GeplanterTon } from '../../../core/hallenton';
 import type { HallTonSpieler } from './hallTonSpieler';
+import { istAusgangsZustand } from './hallTonSpielerTypen';
 import type { TaktQuelle } from './taktQuelle';
 
 /** Weckruf aus dem Worker so lange vor dem Ton (Plan „Freigabe vor dem Ton“). */
@@ -146,7 +147,8 @@ export function erzeugeTonSteuerung({ takt, spieler }: TonSteuerungDeps): TonSte
       // Bestätigung des Spielers: er hat den Ton angenommen, niemand hat ihn abgebrochen (nur diese Steuerung bricht ab),
       // und die Ausgabe läuft. Ob er schon wieder zu Ende ist (`geplant()` leer nach `ended`), zählt nicht – ein im
       // Hintergrund verspäteter Takt dürfte ihn sonst als ungespielt neu planen (doppelter Ton).
-      const ausgabeLaeuft = spieler.zustand() !== 'not_activated';
+      const zustand = spieler.zustand();
+      const ausgabeLaeuft = zustand !== 'not_activated' && !istAusgangsZustand(zustand); // H4-6: bei verlorenem Ausgang erklang nichts
       for (const [id, eintrag] of eintraege) {
         if (eintrag.geplantUm !== null && eintrag.ton.at <= now) {
           if (ausgabeLaeuft) {

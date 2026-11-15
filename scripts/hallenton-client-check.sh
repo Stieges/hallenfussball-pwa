@@ -11,7 +11,9 @@
 #
 # Nachweise: (1) Lebenszeichen nach Turnierende antwortet ok (kein 55000), (2) getDeviceId() ist eine UUID und passt zu
 # p_device_id, (3) volle und schmale Sicht von hall_sound_status bestehen die zod-Schemata, (4) Lebenszeichen → Testton →
-# Quittung einmal komplett.
+# Quittung einmal komplett, (5) H4-6: das echte Lebenszeichen sendet output_unconfirmed und output_lost (@HT-054, @HT-055);
+# der Server nimmt sie an, sie sind in hall_sound_status (voll und schmal) und in der Antwort der Leitung lesbar, und Name und
+# Kennung des Ausgangs stehen nirgends am Server.
 #
 # Aufruf (über die Warteschlange): bash .superpowers/sdd/testlauf/testlauf2.sh <name> bash scripts/hallenton-client-check.sh
 # Ändert NICHTS an der Produktion und nichts an einem lokalen Supabase-Stack; Port 127.0.0.1:5241 nur für Diagnose.

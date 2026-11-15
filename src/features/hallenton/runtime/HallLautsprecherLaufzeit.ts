@@ -26,6 +26,7 @@
  */
 import type { LautsprecherFeldMeldung } from './lautsprecherKanal';
 import { antwortAtVon, feldZustaende, meldeFelderAnTabs, geraeteZustandAus, naechsterTonAus, type HallLautsprecherLaufzeit, type LaufzeitDeps, type LaufzeitRolle, type LaufzeitSnapshot } from './laufzeitZustand';
+import { istAusgangsZustand } from './hallTonSpielerTypen';
 import { erzeugeRollenHalter } from './laufzeitRolle';
 import { erzeugeLaufzeitTakt } from './laufzeitTakt';
 import { VORBELEGUNG } from './tonWahl';
@@ -53,7 +54,8 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
 
   function baue(): LaufzeitSnapshot {
     // ein nur zum „Anhören“ freigegebener Spieler macht den Tab nicht bereit (W2-neu-1)
-    const geraet = geraeteZustandAus({ geschlafen, spieler: r.aktiviert() ? spieler.zustand() : 'not_activated', ausgesetzt: z.ausgesetzt, taktFehler: z.taktFehler });
+    const sz = spieler.zustand();
+    const geraet = geraeteZustandAus({ geschlafen, spieler: r.aktiviert() || istAusgangsZustand(sz) ? sz : 'not_activated', ausgesetzt: z.ausgesetzt, taktFehler: z.taktFehler });
     return {
       rolle: r.rolle(), turnierId: deps.turnierId, felder: deps.felder, geraeteZustand: geraet, taktFehler: z.taktFehler, warAngehalten: z.warAngehalten,
       zustandJeFeld: feldZustaende(geraet, deps.felder, z.warnFelder),
@@ -104,7 +106,7 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
       }
       r.setze('wartet');
       spielerAb = spieler.onZustand(r.beiSpielerZustand);
-      if (spieler.zustand() !== 'not_activated') {
+      if (spieler.ausgabeLaeuft()) {
         r.wirdAktiviert(); // in diesem Tab schon aktiviert (z. B. vorige Laufzeit)
         void spieler.laden(wahl.wahl()).then(melden, melden);
       }
@@ -127,8 +129,8 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
       const freigabe = spieler.aktivieren(); // in der Geste, vor jedem await
       r.wirdAktiviert();
       let ok = await freigabe;
-      if (!ok) {
-        await spieler.laden(wahl.wahl());
+      if (!ok || !spieler.ausgabeLaeuft()) {
+        await spieler.laden(wahl.wahl()); // auch bei „Ausgang bestätigen“ (H4-6): die Töne liegen bereit, sobald der Ausgang gilt
         ok = spieler.zustand() !== 'not_activated';
       }
       if (ok) {

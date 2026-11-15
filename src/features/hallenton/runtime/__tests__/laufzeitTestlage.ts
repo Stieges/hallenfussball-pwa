@@ -11,9 +11,13 @@ import type { FeldStand, HallTonArt } from '../../../../core/hallenton';
 import type { EngineEvent, MatchContext } from '../../../../core/match';
 import { CTX_11, server, stand, stateAus } from '../../../../core/hallenton/__tests__/hallentonFixtures';
 import { FalscherAudioKontext, tonDaten } from '../../../../test/hallenton/falscherAudioKontext';
+import type { FalscheMedienGeraete } from '../../../../test/hallenton/falscheMedienGeraete';
 import { FalschesGeraet } from '../../../../test/hallenton/falschesGeraet';
 import { erzeugeFalscheTaktQuelle, type FalscheTaktQuelle } from '../../../../test/hallenton/falscheTaktQuelle';
 import { ManuelleUhr } from '../../../../test/hallenton/manuelleUhr';
+import { erzeugeAusgangListe } from '../ausgang/ausgangListe';
+import { erzeugeAusgangWaechter, type AusgangWaechter } from '../ausgang/ausgangWaechter';
+import { erzeugeAusgangWahl, type AusgangWahl } from '../ausgang/ausgangWahl';
 import type { FeldStandQuelle, FeldStandVerfuegbarkeit } from '../feldStand';
 import { erzeugeGeraeteSperre } from '../geraeteSperre';
 import { erzeugeHallLautsprecherLaufzeit, type HallLautsprecherLaufzeit } from '../HallLautsprecherLaufzeit';
@@ -109,6 +113,8 @@ export interface TabOptionen {
   leseTonWahl?: () => Promise<Record<'abpfiff' | 'halbzeit', TonWahl>>;
   /** „Ton bei Tor“ und Torhymnen beim Start (H3c). */
   torWahl?: TorWahl;
+  /** Ausgänge und Mikrofon des Geräts (H4-6): ohne sie hat der Spieler keinen Ausgang-Wächter, alles wie vor H4-6. */
+  medien?: FalscheMedienGeraete;
 }
 
 export class Tab {
@@ -121,6 +127,9 @@ export class Tab {
   readonly laufzeit: HallLautsprecherLaufzeit;
   readonly ffs: FalscherFeldStand;
   readonly lage: Lage | null;
+  /** Wahl und Wächter des Ausgangs dieses Tabs (H4-6); nur mit `medien`. */
+  readonly wahl: AusgangWahl;
+  readonly waechter: AusgangWaechter | null;
   /** Probe der Geräteuhr (`Date.now`, `performance.now`) für den Uhrsprung. */
   wandVersatz = 0;
   /** Adressen, deren Abruf gerade scheitert (z. B. WLAN-Aussetzer), und alle Abrufe (H3c Fixrunde 1). */
@@ -137,7 +146,13 @@ export class Tab {
     const name = o.name ?? '';
     this.takt = erzeugeFalscheTaktQuelle({ uhr: this.uhr, name, erzeugenScheitert: o.erzeugenScheitert });
     Object.defineProperty(this.kontext, 'currentTime', { get: () => (this.uhr.jetzt() - this.t0) / 1000 });
+    const seite = this.geraet.neueSeite();
+    this.wahl = erzeugeAusgangWahl({ speicher: seite.speicher, seite: seite.seite });
+    this.waechter = o.medien
+      ? erzeugeAusgangWaechter({ liste: erzeugeAusgangListe({ geraete: o.medien, berechtigungen: o.medien }), wahl: this.wahl })
+      : null;
     this.spieler = erzeugeHallTonSpieler({
+      ausgang: this.waechter,
       erzeugeKontext: () => this.kontext,
       ladeDaten: (url) => {
         this.geholt.push(url);

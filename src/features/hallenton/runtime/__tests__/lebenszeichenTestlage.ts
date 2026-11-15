@@ -63,7 +63,7 @@ export class LzTab {
       deviceId: o.deviceId ?? 'laptop',
       laufzeit: this.tab.laufzeit,
       spieler: this.tab.spieler,
-      erzeugeAusgang: () => erzeugeAusgangsSignale({ kontext: this.tab.kontext, geraete: this.geraete }),
+      erzeugeAusgang: () => erzeugeAusgangsSignale({ kontext: this.tab.kontext, geraete: o.medien ?? this.geraete }),
       sperre: erzeugeGeraeteSperre(this.tab.geraet.sperren, MELDE_SPERRE_NAME),
       kanal: this.tab.kanal,
       zeitgeber: this.tab.uhr.gruppe(`lz${o.name ?? ''}`),

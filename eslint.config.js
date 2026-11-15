@@ -46,6 +46,22 @@ const SUPABASE_RESTRICTED_SYNTAX = [
   },
 ];
 
+/**
+ * Mikrofon-Sperre (H4-6, @HT-053): `getUserMedia` steht nur in `src/features/hallenton/runtime/ausgang/ausgangListe.ts` (dort
+ * zum Lesen der Ausgangsnamen, der Strom endet sofort). Eine Mikrofon-Freigabe gilt für die ganze Herkunft: jede weitere
+ * Stelle könnte die App unbemerkt am Mikrofon lauschen lassen.
+ */
+const MIKROFON_RESTRICTED_SYNTAX = [
+  {
+    selector: "MemberExpression[property.name='getUserMedia']",
+    message: 'getUserMedia ist nur in src/features/hallenton/runtime/ausgang/ausgangListe.ts erlaubt (Mikrofon-Freigabe gilt für die ganze Herkunft).',
+  },
+  {
+    selector: "CallExpression[callee.name='getUserMedia']",
+    message: 'getUserMedia ist nur in src/features/hallenton/runtime/ausgang/ausgangListe.ts erlaubt (Mikrofon-Freigabe gilt für die ganze Herkunft).',
+  },
+];
+
 export default tseslint.config(
   // Global ignores
   {
@@ -192,7 +208,7 @@ export default tseslint.config(
       '@typescript-eslint/consistent-type-definitions': 'off',
 
       // Supabase-Guardrails: siehe SUPABASE_RESTRICTED_SYNTAX oben.
-      'no-restricted-syntax': ['error', ...SUPABASE_RESTRICTED_SYNTAX],
+      'no-restricted-syntax': ['error', ...SUPABASE_RESTRICTED_SYNTAX, ...MIKROFON_RESTRICTED_SYNTAX],
 
       // Layering-Guardrail (Clean-Architecture-Boundaries):
       // Spezifischere Overrides unten setzen Layer-Boundaries pro Folder
@@ -223,6 +239,14 @@ export default tseslint.config(
   // ungeklärt (Module/Reuse-Units vs. echte Bounded Contexts). Bis die
   // Architektur-Entscheidung gefallen ist, bleiben diese Boundaries
   // Review-Pflicht statt automatisierter Lint. Siehe LAYERING.md.
+
+  // Einzige Stelle mit getUserMedia (Mikrofon-Sperre oben)
+  {
+    files: ['src/features/hallenton/runtime/ausgang/ausgangListe.ts'],
+    rules: {
+      'no-restricted-syntax': ['error', ...SUPABASE_RESTRICTED_SYNTAX],
+    },
+  },
 
   // Test files: Relax strict rules
   {
@@ -262,6 +286,7 @@ export default tseslint.config(
       // abräumt (useFocusTrap, @OB-012); neuLaden wartet, bis diese Navigation durch ist.
       'no-restricted-syntax': ['error',
         ...SUPABASE_RESTRICTED_SYNTAX,
+        ...MIKROFON_RESTRICTED_SYNTAX,
         {
           selector: "CallExpression[callee.type='MemberExpression'][callee.property.name='reload'][callee.object.name!='location'][callee.object.property.name!='location']",
           message: 'Kein direktes page.reload() in E2E-Tests: neuLaden(page) aus tests/e2e/helpers/neuLaden.ts verwenden (wartet, bis keine Navigation der App mehr ansteht).',

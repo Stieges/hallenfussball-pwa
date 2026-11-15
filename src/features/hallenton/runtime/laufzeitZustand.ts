@@ -1,7 +1,7 @@
 /**
  * Zustand der Lautsprecher-Laufzeit (H3b-2b): Typen des Schnappschusses und reine Helfer – Zustand des Geräts und je Feld,
  * nächster Ton, Freigabe je Feld. Reihenfolge der Gründe (Ableitung, Bericht H3b-2b): `slept` vor `not_activated` (@HT-037:
- * bis „Ton aktivieren“), dann `background`, `volume_zero`, `keineVerbindung` (nur dieses Feld), `custom_sound_failed`.
+ * bis „Ton aktivieren“), dann `output_lost`/`output_unconfirmed` (H4-6, vor `not_activated`), dann `background`, `volume_zero`, `keineVerbindung` (nur dieses Feld), `custom_sound_failed`.
  */
 import { ANTWORT_MAX_ALTER_MS, type FeldStand, type GeplanterTon, type HallTonArt } from '../../../core/hallenton';
 import type { HallSpeakerState } from '../../../core/repositories/hallentonRpc';
@@ -9,6 +9,7 @@ import { feldKennung } from './aktuellesSpielJeFeld';
 import type { FeldStandVerfuegbarkeit } from './feldStand';
 import { istAngepfiffen } from './feldStandSpiele';
 import type { HallTonSpieler, SpielerZustand, TonArt, TonWahl } from './hallTonSpieler';
+import { istAusgangsZustand } from './hallTonSpielerTypen';
 import type { FeldStandQuelle } from './feldStand';
 import type { GeraeteSperre } from './geraeteSperre';
 import { MELDUNG_ERNEUERN_MS, type KanalSpeicher, type LautsprecherFeldMeldung, type LautsprecherKanal } from './lautsprecherKanal';
@@ -98,6 +99,9 @@ export const BEREIT: ReadonlySet<FeldZustand> = new Set<FeldZustand>(['ready', '
 export function geraeteZustandAus(lage: { geschlafen: boolean; spieler: SpielerZustand; ausgesetzt: boolean; taktFehler: boolean }): HallSpeakerState {
   if (lage.geschlafen) {
     return 'slept';
+  }
+  if (istAusgangsZustand(lage.spieler)) {
+    return lage.spieler; // H4-6 (@HT-054, @HT-055): vor `not_activated`, auch ohne „Ton aktivieren“
   }
   if (lage.spieler === 'not_activated') {
     return 'not_activated';

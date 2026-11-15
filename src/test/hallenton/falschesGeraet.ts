@@ -5,6 +5,7 @@
  * der nächste wartende Tab.
  */
 import type { KanalSpeicher, NachrichtenKanal } from '../../features/hallenton/runtime/lautsprecherKanal';
+import type { SpeicherEreignisse } from '../../features/hallenton/runtime/ausgang/ausgangWahl';
 import type { SperrVerwalter } from '../../features/hallenton/runtime/geraeteSperre';
 
 export class FalscherSpeicher implements KanalSpeicher {
@@ -88,6 +89,54 @@ export class FalschesGeraet<S extends KanalSpeicher = FalscherSpeicher> {
   readonly sperren = new FalscherSperrVerwalter();
   private readonly kanaele = new Set<{ zuhoerer: Set<() => void>; offen: boolean }>();
   nachrichten = 0;
+
+  private readonly seiten = new Set<Set<(ereignis: { key: string | null }) => void>>();
+
+  /**
+   * Eine Seite (Tab) mit eigenem Blick auf den gemeinsamen Speicher (H4-6): schreibt sie einen geänderten Wert, bekommen die
+   * ANDEREN Seiten das `storage`-Ereignis (wie der Browser; die schreibende Seite bekommt keines).
+   */
+  neueSeite(): { speicher: KanalSpeicher; seite: SpeicherEreignisse } {
+    const eigene = new Set<(ereignis: { key: string | null }) => void>();
+    this.seiten.add(eigene);
+    const basis = this.speicher;
+    const melden = (key: string): void => {
+      for (const andere of this.seiten) {
+        if (andere !== eigene) {
+          for (const fn of [...andere]) {
+            fn({ key });
+          }
+        }
+      }
+    };
+    return {
+      speicher: {
+        getItem: (k) => basis.getItem(k),
+        setItem: (k, v) => {
+          const alt = basis.getItem(k);
+          basis.setItem(k, v);
+          if (alt !== v) {
+            melden(k);
+          }
+        },
+        removeItem: (k) => {
+          const hatte = basis.getItem(k) !== null;
+          basis.removeItem(k);
+          if (hatte) {
+            melden(k);
+          }
+        },
+      },
+      seite: {
+        addEventListener: (_type, fn) => {
+          eigene.add(fn);
+        },
+        removeEventListener: (_type, fn) => {
+          eigene.delete(fn);
+        },
+      },
+    };
+  }
 
   /** Neuer `BroadcastChannel('hallenton')` eines Tabs. */
   kanal(): NachrichtenKanal {
