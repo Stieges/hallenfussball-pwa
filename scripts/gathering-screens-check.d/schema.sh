@@ -106,7 +106,18 @@ if [[ "${SKIP_X:-0}" -ne 1 && "${WITH_MIGRATION:-1}" -eq 1 ]]; then
   check X "Rueckweg mit fremder Fassung von public_gathering: bricht ohne Aenderung ab" "abgebrochen|t" \
     "$(psql_stdin < "$ROLLBACK_FILE" >/dev/null 2>&1 && echo gelaufen || echo abgebrochen)|$(q "SELECT to_regclass('public.gathering_screens') IS NOT NULL;")"
   psql_stdin <<<"$(cat "$WORK/pg_eigen.sql");" >/dev/null
-  if psql_stdin < "$ROLLBACK_FILE" >/dev/null 2>"$WORK/x.err"; then x="ok"; else x="fehler: $(tail -2 "$WORK/x.err")"; fi
+  # Spaetere Migrationen (AFTER, soweit sie hier eingespielt wurden) zuerst ueber ihren eigenen Rueckweg zurueck, in umgekehrter
+  # Reihenfolge -- sonst enthaelt "zurueck" deren Objekte und der Vergleich mit "vorher" ist per Konstruktion rot (wie
+  # gatherings-check.d/30-schema.sh). Mit eigenem Harness (OWN_HARNESS_LATER) sind sie gar nicht erst in AFTER.
+  x="ok"
+  for (( i=${#AFTER[@]}-1; i>=0; i-- )); do
+    rb="$REPO_ROOT/supabase/rollbacks/$(basename "${AFTER[$i]}" .sql)_rollback.sql"
+    if [[ ! -f "$rb" ]]; then x="fehler: Rueckweg fehlt fuer $(basename "${AFTER[$i]}")"; break; fi
+    psql_stdin < "$rb" >/dev/null 2>"$WORK/xa.err" || { x="fehler: $(basename "$rb"): $(tail -2 "$WORK/xa.err")"; break; }
+  done
+  if [[ "$x" == "ok" ]]; then
+    if psql_stdin < "$ROLLBACK_FILE" >/dev/null 2>"$WORK/x.err"; then x="ok"; else x="fehler: $(tail -2 "$WORK/x.err")"; fi
+  fi
   schema_dump > "$WORK/schema_zurueck.sql"
   check X "Rueckweg laeuft in einem Block, Schema (public, public_view) = vor der Migration" "ok|gleich" \
     "$x|$(diff -q "$WORK/schema_vorher.sql" "$WORK/schema_zurueck.sql" >/dev/null && echo gleich || { diff "$WORK/schema_vorher.sql" "$WORK/schema_zurueck.sql" | head -20; echo verschieden; })"
