@@ -190,7 +190,7 @@ describe('@HT-054 Verschwindet der gewählte Ausgang, wechselt der Hallenton nic
     await a.vor(3000, [{ um: ENDE_A2 - 28_000, tu: () => abziehen(l, [a], 'dock') }]);
     a.tab.kontext.resumeErlaubt = false;
     anstecken(l, [a], DOCK);
-    await a.vor(1500);
+    await a.vor(4500); // nach der Gnadenfrist des stehenden Kontexts
     expect(zustand(a)).toBe('not_activated');
   });
 

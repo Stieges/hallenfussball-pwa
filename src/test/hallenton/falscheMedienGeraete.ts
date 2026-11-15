@@ -50,8 +50,14 @@ export class FalscheMedienGeraete implements MedienGeraete, Berechtigungen {
     this.ausgaenge = [...ausgaenge];
   }
 
+  /** `enumerateDevices` antwortet nie (hängender Browser-Dienst). */
+  leseHaengt = false;
+
   enumerateDevices(): Promise<readonly GeraeteInfo[]> {
     this.leseAufrufe += 1;
+    if (this.leseHaengt) {
+      return new Promise(() => undefined);
+    }
     const eingang: GeraeteInfo = { deviceId: this.erlaubt ? 'mikro-1' : '', groupId: this.erlaubt ? 'g-mikro' : '', kind: 'audioinput', label: this.erlaubt ? 'Eingebautes Mikrofon' : '' };
     if (!this.erlaubt) {
       return Promise.resolve([eingang, { deviceId: '', groupId: '', kind: 'audiooutput', label: '' }]); // ohne Freigabe: ohne Namen, ohne Kennung
@@ -93,9 +99,12 @@ export class FalscheMedienGeraete implements MedienGeraete, Berechtigungen {
     }
   }
 
-  abziehen(id: string): void {
+  /** `melden = false`: die Liste ändert sich, `devicechange` kommt erst später (`geraeteWechsel()`), wie bei offener Reihenfolge im Browser. */
+  abziehen(id: string, melden = true): void {
     this.ausgaenge = this.ausgaenge.filter((a) => a.id !== id);
-    this.geraeteWechsel();
+    if (melden) {
+      this.geraeteWechsel();
+    }
   }
 
   anstecken(ausgang: FalscherAusgang): void {

@@ -111,6 +111,13 @@ export function erzeugeTonSteuerung({ takt, spieler }: TonSteuerungDeps): TonSte
         if (alt && begonnen(alt, now)) {
           continue; // ein begonnener Ton bleibt, wie er ist
         }
+        if (alt !== undefined && alt.geplantUm !== null) {
+          if (!begonnen(alt, now) && !spieler.geplant().includes(id)) {
+            // der Spieler hat den noch nicht begonnenen Ton abgebrochen (Ausgang verloren): ungeplant, regulär neu planen
+            alt.geplantUm = null;
+            alt.audioAt = null;
+          }
+        }
         const altAudio = alt?.audioAt ?? null;
         const audioGleich = altAudio !== null && Math.abs(spieler.audioZeitFuerServerZeit(ton.at, now) - altAudio) <= AUDIO_ABWEICHUNG_SEK;
         if (alt?.ton.at === ton.at && alt.geplantUm !== null && audioGleich) {

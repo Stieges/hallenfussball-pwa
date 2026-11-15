@@ -129,8 +129,11 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
       const freigabe = spieler.aktivieren(); // in der Geste, vor jedem await
       r.wirdAktiviert();
       let ok = await freigabe;
-      if (!ok || !spieler.ausgabeLaeuft()) {
-        await spieler.laden(wahl.wahl()); // auch bei „Ausgang bestätigen“ (H4-6): die Töne liegen bereit, sobald der Ausgang gilt
+      // Steht der Spieler wegen des Ausgangs (`ok` ist dann true: Ausgang-Zustände sind nicht `not_activated`), liegen die Töne
+      // trotzdem bereit, sobald der Ausgang gilt (@HT-055): laden, aber nur einmal – nicht bei jedem Klick neu. Ohne Wahl ist
+      // `ok` genau dann true, wenn die Töne geladen sind: dort ändert sich nichts.
+      if (!ok || !spieler.tonGeladen()) {
+        await spieler.laden(wahl.wahl());
         ok = spieler.zustand() !== 'not_activated';
       }
       if (ok) {

@@ -39,6 +39,8 @@ export interface HallTonSpieler {
   zustand(): SpielerZustand;
   /** Dieser Tab ist aktiviert und die Ausgabe läuft – ohne Blick auf den Ausgang (wie `zustand() !== 'not_activated'` vor H4-6). */
   ausgabeLaeuft(): boolean;
+  /** Der Abpfiff-Ton ist geladen (unabhängig vom Ausgang). */
+  tonGeladen(): boolean;
   onZustand(fn: (zustand: SpielerZustand) => void): () => void;
   geplant(): string[];
   /** Für `ausgangsSignale` (dieselbe Ausgabe). */

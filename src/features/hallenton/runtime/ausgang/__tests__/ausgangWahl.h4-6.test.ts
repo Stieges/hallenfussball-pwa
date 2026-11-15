@@ -72,3 +72,22 @@ describe('@HT-053 Die Wahl in Tab A erreicht Tab B', () => {
     expect(n).toBe(0);
   });
 });
+
+describe('@HT-053 Der Speicher verweigert das Schreiben', () => {
+  it('setItem wirft → setzen meldet false, die Wahl gilt als nicht gespeichert: lesen() liefert weiter die alte, nie eine andere als auf der Platte', () => {
+    const geraet = new FalschesGeraet();
+    const s = geraet.neueSeite();
+    const wahl = erzeugeAusgangWahl({ speicher: s.speicher, seite: s.seite });
+    expect(wahl.setzen(DOCK)).toBe(true);
+    const gesperrt = erzeugeAusgangWahl({
+      speicher: { getItem: (k) => s.speicher.getItem(k), setItem: () => { throw new Error('voll'); }, removeItem: () => { throw new Error('voll'); } },
+      seite: null,
+    });
+    let gemeldet = 0;
+    gesperrt.beobachten(() => { gemeldet += 1; });
+    expect(gesperrt.setzen({ id: 'lg', name: 'LG', gruppe: 'g-lg' })).toBe(false);
+    expect(gesperrt.setzen(null)).toBe(false);
+    expect(gesperrt.lesen()).toEqual(DOCK);
+    expect(gemeldet).toBe(0);
+  });
+});

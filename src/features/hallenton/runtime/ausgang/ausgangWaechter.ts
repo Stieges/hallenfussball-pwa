@@ -11,12 +11,17 @@
  * - Nichts davon verlässt das Gerät.
  */
 import { bewerteAusgang, type AusgangLage, type GewaehlterAusgang, type MikrofonErlaubnis } from '../../../../core/hallenton';
+import { echterZeitgeber, type Zeitgeber } from '../zeitgeber';
 import type { AusgangListeQuelle, AusgangsListe } from './ausgangListe';
 import type { AusgangWahl } from './ausgangWahl';
 
 /** Was der Spieler vom Wächter braucht (nur Lage, Wahl, Anstoß, Fehlermeldung der Senke). */
 export interface SpielerAusgang {
+  /** Zeit für die Zeitgrenzen (Lesen, `setSinkId`, Gnadenfrist); im Test die manuelle Uhr. */
+  readonly zeitgeber: Zeitgeber;
   lage(): AusgangLage;
+  /** Die Ausgänge wurden mindestens einmal gelesen (oder das Lesen lief in die Zeitgrenze). */
+  gelesen(): boolean;
   wahl(): GewaehlterAusgang | null;
   /** Lage oder Wahl hat sich geändert. */
   beobachten(fn: () => void): () => void;
@@ -35,11 +40,18 @@ export interface AusgangWaechter extends SpielerAusgang {
 export interface AusgangWaechterDeps {
   liste: AusgangListeQuelle;
   wahl: AusgangWahl;
+  zeitgeber?: Zeitgeber;
 }
+
+/**
+ * Zeitgrenze für das Lesen der Ausgänge und für `setSinkId` (ms): „im Zweifel kein Ton, aber nie dauerhaft tot“. Danach gilt die
+ * zuletzt gelesene Liste weiter bzw. der Versuch als gescheitert (`output_unconfirmed`, nie still „Standard“).
+ */
+export const AUSGANG_ZEITGRENZE_MS = 2000;
 
 const NICHT_GELESEN: AusgangsListe = { eintraege: [], lesbar: false };
 
-export function erzeugeAusgangWaechter({ liste: quelle, wahl: wahlSpeicher }: AusgangWaechterDeps): AusgangWaechter {
+export function erzeugeAusgangWaechter({ liste: quelle, wahl: wahlSpeicher, zeitgeber = echterZeitgeber }: AusgangWaechterDeps): AusgangWaechter {
   const zuhoerer = new Set<() => void>();
   let wahl: GewaehlterAusgang | null = wahlSpeicher.lesen();
   let liste: AusgangsListe = NICHT_GELESEN;
@@ -48,6 +60,7 @@ export function erzeugeAusgangWaechter({ liste: quelle, wahl: wahlSpeicher }: Au
   let liest = wahl !== null;
   let lauf = 0;
   let beendet = false;
+  let gelesen = false;
 
   const berechneLage = (): AusgangLage => bewerteAusgang({
     wahl, eintraege: liste.eintraege, erlaubnis, senkeScheitert: senke !== null && senke.scheitert && senke.id === wahl?.id,
@@ -56,7 +69,11 @@ export function erzeugeAusgangWaechter({ liste: quelle, wahl: wahlSpeicher }: Au
 
   const melden = (): void => {
     for (const fn of [...zuhoerer]) {
-      fn();
+      try {
+        fn();
+      } catch {
+        // ein werfender Zuhörer darf die übrigen und das Lesen nicht stören (kein Text nach außen)
+      }
     }
   };
 
@@ -70,11 +87,15 @@ export function erzeugeAusgangWaechter({ liste: quelle, wahl: wahlSpeicher }: Au
   };
 
   let runde: Promise<void> = Promise.resolve();
-  /** Liest Ausgänge und Erlaubnis neu; eine überholte Runde wartet auf die neueste (wer wartet, sieht erst das Endergebnis). */
+  /**
+   * Liest Ausgänge und Erlaubnis neu; eine überholte Runde wartet auf die neueste (wer wartet, sieht erst das Endergebnis).
+   * Antwortet der Browser nicht innerhalb der Zeitgrenze, endet die Runde ohne Änderung (die zuletzt gelesene Liste gilt weiter);
+   * eine später doch eintreffende Antwort gilt nur, wenn keine neuere Runde läuft.
+   */
   const neuLesen = (): Promise<void> => {
     liest = true;
     const meine = ++lauf;
-    const diese = (async (): Promise<void> => {
+    const lesen = (async (): Promise<void> => {
       const [neueListe, neueErlaubnis] = await Promise.all([quelle.lesen(), quelle.erlaubnis()]);
       if (beendet) {
         return;
@@ -83,11 +104,22 @@ export function erzeugeAusgangWaechter({ liste: quelle, wahl: wahlSpeicher }: Au
         await runde; // eine neuere Runde läuft
         return;
       }
+      gelesen = true;
       const geaendert = JSON.stringify(neueListe) !== JSON.stringify(liste) || neueErlaubnis !== erlaubnis;
       liste = neueListe;
       erlaubnis = neueErlaubnis;
       auswerten(geaendert);
     })();
+    const diese = new Promise<void>((fertig) => {
+      const ab = zeitgeber.spaeter(() => {
+        if (meine === lauf && !gelesen) {
+          gelesen = true; // ohne Antwort: nicht ewig „wird gelesen“; Lage bleibt, wie sie war
+          auswerten(true);
+        }
+        fertig();
+      }, AUSGANG_ZEITGRENZE_MS);
+      void lesen.then(() => { ab(); fertig(); }, () => { ab(); fertig(); });
+    });
     runde = diese;
     return diese;
   };
@@ -114,7 +146,9 @@ export function erzeugeAusgangWaechter({ liste: quelle, wahl: wahlSpeicher }: Au
   }
 
   return {
+    zeitgeber,
     lage: () => lage,
+    gelesen: () => gelesen,
     wahl: () => wahl,
     liste: () => liste,
     erlaubnis: () => erlaubnis,

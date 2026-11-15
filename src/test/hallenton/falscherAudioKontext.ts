@@ -51,8 +51,14 @@ export class FalscherAudioKontext implements AudioKontext {
     this.setSinkId = undefined;
   }
 
+  /** `setSinkId` antwortet nie. */
+  setSinkIdHaengt = false;
+
   private sinkSetzen(kennung: string): Promise<void> {
     this.setSinkIdAufrufe.push(kennung);
+    if (this.setSinkIdHaengt) {
+      return new Promise(() => undefined);
+    }
     if (kennung !== '' && this.vorhandeneAusgaenge !== null && !this.vorhandeneAusgaenge.has(kennung)) {
       return Promise.reject(new DOMException(`Kein Ausgang mit der Kennung ${kennung}`, 'NotFoundError'));
     }

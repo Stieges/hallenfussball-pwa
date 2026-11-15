@@ -24,7 +24,8 @@ export interface HallAusgang {
   liste: readonly AusgangEintrag[];
   zustand: AusgangLage;
   mikrofonErlauben(): Promise<boolean>;
-  waehle(id: string | null): void;
+  /** `false`: nichts geändert (Browser ohne Wahl, unbekannte Kennung oder der Speicher verweigert das Schreiben). */
+  waehle(id: string | null): boolean;
   bestaetigen(): Promise<boolean>;
 }
 
@@ -72,19 +73,16 @@ export function useHallAusgang(): HallAusgang {
     return erlaubt;
   }, []);
 
-  const waehle = useCallback((id: string | null) => {
+  const waehle = useCallback((id: string | null): boolean => {
     const { wahl, waechter } = browserAusgang();
     if (!verfuegbar) {
-      return; // Browser ohne Ausgangswahl: „Standard“, nichts zu wählen
+      return false; // Browser ohne Ausgangswahl: „Standard“, nichts zu wählen
     }
     if (id === null || id === STANDARD_AUSGANG_ID) {
-      wahl.setzen(null);
-      return;
+      return wahl.setzen(null);
     }
     const eintrag = waechter.liste().eintraege.find((e) => e.id === id);
-    if (eintrag) {
-      wahl.setzen({ id: eintrag.id, name: eintrag.name, gruppe: eintrag.gruppe });
-    }
+    return eintrag ? wahl.setzen({ id: eintrag.id, name: eintrag.name, gruppe: eintrag.gruppe }) : false;
   }, [verfuegbar]);
 
   const bestaetigen = useCallback(async (): Promise<boolean> => {

@@ -251,6 +251,7 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher, aus
     },
     zustand: berechne,
     ausgabeLaeuft: () => grundZustand() !== 'not_activated',
+    tonGeladen: () => puffer.abpfiff !== null,
     onZustand(fn) {
       zuhoerer.add(fn);
       return () => zuhoerer.delete(fn);

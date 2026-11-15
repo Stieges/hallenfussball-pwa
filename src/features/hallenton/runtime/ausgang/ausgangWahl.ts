@@ -23,8 +23,11 @@ export interface SpeicherEreignisse {
 export interface AusgangWahl {
   /** `null` = „Standard (Ausgang des Systems)“. */
   lesen(): GewaehlterAusgang | null;
-  /** `null` oder der Systemstandard löscht die Wahl. */
-  setzen(wahl: GewaehlterAusgang | null): void;
+  /**
+   * `null` oder der Systemstandard löscht die Wahl. `false`, wenn der Speicher das Schreiben verweigert: dann gilt die Wahl als
+   * nicht gespeichert, `lesen()` liefert weiter die alte (nie im Arbeitsspeicher eine andere als auf der Platte).
+   */
+  setzen(wahl: GewaehlterAusgang | null): boolean;
   /** Anstoß an die anderen Tabs, die Ausgänge neu zu lesen (nach „Ausgang bestätigen“). */
   pruefenAnstossen(): void;
   /** Wahl geändert (hier oder in einem anderen Tab) oder neu zu prüfen. */
@@ -73,19 +76,21 @@ export function erzeugeAusgangWahl({ speicher, seite }: { speicher: KanalSpeiche
     lesen,
     setzen(wahl) {
       const gueltig = wahl === null ? null : alsWahl(wahl);
-      imArbeitsspeicher = gueltig;
       if (speicher) {
-        if (gueltig === null) {
-          try {
+        try {
+          if (gueltig === null) {
             speicher.removeItem(AUSGANG_SCHLUESSEL);
-          } catch {
-            // gesperrt: gilt bis zum Neuladen
+          } else {
+            speicher.setItem(AUSGANG_SCHLUESSEL, JSON.stringify(gueltig));
           }
-        } else {
-          schreib(speicher, AUSGANG_SCHLUESSEL, JSON.stringify(gueltig));
+        } catch {
+          return false; // gesperrt oder voll: nicht gespeichert, alles bleibt beim Alten
         }
+      } else {
+        imArbeitsspeicher = gueltig;
       }
       melden();
+      return true;
     },
     pruefenAnstossen() {
       zaehler += 1;

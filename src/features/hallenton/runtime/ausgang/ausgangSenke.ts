@@ -14,7 +14,7 @@
  * Fehlertexte des Browsers (sie können Kennungen enthalten) werden nie weitergegeben.
  */
 import type { AusgangLage } from '../../../../core/hallenton';
-import type { SpielerAusgang } from './ausgangWaechter';
+import { AUSGANG_ZEITGRENZE_MS, type SpielerAusgang } from './ausgangWaechter';
 
 /** Ausschnitt des `AudioContext` für die Senke. */
 export interface SenkenKontext {
@@ -59,15 +59,37 @@ export interface SenkeDeps {
 }
 
 const KEINER = '\u0000keiner';
+/**
+ * Gnadenfrist (ms), in der ein stehender Kontext mit gewähltem Ausgang als `output_unconfirmed` gilt: Abziehen meldet
+ * `suspended` und `devicechange` in beliebiger Reihenfolge. Danach gilt der Zustand ohne Ausgang (Kontext steht aus anderem Grund).
+ */
+export const STATUS_GNADE_MS = 3000;
+
+/** `setSinkId` kann hängen: nach der Zeitgrenze gilt der Versuch als gescheitert. */
+function mitZeitgrenze(versuch: Promise<void>, ausgang: SpielerAusgang): Promise<void> {
+  return new Promise<void>((geschafft, gescheitert) => {
+    const ab = ausgang.zeitgeber.spaeter(() => { gescheitert(new Error('Zeitgrenze')); }, AUSGANG_ZEITGRENZE_MS);
+    versuch.then(() => { ab(); geschafft(); }, () => { ab(); gescheitert(new Error('Fehlschlag')); });
+  });
+}
 
 const kontextLaeuft = (k: SenkenKontext): boolean => k.state === 'running';
 
-export function erzeugeSenke({ ausgang, kontext, geaendert, beiVerlust, darfResume }: SenkeDeps): Senke {
+export function erzeugeSenke({ ausgang, kontext, geaendert: geaendertRoh, beiVerlust, darfResume }: SenkeDeps): Senke {
+  /** Ein werfender Zuhörer darf weder die Kette noch den Wächter lahmlegen (kein Text nach außen). */
+  const geaendert = (): void => {
+    try {
+      geaendertRoh();
+    } catch {
+      // der Zuhörer ist selbst schuld; die Senke arbeitet weiter
+    }
+  };
   let angewendet: string | undefined; // zuletzt gesetzte Kennung; `''` = Standard; `undefined` = nie gesetzt
   let kette: Promise<void> = Promise.resolve();
   let fehlteZuvor = false;
   let beendet = false;
-  let pruefungen = 0;
+  let pruefBis = Number.NEGATIVE_INFINITY; // Gnadenfrist nach einem stehenden Kontext
+  let ausstehend = 0; // laufende Versuche von `setSinkId`
   let abSinkchange: (() => void) | null = null;
 
   const lage = (): AusgangLage => ausgang?.lage() ?? 'standard';
@@ -92,13 +114,16 @@ export function erzeugeSenke({ ausgang, kontext, geaendert, beiVerlust, darfResu
       }
       return;
     }
+    ausstehend += 1;
     try {
-      await k.setSinkId(ziel);
+      await mitZeitgrenze(k.setSinkId(ziel), ausgang);
     } catch {
       if (ziel !== '') {
-        ausgang.senkeMelden(ziel, true); // Kennung nicht mehr gültig o. Ä.: unbestätigt (nie den Browsertext weitergeben)
+        ausgang.senkeMelden(ziel, true); // Kennung nicht mehr gültig, Zeitgrenze o. Ä.: unbestätigt (nie den Browsertext weitergeben)
       }
       return;
+    } finally {
+      ausstehend -= 1;
     }
     angewendet = ziel;
     if (ziel !== '') {
@@ -110,12 +135,17 @@ export function erzeugeSenke({ ausgang, kontext, geaendert, beiVerlust, darfResu
     }
   };
 
+  /** Die Kette lebt weiter, auch wenn ein Zuhörer wirft (kein Text nach außen, nie eine unbehandelte Ablehnung). */
   const anwenden = (): Promise<void> => {
-    kette = kette.then(einmal).then(() => {
-      if (!beendet) {
-        geaendert();
-      }
-    });
+    kette = kette
+      .then(einmal)
+      .catch(() => undefined)
+      .then(() => {
+        if (!beendet) {
+          geaendert();
+        }
+      })
+      .catch(() => undefined);
     return kette;
   };
 
@@ -124,7 +154,9 @@ export function erzeugeSenke({ ausgang, kontext, geaendert, beiVerlust, darfResu
     if (l === 'lost' || l === 'unconfirmed') {
       fehlteZuvor = true;
       angewendet = KEINER; // nach der Rückkehr muss `setSinkId` neu gesetzt werden, auch mit derselben Kennung
-      beiVerlust();
+      if (l === 'lost' || ausgang?.gelesen() === true) {
+        beiVerlust(); // beim ersten Lesen nach einem Wahlwechsel aus einem anderen Tab noch nichts abbrechen
+      }
     }
     geaendert();
     void anwenden();
@@ -132,8 +164,8 @@ export function erzeugeSenke({ ausgang, kontext, geaendert, beiVerlust, darfResu
 
   const beiSinkchange = (): void => {
     const k = kontext();
-    if (!k || !ausgang) {
-      return;
+    if (!k || !ausgang || (ausgang.wahl() === null && angewendet === undefined)) {
+      return; // ein Gerät ohne Wahl rührt bei einem spontanen `sinkchange` nichts an
     }
     angewendet = typeof k.sinkId === 'string' ? k.sinkId : KEINER;
     geaendert();
@@ -162,9 +194,13 @@ export function erzeugeSenke({ ausgang, kontext, geaendert, beiVerlust, darfResu
       if (!ausgang || !k || ausgang.wahl() === null || lage() !== 'ok' || kontextLaeuft(k)) {
         return;
       }
-      pruefungen += 1;
-      void ausgang.neuLesen().finally(() => {
-        pruefungen -= 1;
+      pruefBis = ausgang.zeitgeber.jetzt() + STATUS_GNADE_MS;
+      ausgang.zeitgeber.spaeter(() => {
+        if (!beendet) {
+          geaendert(); // Gnadenfrist vorbei
+        }
+      }, STATUS_GNADE_MS);
+      void ausgang.neuLesen().then(() => {
         if (!beendet) {
           geaendert();
         }
@@ -172,8 +208,13 @@ export function erzeugeSenke({ ausgang, kontext, geaendert, beiVerlust, darfResu
     },
     zustand() {
       const l = lage();
-      if (pruefungen > 0 && l === 'ok') {
-        return 'output_unconfirmed'; // Ausgang wird geprüft: nie kurz „Ton nicht aktiviert“ (die Sperre bleibt)
+      if (l === 'ok' && ausgang) {
+        const k = kontext();
+        const gewaehlt = ausgang.wahl()?.id;
+        // Ausgang wird geprüft oder gesetzt: nie kurz „Ton nicht aktiviert“ (die Sperre bleibt); ohne Wahl nie
+        if (gewaehlt !== undefined && (ausstehend > 0 || (k !== null && (angewendet ?? '') !== gewaehlt) || (k !== null && !kontextLaeuft(k) && ausgang.zeitgeber.jetzt() < pruefBis))) {
+          return 'output_unconfirmed';
+        }
       }
       return l === 'lost' ? 'output_lost' : l === 'unconfirmed' ? 'output_unconfirmed' : null;
     },

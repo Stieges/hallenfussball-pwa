@@ -149,7 +149,7 @@ export class Tab {
     const seite = this.geraet.neueSeite();
     this.wahl = erzeugeAusgangWahl({ speicher: seite.speicher, seite: seite.seite });
     this.waechter = o.medien
-      ? erzeugeAusgangWaechter({ liste: erzeugeAusgangListe({ geraete: o.medien, berechtigungen: o.medien }), wahl: this.wahl })
+      ? erzeugeAusgangWaechter({ liste: erzeugeAusgangListe({ geraete: o.medien, berechtigungen: o.medien }), wahl: this.wahl, zeitgeber: this.uhr.gruppe(`ausgang${name}`) })
       : null;
     this.spieler = erzeugeHallTonSpieler({
       ausgang: this.waechter,
