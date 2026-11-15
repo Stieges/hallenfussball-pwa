@@ -56,6 +56,9 @@ function FeldEintrag({ karte, testton, status, darfAendern, abmelden }: EintragP
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.xs }}>
       <LautsprecherFeldKarte feld={karte.feld} zustand={karte.zustand} geraet={karte.geraet} pille={pille ?? undefined} extra={extra ?? undefined} aktion={taste} />
+      {abmelden?.abgemeldet.has(karte.feld) === true && karte.zustand.art === 'keinLautsprecher' ? (
+        <p style={ruhigStil} role="status" data-testid={`lautsprecher-feld-${karte.feld}-abgemeldet`}>{t('abmelden.ergebnis', { feld: karte.feld })}</p>
+      ) : null}
       {fehler === undefined || abmelden === undefined ? null : (
         <HinweisMitTaste
           ton="warn" symbol={<Icons.AlertTriangle size={iconSizeValues.sm} />} titel={t(`abmelden.fehler.${fehler}`, { feld: karte.feld })} data-testid={`lautsprecher-feld-${karte.feld}-abmelden-fehler`}
@@ -75,7 +78,7 @@ export function FeldKartenAbschnitt({ karten, keinLautsprecherImTurnier, testton
   return (
     <section style={listeStil} aria-labelledby="hallenton-felder-titel" data-testid="hallenton-felder">
       <h2 id="hallenton-felder-titel" style={{ margin: 0, fontSize: cssVars.fontSizes.titleLg, fontWeight: cssVars.fontWeights.semibold }}>{t('seite.felderTitel')}</h2>
-      {keinLautsprecherImTurnier ? <p style={hinweisStil} data-testid="hallenton-felder-leer">{t('seite.felderLeer')}</p> : null}
+      {keinLautsprecherImTurnier && (abmelden?.abgemeldet.size ?? 0) === 0 ? <p style={hinweisStil} data-testid="hallenton-felder-leer">{t('seite.felderLeer')}</p> : null}
       {karten.map((karte) => <FeldEintrag key={karte.feld} karte={karte} testton={testton} status={status} darfAendern={darfAendern} abmelden={abmelden} />)}
     </section>
   );

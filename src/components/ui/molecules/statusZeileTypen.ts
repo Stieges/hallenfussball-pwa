@@ -32,5 +32,7 @@ export interface StatusZeileProps {
   onNavigiere: (ziel: string) => void;
   /** Name der Zeile für Vorlesehilfen (Bereich), z. B. „Status“. */
   label: string;
+  /** Enge Ansicht (Cockpit am Handy, @OB-087): kaum Abstand oben und unten, die Pillen bleiben 44 px hoch. */
+  kompakt?: boolean;
   'data-testid'?: string;
 }

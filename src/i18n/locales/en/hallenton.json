@@ -1,6 +1,8 @@
 {
   "statuszeile": {
     "weitere": "+{{count}} more",
+    "abgemeldet": "Field {{feld}}: unassigned as hall speaker",
+    "abgemeldetKurz": "Field {{feld}} unassigned",
     "weniger": "show less",
     "bereit": "Field {{feld}} speaker ready",
     "bereitKurz": "Field {{feld}} ready",
@@ -54,7 +56,7 @@
   },
   "geraet": {
     "uebernommen": "Field {{feld}} taken over by another device",
-    "abgemeldet": "The tournament director removed this device as the hall speaker for field {{feld}}.",
+    "abgemeldet": "The tournament director has unassigned this device as the hall speaker for field {{feld}}.",
     "titel": "This device",
     "bereit": "Speaker ready",
     "bereitText": "Field {{feld}} · {{name}}",
@@ -63,7 +65,7 @@
     "keinLautsprecherText": "Turn on the switch below to make it a speaker.",
     "uebernommenText": "{{name}} now plays the audio for field {{feld}}. This device no longer plays for it.",
     "uebernommenTextOhneName": "Another device now plays the audio for field {{feld}}. This device no longer plays for it.",
-    "abgemeldetTitel": "Removed as hall speaker",
+    "abgemeldetTitel": "Unassigned as hall speaker",
     "verstanden": "Understood",
     "geraeteName": "Device name",
     "geraeteNameHinweis": "This is how the device is named in the admin area. 60 characters at most.",
@@ -120,27 +122,29 @@
     "abbrechen": "Cancel",
     "testton": "{{lage}} Play the test tone in the hall anyway?",
     "testtonTitel": "Test tone although a match is running",
-    "testtonBestaetigen": "Play test tone",
-    "abmelden": "{{lage}} Remove it anyway? There will be no final whistle on this field afterwards.",
-    "abmeldenTitel": "Remove although a match is running",
-    "abmeldenBestaetigen": "Remove"
+    "testtonBestaetigen": "Play test tone"
   },
   "abmelden": {
-    "taste": "Remove",
-    "tasteLesetext": "Remove the hall speaker for field {{feld}}",
-    "titel": "Remove hall speaker?",
-    "frage": "Remove “{{name}}” as the hall speaker for field {{feld}}?",
+    "taste": "Unassign",
+    "tasteLesetext": "Unassign the hall speaker for field {{feld}}",
+    "titel": "Unassign hall speaker?",
+    "frage": "Unassign “{{name}}” as the hall speaker for field {{feld}}?",
     "folge": "Afterwards there is no hall tone for field {{feld}} until a device is switched on again.",
     "folgeEigenes": "This is this device. Afterwards there is no hall tone for field {{feld}} until you switch it on again.",
-    "bestaetigen": "Remove",
+    "bestaetigen": "Unassign",
     "abbrechen": "Cancel",
     "nochmal": "Try again",
+    "spielTitel": "Unassign although a match is running",
+    "spiel": "Match {{spiel}} is running on field {{feld}}. Unassign “{{name}}” as the hall speaker anyway? There will be no final whistle on field {{feld}} afterwards.",
+    "spielBestaetigen": "Unassign anyway",
+    "ergebnis": "Field {{feld}} unassigned – no hall speaker",
     "fehler": {
-      "netz": "Not removed: no connection. The speaker for field {{feld}} is unchanged.",
-      "kein_recht": "Not removed: you do not have permission.",
-      "turnier_beendet": "Not removed: the tournament has ended.",
-      "ungueltig": "Not removed: field {{feld}} was not found.",
-      "antwort_unbekannt": "Not removed: that did not work. The speaker for field {{feld}} is unchanged."
+      "weg": "Not unassigned: field {{feld}} no longer has a hall speaker.",
+      "netz": "Not unassigned: no connection. The speaker for field {{feld}} is unchanged.",
+      "kein_recht": "Not unassigned: you do not have permission.",
+      "turnier_beendet": "Not unassigned: the tournament has ended.",
+      "ungueltig": "Not unassigned: field {{feld}} was not found.",
+      "antwort_unbekannt": "Not unassigned: that did not work. The speaker for field {{feld}} is unchanged."
     }
   },
   "seite": {

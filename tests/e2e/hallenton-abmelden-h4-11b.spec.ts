@@ -12,7 +12,7 @@ import { GERAETE, hartBefunde, speichereBild } from './helpers/hallentonPruefsta
 type Sprache = 'de' | 'en';
 interface Fall {
   name: string;
-  seite: 'abmelden' | 'dieses-geraet';
+  seite: 'abmelden' | 'dieses-geraet' | 'abgemeldet-eintrag';
   /** Abfrage des Prüfstands. */
   abfrage: string;
   /** Klicks wie Olli, danach die Prüfung (`s` = Sprache). */
@@ -25,15 +25,17 @@ interface Fall {
 const T = {
   de: {
     abmelden: 'Abmelden', titel: 'Hallen-Lautsprecher abmelden?', kein: 'kein Hallen-Lautsprecher', nochmal: 'Erneut versuchen', verstanden: 'Verstanden',
-    folge: 'Für Feld 1 ertönt danach kein Hallenton, bis ein Gerät wieder eingeschaltet wird.', laeuft: 'Auf Feld 1 läuft Spiel 11.', zweiteTitel: 'Abmelden, obwohl ein Spiel läuft',
+    folge: 'Für Feld 1 ertönt danach kein Hallenton, bis ein Gerät wieder eingeschaltet wird.', laeuft: 'Auf Feld 1 läuft Spiel 11.', zweiteTitel: 'Abmelden, obwohl ein Spiel läuft', zweiteJa: 'Trotzdem abmelden',
+    ergebnis: 'Feld 1 abgemeldet – kein Hallen-Lautsprecher', leer: 'Noch kein Hallen-Lautsprecher eingerichtet', eintrag: 'Feld 1: als Hallen-Lautsprecher abgemeldet', eintragKurz: 'Feld 1 abgemeldet',
     keinNetz: 'Nicht abgemeldet: kein Netz. Der Lautsprecher für Feld 1 ist unverändert.', keinRecht: 'Nicht abgemeldet: dafür fehlt dir das Recht.',
     abgemeldet: 'Die Turnierleitung hat dieses Gerät als Hallen-Lautsprecher für Feld 1 abgemeldet.', eigen: 'Das ist dieses Gerät.',
   },
   en: {
-    abmelden: 'Remove', titel: 'Remove hall speaker?', kein: 'no hall speaker', nochmal: 'Try again', verstanden: 'Understood',
-    folge: 'Afterwards there is no hall tone for field 1 until a device is switched on again.', laeuft: 'Match 11 is running on field 1.', zweiteTitel: 'Remove although a match is running',
-    keinNetz: 'Not removed: no connection. The speaker for field 1 is unchanged.', keinRecht: 'Not removed: you do not have permission.',
-    abgemeldet: 'The tournament director removed this device as the hall speaker for field 1.', eigen: 'This is this device.',
+    abmelden: 'Unassign', titel: 'Unassign hall speaker?', kein: 'no hall speaker', nochmal: 'Try again', verstanden: 'Understood',
+    folge: 'Afterwards there is no hall tone for field 1 until a device is switched on again.', laeuft: 'Match 11 is running on field 1.', zweiteTitel: 'Unassign although a match is running', zweiteJa: 'Unassign anyway',
+    ergebnis: 'Field 1 unassigned – no hall speaker', leer: 'No hall speaker set up yet', eintrag: 'Field 1: unassigned as hall speaker', eintragKurz: 'Field 1 unassigned',
+    keinNetz: 'Not unassigned: no connection. The speaker for field 1 is unchanged.', keinRecht: 'Not unassigned: you do not have permission.',
+    abgemeldet: 'The tournament director has unassigned this device as the hall speaker for field 1.', eigen: 'This is this device.',
   },
 } as const;
 const NAMEN = ['Rechner der Turnierleitung', 'Laptop Turnierleitung', 'Tablet Halle Süd am Eingang neben der Kasse, links'];
@@ -78,6 +80,18 @@ const FAELLE: readonly Fall[] = [
       await ja(page).click();
       await expect(page.getByText(T[s].zweiteTitel)).toBeVisible();
       await expect(page.getByRole('dialog')).toContainText(T[s].laeuft);
+      await expect(page.getByRole('dialog')).toContainText('Rechner der Turnierleitung'); // auch die zweite Rückfrage nennt das Gerät
+      await expect(page.getByTestId('confirm-dialog-confirm')).toHaveText(T[s].zweiteJa);
+      await expect(page.getByTestId('confirm-dialog-cancel'), 'Gefahr-Dialog: Fokus auf „Abbrechen“, Enter löst nichts aus').toBeFocused();
+    },
+  },
+  {
+    name: 'nochmal-fragt-wieder', seite: 'abmelden', abfrage: 'fall=bereit&fehler=netz', sprachen: ['de'], dialog: true, async ablauf(page, s) {
+      await taste(page).click();
+      await ja(page).click();
+      await expect(page.getByTestId('lautsprecher-feld-1-abmelden-fehler')).toBeVisible();
+      await page.getByTestId('lautsprecher-feld-1-abmelden-nochmal').click();
+      await expect(page.getByText(T[s].titel), '„Erneut versuchen“ fragt wieder, es meldet nie direkt ab').toBeVisible();
     },
   },
   {
@@ -93,6 +107,9 @@ const FAELLE: readonly Fall[] = [
       await ja(page).click();
       await expect(page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText(T[s].kein);
       await expect(taste(page)).toHaveCount(0);
+      await expect(page.getByTestId('lautsprecher-feld-1-abgemeldet')).toHaveText(T[s].ergebnis);
+      await expect(page.getByTestId('hallenton-felder-leer'), 'nach einer bewussten Abmeldung nicht „Noch kein Hallen-Lautsprecher eingerichtet“').toHaveCount(0);
+      await expect(page.locator('body')).not.toContainText(T[s].leer);
     },
   },
   {
@@ -118,6 +135,16 @@ const FAELLE: readonly Fall[] = [
       await expect(page.getByTestId('lautsprecher-feld-1-abmelden-fehler')).toContainText(T[s].keinRecht);
       await expect(page.getByTestId('lautsprecher-feld-1-abmelden-nochmal')).toHaveCount(0);
       await expect(page.getByTestId('lautsprecher-feld-1-zustand'), 'der Zustand bleibt').not.toHaveText(T[s].kein);
+    },
+  },
+  {
+    name: 'eintrag-verwaltung', seite: 'abgemeldet-eintrag', abfrage: 'ansicht=verwaltung', async ablauf(page, s) {
+      await expect(page.getByTestId('hallenton-status-zeile')).toContainText(T[s].eintrag, { ignoreCase: false });
+    },
+  },
+  {
+    name: 'eintrag-ohne-kopf', seite: 'abgemeldet-eintrag', abfrage: 'ansicht=ohne', async ablauf(page, s) {
+      await expect(page.getByTestId('hallenton-geraet-streifen')).toContainText(T[s].eintrag);
     },
   },
   {
@@ -183,6 +210,38 @@ test.describe('@HT-057 H4-11b Abmelden (Prüfstand)', () => {
             await speichereBild(page, testInfo.outputDir, 'H411B_BILDER', `h4-11b-${f.name}-${sprache}-${g.name}-${thema}`, f.dialog !== true);
           });
         }
+      }
+    }
+  }
+
+  // Cockpit (@HT-057, @OB-087): der schmale Kopf mit dem Eintrag „abgemeldet“; Tor-Tasten und die Reihe Foul/Zeitstrafe/Karte bleiben im Bild
+  for (const sprache of ['de', 'en'] as const) {
+    for (const g of GERAETE) {
+      for (const thema of ['light', 'dark'] as const) {
+        test(`eintrag-cockpit ${sprache} ${g.name}, ${thema}: Eintrag im Kopf, Tor-Tasten und Foul/Zeitstrafe/Karte im Bild, Tasten ≥ 44 px`, async ({ page }, testInfo) => {
+          await page.setViewportSize({ width: g.width, height: g.height });
+          await page.emulateMedia({ colorScheme: thema });
+          await page.clock.setFixedTime(new Date(2026, 10, 21, 14, 0));
+          await page.goto(`/tests/e2e/harness/cockpit-hallenton.html?fall=abgemeldet&lang=${sprache}`);
+          const zeile = page.getByTestId('hallenton-status-zeile');
+          await expect(zeile).toBeVisible({ timeout: 15_000 });
+          await expect(zeile).toContainText(g.schmal ? T[sprache].eintragKurz : T[sprache].eintrag); // im Kopf des Cockpits am Handy gilt die Kurzform
+          await expect(page.getByTestId('scoreboard')).toContainText('4:32');
+          for (const seite of ['home', 'away']) {
+            for (const id of ['goal-button', 'foul-button', 'penalty-button', 'card-button']) {
+              const box = await page.getByTestId(`${id}-${seite}`).first().boundingBox();
+              expect(box, `${id}-${seite}`).not.toBeNull();
+              expect((box?.y ?? 0) + (box?.height ?? 0), `${id}-${seite} liegt im Bild`).toBeLessThanOrEqual(g.height);
+              expect(box?.height ?? 0, `${id}-${seite} ≥ 44 px`).toBeGreaterThanOrEqual(44);
+              // nichts verdeckt oder beschneidet die Taste: oben, Mitte und unten trifft ein Tipp die Taste selbst (@OB-087)
+              const sichtbar = await page.evaluate(([tid, x, y, w, h]) => [y + 2, y + h / 2, y + h - 2].map((py) => document.elementFromPoint(x + w / 2, py)?.closest(`[data-testid="${tid}"]`) !== null), [`${id}-${seite}`, box?.x ?? 0, box?.y ?? 0, box?.width ?? 0, box?.height ?? 0] as const);
+              expect(sichtbar, `${id}-${seite} ist oben, in der Mitte und unten sichtbar`).toEqual([true, true, true]);
+            }
+          }
+          expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'kein waagerechtes Scrollen').toBe(true);
+          await page.evaluate(() => Promise.all(document.getAnimations().filter((a) => a.effect?.getComputedTiming().iterations !== Infinity).map((a) => a.finished.catch(() => undefined))));
+          await speichereBild(page, testInfo.outputDir, 'H411B_BILDER', `h4-11b-eintrag-cockpit-${sprache}-${g.name}-${thema}`, false);
+        });
       }
     }
   }

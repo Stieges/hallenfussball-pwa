@@ -47,7 +47,7 @@ export function HallentonSeite({ tournamentId, felderAnzahl, seitenleisteBreite 
   const rueckfrage = useAnhoerenRueckfrage(daten.laufendeSpiele);
   const anhoeren = useAnhoeren(lautsprecher, rueckfrage);
   const geraet = useGeraetAbschnitt({ daten, felderAnzahl, darfAendern, anhoeren });
-  const abmelden = useLautsprecherAbmelden({ tournamentId, karten, stand: status.stand, darfAendern, lautsprecher, rueckfrage });
+  const abmelden = useLautsprecherAbmelden({ tournamentId, karten, stand: status.stand, darfAendern, lautsprecher, laufendeSpiele: daten.laufendeSpiele });
   return (
     <HallentonSeiteAnsicht
       karten={karten}

@@ -30,9 +30,15 @@ const zeileStil: CSSProperties = {
   borderBottom: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
 };
 
+/**
+ * Cockpit (@OB-087): die Zeile steht IM Kopf (`CockpitSlimHeader`) als Teil seiner umbrechenden Zeile – neben „Zurück“ und Turniername, wenn sie dort Platz hat, sonst in der nächsten Zeile –
+ * ohne eigenen Rand, Hintergrund und Abstand. So kostet sie am Handy keine zusätzliche Zeile, und Tor-Tasten und die Reihe Foul/Zeitstrafe/Karte bleiben im Bild. Es gilt die Kurzform.
+ */
+const kompaktStil: CSSProperties = { flex: '0 1 auto', width: 'auto', minWidth: 0, padding: 0, backgroundColor: 'transparent', borderBottom: 'none' };
+
 const gruppeStil: CSSProperties = { display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', gap: cssVars.spacing.xs, maxWidth: '100%' };
 
-export function StatusZeile({ eintraege, weitereText, wenigerText, onNavigiere, label, 'data-testid': testId = 'status-zeile' }: StatusZeileProps): ReactElement | null {
+export function StatusZeile({ eintraege, weitereText, wenigerText, onNavigiere, label, kompakt = false, 'data-testid': testId = 'status-zeile' }: StatusZeileProps): ReactElement | null {
   const schmal = useSchmaleBreite();
   const [aufgeklappt, setAufgeklappt] = useState(false);
   const sortiert = sortiereEintraege(eintraege);
@@ -40,7 +46,7 @@ export function StatusZeile({ eintraege, weitereText, wenigerText, onNavigiere, 
   // Schrumpft die Liste auf höchstens zwei Einträge, verschwindet die Sammelpille: das Aufklappen gilt dann nicht mehr (kein Aufklappen „auf Vorrat“)
   if (weitere === 0 && aufgeklappt) { setAufgeklappt(false); }
   if (eintraege.length === 0) { return null; }
-  const kurz = schmal && eintraege.length >= 2;
+  const kurz = schmal && (eintraege.length >= 2 || kompakt);
   const sichtbar = kuerzeEintraege(sortiert, aufgeklappt).sichtbar;
 
   const pille = (e: StatusEintrag): ReactElement => (
@@ -61,7 +67,7 @@ export function StatusZeile({ eintraege, weitereText, wenigerText, onNavigiere, 
     e.daneben === undefined ? pille(e) : <span key={e.id} style={gruppeStil}>{pille(e)}{pille(e.daneben)}</span>;
 
   return (
-    <div role="region" aria-label={label} style={zeileStil} data-testid={testId} data-kurz={kurz}>
+    <div role="region" aria-label={label} style={kompakt ? { ...zeileStil, ...kompaktStil } : zeileStil} data-testid={testId} data-kurz={kurz}>
       {sichtbar.map(mitDaneben)}
       {weitere > 0 ? (
         <StatusPille

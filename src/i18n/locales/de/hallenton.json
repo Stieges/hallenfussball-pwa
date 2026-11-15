@@ -1,6 +1,8 @@
 {
   "statuszeile": {
     "weitere": "+{{count}} weitere",
+    "abgemeldet": "Feld {{feld}}: als Hallen-Lautsprecher abgemeldet",
+    "abgemeldetKurz": "Feld {{feld}} abgemeldet",
     "weniger": "weniger",
     "bereit": "Lautsprecher Feld {{feld}} bereit",
     "bereitKurz": "Feld {{feld}} bereit",
@@ -120,10 +122,7 @@
     "abbrechen": "Abbrechen",
     "testton": "{{lage}} Testton trotzdem in der Halle spielen?",
     "testtonTitel": "Testton, obwohl ein Spiel läuft",
-    "testtonBestaetigen": "Testton spielen",
-    "abmelden": "{{lage}} Trotzdem abmelden? Danach ertönt für dieses Feld kein Abpfiff.",
-    "abmeldenTitel": "Abmelden, obwohl ein Spiel läuft",
-    "abmeldenBestaetigen": "Abmelden"
+    "testtonBestaetigen": "Testton spielen"
   },
   "abmelden": {
     "taste": "Abmelden",
@@ -135,7 +134,12 @@
     "bestaetigen": "Abmelden",
     "abbrechen": "Abbrechen",
     "nochmal": "Erneut versuchen",
+    "spielTitel": "Abmelden, obwohl ein Spiel läuft",
+    "spiel": "Auf Feld {{feld}} läuft Spiel {{spiel}}. „{{name}}“ trotzdem als Hallen-Lautsprecher abmelden? Danach ertönt für Feld {{feld}} kein Abpfiff.",
+    "spielBestaetigen": "Trotzdem abmelden",
+    "ergebnis": "Feld {{feld}} abgemeldet – kein Hallen-Lautsprecher",
     "fehler": {
+      "weg": "Nicht abgemeldet: für Feld {{feld}} gibt es inzwischen keinen Hallen-Lautsprecher mehr.",
       "netz": "Nicht abgemeldet: kein Netz. Der Lautsprecher für Feld {{feld}} ist unverändert.",
       "kein_recht": "Nicht abgemeldet: dafür fehlt dir das Recht.",
       "turnier_beendet": "Nicht abgemeldet: das Turnier ist beendet.",

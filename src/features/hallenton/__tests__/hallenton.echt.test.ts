@@ -141,16 +141,22 @@ describe.skipIf(C === '')('Hallenton-Client gegen die echten RPCs (Wegwerf-Conta
     expect(nochDa.ok && nochDa.speakers[0]).toMatchObject({ field: 1, isThisDevice: true }); // ohne Recht nichts verändert
     const unbekannt = await hallSpeakerUnassign(olli(), { p_tournament_id: TID, p_fields: [99] });
     expect(unbekannt).toEqual({ ok: false, grund: 'ungueltig' });
-    const aus = await hallSpeakerUnassign(olli(), { p_tournament_id: TID, p_fields: [1] });
-    protokoll(`[echt] unassign ${JSON.stringify(aus)}`);
-    expect(aus).toEqual({ ok: true, status: 'unassigned', fields: [1] });
-    expect(JSON.stringify(aus)).not.toContain(geraet);
+    const fremd = await hallSpeakerUnassign(olli(), { p_tournament_id: '00000000-0000-4000-8000-0000000000aa', p_fields: [1] });
+    expect(fremd).toEqual({ ok: false, grund: 'kein_recht' }); // fremdes Turnier (der Server unterscheidet „gibt es nicht“ bewusst nicht, @HT-044)
+    // Die ROHE Antwort des Servers (nicht die von zod geparste) kennt keine Geräte-Kennung
+    const roh = await (olli()!).rpc('hall_speaker_unassign', { p_tournament_id: TID, p_fields: [1] });
+    protokoll(`[echt] unassign roh ${JSON.stringify(roh.data)}`);
+    expect(roh.data).toEqual({ status: 'unassigned', fields: [1] });
+    expect(JSON.stringify(roh.data)).not.toContain(geraet);
     const danach = await hallSpeakerHeartbeat(olli(), { p_tournament_id: TID, p_device_id: geraet, p_fields: [1], p_state: 'ready', p_output_changed: false });
     expect(danach).toMatchObject({ ok: true, status: 'ok', fields: [{ field: 1, status: 'unassigned' }] });
     const leer = await hallSoundStatus(olli(), { p_tournament_id: TID, p_device_id: geraet });
     expect(leer.ok && leer.speakers).toEqual([]); // @HT-016: die Karte zeigt gleich „kein Hallen-Lautsprecher“
     const wieder = await hallSpeakerUnassign(olli(), { p_tournament_id: TID, p_fields: [1] });
     expect(wieder).toEqual({ ok: true, status: 'unassigned', fields: [] }); // schon ohne Lautsprecher: nichts zu tun, kein Fehler
+    await hallSpeakerAssign(olli(), { p_tournament_id: TID, p_fields: [1], p_device_id: geraet, p_device_name: 'Rechner der Turnierleitung', p_replace: false });
+    const aus = await hallSpeakerUnassign(olli(), { p_tournament_id: TID, p_fields: [1] }); // der Client-Aufruf löscht ebenso (Antwort per zod geparst)
+    expect(aus).toEqual({ ok: true, status: 'unassigned', fields: [1] });
     const neu = await hallSpeakerAssign(olli(), { p_tournament_id: TID, p_fields: [1], p_device_id: geraet, p_device_name: 'Rechner der Turnierleitung', p_replace: false });
     expect(neu).toMatchObject({ ok: true, status: 'assigned', fields: [1] });
   });

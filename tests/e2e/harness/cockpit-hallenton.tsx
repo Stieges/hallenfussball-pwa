@@ -6,7 +6,7 @@
  * echten `useHallStatus`; nur der Server-Aufruf ist gefälscht, der Ton je Gerät kommt aus `useCockpitTon` (echter `localStorage`).
  * Daten wie im Mockup: Hallencup Süd, Feld 1, Spiel 11, FC Nord – SV Süd, 14:02; 2:1, 2. Halbzeit, Restzeit 4:32 (Fall `halbzeit`: Pause).
  * Nur Testumgebung, nicht Teil des Builds.
- * Aufruf: `?fall=kein-netz|lautsprecher-aus|ausgang-geaendert|ausgang-verloren|halbzeit|anpfiff|uhr|dialog|admin|ohne|ton-aktivieren|kombi` (kombi: vor dem Anpfiff „Ton aktivieren“ UND „Uhr nicht abgeglichen“ untereinander; + `&lang=en`, `&lang=de`).
+ * Aufruf: `?fall=kein-netz|lautsprecher-aus|ausgang-geaendert|ausgang-verloren|halbzeit|anpfiff|uhr|dialog|admin|ohne|ton-aktivieren|kombi` (abgemeldet: Kopf mit Eintrag „abgemeldet“ über dem Cockpit; kombi: vor dem Anpfiff „Ton aktivieren“ UND „Uhr nicht abgeglichen“ untereinander; + `&lang=en`, `&lang=de`).
  */
 import ReactDOM from 'react-dom/client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -21,6 +21,9 @@ import { ToastProvider } from '../../../src/components/ui/Toast';
 import { ThemeProvider } from '../../../src/hooks/useTheme';
 import { cssVars } from '../../../src/design-tokens';
 import { LiveCockpit } from '../../../src/components/live-cockpit/LiveCockpit';
+import { CockpitSlimHeader } from '../../../src/components/live-cockpit/frame/CockpitSlimHeader';
+import { HallStatusZeileAnsicht } from '../../../src/features/hallenton/ui/HallStatusZeile';
+import { hallAnzeige } from '../../../src/features/hallenton/hallAnzeige';
 import { MatchCockpitCategory } from '../../../src/features/tournament-admin/categories/MatchCockpit';
 import type { Tournament } from '../../../src/types/tournament';
 import { ClockSync, LocalMatchStore, MatchCommands, MatchEngine, emptyOutboxStatus } from '../../../src/core/match/client';
@@ -45,7 +48,7 @@ const MIN = 60_000;
 /** Zeitpunkt des Anpfiffs: 14:02 (Mockup). */
 const ANPFIFF = new Date(2026, 10, 21, 14, 2).getTime();
 const SERVER_JETZT = ANPFIFF + 30_000;
-const FAELLE = ['kein-netz', 'lautsprecher-aus', 'ausgang-geaendert', 'ausgang-verloren', 'halbzeit', 'anpfiff', 'uhr', 'dialog', 'admin', 'ohne', 'ton-aktivieren', 'kombi'] as const;
+const FAELLE = ['kein-netz', 'lautsprecher-aus', 'ausgang-geaendert', 'ausgang-verloren', 'halbzeit', 'anpfiff', 'uhr', 'dialog', 'admin', 'ohne', 'ton-aktivieren', 'kombi', 'abgemeldet'] as const;
 type Fall = (typeof FAELLE)[number];
 /** Fälle mit Lautsprecher-Antwort der Leitung im Spiel (angepfiffen). */
 const LEITUNG_FAELLE: readonly Fall[] = ['kein-netz', 'lautsprecher-aus', 'ausgang-geaendert', 'ausgang-verloren', 'halbzeit', 'anpfiff', 'ton-aktivieren'];
@@ -179,6 +182,17 @@ function Cockpit({ kontext }: { kontext: MatchEngineContextValue }) {
   );
 }
 
+/** H4-11b (@HT-057): das Gerät wurde als Hallen-Lautsprecher abgemeldet – der schmale Kopf des Cockpits mit der echten Statuszeile und dem Eintrag „abgemeldet“ (Daten von Hand, Bausteine echt). */
+function AbgemeldetKopf() {
+  const anzeige = hallAnzeige({ server: { stand: 'aktuell', felder: {}, antwort: null }, lokal: null, angepfiffen: new Set(), lautsprecherBekannt: false });
+  return (
+    <CockpitSlimHeader
+      statuszeileImKopf tournamentId={TID} turnierName="Hallencup Süd" felder={1} feld={1} onFeld={nichts} verbindung={null}
+      statuszeile={new URLSearchParams(window.location.search).get('zeile') === '0' ? undefined : <HallStatusZeileAnsicht anzeige={anzeige} tournamentId={TID} tonAktivieren={nichts} abgemeldet={[1]} kompakt />}
+    />
+  );
+}
+
 export function Seite() {
   const params = new URLSearchParams(window.location.search);
   const fall = FAELLE.find((f) => f === params.get('fall')) ?? 'ohne';
@@ -207,6 +221,7 @@ export function Seite() {
   return (
     <MatchEngineContext.Provider value={kontext}>
       <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: cssVars.colors.background }}>
+        {fall === 'abgemeldet' ? <AbgemeldetKopf /> : null}
         <Cockpit kontext={kontext} />
       </div>
     </MatchEngineContext.Provider>

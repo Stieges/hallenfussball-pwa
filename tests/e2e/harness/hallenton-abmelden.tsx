@@ -64,7 +64,8 @@ export function Seite() {
   const status: Pick<HallStatus, 'stand' | 'antwort' | 'testtonAnfordern' | 'gehoert'> = {
     stand, antwort: aktuell, gehoert: () => Promise.resolve({ ok: false as const, grund: 'netz' as const }), testtonAnfordern: () => Promise.resolve({ ok: false as const, grund: 'netz' as const }),
   };
-  const rueckfrage = useAnhoerenRueckfrage(params.get('spiel') === '1' ? LAUFEND : KEIN_SPIEL);
+  const laufend = params.get('spiel') === '1' ? LAUFEND : KEIN_SPIEL;
+  const rueckfrage = useAnhoerenRueckfrage(laufend);
   // nur der Server-Aufruf ist gefälscht: Erfolg → die Karte zeigt gleich „kein Hallen-Lautsprecher“; sonst der gewählte Fehler
   const melde = (): Promise<HallErgebnis<{ status: 'unassigned'; fields: number[] }>> => {
     if (fehler !== null) { return Promise.resolve({ ok: false, grund: fehler }); }
@@ -76,7 +77,7 @@ export function Seite() {
     feldAbmelden: () => { setAbgemeldet(true); return Promise.resolve({ ok: true as const, status: 'released' as const, fields: [1] }); },
     ausschalten: () => { setAbgemeldet(true); return Promise.resolve({ ok: true as const, status: 'released' as const, fields: [1] }); },
   } as unknown as HallLautsprecher;
-  const abmelden = useLautsprecherAbmelden({ tournamentId: 't-sued', karten, stand, darfAendern: true, lautsprecher, rueckfrage }, melde);
+  const abmelden = useLautsprecherAbmelden({ tournamentId: 't-sued', karten, stand, darfAendern: true, lautsprecher, laufendeSpiele: laufend }, melde);
   const breit = window.innerWidth >= 768;
   const aus = () => undefined;
   return (

@@ -2,11 +2,11 @@
  * useAnhoerenRueckfrage – die Rückfrage vor einem Ton, der in der Halle stören könnte (H4-10, @HT-017): läuft auf einem betroffenen Feld ein
  * angepfiffenes Spiel, fragt die App „Auf Feld 1 läuft Spiel 11. … trotzdem …?“, und ohne Bestätigen passiert nichts. Ohne laufendes Spiel
  * läuft die Aktion sofort, ohne Frage. Betroffen: bei „Testton in der Halle“ das eine Feld, bei „Anhören“ die Felder dieses Geräts
- * (ist es Hallen-Lautsprecher, klingt es in der Halle); bei „Abmelden“ (H4-11b, @HT-057) das eine Feld: danach ertönt dort kein Abpfiff. Die Aktion läuft synchron im Klick der Bestätigung (Nutzergeste für den Ton).
+ * (ist es Hallen-Lautsprecher, klingt es in der Halle). Die Aktion läuft synchron im Klick der Bestätigung (Nutzergeste für den Ton).
  */
 import { useCallback, useState } from 'react';
 
-export type RueckfrageArt = 'anhoeren' | 'testton' | 'abmelden';
+export type RueckfrageArt = 'anhoeren' | 'testton';
 
 export interface LaufendesSpiel {
   feld: number;

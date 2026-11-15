@@ -26,6 +26,8 @@ export interface CockpitSlimHeaderProps {
   klaerung?: ReactNode;
   /** H4-5: Statuszeile unter dem Kopf (Hallenton, später auch die Probe); eine Zeile im Fluss, `null`/leer = nichts. */
   statuszeile?: ReactNode;
+  /** Die Statuszeile steht im Kopf (in dessen umbrechender Zeile) statt als eigene Zeile darunter: spart am Handy eine Zeile (@OB-087). */
+  statuszeileImKopf?: boolean;
   /** Nur ab 1024 px (`layout === 'breit'`) und nur mit Handler. */
   breit?: boolean;
   onTastenkuerzel?: () => void;
@@ -73,9 +75,10 @@ export function CockpitSlimHeader(p: CockpitSlimHeaderProps): ReactElement {
         <button type="button" style={knopfStil} data-testid="cockpit-tastenkuerzel" onClick={p.onTastenkuerzel}>{t('rahmen.tastenkuerzel')}</button>
       )}
       {p.klaerung}
+      {p.statuszeileImKopf === true ? p.statuszeile : null}
       {p.verbindung}
     </header>
-    {p.statuszeile}
+    {p.statuszeileImKopf === true ? null : p.statuszeile}
     </>
   );
 }

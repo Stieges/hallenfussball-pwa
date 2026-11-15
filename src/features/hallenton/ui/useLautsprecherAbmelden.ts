@@ -1,20 +1,29 @@
 /**
  * useLautsprecherAbmelden – „Abmelden“ an der Karte eines Felds mit Hallen-Lautsprecher (H4-11b, @HT-057): die Turnierleitung meldet den Lautsprecher ab, auch
- * wenn es ein ANDERES Gerät ist („meldet sich nicht“, verlorenes Tablet). Ablauf: Tipp → Rückfrage (Feld, Gerätename, Folge) → bei Ja und laufendem Spiel
- * auf dem Feld die zusätzliche Rückfrage wie beim Testton (danach ertönt kein Abpfiff, @HT-017) → Aufruf → die Karte liest den Stand sofort neu.
- * - Ein anderes Gerät: `hall_speaker_unassign` über `meldeLautsprecherAb`. Ohne aktuellen Stand kein Aufruf, die Karte sagt „kein Netz“ (kein stiller Fehlschlag).
- * - DIESES Gerät: der bestehende Weg des Schalters „Dieses Gerät ist Hallen-Lautsprecher“ (`feldAbmelden`, beim letzten Feld `ausschalten`): lokal sofort, ohne Netz
- *   gemerkt und nachgeholt (@HT-038). Kein zweiter Weg mit anderem Verhalten, und die Marke „abgemeldet“ gehört nur einem Gerät, das ein ANDERES abgemeldet hat.
- * - Nach einem Fehler bleibt der Zustand, die Karte zeigt den Grund mit „Erneut versuchen“. Ohne Recht (`darfAendern`, nach dem Turnierende auch nicht) tut nichts etwas.
- * Gerätenamen stehen nur im Text der Rückfrage, nie in einem Attribut.
+ * wenn es ein ANDERES Gerät ist („meldet sich nicht“, verlorenes Tablet).
+ *
+ * Regel (Fixrunde 1): Es wird NIE abgemeldet, ohne dass unmittelbar davor die Rückfrage(n) für genau diesen Stand bestätigt wurden.
+ * - Tipp → erste Rückfrage (Feld, Gerätename, Folge). Läuft auf dem Feld ein Spiel, folgt nach dem Ja eine zweite Rückfrage als Gefahr-Dialog (@OB-014: Fokus auf „Abbrechen“,
+ *   Enter löst nichts aus), die ebenfalls Feld, Spiel und Gerätename nennt (@HT-017-Muster: danach ertönt kein Abpfiff).
+ * - Direkt vor dem Aufruf (nach dem letzten Ja) wird der AKTUELLE Stand der Karte mit dem der Rückfrage verglichen (Lautsprecher da, Gerätename, eigenes Gerät, laufendes Spiel). Hat sich
+ *   etwas geändert (z. B. Gerät B hat das Feld übernommen), geht nichts raus: die Rückfrage öffnet sich mit dem neuen Stand erneut; ist kein Lautsprecher mehr da, schließt sie sich und
+ *   ein Hinweis sagt es. Das Restfenster: der Client kennt nur den Stand der letzten Statusabfrage (Takt 5 s) – eine Übernahme in den letzten Sekunden vor dem Tipp sieht er nicht,
+ *   und der Server löscht beim Abmelden jede Zuordnung des Felds.
+ * - „Erneut versuchen“ führt wieder über `anfragen(feld)`, also über die Rückfragen für den dann aktuellen Stand; es meldet nie direkt ab.
+ * - Ein anderes Gerät: `hall_speaker_unassign` über `meldeLautsprecherAb`. Ohne aktuellen Stand (kein Netz) kein Aufruf, der Hinweis sagt es. Ohne Recht am Server
+ *   (`kein_recht`-Stand) wird die Taste gar nicht angeboten.
+ * - DIESES Gerät: der bestehende Weg des Schalters (`feldAbmelden`, beim letzten Feld `ausschalten`): lokal sofort, ohne Netz gemerkt und nachgeholt (@HT-038).
+ * Gerätenamen stehen nur im Text der Rückfragen, nie in einem Attribut.
  */
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { HallErgebnis, HallFehlerGrund } from '../../../core/repositories/hallentonRpc';
 import { meldeLautsprecherAb } from '../hallAbmelden';
 import type { HallStatusStand } from '../runtime/hallStatusAbfrage';
 import type { HallLautsprecher } from '../useHallLautsprecher';
 import type { FeldKarte } from './feldKarten';
-import type { AnhoerenRueckfrage } from './useAnhoerenRueckfrage';
+
+/** Der Grund, warum nicht abgemeldet wurde; `weg` = inzwischen ist an dem Feld kein Hallen-Lautsprecher mehr (nichts zu tun). */
+export type AbmeldenFehler = HallFehlerGrund | 'weg';
 
 export interface AbmeldenFrage {
   feld: number;
@@ -22,21 +31,27 @@ export interface AbmeldenFrage {
   geraetName: string;
   /** Der Lautsprecher ist dieses Gerät. */
   eigenes: boolean;
+  /** 1 = erste Rückfrage, 2 = zweite Rückfrage bei laufendem Spiel. */
+  stufe: 1 | 2;
+  /** Nummer des laufenden Spiels (nur Stufe 2). */
+  spiel?: number;
 }
 
 export interface LautsprecherAbmelden {
-  /** Die Rückfrage vor dem Abmelden (`null`: keine offen). */
+  /** Die offene Rückfrage (`null`: keine). */
   frage: AbmeldenFrage | null;
   /** Felder, für die gerade ein Abmelden läuft. */
   laeuft: ReadonlySet<number>;
   /** Warum das Abmelden des Felds nicht geklappt hat (der Zustand der Karte ist dann unverändert). */
-  fehler: Readonly<Record<number, HallFehlerGrund>>;
+  fehler: Readonly<Record<number, AbmeldenFehler>>;
+  /** Felder, die in dieser Sitzung abgemeldet wurden (kurze Bestätigung an der Karte, bis sich der Stand ändert). */
+  abgemeldet: ReadonlySet<number>;
   /** Die Taste „Abmelden“ ist an der Karte des Felds zu zeigen. */
   anbieten(karte: FeldKarte): boolean;
   anfragen(feld: number): void;
   bestaetigen(): void;
   abbrechen(): void;
-  /** „Erneut versuchen“ nach einem Fehler (die Rückfrage war schon beantwortet). */
+  /** „Erneut versuchen“ nach einem Fehler: wieder über die Rückfragen. */
   nochmal(feld: number): void;
 }
 
@@ -47,23 +62,32 @@ export interface AbmeldenEingabe {
   /** `useCan('manageScreens')` ohne Ausnahme: nach dem Turnierende falsch. */
   darfAendern: boolean;
   lautsprecher: Pick<HallLautsprecher, 'rolle' | 'felder' | 'feldAbmelden' | 'ausschalten'>;
-  rueckfrage: AnhoerenRueckfrage;
+  /** Feld → Nummer des angepfiffenen Spiels. */
+  laufendeSpiele: ReadonlyMap<number, number>;
 }
 
 /** Der Aufruf, der ein Feld eines anderen Geräts am Server abmeldet (`meldeLautsprecherAb`); der Prüfstand der Bilder setzt einen anderen ein. */
 export type MeldeAb = (turnierId: string, feld: number) => Promise<HallErgebnis<unknown>>;
 
-export function useLautsprecherAbmelden({ tournamentId, karten, stand, darfAendern, lautsprecher, rueckfrage }: AbmeldenEingabe, melde: MeldeAb = meldeLautsprecherAb): LautsprecherAbmelden {
+export function useLautsprecherAbmelden({ tournamentId, karten, stand, darfAendern, lautsprecher, laufendeSpiele }: AbmeldenEingabe, melde: MeldeAb = meldeLautsprecherAb): LautsprecherAbmelden {
   const [frage, setFrage] = useState<AbmeldenFrage | null>(null);
   const [laeuft, setLaeuft] = useState<ReadonlySet<number>>(new Set());
-  const [fehler, setFehler] = useState<Readonly<Record<number, HallFehlerGrund>>>({});
+  const [fehler, setFehler] = useState<Readonly<Record<number, AbmeldenFehler>>>({});
+  const [abgemeldet, setAbgemeldet] = useState<ReadonlySet<number>>(new Set());
   const { rolle, felder, feldAbmelden, ausschalten } = lautsprecher;
 
-  const anbieten = useCallback((karte: FeldKarte): boolean => darfAendern && karte.zustand.art !== 'keinLautsprecher', [darfAendern]);
+  const anbieten = useCallback((karte: FeldKarte): boolean => darfAendern && stand !== 'kein_recht' && karte.zustand.art !== 'keinLautsprecher', [darfAendern, stand]);
+  const eigenesFeld = useCallback((karte: FeldKarte): boolean => karte.eigenesGeraet && rolle === 'diesesTurnier' && felder.includes(karte.feld), [rolle, felder]);
+  const setzeFehler = useCallback((feld: number, grund: AbmeldenFehler | null): void => {
+    setFehler((alt) => {
+      const rest = Object.fromEntries(Object.entries(alt).filter(([f]) => Number(f) !== feld));
+      return grund === null ? rest : { ...rest, [feld]: grund };
+    });
+  }, []);
 
   const ausfuehren = useCallback(async (feld: number, eigenes: boolean): Promise<void> => {
     setLaeuft((alt) => new Set(alt).add(feld));
-    setFehler((alt) => Object.fromEntries(Object.entries(alt).filter(([f]) => Number(f) !== feld)));
+    setzeFehler(feld, null);
     let ergebnis: HallErgebnis<unknown> | null;
     if (eigenes) {
       // der bestehende Weg des Schalters: das letzte Feld schaltet das Gerät ganz aus
@@ -74,45 +98,62 @@ export function useLautsprecherAbmelden({ tournamentId, karten, stand, darfAende
     setLaeuft((alt) => { const neu = new Set(alt); neu.delete(feld); return neu; });
     // am eigenen Gerät wirkt es lokal sofort; ohne Netz holt das Gerät die Abmeldung nach (@HT-038), das ist kein Fehlschlag
     if (ergebnis !== null && !ergebnis.ok && !(eigenes && ergebnis.grund === 'netz')) {
-      const grund = ergebnis.grund;
-      setFehler((alt) => ({ ...alt, [feld]: grund }));
+      setzeFehler(feld, ergebnis.grund);
+    } else {
+      setAbgemeldet((alt) => new Set(alt).add(feld));
     }
-  }, [tournamentId, rolle, felder, feldAbmelden, ausschalten, melde]);
+  }, [tournamentId, rolle, felder, feldAbmelden, ausschalten, melde, setzeFehler]);
 
-  const eigenesFeld = useCallback((karte: FeldKarte): boolean => karte.eigenesGeraet && rolle === 'diesesTurnier' && felder.includes(karte.feld), [rolle, felder]);
+  /** Der aktuelle Stand der Karte, wie ihn die Rückfrage nennt; `null`: es gibt dort keinen (anzubietenden) Lautsprecher mehr. */
+  const aktuell = useCallback((feld: number): { geraetName: string; eigenes: boolean; spiel: number | undefined } | null => {
+    const karte = karten.find((k) => k.feld === feld);
+    return karte === undefined || !anbieten(karte) ? null : { geraetName: karte.geraet?.name ?? '', eigenes: eigenesFeld(karte), spiel: laufendeSpiele.get(feld) };
+  }, [karten, anbieten, eigenesFeld, laufendeSpiele]);
 
   const anfragen = useCallback((feld: number): void => {
-    const karte = karten.find((k) => k.feld === feld);
-    if (karte === undefined || !anbieten(karte) || stand === 'laedt') {
+    const jetzt = aktuell(feld);
+    if (jetzt === null || stand === 'laedt') {
       return; // die erste Antwort steht noch aus: die Taste ist bis dahin aus
     }
-    const eigenes = eigenesFeld(karte);
-    if (!eigenes && stand !== 'aktuell') {
-      setFehler((alt) => ({ ...alt, [feld]: 'netz' })); // ohne aktuellen Stand kein Aufruf: der Hinweis sagt es, nichts geschieht still
+    if (!jetzt.eigenes && stand !== 'aktuell') {
+      setzeFehler(feld, 'netz'); // ohne aktuellen Stand kein Aufruf: der Hinweis sagt es, nichts geschieht still
       return;
     }
-    setFrage({ feld, geraetName: karte.geraet?.name ?? '', eigenes });
-  }, [karten, anbieten, stand, eigenesFeld]);
+    setzeFehler(feld, null);
+    setAbgemeldet((alt) => { const neu = new Set(alt); neu.delete(feld); return neu; });
+    setFrage({ feld, geraetName: jetzt.geraetName, eigenes: jetzt.eigenes, stufe: 1 });
+  }, [aktuell, stand, setzeFehler]);
 
   const bestaetigen = useCallback((): void => {
     const f = frage;
+    if (f === null) {
+      return;
+    }
+    const jetzt = aktuell(f.feld);
+    if (jetzt === null) {
+      setFrage(null); // inzwischen kein Lautsprecher mehr: nichts zu tun, kein Aufruf
+      setzeFehler(f.feld, 'weg');
+      return;
+    }
+    if (jetzt.geraetName !== f.geraetName || jetzt.eigenes !== f.eigenes) {
+      setFrage({ feld: f.feld, geraetName: jetzt.geraetName, eigenes: jetzt.eigenes, stufe: 1 }); // anderes Gerät als genannt: noch einmal fragen, mit dem neuen Stand
+      return;
+    }
+    if (jetzt.spiel !== undefined && (f.stufe === 1 || jetzt.spiel !== f.spiel)) {
+      setFrage({ ...f, stufe: 2, spiel: jetzt.spiel }); // läuft ein Spiel (oder ein anderes als genannt): zweite Rückfrage
+      return;
+    }
     setFrage(null);
-    if (f !== null) {
-      rueckfrage.fragen('abmelden', [f.feld], () => { void ausfuehren(f.feld, f.eigenes); }); // läuft ein Spiel auf dem Feld, erst die zweite Rückfrage
-    }
-  }, [frage, rueckfrage, ausfuehren]);
+    void ausfuehren(f.feld, jetzt.eigenes);
+  }, [frage, aktuell, ausfuehren, setzeFehler]);
 
-  const nochmal = useCallback((feld: number): void => {
-    const karte = karten.find((k) => k.feld === feld);
-    if (karte === undefined || !anbieten(karte)) {
-      return;
-    }
-    if (!eigenesFeld(karte) && stand !== 'aktuell') {
-      setFehler((alt) => ({ ...alt, [feld]: 'netz' }));
-      return;
-    }
-    void ausfuehren(feld, eigenesFeld(karte));
-  }, [karten, anbieten, stand, eigenesFeld, ausfuehren]);
+  // Hat das Feld wieder einen Lautsprecher (der Stand hat gewechselt), gilt die Bestätigung „abgemeldet“ nicht mehr
+  useEffect(() => {
+    setAbgemeldet((alt) => {
+      const rest = [...alt].filter((feld) => karten.find((k) => k.feld === feld)?.zustand.art === 'keinLautsprecher');
+      return rest.length === alt.size ? alt : new Set(rest);
+    });
+  }, [karten]);
 
-  return { frage, laeuft, fehler, anbieten, anfragen, bestaetigen, abbrechen: () => setFrage(null), nochmal };
+  return { frage, laeuft, fehler, abgemeldet, anbieten, anfragen, bestaetigen, abbrechen: () => setFrage(null), nochmal: anfragen };
 }

@@ -4,7 +4,8 @@
  * Erwartungen aus dem Gherkin (@HT-057, @HT-015 als Gegenstück, @HT-016, @HT-022, @HT-046, @HT-041, @HT-017), nicht am Code abgelesen. Die Hooks sind Doppel; der Server-Aufruf ist
  * `meldeLautsprecherAb`; Texte aus den echten deutschen Sprachdateien. Die Seite des abgemeldeten Geräts steht in `runtime/__tests__/abmelden.geraet.h4-11b.test.ts`.
  */
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import de from '../../../../i18n/locales/de/hallenton.json';
 import type { HallFehlerGrund, HallStatusAntwort, HallStatusVoll } from '../../../../core/repositories/hallentonRpc';
@@ -39,6 +40,7 @@ vi.mock('../../lokalesTurnier', () => ({ ladeTurnierLokal: () => Promise.resolve
 vi.mock('../../hallAbmelden', () => ({ meldeLautsprecherAb: (...a: unknown[]) => doppel.abmelden(...a) }));
 
 import { HallentonSeite } from '../HallentonSeite';
+import { useLautsprecherAbmelden } from '../useLautsprecherAbmelden';
 
 const SERVER_JETZT = new Date(2026, 10, 15, 14, 2, 30).getTime();
 const GERAET = 'Rechner der Turnierleitung';
@@ -146,16 +148,35 @@ describe('@HT-057 Olli meldet den Lautsprecher für Feld 1 auf einem anderen Ger
 });
 
 describe('@HT-017-Muster: läuft auf dem Feld ein Spiel, kommt eine zusätzliche Rückfrage', () => {
-  it('Spiel 11 läuft auf Feld 1 → erst „Abmelden?“, dann „Auf Feld 1 läuft Spiel 11. … Trotzdem abmelden? Danach ertönt für dieses Feld kein Abpfiff.“; erst das zweite Ja ruft den Server', async () => {
+  it('Spiel 11 läuft auf Feld 1 → erst „Abmelden?“, dann die zweite Rückfrage mit Feld, Spiel und Gerätename („… trotzdem als Hallen-Lautsprecher abmelden? Danach ertönt für Feld 1 kein Abpfiff.“); erst das zweite Ja ruft den Server', async () => {
     doppel.laufend = new Map([[1, 11]]);
     render(seite());
     await klick('lautsprecher-feld-1-abmelden');
     await dialogKnopf('confirm-dialog-confirm');
     expect(aufrufe()).toHaveLength(0);
     expect(screen.getByText('Abmelden, obwohl ein Spiel läuft')).toBeInTheDocument();
-    expect(screen.getByText(/Auf Feld 1 läuft Spiel 11\. Trotzdem abmelden\? Danach ertönt für dieses Feld kein Abpfiff\./)).toBeInTheDocument();
+    expect(screen.getByText(/Auf Feld 1 läuft Spiel 11\. „Rechner der Turnierleitung“ trotzdem als Hallen-Lautsprecher abmelden\? Danach ertönt für Feld 1 kein Abpfiff\./)).toBeInTheDocument();
+    expect(screen.getByTestId('confirm-dialog-confirm')).toHaveTextContent('Trotzdem abmelden');
     await dialogKnopf('confirm-dialog-confirm');
     expect(aufrufe()).toEqual([['t-sued', 1]]);
+  });
+
+  it('Durchtippen verhindert (@OB-014): die zweite Rückfrage ist ein Gefahr-Dialog – der Fokus liegt auch nach der Anlaufzeit des Dialogs auf „Abbrechen“, Enter löst nichts aus', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      doppel.laufend = new Map([[1, 11]]);
+      const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
+      render(seite());
+      await klick('lautsprecher-feld-1-abmelden');
+      await dialogKnopf('confirm-dialog-confirm');
+      await act(async () => { vi.advanceTimersByTime(200); await Promise.resolve(); }); // der Bestätigen-Dialog würde seinen Knopf nach 50 ms fokussieren
+      expect(document.activeElement).toBe(screen.getByTestId('confirm-dialog-cancel'));
+      expect(document.activeElement).not.toBe(screen.getByTestId('confirm-dialog-confirm'));
+      await user.keyboard('{Enter}');
+      expect(aufrufe()).toHaveLength(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('Gegenbeispiel: Abbrechen der zweiten Rückfrage → nichts wird abgemeldet', async () => {
@@ -209,7 +230,7 @@ describe('@HT-041 ohne Netz und Fehler vom Server: kein stiller Fehlschlag, der 
     expect(within(hinweis).getByTestId('lautsprecher-feld-1-abmelden-nochmal')).toHaveTextContent('Erneut versuchen');
   });
 
-  it('wieder Netz → „Erneut versuchen“ fragt nicht noch einmal, sondern meldet ab; der Hinweis verschwindet', async () => {
+  it('Gegenbeispiel: wieder Netz → „Erneut versuchen“ meldet NICHT direkt ab, sondern öffnet wieder die Rückfrage; ohne bestätigte Rückfrage kein Aufruf', async () => {
     const { rerender } = render(seite());
     setzeServer(null, 'unbekannt');
     rerender(seite());
@@ -217,8 +238,31 @@ describe('@HT-041 ohne Netz und Fehler vom Server: kein stiller Fehlschlag, der 
     setzeServer(voll([{ feld: 1, name: GERAET }]));
     rerender(seite());
     await klick('lautsprecher-feld-1-abmelden-nochmal');
-    expect(aufrufe()).toEqual([['t-sued', 1]]);
+    expect(aufrufe()).toHaveLength(0);
+    expect(screen.getByText('Hallen-Lautsprecher abmelden?')).toBeInTheDocument();
     expect(screen.queryByTestId('lautsprecher-feld-1-abmelden-fehler')).toBeNull();
+    await dialogKnopf('confirm-dialog-cancel');
+    expect(aufrufe()).toHaveLength(0);
+    await klick('lautsprecher-feld-1-abmelden');
+    await dialogKnopf('confirm-dialog-confirm');
+    expect(aufrufe()).toEqual([['t-sued', 1]]);
+  });
+
+  it('Gegenbeispiel: nach einem Serverfehler fragt „Erneut versuchen“ wieder – beginnt dazwischen ein Spiel, kommt auch die zweite Rückfrage', async () => {
+    doppel.abmelden = vi.fn(() => Promise.resolve({ ok: false as const, grund: 'netz' as const }));
+    const { rerender } = render(seite());
+    await klick('lautsprecher-feld-1-abmelden');
+    await dialogKnopf('confirm-dialog-confirm');
+    expect(aufrufe()).toHaveLength(1);
+    doppel.laufend = new Map([[1, 11]]); // Spiel 11 wird angepfiffen
+    rerender(seite());
+    await klick('lautsprecher-feld-1-abmelden-nochmal');
+    expect(aufrufe()).toHaveLength(1); // noch nichts abgesendet
+    await dialogKnopf('confirm-dialog-confirm');
+    expect(screen.getByText('Abmelden, obwohl ein Spiel läuft')).toBeInTheDocument();
+    expect(aufrufe()).toHaveLength(1);
+    await dialogKnopf('confirm-dialog-confirm');
+    expect(aufrufe()).toHaveLength(2);
   });
 
   it.each([
@@ -278,5 +322,113 @@ describe('@HT-057 ist der Lautsprecher DIESES Gerät: der bestehende Weg des Sch
     await dialogKnopf('confirm-dialog-confirm');
     expect(doppel.lautsprecher.ausschalten).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId('lautsprecher-feld-1-abmelden-fehler')).toBeNull();
+  });
+});
+
+describe('Das richtige Gerät: der Stand der Rückfrage gilt nur, solange er der aktuelle ist (Fixrunde 1)', () => {
+  const B = 'Tablet Halle';
+
+  it('Gerät B übernimmt das Feld bei offener ERSTER Rückfrage → das Ja ruft nichts auf, die Rückfrage öffnet sich neu und nennt B; erst deren Ja meldet ab', async () => {
+    const { rerender } = render(seite());
+    await klick('lautsprecher-feld-1-abmelden');
+    expect(screen.getByText(/„Rechner der Turnierleitung“ als Hallen-Lautsprecher/)).toBeInTheDocument();
+    setzeServer(voll([{ feld: 1, name: B }]));
+    rerender(seite());
+    await dialogKnopf('confirm-dialog-confirm');
+    expect(aufrufe()).toHaveLength(0);
+    expect(screen.getByText(/Soll „Tablet Halle“ als Hallen-Lautsprecher für Feld 1 abgemeldet werden\?/)).toBeInTheDocument();
+    await dialogKnopf('confirm-dialog-confirm');
+    expect(aufrufe()).toEqual([['t-sued', 1]]);
+  });
+
+  it('dasselbe bei offener ZWEITER Rückfrage (Spiel läuft) → kein Aufruf, die erste Rückfrage kommt mit B wieder, danach wieder die zweite mit B', async () => {
+    doppel.laufend = new Map([[1, 11]]);
+    const { rerender } = render(seite());
+    await klick('lautsprecher-feld-1-abmelden');
+    await dialogKnopf('confirm-dialog-confirm');
+    expect(screen.getByText(/Auf Feld 1 läuft Spiel 11\. „Rechner der Turnierleitung“/)).toBeInTheDocument();
+    setzeServer(voll([{ feld: 1, name: B }]));
+    rerender(seite());
+    await dialogKnopf('confirm-dialog-confirm');
+    expect(aufrufe()).toHaveLength(0);
+    expect(screen.getByText(/Soll „Tablet Halle“ als Hallen-Lautsprecher/)).toBeInTheDocument();
+    await dialogKnopf('confirm-dialog-confirm');
+    expect(screen.getByText(/Auf Feld 1 läuft Spiel 11\. „Tablet Halle“/)).toBeInTheDocument();
+    expect(aufrufe()).toHaveLength(0);
+    await dialogKnopf('confirm-dialog-confirm');
+    expect(aufrufe()).toEqual([['t-sued', 1]]);
+  });
+
+  it('läuft bei offener zweiter Rückfrage inzwischen ein anderes Spiel, nennt die Rückfrage das neue Spiel und ruft noch nichts auf', async () => {
+    doppel.laufend = new Map([[1, 11]]);
+    const { rerender } = render(seite());
+    await klick('lautsprecher-feld-1-abmelden');
+    await dialogKnopf('confirm-dialog-confirm');
+    doppel.laufend = new Map([[1, 12]]);
+    rerender(seite());
+    await dialogKnopf('confirm-dialog-confirm');
+    expect(aufrufe()).toHaveLength(0);
+    expect(screen.getByText(/Auf Feld 1 läuft Spiel 12\./)).toBeInTheDocument();
+  });
+
+  it('der Lautsprecher ist inzwischen weg (jemand anderes hat ihn abgemeldet) → das Ja ruft nichts auf, die Rückfrage schließt sich, ein Hinweis sagt es', async () => {
+    const { rerender } = render(seite());
+    await klick('lautsprecher-feld-1-abmelden');
+    setzeServer(voll([]));
+    rerender(seite());
+    await dialogKnopf('confirm-dialog-confirm');
+    expect(aufrufe()).toHaveLength(0);
+    expect(screen.queryByText('Hallen-Lautsprecher abmelden?')).toBeNull();
+    expect(screen.getByTestId('lautsprecher-feld-1-zustand')).toHaveTextContent('kein Hallen-Lautsprecher');
+    expect(screen.getByTestId('lautsprecher-feld-1-abmelden-fehler')).toHaveTextContent('Nicht abgemeldet: für Feld 1 gibt es inzwischen keinen Hallen-Lautsprecher mehr.');
+    expect(screen.queryByTestId('lautsprecher-feld-1-abmelden-nochmal')).toBeNull();
+  });
+
+  it('Gegenbeispiel: ändert sich nichts, geht genau ein Aufruf raus (kein zusätzliches Nachfragen)', async () => {
+    const { rerender } = render(seite());
+    await klick('lautsprecher-feld-1-abmelden');
+    rerender(seite());
+    await dialogKnopf('confirm-dialog-confirm');
+    expect(aufrufe()).toEqual([['t-sued', 1]]);
+  });
+});
+
+describe('Ergebnis nach dem Abmelden (Fixrunde 1)', () => {
+  it('der einzige Lautsprecher wurde abgemeldet → nicht „Noch kein Hallen-Lautsprecher eingerichtet“, sondern die Bestätigung „Feld 1 abgemeldet – kein Hallen-Lautsprecher“ an der Karte', async () => {
+    doppel.abmelden = vi.fn(() => { setzeServer(voll([])); return erfolg(); });
+    const { rerender } = render(seite());
+    await klick('lautsprecher-feld-1-abmelden');
+    await dialogKnopf('confirm-dialog-confirm');
+    rerender(seite());
+    expect(screen.queryByTestId('hallenton-felder-leer')).toBeNull();
+    expect(screen.getByTestId('lautsprecher-feld-1-abgemeldet')).toHaveTextContent('Feld 1 abgemeldet – kein Hallen-Lautsprecher');
+  });
+
+  it('Gegenbeispiel: wurde nie ein Lautsprecher bekannt, steht der Satz „Noch kein Hallen-Lautsprecher eingerichtet …“ weiter da, ohne Bestätigung', () => {
+    setzeServer(voll([]));
+    render(seite());
+    expect(screen.getByTestId('hallenton-felder-leer')).toHaveTextContent('Noch kein Hallen-Lautsprecher eingerichtet');
+    expect(screen.queryByTestId('lautsprecher-feld-1-abgemeldet')).toBeNull();
+  });
+
+  it('die Bestätigung verschwindet, sobald das Feld wieder einen Lautsprecher hat (der Stand wechselt)', async () => {
+    doppel.abmelden = vi.fn(() => { setzeServer(voll([])); return erfolg(); });
+    const { rerender } = render(seite());
+    await klick('lautsprecher-feld-1-abmelden');
+    await dialogKnopf('confirm-dialog-confirm');
+    rerender(seite());
+    expect(screen.getByTestId('lautsprecher-feld-1-abgemeldet')).toBeInTheDocument();
+    setzeServer(voll([{ feld: 1, name: 'Tablet Halle' }]));
+    rerender(seite());
+    expect(screen.queryByTestId('lautsprecher-feld-1-abgemeldet')).toBeNull();
+  });
+});
+
+describe('Fixrunde 1 klein: kein Recht am Server (`stand` kein_recht)', () => {
+  it('die Taste wird gar nicht angeboten (statt eines falschen „kein Netz“)', () => {
+    const karte = { feld: 1, zustand: { art: 'bereit' }, geraet: { name: GERAET, art: 'laptop' }, pruefen: false, hupeStattEigenerTon: false, anderesFenster: false, eigenesGeraet: false } as never;
+    const eingabe = (stand: 'aktuell' | 'kein_recht') => ({ tournamentId: 't', karten: [karte], stand, darfAendern: true, lautsprecher: doppel.lautsprecher, laufendeSpiele: new Map<number, number>() });
+    expect(renderHook(() => useLautsprecherAbmelden(eingabe('kein_recht'))).result.current.anbieten(karte)).toBe(false);
+    expect(renderHook(() => useLautsprecherAbmelden(eingabe('aktuell'))).result.current.anbieten(karte)).toBe(true);
   });
 });
