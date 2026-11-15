@@ -73,11 +73,21 @@ export interface AusgangBewertung {
   erlaubnis: MikrofonErlaubnis;
   /** `setSinkId` mit der gewählten Kennung ist gescheitert. */
   senkeScheitert: boolean;
+  /**
+   * In dieser Sitzung wurde die gewählte Kennung erfolgreich gesetzt (`setSinkId`): dann gilt der Ausgang, bis er nachweislich fehlt
+   * (Kennungen lesbar und er nicht dabei) – ein Wegfall der Mikrofon-Freigabe mitten im Betrieb macht ihn nicht unbestätigt (@HT-054
+   * Zeile 5). Nach dem Neuladen ist das `false` (@HT-055).
+   */
+  inSitzungGesetzt?: boolean;
 }
 
-export function bewerteAusgang({ wahl, eintraege, erlaubnis, senkeScheitert }: AusgangBewertung): AusgangLage {
+export function bewerteAusgang({ wahl, eintraege, erlaubnis, senkeScheitert, inSitzungGesetzt = false }: AusgangBewertung): AusgangLage {
   if (wahl === null || wahl.id === STANDARD_AUSGANG_ID) {
     return 'standard';
+  }
+  if (inSitzungGesetzt && !senkeScheitert) {
+    const sichtbar = eintraege.filter((e) => e.id !== '');
+    return sichtbar.length > 0 && !sichtbar.some((e) => e.id === wahl.id) ? 'lost' : 'ok'; // nicht lesbar ≠ verschwunden
   }
   if (erlaubnis !== null && erlaubnis !== 'granted') {
     return 'unconfirmed';

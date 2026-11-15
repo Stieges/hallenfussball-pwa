@@ -56,14 +56,16 @@ export function erzeugeAusgangWaechter({ liste: quelle, wahl: wahlSpeicher, zeit
   let wahl: GewaehlterAusgang | null = wahlSpeicher.lesen();
   let liste: AusgangsListe = NICHT_GELESEN;
   let erlaubnis: MikrofonErlaubnis = null;
-  let senke: { id: string; scheitert: boolean } | null = null;
+  let fehlerId: string | null = null; // `setSinkId` mit dieser Kennung ist gescheitert
+  let gesetztId: string | null = null; // diese Kennung wurde in dieser Sitzung erfolgreich gesetzt
   let liest = wahl !== null;
   let lauf = 0;
   let beendet = false;
   let gelesen = false;
 
   const berechneLage = (): AusgangLage => bewerteAusgang({
-    wahl, eintraege: liste.eintraege, erlaubnis, senkeScheitert: senke !== null && senke.scheitert && senke.id === wahl?.id,
+    wahl, eintraege: liste.eintraege, erlaubnis, senkeScheitert: fehlerId !== null && fehlerId === wahl?.id,
+    inSitzungGesetzt: gesetztId !== null && gesetztId === wahl?.id,
   });
   let lage: AusgangLage = berechneLage();
 
@@ -80,6 +82,9 @@ export function erzeugeAusgangWaechter({ liste: quelle, wahl: wahlSpeicher, zeit
   /** Lage neu rechnen; `true`, wenn sich etwas Sichtbares geändert hat (dann geht die Meldung an alle). */
   const auswerten = (geaendert: boolean): void => {
     const neu = berechneLage();
+    if (neu === 'lost') {
+      gesetztId = null; // nachweislich verschwunden: nach der Rückkehr gilt wieder nur, was lesbar bestätigt ist
+    }
     if (neu !== lage || geaendert) {
       lage = neu;
       melden();
@@ -126,8 +131,11 @@ export function erzeugeAusgangWaechter({ liste: quelle, wahl: wahlSpeicher, zeit
 
   const beiWahlWechsel = (): void => {
     const neu = wahlSpeicher.lesen();
+    if (neu?.id !== wahl?.id) {
+      gesetztId = null; // eine andere Kennung: in dieser Sitzung noch nicht gesetzt
+    }
     wahl = neu;
-    senke = null; // neue Wahl, „Bestätigen“ in einem anderen Tab: der alte Fehler gilt nicht mehr, `setSinkId` wird neu versucht
+    fehlerId = null; // neue Wahl, „Bestätigen“ in einem anderen Tab: der alte Fehler gilt nicht mehr, `setSinkId` wird neu versucht
     auswerten(true);
     if (neu !== null || liest) {
       void neuLesen(); // „Bestätigen“ in einem anderen Tab oder neue Wahl: frisch lesen
@@ -136,7 +144,7 @@ export function erzeugeAusgangWaechter({ liste: quelle, wahl: wahlSpeicher, zeit
 
   const abWahl = wahlSpeicher.beobachten(beiWahlWechsel);
   const abGeraete = quelle.beiGeraeteWechsel(() => {
-    senke = null; // ein zurückgekehrter Ausgang soll neu versucht werden (Rückkehr ohne neue Wahl, @HT-054)
+    fehlerId = null; // ein zurückgekehrter Ausgang soll neu versucht werden (Rückkehr ohne neue Wahl, @HT-054)
     if (liest) {
       void neuLesen();
     }
@@ -160,10 +168,16 @@ export function erzeugeAusgangWaechter({ liste: quelle, wahl: wahlSpeicher, zeit
     },
     neuLesen,
     senkeMelden(id, scheitert) {
-      if (senke?.id === id && senke.scheitert === scheitert) {
+      if (scheitert ? fehlerId === id && gesetztId !== id : gesetztId === id && fehlerId !== id) {
         return;
       }
-      senke = { id, scheitert };
+      if (scheitert) {
+        fehlerId = id;
+        gesetztId = gesetztId === id ? null : gesetztId;
+      } else {
+        gesetztId = id;
+        fehlerId = fehlerId === id ? null : fehlerId;
+      }
       auswerten(false);
     },
     beenden() {

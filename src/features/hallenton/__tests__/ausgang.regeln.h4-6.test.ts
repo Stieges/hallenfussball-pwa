@@ -68,7 +68,7 @@ describe('G2 getUserMedia nur in ausgangListe.ts', () => {
       .filter((pfad) => !ERLAUBT.has(pfad))
       .filter((pfad) => readFileSync(join(WURZEL, pfad), 'utf8').includes('getUserMedia'));
     expect(treffer).toEqual([]);
-  });
+  }, 60_000); // liest den ganzen Quellbaum: unter Last länger als die üblichen 5 s
 
   it('ausgangListe.ts ist die einzige Stelle der App mit dem Aufruf und beendet den Strom sofort (stop)', () => {
     const quelle = readFileSync(join(WURZEL, 'src/features/hallenton/runtime/ausgang/ausgangListe.ts'), 'utf8');

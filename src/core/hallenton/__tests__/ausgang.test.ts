@@ -59,4 +59,13 @@ describe('@HT-054 @HT-055 Bewertung der Wahl', () => {
   it('@HT-055 setSinkId mit der gespeicherten Kennung scheitert → unconfirmed (nicht lost: der Ausgang ist da)', () => {
     expect(bewerteAusgang({ wahl: DOCK, eintraege, erlaubnis: 'granted', senkeScheitert: true })).toBe('unconfirmed');
   });
+
+  it('@HT-054 Zeile 5 in dieser Sitzung gesetzt: nicht lesbare Kennungen / Erlaubnis weg → weiter ok; lesbar und fehlt → lost; setSinkId gescheitert → unconfirmed', () => {
+    const g = { wahl: DOCK, inSitzungGesetzt: true, senkeScheitert: false };
+    expect(bewerteAusgang({ ...g, eintraege: [roh('', '')], erlaubnis: 'prompt' })).toBe('ok');
+    expect(bewerteAusgang({ ...g, eintraege: [], erlaubnis: null })).toBe('ok');
+    expect(bewerteAusgang({ ...g, eintraege: eintraege.filter((e) => e.id !== 'dock'), erlaubnis: 'granted' })).toBe('lost');
+    expect(bewerteAusgang({ ...g, eintraege, erlaubnis: 'granted' })).toBe('ok');
+    expect(bewerteAusgang({ ...g, senkeScheitert: true, eintraege, erlaubnis: 'granted' })).toBe('unconfirmed');
+  });
 });
