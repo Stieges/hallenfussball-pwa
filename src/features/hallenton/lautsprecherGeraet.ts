@@ -226,6 +226,19 @@ export function geraetSpieler(): HallTonSpieler {
   return spieler;
 }
 
+/**
+ * „Ton aktivieren“ am Gerät (@HT-012, @HT-013, @HT-037) aus der Nutzergeste: die Laufzeit dieses Tabs, sonst nur der Spieler.
+ * `resume()` läuft synchron in der Geste (vor jedem `await`). Auch „Ausgang bestätigen“ (@HT-055) nutzt sie.
+ */
+export async function tonAktivierenAmGeraet(): Promise<boolean> {
+  const aktuell = geraetStand().laufzeit;
+  const ok = aktuell ? await aktuell.tonAktivieren() : await geraetSpieler().aktivieren();
+  if (ok) {
+    schlafenQuittiert();
+  }
+  return ok;
+}
+
 export function istGeschlafen(): boolean {
   return geschlafen;
 }

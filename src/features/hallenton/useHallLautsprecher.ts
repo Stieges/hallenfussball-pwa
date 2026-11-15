@@ -31,7 +31,7 @@ import { leseTonWahlSofort, leseTorWahlZumAnhoeren } from './browserLaufzeit';
 import { meldeFeldAb, wechsleTurnier, type WechselErgebnis } from './geraetZuordnung';
 import { ladeTurnierLokal } from './lokalesTurnier';
 import {
-  abgeloestVerstanden, abonniereGeraet, erneutVersuchen, geraetSpieler, geraetStand, schlafenQuittiert, setzeEinschaltung, setzeLebenszeichenFehler,
+  abgeloestVerstanden, abonniereGeraet, erneutVersuchen, geraetSpieler, geraetStand, setzeEinschaltung, setzeLebenszeichenFehler, tonAktivierenAmGeraet,
 } from './lautsprecherGeraet';
 import type { LaufzeitSnapshot } from './runtime/HallLautsprecherLaufzeit';
 import type { AnhoerenErgebnis, ReglerArt } from './runtime/hallTonSpieler';
@@ -100,14 +100,6 @@ export function useHallLautsprecher(tid: string): HallLautsprecher {
   );
   const feldAbmelden = useCallback((feld: number) => meldeFeldAb(tid, feld), [tid]);
 
-  const tonAktivieren = useCallback(async () => {
-    const aktuell = geraetStand().laufzeit;
-    const ok = aktuell ? await aktuell.tonAktivieren() : await geraetSpieler().aktivieren();
-    if (ok) {
-      schlafenQuittiert();
-    }
-    return ok;
-  }, []);
 
   const ausschalten = useCallback(async () => {
     const aktuell = geraetStand().einschaltung;
@@ -158,7 +150,7 @@ export function useHallLautsprecher(tid: string): HallLautsprecher {
     felder: rolle === 'diesesTurnier' && einschaltung ? einschaltung.felder : [],
     name: rolle === 'diesesTurnier' && einschaltung ? einschaltung.name : null,
     laufzeit: rolle === 'diesesTurnier' ? snapshot : null,
-    einschalten, tonAktivieren, ausschalten, wechseln, feldAbmelden, hierAnhoeren,
+    einschalten, tonAktivieren: tonAktivierenAmGeraet, ausschalten, wechseln, feldAbmelden, hierAnhoeren,
     anderesTurnier: rolle === 'anderesTurnier' && einschaltung ? { turnierId: einschaltung.turnierId, felder: einschaltung.felder } : null,
     lautstaerke, setzeLautstaerke,
     lebenszeichenFehler: rolle === 'diesesTurnier' ? lebenszeichenFehler : null,

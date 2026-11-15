@@ -26,6 +26,7 @@
  */
 import type { LautsprecherFeldMeldung } from './lautsprecherKanal';
 import { antwortAtVon, feldZustaende, meldeFelderAnTabs, geraeteZustandAus, naechsterTonAus, type HallLautsprecherLaufzeit, type LaufzeitDeps, type LaufzeitRolle, type LaufzeitSnapshot } from './laufzeitZustand';
+import { istAusgangsZustand } from './hallTonSpielerTypen';
 import { erzeugeRollenHalter } from './laufzeitRolle';
 import { erzeugeLaufzeitTakt } from './laufzeitTakt';
 import { VORBELEGUNG } from './tonWahl';
@@ -53,7 +54,8 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
 
   function baue(): LaufzeitSnapshot {
     // ein nur zum „Anhören“ freigegebener Spieler macht den Tab nicht bereit (W2-neu-1)
-    const geraet = geraeteZustandAus({ geschlafen, spieler: r.aktiviert() ? spieler.zustand() : 'not_activated', ausgesetzt: z.ausgesetzt, taktFehler: z.taktFehler });
+    const sz = spieler.zustand();
+    const geraet = geraeteZustandAus({ geschlafen, spieler: r.aktiviert() || istAusgangsZustand(sz) ? sz : 'not_activated', ausgesetzt: z.ausgesetzt, taktFehler: z.taktFehler });
     return {
       rolle: r.rolle(), turnierId: deps.turnierId, felder: deps.felder, geraeteZustand: geraet, taktFehler: z.taktFehler, warAngehalten: z.warAngehalten,
       zustandJeFeld: feldZustaende(geraet, deps.felder, z.warnFelder),
@@ -104,7 +106,7 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
       }
       r.setze('wartet');
       spielerAb = spieler.onZustand(r.beiSpielerZustand);
-      if (spieler.zustand() !== 'not_activated') {
+      if (spieler.ausgabeLaeuft()) {
         r.wirdAktiviert(); // in diesem Tab schon aktiviert (z. B. vorige Laufzeit)
         void spieler.laden(wahl.wahl()).then(melden, melden);
       }
@@ -127,7 +129,10 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
       const freigabe = spieler.aktivieren(); // in der Geste, vor jedem await
       r.wirdAktiviert();
       let ok = await freigabe;
-      if (!ok) {
+      // Steht der Spieler wegen des Ausgangs (`ok` ist dann true: Ausgang-Zustände sind nicht `not_activated`), liegen die Töne
+      // trotzdem bereit, sobald der Ausgang gilt (@HT-055): laden, aber nur einmal – nicht bei jedem Klick neu. Ohne Wahl ist
+      // `ok` genau dann true, wenn die Töne geladen sind: dort ändert sich nichts.
+      if (!ok || !spieler.tonGeladen()) {
         await spieler.laden(wahl.wahl());
         ok = spieler.zustand() !== 'not_activated';
       }
