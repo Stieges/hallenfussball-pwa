@@ -6,7 +6,7 @@
  * echten `useHallStatus`; nur der Server-Aufruf ist gefälscht, der Ton je Gerät kommt aus `useCockpitTon` (echter `localStorage`).
  * Daten wie im Mockup: Hallencup Süd, Feld 1, Spiel 11, FC Nord – SV Süd, 14:02; 2:1, 2. Halbzeit, Restzeit 4:32 (Fall `halbzeit`: Pause).
  * Nur Testumgebung, nicht Teil des Builds.
- * Aufruf: `?fall=kein-netz|lautsprecher-aus|ausgang-geaendert|ausgang-verloren|halbzeit|anpfiff|uhr|dialog|admin|ohne|ton-aktivieren|kombi` (abgemeldet: Kopf mit Eintrag „abgemeldet“ über dem Cockpit; kombi: vor dem Anpfiff „Ton aktivieren“ UND „Uhr nicht abgeglichen“ untereinander; + `&lang=en`, `&lang=de`).
+ * Aufruf: `?fall=kein-netz|lautsprecher-aus|ausgang-geaendert|ausgang-verloren|halbzeit|anpfiff|uhr|dialog|admin|ohne|ton-aktivieren|kombi` (abgemeldet|kopf-ohne|kopf-bereit: echter Kopf (Feldwahl, Online-Anzeige) mit Eintrag „abgemeldet“ / ohne Eintrag / „Lautsprecher Feld 1 bereit“ unter dem Kopf; kombi: vor dem Anpfiff „Ton aktivieren“ UND „Uhr nicht abgeglichen“ untereinander; + `&lang=en`, `&lang=de`).
  */
 import ReactDOM from 'react-dom/client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -22,6 +22,7 @@ import { ThemeProvider } from '../../../src/hooks/useTheme';
 import { cssVars } from '../../../src/design-tokens';
 import { LiveCockpit } from '../../../src/components/live-cockpit/LiveCockpit';
 import { CockpitSlimHeader } from '../../../src/components/live-cockpit/frame/CockpitSlimHeader';
+import { ConnectionPill } from '../../../src/components/live-cockpit/frame/ConnectionPill';
 import { HallStatusZeileAnsicht } from '../../../src/features/hallenton/ui/HallStatusZeile';
 import { hallAnzeige } from '../../../src/features/hallenton/hallAnzeige';
 import { MatchCockpitCategory } from '../../../src/features/tournament-admin/categories/MatchCockpit';
@@ -48,7 +49,7 @@ const MIN = 60_000;
 /** Zeitpunkt des Anpfiffs: 14:02 (Mockup). */
 const ANPFIFF = new Date(2026, 10, 21, 14, 2).getTime();
 const SERVER_JETZT = ANPFIFF + 30_000;
-const FAELLE = ['kein-netz', 'lautsprecher-aus', 'ausgang-geaendert', 'ausgang-verloren', 'halbzeit', 'anpfiff', 'uhr', 'dialog', 'admin', 'ohne', 'ton-aktivieren', 'kombi', 'abgemeldet'] as const;
+const FAELLE = ['kein-netz', 'lautsprecher-aus', 'ausgang-geaendert', 'ausgang-verloren', 'halbzeit', 'anpfiff', 'uhr', 'dialog', 'admin', 'ohne', 'ton-aktivieren', 'kombi', 'abgemeldet', 'kopf-ohne', 'kopf-bereit'] as const;
 type Fall = (typeof FAELLE)[number];
 /** Fälle mit Lautsprecher-Antwort der Leitung im Spiel (angepfiffen). */
 const LEITUNG_FAELLE: readonly Fall[] = ['kein-netz', 'lautsprecher-aus', 'ausgang-geaendert', 'ausgang-verloren', 'halbzeit', 'anpfiff', 'ton-aktivieren'];
@@ -182,13 +183,18 @@ function Cockpit({ kontext }: { kontext: MatchEngineContextValue }) {
   );
 }
 
-/** H4-11b (@HT-057): das Gerät wurde als Hallen-Lautsprecher abgemeldet – der schmale Kopf des Cockpits mit der echten Statuszeile und dem Eintrag „abgemeldet“ (Daten von Hand, Bausteine echt). */
-function AbgemeldetKopf() {
-  const anzeige = hallAnzeige({ server: { stand: 'aktuell', felder: {}, antwort: null }, lokal: null, angepfiffen: new Set(), lautsprecherBekannt: false });
+/**
+ * Kopf des Cockpits mit der echten Statuszeile unter dem Kopf (Daten von Hand, Bausteine echt): `CockpitSlimHeader` wie in `ManagementTabKopf` mit Feldwahl („Feld 1“, zwei Felder) und
+ * Online-Anzeige (`ConnectionPill`). `abgemeldet`: Eintrag „abgemeldet“ (@HT-057); `bereit`: „Lautsprecher Feld 1 bereit“ (ein eingerichteter Hallen-Lautsprecher, Stand von origin/main); sonst keine Zeile.
+ */
+function StatusKopf({ eintrag }: { eintrag: 'ohne' | 'bereit' | 'abgemeldet' }) {
+  const anzeige = hallAnzeige({
+    server: { stand: 'aktuell', felder: eintrag === 'bereit' ? { 1: { art: 'bereit', pruefen: false } } : {}, antwort: null }, lokal: null, angepfiffen: new Set(), lautsprecherBekannt: true,
+  });
   return (
     <CockpitSlimHeader
-      statuszeileImKopf tournamentId={TID} turnierName="Hallencup Süd" felder={1} feld={1} onFeld={nichts} verbindung={null}
-      statuszeile={new URLSearchParams(window.location.search).get('zeile') === '0' ? undefined : <HallStatusZeileAnsicht anzeige={anzeige} tournamentId={TID} tonAktivieren={nichts} abgemeldet={[1]} kompakt />}
+      tournamentId={TID} turnierName="Hallencup Süd" felder={2} feld={1} onFeld={nichts} verbindung={<ConnectionPill tournamentId={TID} />}
+      statuszeile={<HallStatusZeileAnsicht anzeige={anzeige} tournamentId={TID} tonAktivieren={nichts} abgemeldet={eintrag === 'abgemeldet' ? [1] : undefined} />}
     />
   );
 }
@@ -221,7 +227,7 @@ export function Seite() {
   return (
     <MatchEngineContext.Provider value={kontext}>
       <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: cssVars.colors.background }}>
-        {fall === 'abgemeldet' ? <AbgemeldetKopf /> : null}
+        {fall === 'abgemeldet' || fall === 'kopf-ohne' || fall === 'kopf-bereit' ? <StatusKopf eintrag={fall === 'abgemeldet' ? 'abgemeldet' : fall === 'kopf-bereit' ? 'bereit' : 'ohne'} /> : null}
         <Cockpit kontext={kontext} />
       </div>
     </MatchEngineContext.Provider>

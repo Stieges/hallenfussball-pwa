@@ -23,8 +23,7 @@ export function ManagementTabKopf({ tournament, feld, onFeld, halter, onTastenku
     <CockpitSlimHeader
       tournamentId={tournament.id} turnierName={tournament.title} felder={tournament.numberOfFields} feld={feld} onFeld={onFeld} halter={halter}
       verbindung={<ConnectionPill tournamentId={tournament.id} />} onTastenkuerzel={onTastenkuerzel}
-      statuszeileImKopf
-      statuszeile={<HallStatusZeile tournamentId={tournament.id} kompakt />}
+      statuszeile={<HallStatusZeile tournamentId={tournament.id} />}
       klaerung={KLAERUNG_IM_COCKPIT_KOPF ? <KlaerungslisteEinstieg tournament={tournament} variant="cockpit" /> : undefined}
     />
   );

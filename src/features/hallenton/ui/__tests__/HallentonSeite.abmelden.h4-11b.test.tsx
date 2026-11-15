@@ -6,7 +6,7 @@
  */
 import { act, fireEvent, render, renderHook, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import de from '../../../../i18n/locales/de/hallenton.json';
 import type { HallFehlerGrund, HallStatusAntwort, HallStatusVoll } from '../../../../core/repositories/hallentonRpc';
 import { lautsprecherLage, type LautsprecherLage } from '../../runtime/hallStatusAuswertung';
@@ -41,16 +41,17 @@ vi.mock('../../hallAbmelden', () => ({ meldeLautsprecherAb: (...a: unknown[]) =>
 
 import { HallentonSeite } from '../HallentonSeite';
 import { useLautsprecherAbmelden } from '../useLautsprecherAbmelden';
+import { ABMELDEN_SPERRZEIT_MS } from '../AbmeldenDialog';
 
 const SERVER_JETZT = new Date(2026, 10, 15, 14, 2, 30).getTime();
 const GERAET = 'Rechner der Turnierleitung';
 
-function voll(felder: ReadonlyArray<{ feld: number; name: string; state?: string; ich?: boolean }>): HallStatusVoll {
+function voll(felder: ReadonlyArray<{ feld: number; name: string; state?: string; ich?: boolean; seit?: number }>): HallStatusVoll {
   return {
     sicht: 'voll', serverNow: SERVER_JETZT, closed: false, leads: [],
     settings: { halftimeSound: 'horn-1', halftimeCustomPath: null, endCustomPath: null, goalToneFields: [], goalAnthemPaths: [] },
     speakers: felder.map((f) => ({
-      field: f.feld, deviceName: f.name, isThisDevice: f.ich === true, state: (f.state ?? 'ready') as never, assignedAt: 1, outputHint: false, hintAt: null, lastSeen: null, ageMs: 3000, test: null,
+      field: f.feld, deviceName: f.name, isThisDevice: f.ich === true, state: (f.state ?? 'ready') as never, assignedAt: f.seit ?? 1, outputHint: false, hintAt: null, lastSeen: null, ageMs: 3000, test: null,
     })),
   };
 }
@@ -75,17 +76,26 @@ function lautsprecherDoppel(teil: Partial<HallLautsprecher> = {}): HallLautsprec
 
 const seite = () => <HallentonSeite tournamentId="t-sued" felderAnzahl={2} />;
 const klick = async (testId: string): Promise<void> => { await act(async () => { fireEvent.click(screen.getByTestId(testId)); await Promise.resolve(); }); };
-const dialogKnopf = async (id: 'confirm-dialog-confirm' | 'confirm-dialog-cancel'): Promise<void> => { await klick(id); };
+/** Die Bestätigung der zweiten Rückfrage nimmt erst nach der Sperrzeit Tipps an (B); die Hilfe wartet sie auf der Fake-Uhr ab. */
+const dialogKnopf = async (id: 'confirm-dialog-confirm' | 'confirm-dialog-cancel'): Promise<void> => {
+  if (id === 'confirm-dialog-confirm' && screen.getByTestId(id).getAttribute('aria-disabled') === 'true') {
+    await act(async () => { vi.advanceTimersByTime(ABMELDEN_SPERRZEIT_MS); await Promise.resolve(); });
+  }
+  await klick(id);
+};
 const aufrufe = (): unknown[][] => doppel.abmelden.mock.calls as unknown[][];
 const erfolg = () => Promise.resolve({ ok: true as const, status: 'unassigned' as const, fields: [1] });
 
 beforeEach(() => {
+  vi.useFakeTimers({ shouldAdvanceTime: true }); // die Sperrzeit der zweiten Rückfrage läuft auf der Fake-Uhr
   doppel.darf = true; doppel.abgeschlossen = false;
   doppel.laufend = new Map();
   doppel.lautsprecher = lautsprecherDoppel();
   doppel.abmelden = vi.fn(erfolg);
   setzeServer(voll([{ feld: 1, name: GERAET }]));
 });
+
+afterEach(() => { vi.useRealTimers(); });
 
 describe('@HT-057 Olli meldet den Lautsprecher für Feld 1 auf einem anderen Gerät ab', () => {
   it('Feld 1 hat einen Hallen-Lautsprecher, Feld 2 nicht → nur bei Feld 1 steht „Abmelden“ (@HT-016: Feld ohne Lautsprecher hat keine Aktion)', () => {
@@ -162,21 +172,47 @@ describe('@HT-017-Muster: läuft auf dem Feld ein Spiel, kommt eine zusätzliche
   });
 
   it('Durchtippen verhindert (@OB-014): die zweite Rückfrage ist ein Gefahr-Dialog – der Fokus liegt auch nach der Anlaufzeit des Dialogs auf „Abbrechen“, Enter löst nichts aus', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    try {
-      doppel.laufend = new Map([[1, 11]]);
-      const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
-      render(seite());
-      await klick('lautsprecher-feld-1-abmelden');
-      await dialogKnopf('confirm-dialog-confirm');
-      await act(async () => { vi.advanceTimersByTime(200); await Promise.resolve(); }); // der Bestätigen-Dialog würde seinen Knopf nach 50 ms fokussieren
-      expect(document.activeElement).toBe(screen.getByTestId('confirm-dialog-cancel'));
-      expect(document.activeElement).not.toBe(screen.getByTestId('confirm-dialog-confirm'));
-      await user.keyboard('{Enter}');
-      expect(aufrufe()).toHaveLength(0);
-    } finally {
-      vi.useRealTimers();
-    }
+    doppel.laufend = new Map([[1, 11]]);
+    const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
+    render(seite());
+    await klick('lautsprecher-feld-1-abmelden');
+    await dialogKnopf('confirm-dialog-confirm');
+    await act(async () => { vi.advanceTimersByTime(ABMELDEN_SPERRZEIT_MS + 200); await Promise.resolve(); }); // der Bestätigen-Dialog würde seinen Knopf nach 50 ms fokussieren
+    expect(document.activeElement).toBe(screen.getByTestId('confirm-dialog-cancel'));
+    expect(document.activeElement).not.toBe(screen.getByTestId('confirm-dialog-confirm'));
+    await user.keyboard('{Enter}');
+    expect(aufrufe()).toHaveLength(0);
+  });
+
+  it('Doppeltipp am Handy (Fixrunde 2): die Bestätigung der zweiten Rückfrage ist anfangs gesperrt (abgeblendet, aria-disabled): ein Tipp nach 100 ms löst nichts aus, „Abbrechen“ geht sofort, nach der Sperrzeit löst der Tipp aus; Enter löst nie aus', async () => {
+    doppel.laufend = new Map([[1, 11]]);
+    const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
+    render(seite());
+    await klick('lautsprecher-feld-1-abmelden');
+    await dialogKnopf('confirm-dialog-confirm'); // erste Rückfrage
+    const ja = screen.getByTestId('confirm-dialog-confirm');
+    expect(ja).toHaveAttribute('aria-disabled', 'true');
+    await act(async () => { vi.advanceTimersByTime(100); });
+    fireEvent.click(ja); // der zweite Tipp des Doppeltipps
+    expect(aufrufe()).toHaveLength(0);
+    expect(screen.getByText('Abmelden, obwohl ein Spiel läuft')).toBeInTheDocument();
+    await user.keyboard('{Enter}');
+    expect(aufrufe()).toHaveLength(0);
+    await act(async () => { vi.advanceTimersByTime(ABMELDEN_SPERRZEIT_MS); });
+    expect(screen.getByTestId('confirm-dialog-confirm')).not.toHaveAttribute('aria-disabled');
+    fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
+    expect(aufrufe()).toEqual([['t-sued', 1]]);
+  });
+
+  it('„Abbrechen“ der zweiten Rückfrage ist von Anfang an bedienbar (Gegenbeispiel: nur die Bestätigung ist gesperrt)', async () => {
+    doppel.laufend = new Map([[1, 11]]);
+    render(seite());
+    await klick('lautsprecher-feld-1-abmelden');
+    await dialogKnopf('confirm-dialog-confirm');
+    expect(screen.getByTestId('confirm-dialog-cancel')).not.toHaveAttribute('aria-disabled');
+    await klick('confirm-dialog-cancel');
+    expect(screen.queryByText('Abmelden, obwohl ein Spiel läuft')).toBeNull();
+    expect(aufrufe()).toHaveLength(0);
   });
 
   it('Gegenbeispiel: Abbrechen der zweiten Rückfrage → nichts wird abgemeldet', async () => {
@@ -384,7 +420,43 @@ describe('Das richtige Gerät: der Stand der Rückfrage gilt nur, solange er der
     expect(screen.queryByTestId('lautsprecher-feld-1-abmelden-nochmal')).toBeNull();
   });
 
-  it('Gegenbeispiel: ändert sich nichts, geht genau ein Aufruf raus (kein zusätzliches Nachfragen)', async () => {
+  it('gleichnamiges Gerät übernimmt bei offener Rückfrage (gleicher Name, neue Zuordnung) → kein Aufruf, die Rückfrage öffnet sich neu; erst deren Ja meldet ab', async () => {
+    setzeServer(voll([{ feld: 1, name: 'iPad', seit: 1 }]));
+    const { rerender } = render(seite());
+    await klick('lautsprecher-feld-1-abmelden');
+    setzeServer(voll([{ feld: 1, name: 'iPad', seit: 2 }])); // ein anderes „iPad“ hat das Feld übernommen
+    rerender(seite());
+    await dialogKnopf('confirm-dialog-confirm');
+    expect(aufrufe()).toHaveLength(0);
+    expect(screen.getByText(/Soll „iPad“ als Hallen-Lautsprecher/)).toBeInTheDocument();
+    await dialogKnopf('confirm-dialog-confirm');
+    expect(aufrufe()).toEqual([['t-sued', 1]]);
+  });
+
+  it('Gegenbeispiel: der Zeitpunkt der Zuordnung steht in keinem Attribut und nirgends im Text', async () => {
+    setzeServer(voll([{ feld: 1, name: 'iPad', seit: 1_794_123_456_789 }]));
+    render(seite());
+    await klick('lautsprecher-feld-1-abmelden');
+    expect(document.body.innerHTML).not.toContain('1794123456789');
+  });
+
+  it('der Stand ist zwischen Frage und Ja nicht mehr aktuell lesbar (kein Netz) → kein Aufruf, Hinweis „kein Netz“ mit „Erneut versuchen“, das wieder über die Rückfrage führt', async () => {
+    const { rerender } = render(seite());
+    await klick('lautsprecher-feld-1-abmelden');
+    setzeServer(null, 'unbekannt');
+    rerender(seite());
+    await dialogKnopf('confirm-dialog-confirm');
+    expect(aufrufe()).toHaveLength(0);
+    expect(screen.queryByText('Hallen-Lautsprecher abmelden?')).toBeNull();
+    expect(screen.getByTestId('lautsprecher-feld-1-abmelden-fehler')).toHaveTextContent('Nicht abgemeldet: kein Netz.');
+    setzeServer(voll([{ feld: 1, name: GERAET }]));
+    rerender(seite());
+    await klick('lautsprecher-feld-1-abmelden-nochmal');
+    expect(aufrufe()).toHaveLength(0);
+    expect(screen.getByText('Hallen-Lautsprecher abmelden?')).toBeInTheDocument();
+  });
+
+  it('Gegenbeispiel: ändert sich nichts (kein zusätzliches Nachfragen)', async () => {
     const { rerender } = render(seite());
     await klick('lautsprecher-feld-1-abmelden');
     rerender(seite());

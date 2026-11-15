@@ -5,7 +5,8 @@
  * Regel (Fixrunde 1): Es wird NIE abgemeldet, ohne dass unmittelbar davor die Rückfrage(n) für genau diesen Stand bestätigt wurden.
  * - Tipp → erste Rückfrage (Feld, Gerätename, Folge). Läuft auf dem Feld ein Spiel, folgt nach dem Ja eine zweite Rückfrage als Gefahr-Dialog (@OB-014: Fokus auf „Abbrechen“,
  *   Enter löst nichts aus), die ebenfalls Feld, Spiel und Gerätename nennt (@HT-017-Muster: danach ertönt kein Abpfiff).
- * - Direkt vor dem Aufruf (nach dem letzten Ja) wird der AKTUELLE Stand der Karte mit dem der Rückfrage verglichen (Lautsprecher da, Gerätename, eigenes Gerät, laufendes Spiel). Hat sich
+ * - Direkt vor dem Aufruf (nach dem letzten Ja) wird der AKTUELLE Stand der Karte mit dem der Rückfrage verglichen (Lautsprecher da, Gerätename, eigenes Gerät, Zeitpunkt der Zuordnung
+ *   – erkennt ein gleichnamiges Gerät –, laufendes Spiel); ist der Stand inzwischen nicht mehr aktuell lesbar (kein Netz), geht ebenfalls nichts raus. Hat sich
  *   etwas geändert (z. B. Gerät B hat das Feld übernommen), geht nichts raus: die Rückfrage öffnet sich mit dem neuen Stand erneut; ist kein Lautsprecher mehr da, schließt sie sich und
  *   ein Hinweis sagt es. Das Restfenster: der Client kennt nur den Stand der letzten Statusabfrage (Takt 5 s) – eine Übernahme in den letzten Sekunden vor dem Tipp sieht er nicht,
  *   und der Server löscht beim Abmelden jede Zuordnung des Felds.
@@ -35,6 +36,8 @@ export interface AbmeldenFrage {
   stufe: 1 | 2;
   /** Nummer des laufenden Spiels (nur Stufe 2). */
   spiel?: number;
+  /** Zeitpunkt der Zuordnung am Server (intern, nie anzeigen): erkennt ein gleichnamiges Gerät, das inzwischen übernommen hat. */
+  zuordnung?: number;
 }
 
 export interface LautsprecherAbmelden {
@@ -105,9 +108,9 @@ export function useLautsprecherAbmelden({ tournamentId, karten, stand, darfAende
   }, [tournamentId, rolle, felder, feldAbmelden, ausschalten, melde, setzeFehler]);
 
   /** Der aktuelle Stand der Karte, wie ihn die Rückfrage nennt; `null`: es gibt dort keinen (anzubietenden) Lautsprecher mehr. */
-  const aktuell = useCallback((feld: number): { geraetName: string; eigenes: boolean; spiel: number | undefined } | null => {
+  const aktuell = useCallback((feld: number): { geraetName: string; eigenes: boolean; spiel: number | undefined; zuordnung: number | undefined } | null => {
     const karte = karten.find((k) => k.feld === feld);
-    return karte === undefined || !anbieten(karte) ? null : { geraetName: karte.geraet?.name ?? '', eigenes: eigenesFeld(karte), spiel: laufendeSpiele.get(feld) };
+    return karte === undefined || !anbieten(karte) ? null : { geraetName: karte.geraet?.name ?? '', eigenes: eigenesFeld(karte), spiel: laufendeSpiele.get(feld), zuordnung: karte.zuordnung };
   }, [karten, anbieten, eigenesFeld, laufendeSpiele]);
 
   const anfragen = useCallback((feld: number): void => {
@@ -121,7 +124,7 @@ export function useLautsprecherAbmelden({ tournamentId, karten, stand, darfAende
     }
     setzeFehler(feld, null);
     setAbgemeldet((alt) => { const neu = new Set(alt); neu.delete(feld); return neu; });
-    setFrage({ feld, geraetName: jetzt.geraetName, eigenes: jetzt.eigenes, stufe: 1 });
+    setFrage({ feld, geraetName: jetzt.geraetName, eigenes: jetzt.eigenes, stufe: 1, zuordnung: jetzt.zuordnung });
   }, [aktuell, stand, setzeFehler]);
 
   const bestaetigen = useCallback((): void => {
@@ -135,8 +138,13 @@ export function useLautsprecherAbmelden({ tournamentId, karten, stand, darfAende
       setzeFehler(f.feld, 'weg');
       return;
     }
-    if (jetzt.geraetName !== f.geraetName || jetzt.eigenes !== f.eigenes) {
-      setFrage({ feld: f.feld, geraetName: jetzt.geraetName, eigenes: jetzt.eigenes, stufe: 1 }); // anderes Gerät als genannt: noch einmal fragen, mit dem neuen Stand
+    if (!jetzt.eigenes && stand !== 'aktuell') {
+      setFrage(null); // zwischen Frage und Ja ist der Stand nicht mehr aktuell lesbar (kein Netz): kein Aufruf, der Hinweis führt über „Erneut versuchen“ wieder durch die Rückfragen
+      setzeFehler(f.feld, 'netz');
+      return;
+    }
+    if (jetzt.geraetName !== f.geraetName || jetzt.eigenes !== f.eigenes || jetzt.zuordnung !== f.zuordnung) {
+      setFrage({ feld: f.feld, geraetName: jetzt.geraetName, eigenes: jetzt.eigenes, stufe: 1, zuordnung: jetzt.zuordnung }); // anderes (oder gleichnamiges, neu zugeordnetes) Gerät als genannt: noch einmal fragen, mit dem neuen Stand
       return;
     }
     if (jetzt.spiel !== undefined && (f.stufe === 1 || jetzt.spiel !== f.spiel)) {
@@ -145,7 +153,7 @@ export function useLautsprecherAbmelden({ tournamentId, karten, stand, darfAende
     }
     setFrage(null);
     void ausfuehren(f.feld, jetzt.eigenes);
-  }, [frage, aktuell, ausfuehren, setzeFehler]);
+  }, [frage, aktuell, stand, ausfuehren, setzeFehler]);
 
   // Hat das Feld wieder einen Lautsprecher (der Stand hat gewechselt), gilt die Bestätigung „abgemeldet“ nicht mehr
   useEffect(() => {
