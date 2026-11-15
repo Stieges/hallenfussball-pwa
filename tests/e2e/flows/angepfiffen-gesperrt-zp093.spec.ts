@@ -59,9 +59,11 @@ test.describe('@ZP-093 C-ANGEPFIFFEN-TAUSCHZIEL: laufendes Spiel im Bearbeitungs
     await expect(laufend).toHaveCSS('cursor', 'not-allowed');
 
     const reihenfolge = (a: { x: number; y: number }, b: { x: number; y: number }) => (a.y !== b.y ? a.y < b.y : a.x < b.x);
-    // Treffer 0 ist die Teilnehmerliste oben, Treffer 1 die Karte des Spiels
-    const nord = page.getByText('FC Nord', { exact: true }).filter({ visible: true }).nth(1);
-    const west = page.getByText('TSV West', { exact: true }).filter({ visible: true }).nth(1);
+    // Der Name in der Spielzeile (nicht in der Teilnehmerliste oben, die je nach Breite ein- oder ausgeklappt ist, @ZP-113)
+    const inSpielzeile = (name: string) => page.locator('[data-match-card]').filter({ visible: true })
+      .getByText(name, { exact: true }).filter({ visible: true }).first();
+    const nord = inSpielzeile('FC Nord');
+    const west = inSpielzeile('TSV West');
     await nord.scrollIntoViewIfNeeded();
     const vorher = await Promise.all([nord.boundingBox(), west.boundingBox()]);
     expect(reihenfolge(vorher[0]!, vorher[1]!)).toBe(true);

@@ -806,6 +806,13 @@
     "ariaLabel": "Match is currently running",
     "live": "Live"
   },
+  "scheduleHead": {
+    "title": "Matches",
+    "start": "Start {{start}}",
+    "end": "End about {{end}}",
+    "duration_one": "{{count}} minute per match",
+    "duration_other": "{{count}} minutes per match"
+  },
   "scheduleCurrent": {
     "live": "Running · {{name}} · Field {{field}}",
     "next": "Next match · {{name}} · Field {{field}}",
@@ -2066,7 +2073,9 @@
     "saveFailed": "Saving failed – the changes are not saved yet and stay in the draft.",
     "conflictHint_one": "{{count}} conflict in the schedule",
     "conflictHint_other": "{{count}} conflicts in the schedule",
-    "samePhaseOnly": "Only matches of the same phase can be swapped"
+    "samePhaseOnly": "Only matches of the same phase can be swapped",
+    "groupStaysInGroupPhase": "Group matches stay in the group phase",
+    "finalsStayInFinals": "Final-round matches stay in the final round"
   },
   "scheduleEditor": {
     "autoAssignReferees": "Assign referees automatically",

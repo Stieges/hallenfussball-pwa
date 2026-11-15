@@ -133,6 +133,26 @@ export function swapPhaseOf(match: { phase?: string; isFinal?: boolean }): 'grou
   return (match.phase ?? (match.isFinal ? 'final' : 'groupStage')) === 'groupStage' ? 'group' : 'finals';
 }
 
+/**
+ * Phase eines freien Platzes (@ZP-115, gleiche Zweiteilung wie das Tauschen, @ZP-107): Ein Platz zur Zeit T gehört zur Finalrunde,
+ * wenn T nicht vor dem ersten anderen Finalspiel liegt; er gehört zur Gruppenphase, wenn T nicht nach dem Anpfiff des letzten
+ * anderen Gruppenspiels liegt. Dazwischen (Lücke) ist er frei für beide. Liefert die Phase, in die `match` nicht ziehen darf, sonst `null`.
+ */
+export function blockedMovePhase(matches: readonly Match[], matchId: string, targetTime: Match['scheduledTime']): 'group' | 'finals' | null {
+  const moved = matches.find((m) => m.id === matchId);
+  if (!moved || !targetTime) { return null; }
+  const target = new Date(targetTime).getTime();
+  const times = (phase: 'group' | 'finals') => matches
+    .filter((m) => m.id !== matchId && swapPhaseOf(m) === phase)
+    .flatMap((m) => (m.scheduledTime ? [new Date(m.scheduledTime).getTime()] : []));
+  if (swapPhaseOf(moved) === 'group') {
+    const finals = times('finals');
+    return finals.length > 0 && target >= Math.min(...finals) ? 'group' : null;
+  }
+  const groups = times('group');
+  return groups.length > 0 && target <= Math.max(...groups) ? 'finals' : null;
+}
+
 /** Tausch: Spiel A bekommt Uhrzeit und Feld von B und umgekehrt (@ZP-100). `null`, wenn ein Spiel fehlt. */
 export function swapStep(draft: Tournament, matchIdA: string, matchIdB: string): DraftStep | null {
   const a = draft.matches.find((m) => m.id === matchIdA);
