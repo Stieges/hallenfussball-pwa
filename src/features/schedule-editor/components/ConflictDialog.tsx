@@ -12,7 +12,8 @@
 import React, { useId, useMemo } from 'react';
 import { ScheduleConflict, ConflictType } from '../types';
 import { Match } from '../../../types/tournament';
-import { cssVars, dialogWidths, mediaQueries } from '../../../design-tokens';
+import { cssVars, dialogWidths, mediaQueries, iconSizeValues } from '../../../design-tokens';
+import { Icons } from '../../../components/ui/Icons';
 import { DialogSurface } from '../../../components/ui/molecules/DialogSurface';
 import { DialogActions, type DialogAction } from '../../../components/ui/molecules/DialogActions';
 import { getConflictTypeLabel, groupConflictsByType } from '../utils/scheduleConflicts';
@@ -246,7 +247,7 @@ export const ConflictDialog: React.FC<ConflictDialogProps> = ({
         <span>{title}</span>
       </h2>
       <button style={closeButtonStyle} onClick={onClose} aria-label="Schließen">
-        ×
+        <Icons.X size={iconSizeValues.sm} />
       </button>
     </div>
   );

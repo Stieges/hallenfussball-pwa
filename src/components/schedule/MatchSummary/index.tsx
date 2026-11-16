@@ -9,7 +9,8 @@
 
 import { type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, dialogWidths } from '../../../design-tokens';
+import { cssVars, dialogWidths, iconSizeValues } from '../../../design-tokens';
+import { Icons } from '../../../components/ui/Icons';
 import { useBreakpoint } from '../../../hooks';
 import { BottomSheet } from '../../ui/BottomSheet';
 import { DialogSurface } from '../../ui/molecules/DialogSurface';
@@ -129,7 +130,7 @@ function MatchSummaryDialog({
             onClick={onClose}
             aria-label={t('matchSummary.close')}
           >
-            ✕
+            <Icons.X size={iconSizeValues.sm} />
           </button>
         </div>
 

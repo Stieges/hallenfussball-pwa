@@ -14,7 +14,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, dialogWidths } from '../../../../design-tokens';
+import { cssVars, dialogWidths, iconSizeValues } from '../../../../design-tokens';
+import { Icons } from '../../../../components/ui/Icons';
 import { DialogSurface } from '../../../ui/molecules/DialogSurface';
 import { useDialogTimer } from '../../../../hooks';
 import moduleStyles from '../../LiveCockpit.module.css';
@@ -209,7 +210,7 @@ export function GoalScorerDialog({
             data-testid="dialog-close-button"
             style={styles.closeButton}
           >
-            ✕
+            <Icons.X size={iconSizeValues.sm} />
           </button>
         </div>
 

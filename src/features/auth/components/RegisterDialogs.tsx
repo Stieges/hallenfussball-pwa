@@ -10,7 +10,8 @@
 
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, dialogWidths } from '../../../design-tokens';
+import { cssVars, dialogWidths, iconSizeValues } from '../../../design-tokens';
+import { Icons } from '../../../components/ui/Icons';
 import { Button } from '../../../components/ui/Button';
 import { registerStyles as styles } from './RegisterScreen.styles';
 import { DialogSurface } from '../../../components/ui/molecules/DialogSurface';
@@ -45,7 +46,7 @@ export const RegisterEmailConfirmationDialog: React.FC<RegisterEmailConfirmation
           style={styles.successCloseButton}
           aria-label={t('login.close')}
         >
-          ✕
+          <Icons.X size={iconSizeValues.sm} />
         </button>
         <div style={styles.successIcon}>✉</div>
         <h2 id="email-confirm-title" style={styles.successTitle}>{t('registerDialogs.emailConfirmation.title')}</h2>
@@ -96,7 +97,7 @@ export const RegisterSuccessDialog: React.FC<RegisterSuccessDialogProps> = ({
           style={styles.successCloseButton}
           aria-label={t('login.close')}
         >
-          ✕
+          <Icons.X size={iconSizeValues.sm} />
         </button>
         <div style={styles.successIcon}>✓</div>
         <h2 id="success-title" style={styles.successTitle}>{t('registerDialogs.success.title')}</h2>
