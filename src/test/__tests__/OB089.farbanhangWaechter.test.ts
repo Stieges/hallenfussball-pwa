@@ -29,7 +29,7 @@ const AUSNAHMEN: Record<string, { erlaubt: number; grund: string }> = {
   },
   'components/live-cockpit/components/Dialogs/CardDialog.tsx': {
     erlaubt: 3,
-    grund: 'Karten-Auswahl: keine getönten Karten-Tokens vorhanden, Stelle ausgelassen und gemeldet.',
+    grund: 'Karten-Auswahl: keine getönten Karten-Tokens vorhanden, Stelle ausgelassen und gemeldet; toter Code (C-CARDDIALOG-TOT), Aufräumen eingeplant.',
   },
 };
 
@@ -49,23 +49,32 @@ function quelldateien(dir: string): string[] {
   return out;
 }
 
+type Ausnahmen = Record<string, { erlaubt: number; grund: string }>;
+
+/** Verstöße: nur „mehr als erlaubt“ ist rot. Weniger Treffer oder eine fehlende Datei (Ausnahme behoben, Datei gelöscht) bleibt grün. */
+function verstoesse(dateien: Record<string, string>, ausnahmen: Ausnahmen): string[] {
+  return Object.entries(dateien).flatMap(([rel, text]) => {
+    const n = zaehleFarbanhang(text);
+    const erlaubt = ausnahmen[rel]?.erlaubt ?? 0;
+    return n > erlaubt ? [`${rel}: ${n} (erlaubt ${erlaubt})`] : [];
+  });
+}
+
 describe('@OB-089 Wächter: kein Farbwert mit angehängter Deckkraft', () => {
   it('@OB-089 Obergrenze 0: in src/ steht kein `${…}22`-Muster außerhalb der begründeten Ausnahmen', () => {
-    const verstoesse: string[] = [];
-    for (const file of quelldateien(SRC)) {
-      const n = zaehleFarbanhang(readFileSync(file, 'utf8'));
-      const rel = file.slice(SRC.length + 1);
-      const erlaubt = AUSNAHMEN[rel]?.erlaubt ?? 0;
-      if (n > erlaubt) { verstoesse.push(`${rel}: ${n} (erlaubt ${erlaubt})`); }
-    }
-    expect(verstoesse, 'Deckkraft nie an einen Farbwert hängen – getönte Tokens (errorLight, warningLight …) verwenden').toEqual([]);
+    const dateien: Record<string, string> = {};
+    for (const file of quelldateien(SRC)) { dateien[file.slice(SRC.length + 1)] = readFileSync(file, 'utf8'); }
+    expect(verstoesse(dateien, AUSNAHMEN), 'Deckkraft nie an einen Farbwert hängen – getönte Tokens (errorLight, warningLight …) verwenden').toEqual([]);
   });
 
-  it('@OB-089 die Ausnahmen existieren und sind nicht größer als nötig (sie dürfen nur sinken)', () => {
-    for (const [rel, a] of Object.entries(AUSNAHMEN)) {
-      const n = zaehleFarbanhang(readFileSync(join(SRC, rel), 'utf8'));
-      expect(n, `${rel}: ${a.grund}`).toBe(a.erlaubt);
-    }
+  it('@OB-089 Ausnahmen dürfen nur sinken: weniger Treffer → grün, fehlende Datei → grün, mehr Treffer → rot', () => {
+    const ausnahmen: Ausnahmen = { 'a.tsx': { erlaubt: 2, grund: 'Test' }, 'b.tsx': { erlaubt: 1, grund: 'Test' } };
+    const treffer = 'x: `${cssVars.colors.error}22`';
+    expect(verstoesse({ 'a.tsx': `${treffer};${treffer}`, 'b.tsx': treffer }, ausnahmen)).toEqual([]); // genau erlaubt
+    expect(verstoesse({ 'a.tsx': treffer, 'b.tsx': '' }, ausnahmen)).toEqual([]); // weniger
+    expect(verstoesse({ 'a.tsx': treffer }, ausnahmen)).toEqual([]); // b.tsx fehlt (gelöscht)
+    expect(verstoesse({ 'a.tsx': `${treffer};${treffer};${treffer}` }, ausnahmen)).toEqual(['a.tsx: 3 (erlaubt 2)']); // mehr
+    expect(verstoesse({ 'c.tsx': treffer }, ausnahmen)).toEqual(['c.tsx: 1 (erlaubt 0)']); // neue Datei ohne Ausnahme
   });
 
   it('@OB-089 Gegenprobe: das Muster erkennt die bekannten Fehlformen und lässt gültige Vorlagen durch', () => {
