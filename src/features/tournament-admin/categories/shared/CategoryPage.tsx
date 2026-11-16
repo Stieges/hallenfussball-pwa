@@ -44,6 +44,7 @@ const styles = {
 
   icon: {
     fontSize: 24,
+    display: 'inline-flex',
   } as CSSProperties,
 
   description: {
@@ -64,7 +65,8 @@ const styles = {
 // =============================================================================
 
 interface CategoryPageProps {
-  icon: string;
+  /** Kurzzeichen (Text) oder gezeichnetes Symbol */
+  icon: ReactNode;
   title: string;
   description?: string;
   headerExtra?: ReactNode;
@@ -87,7 +89,7 @@ export function CategoryPage({
       <div style={styles.header}>
         <div style={styles.titleRow}>
           <h1 style={styles.title}>
-            <span style={styles.icon}>{icon}</span>
+            <span style={styles.icon} aria-hidden="true">{icon}</span>
             {title}
           </h1>
           {headerExtra}
