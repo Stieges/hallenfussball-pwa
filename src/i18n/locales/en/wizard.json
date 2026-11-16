@@ -260,7 +260,8 @@
           "title": "Both start at home",
           "description": "Match 1: {{a}} at home against a guest. Match 2: {{b}} at home against a guest."
         }
-      }
+      },
+      "ariaLabel": "Host team: {{name}}"
     }
   },
   "step5": {

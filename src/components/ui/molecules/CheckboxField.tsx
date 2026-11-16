@@ -13,6 +13,8 @@ export interface CheckboxFieldProps {
   hint?: string;
   /** Gesperrt (etwa Regel nur für die Turnierleitung): nicht anklickbar, Zeiger ohne Hand */
   disabled?: boolean;
+  /** Zugänglicher Name, wenn die sichtbare Beschriftung allein nicht genügt (mehrere gleiche Felder, etwa je Team); enthält den sichtbaren Text. */
+  ariaLabel?: string;
   'data-testid'?: string;
 }
 
@@ -47,7 +49,7 @@ const hintStyle: CSSProperties = {
   fontSize: cssVars.fontSizes.xs,
 };
 
-export function CheckboxField({ checked, onChange, label, hint, disabled = false, 'data-testid': testId }: CheckboxFieldProps) {
+export function CheckboxField({ checked, onChange, label, hint, disabled = false, ariaLabel, 'data-testid': testId }: CheckboxFieldProps) {
   return (
     <label style={disabled ? { ...rowStyle, cursor: 'default' } : rowStyle}>
       <input
@@ -55,6 +57,7 @@ export function CheckboxField({ checked, onChange, label, hint, disabled = false
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
         disabled={disabled}
+        aria-label={ariaLabel}
         style={disabled ? { ...boxStyle, cursor: 'default' } : boxStyle}
         data-testid={testId}
       />

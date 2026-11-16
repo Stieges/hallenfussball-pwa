@@ -260,7 +260,8 @@
           "title": "Beide beginnen als Heim",
           "description": "Spiel 1: {{a}} als Heim gegen einen Gast. Spiel 2: {{b}} als Heim gegen einen Gast."
         }
-      }
+      },
+      "ariaLabel": "Mannschaft des Veranstalters: {{name}}"
     }
   },
   "step5": {

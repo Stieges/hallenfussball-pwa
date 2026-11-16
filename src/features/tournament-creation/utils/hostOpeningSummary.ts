@@ -28,7 +28,9 @@ export interface HostSummary {
 /** Plan des Entwurfs; null, wenn er sich noch nicht erzeugen lässt. */
 export function planForHostSummary(draft: Tournament): GeneratedSchedule | null {
   try {
-    return generateFullSchedule({ ...draft, matches: [] });
+    // wie `buildReplanPreview`: entfernte Teams spielen nicht mit, sonst nennen Übersicht und Vorschau verschiedene Nummern
+    const teams = draft.teams.filter((team) => !team.isRemoved);
+    return generateFullSchedule({ ...draft, teams, numberOfTeams: teams.length, matches: [] });
   } catch {
     return null;
   }

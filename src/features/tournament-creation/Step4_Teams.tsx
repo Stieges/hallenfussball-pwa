@@ -409,6 +409,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
 
                 <HostTeamToggle
                   teamId={team.id}
+                  teamName={team.name}
                   marked={formData.hostTeamIds?.includes(team.id) === true}
                   onToggle={(id, marked) => onUpdate('hostTeamIds', toggleHostTeam(formData.hostTeamIds, id, marked))}
                 />

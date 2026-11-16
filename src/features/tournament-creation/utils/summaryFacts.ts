@@ -40,6 +40,11 @@ function planOf(draft: Tournament): GeneratedSchedule | undefined {
   }
 }
 
+/** Bearbeiten (vorhandene Spiele) oder entfernte Teams: der neue Plan zählt, nicht der bestehende bzw. einer mit den entfernten Teams. */
+function needsOwnPlan(draft: Tournament): boolean {
+  return draft.matches.length > 0 || draft.teams.some(team => team.isRemoved);
+}
+
 export function summaryFacts(draft: Tournament, t: PdfTexts): SummaryFacts {
   const schedule = planOf(draft);
   const rules = pdfRulesFrom(draft, schedule);
@@ -54,6 +59,6 @@ export function summaryFacts(draft: Tournament, t: PdfTexts): SummaryFacts {
     ruleLines: pdfRuleEntries(rules, t)
       .filter(entry => SUMMARY_RULE_KINDS.includes(entry.kind))
       .map(entry => entry.line),
-    host: hostSummary(draft, draft.matches.length > 0 ? planForHostSummary(draft) : schedule ?? null), // Bearbeiten: neuer Plan, nicht der bestehende
+    host: hostSummary(draft, needsOwnPlan(draft) ? planForHostSummary(draft) : schedule ?? null),
   };
 }
