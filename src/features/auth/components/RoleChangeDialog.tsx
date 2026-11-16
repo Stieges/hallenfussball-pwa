@@ -271,7 +271,7 @@ const styles: Record<string, CSSProperties> = {
     textAlign: 'left',
   },
   roleOptionSelected: {
-    background: `${cssVars.colors.primary}10`,
+    background: cssVars.colors.primaryMedium,
     borderColor: cssVars.colors.primary,
   },
   roleLabel: {

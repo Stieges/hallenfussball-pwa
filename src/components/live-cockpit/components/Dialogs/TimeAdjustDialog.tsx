@@ -162,7 +162,7 @@ const styles: Record<string, React.CSSProperties> = {
   changeIndicator: {
     fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.primary,
-    backgroundColor: `${cssVars.colors.primary}20`,
+    backgroundColor: cssVars.colors.primaryLight,
     padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
     borderRadius: cssVars.borderRadius.md,
     marginBottom: cssVars.spacing.lg,
