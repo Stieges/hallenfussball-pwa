@@ -21,6 +21,7 @@ import {
 } from '../types/tournament';
 import { generateUniqueId } from './idGenerator';
 import { parseTeamColors } from './importTeamColors';
+import { importedHostFields } from './importHostTeams';
 import { teamSlot, pendingSlot, matchSideTeamId } from '../core/models/matchSlot';
 import type { MatchSlot } from '../core/models/schemas/MatchSlotSchema';
 import { FILE_SOURCE_KEY, checkImportedFinalsPlan, parseFileSource, parseFinalsPhase, type FileSide } from './importFinalsPlan';
@@ -414,6 +415,7 @@ function parseJSONTournament(content: string): ImportValidationResult {
 
     // Step 4: Teams
     teams,
+    ...importedHostFields(json, teamIdMap, teams), // @W4-034: Mannschaften des Veranstalters und Eröffnung
 
     // Generated data
     matches,
