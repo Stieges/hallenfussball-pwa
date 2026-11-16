@@ -105,7 +105,7 @@ async function frueherAnpfiff({ browser }: StepContext): Promise<void> {
 /** Zeile von Spiel 1 auf der Zuschauer-Seite: Beschriftung „Spiel 1: …“ (@ZM-007, @SL-049). */
 const zeileSpiel1 = (seite: Page) => seite.locator('[aria-label="Spiel 1: TSV Waging rot gegen TSV 1921 Fridolfing"]:visible');
 /** Zeile von Spiel 2: „Spiel 2: …“. */
-const zeileSpiel2 = (seite: Page) => seite.locator('[aria-label="Spiel 2: DJK Otting gegen TSV Waging blau"]:visible');
+const zeileSpiel2 = (seite: Page) => seite.locator('[aria-label="Spiel 2: DJK Otting gegen TSV Petting"]:visible');
 
 /** Tatsächliche Anpfiffzeit von Spiel 1 (Ortszeit, HH:MM) aus der Datenbank. */
 async function anpfiffzeit(): Promise<string> {
