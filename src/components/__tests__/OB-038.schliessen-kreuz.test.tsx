@@ -7,9 +7,10 @@ import { render, screen } from '@testing-library/react';
 import { CardDialog } from '../live-cockpit/components/Dialogs/CardDialog';
 import { GoalScorerDialog } from '../live-cockpit/components/Dialogs/GoalScorerDialog';
 import { ConflictDialog } from '../../features/schedule-editor/components/ConflictDialog';
+import { MatchSummary } from '../schedule/MatchSummary';
 import { LogoUploadDialog } from '../ui/LogoUploadDialog';
 import { LoginSuccessDialog } from '../../features/auth/components/LoginDialogs';
-import { RegisterSuccessDialog } from '../../features/auth/components/RegisterDialogs';
+import { RegisterEmailConfirmationDialog, RegisterSuccessDialog } from '../../features/auth/components/RegisterDialogs';
 
 const noop = vi.fn();
 const home = { id: 'h', name: 'VfB Ufer' };
@@ -25,6 +26,8 @@ describe('@OB-038 Taste zum Schließen eines Dialogs: überall dasselbe gezeichn
     ['Konflikt-Dialog', () => <ConflictDialog isOpen onClose={noop} conflicts={[]} matches={[]} />, () => taste('Schließen')],
     ['Logo-Dialog', () => <LogoUploadDialog teamName="TSV Waging" onSave={noop} onCancel={noop} />, () => taste('Schließen')],
     ['Anmeldung erfolgreich', () => <LoginSuccessDialog migratedCount={0} onClose={noop} />, () => taste(/login.close/)],
+    ['Spielzusammenfassung', () => <MatchSummary isOpen onClose={noop} homeScore={2} awayScore={1} homeTeamId="h" awayTeamId="a" homeTeamName="FC Nord" awayTeamName="SV Süd" events={[]} />, () => screen.getByRole('button', { name: /matchSummary.close/ })],
+    ['E-Mail-Bestätigung (Registrierung)', () => <RegisterEmailConfirmationDialog email="a@b.de" migratedCount={0} onClose={noop} />, () => taste(/login.close/)],
     ['Registrierung erfolgreich', () => <RegisterSuccessDialog migratedCount={0} onClose={noop} />, () => taste(/login.close/)],
   ];
 
@@ -36,7 +39,7 @@ describe('@OB-038 Taste zum Schließen eines Dialogs: überall dasselbe gezeichn
     expect(knopf.getAttribute('aria-label')).toBeTruthy();
   });
 
-  it('alle sechs Dialoge zeigen dieselbe Zeichnung', () => {
+  it('alle acht Dialoge zeigen dieselbe Zeichnung', () => {
     const formen = DIALOGE.map(([, dialog, finde]) => {
       const { unmount } = render(dialog());
       const d = finde().querySelector('svg')!.innerHTML;
