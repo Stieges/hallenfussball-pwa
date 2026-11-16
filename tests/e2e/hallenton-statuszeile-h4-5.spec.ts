@@ -74,6 +74,18 @@ test.describe('@HT-045 H4-5 Statuszeile in den Kopfzeilen (Prüfstand)', () => {
             // Fälle, die der Streifen nie zeigt (Probe, Server-Stände), kommen hier nicht vor
             await expect(page.getByText('Probe läuft')).toHaveCount(0);
             await expect(page.getByText('Lautsprecher: Status unbekannt')).toHaveCount(0);
+          } else if (ort === 'cockpit') {
+            // @HT-059: im Cockpit nur Störungen – „bereit“, „Prüfen“ und Hinweise entfallen, ohne Eintrag fehlt die Zeile ganz
+            await expect(page.getByTestId('zeile-bereit')).toHaveCount(0);
+            expect(await page.getByTestId('zeile-probe-bereit').getByRole('button').allTextContents(), 'nur die Probe, „bereit“ entfällt').toEqual(['Probe läuft']);
+            expect(await page.getByTestId('zeile-stoerung-probe').getByRole('button').allTextContents()).toEqual([g.schmal ? 'Feld 1 nicht bereit' : 'Lautsprecher Feld 1 nicht bereit', 'Probe läuft']);
+            expect((await page.getByTestId('zeile-zwei-felder').getByRole('button').allTextContents()).at(0)).toMatch(/Feld 1, 2 nicht bereit$/);
+            expect((await page.getByTestId('zeile-ton-nicht-aktiv').getByRole('button').allTextContents()).at(0)).toBe('Ton nicht aktiv – hier klicken');
+            // „Feld 1 nicht bereit“, „Feld 2 bereit“, „Feld 3 bereit mit Prüfen“ + Probe: nur Störung und Probe, keine Sammelpille „+n weitere“
+            expect(await page.getByTestId('zeile-mehr').getByRole('button').allTextContents()).toEqual([g.schmal ? 'Feld 1 nicht bereit' : 'Lautsprecher Feld 1 nicht bereit', 'Probe läuft']);
+            await expect(page.getByTestId('zeile-mehr-weitere')).toHaveCount(0);
+            await expect(page.getByTestId('zeile-keiner')).toHaveCount(0);
+            await expect(page.getByText('Prüfen', { exact: true })).toHaveCount(0);
           } else {
             await expect(page.getByTestId('zeile-bereit')).toBeVisible();
             // @HT-045 Zeile 2: „Probe läuft“ und „Feld 1 bereit“ in einer Zeile (360 px: gekürzt „Feld 1 bereit“), Probe zuerst
