@@ -25,6 +25,7 @@ const GERAETESPEICHER: string[][] = [
   ['Geräte-Kennung', 'lokaler Speicher', 'damit immer nur ein Gerät ein Spielfeld steuert und Einträge zugeordnet werden'],
   ['Helfer-Zugang', 'lokaler Speicher', 'damit Helfer nicht jedes Mal neu anfragen müssen'],
   ['Hallen-Lautsprecher: zugeordnete Spielfelder und Gerätename, Marken zu Abmeldung und Fehlern (nur am Lautsprecher-Gerät)', 'lokaler Speicher', 'damit das Gerät nach dem Neuladen weiter Ton gibt'],
+  ['Namen der Zwischenspeicher und Datenbanken der App sowie Zustand des Service Workers', 'wird beim Start nur gelesen, nicht gespeichert', 'geht einmal pro Start in den Fehlerbericht (Abschnitt 10), damit Ladefehler gefunden werden'],
   ['„Mein Team“ (Zuschauer)', 'lokaler Speicher', 'deine eigene Auswahl'],
   ['Letzter Turnierstand (Zuschauer)', 'lokaler Speicher', 'Anzeige ohne Netz, an einem späteren Tag nicht mehr angezeigt'],
   ['Turnierdaten für den Offline-Betrieb', 'Datenbank im Browser (IndexedDB)', 'damit Turnierleitung und Helfer ohne Netz weiterarbeiten'],

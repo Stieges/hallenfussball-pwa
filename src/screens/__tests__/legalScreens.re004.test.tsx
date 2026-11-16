@@ -113,7 +113,8 @@ describe('@RE-004 Datenschutzerklärung sagt, was die App wirklich tut (Prüfung
     expect(text).toContain('nie eine Versionsnummer');
     expect(text).toContain('keine IP-Adresse und keine Kennung deines Geräts in dieser Zählung; ich kann dich daran nicht wiedererkennen');
     expect(text).toContain('die Bildschirmgröße, die Bedienart (Finger oder Maus) und ob sie als App geöffnet wurde');
-    expect(text).toContain('Auf deinem Gerät wird dafür nichts gespeichert');
+    expect(text).toContain('Auf deinem Gerät wird dafür nichts gespeichert und nichts aus dem Speicher des Geräts gelesen: kein Cookie, kein lokaler Speicher, keine Kennung');
+    expect(text).toContain('nur im Arbeitsspeicher');
     expect(text).toContain('Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO');
     expect(text).toContain('Die Summen werden mit dem Turnier gelöscht (Abschnitt 11)');
   });
@@ -157,6 +158,7 @@ describe('@RE-004 Datenschutzerklärung sagt, was die App wirklich tut (Prüfung
     expect(screen.getByTestId('datenschutz-section-11').textContent).toContain('Zahlen der Zuschauer-Zählung (nur Summen) und Daten des Hallen-Lautsprechers');
     expect(screen.getByTestId('datenschutz-section-11').textContent).not.toContain('nur bis zum Ende des Turniertags');
     expect(screen.getByTestId('datenschutz-section-14').textContent).toContain('Hallen-Lautsprecher: zugeordnete Spielfelder und Gerätename');
+    expect(screen.getByTestId('datenschutz-section-14').textContent).toContain('Namen der Zwischenspeicher und Datenbanken der App sowie Zustand des Service Workers');
     expect(screen.getByTestId('datenschutz-section-6').textContent).toContain('der Gerätetyp (Handy, Tablet oder Computer');
     expect(screen.getByTestId('datenschutz-section-6').textContent).not.toContain('iPhone');
     expect(screen.getByTestId('datenschutz-section-10').textContent).toContain('die Kennung des Kontos (eine zufällige Zeichenfolge, keine E-Mail, kein Name)');
