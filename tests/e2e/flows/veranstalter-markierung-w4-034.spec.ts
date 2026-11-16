@@ -79,10 +79,10 @@ test.describe('@W4-034 @W4-048 @W4-049 Mannschaften des Veranstalters im Assiste
 
       // eine Markierte: nur der Hinweis
       await feld(W1).check();
-      await expect(page.getByTestId('wizard-host-hint')).toContainText('TSV Waging 1 bestreitet das erste Spiel als Heimmannschaft');
+      await expect(page.getByTestId('wizard-host-hint')).toContainText('TSV Waging 1 eröffnet als Heim.');
       await expect(page.getByTestId('wizard-host-choice')).toHaveCount(0);
 
-      // zwei Markierte: die Wahl mit drei Arten, Voreinstellung „Veranstalter gegen einen Gast“
+      // zwei Markierte: die Wahl mit drei Arten, Voreinstellung „Ein Team eröffnet als Heim“
       await feld(W2).check();
       await expect(page.getByTestId('wizard-host-choice')).toBeVisible();
       await expect(page.getByTestId('wizard-opening-guest-opening')).toHaveAttribute('aria-checked', 'true');
@@ -97,8 +97,8 @@ test.describe('@W4-034 @W4-048 @W4-049 Mannschaften des Veranstalters im Assiste
       await expect(page.getByTestId('step5-host')).toBeVisible();
       await expect(page.getByTestId('host-summary-teams')).toHaveText('TSV Waging 1, TSV Waging 2');
       await expect(page.getByTestId('host-summary-mode')).toHaveText('Eröffnung: Beide beginnen als Heim');
-      await expect(page.getByTestId('host-summary-duel')).toContainText('Das Vereinsduell ist Spiel');
-      await expect(page.getByTestId('host-summary-follows')).toContainText('direkt');
+      await expect(page.getByTestId('host-summary-duel')).toContainText('Vereinsduell: Spiel');
+      await expect(page.getByTestId('host-summary-follows')).toContainText('Direkt nacheinander');
       await page.getByTestId('step5-host').scrollIntoViewIfNeeded();
       await bild(page, '4-uebersicht', breite, thema);
 

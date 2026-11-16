@@ -69,8 +69,8 @@ describe('@W4-034 @W4-048 @W4-050 Fenster „Neuplanung prüfen“ nennt die Ang
     const box = screen.getByTestId('replan-host');
     expect(box.textContent).toContain('TSV Waging 1, TSV Waging 2');
     expect(screen.getByTestId('host-summary-mode').textContent).toBe('Eröffnung: Beide beginnen als Heim');
-    expect(screen.getByTestId('host-summary-duel').textContent).toBe(`Das Vereinsduell ist Spiel ${duel}.`);
-    expect(screen.getByTestId('host-summary-follows').textContent).toContain(`${folgen} Mal`);
+    expect(screen.getByTestId('host-summary-duel').textContent).toBe(`Vereinsduell: Spiel ${duel}`);
+    expect(screen.getByTestId('host-summary-follows').textContent).toBe(folgen === 0 ? 'Direkt nacheinander: nie' : `Direkt nacheinander: ${folgen}-mal`);
   });
 
   it('bei „Vereinsduell eröffnet“ steht die Art, aber keine Duell-Zeile', () => {

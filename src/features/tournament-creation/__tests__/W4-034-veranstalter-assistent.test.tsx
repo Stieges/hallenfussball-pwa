@@ -80,7 +80,7 @@ describe('@W4-034 Mannschaften des Veranstalters werden beim Anlegen markiert', 
     render(<Zustand start={draft()} />);
     fireEvent.click(box(W1));
 
-    expect(screen.getByTestId('wizard-host-hint').textContent).toContain('TSV Waging 1 bestreitet das erste Spiel als Heimmannschaft');
+    expect(screen.getByTestId('wizard-host-hint').textContent).toContain('TSV Waging 1 eröffnet als Heim.');
     expect(screen.queryByTestId('wizard-host-choice')).toBeNull();
   });
 
@@ -97,7 +97,7 @@ describe('@W4-034 Mannschaften des Veranstalters werden beim Anlegen markiert', 
     expect(screen.getByTestId('wizard-opening-both-home')).toHaveAttribute('aria-checked', 'false');
     expect(within(choice).getByText('Beide beginnen als Heim')).toBeInTheDocument();
     expect(within(choice).getByText('Vereinsduell eröffnet')).toBeInTheDocument();
-    expect(within(choice).getByText('Veranstalter gegen einen Gast, Vereinsduell in Runde 2')).toBeInTheDocument();
+    expect(within(choice).getByText('Ein Team eröffnet als Heim')).toBeInTheDocument();
     expect(screen.queryByTestId('wizard-host-hint')).toBeNull();
   });
 
@@ -127,7 +127,7 @@ describe('@W4-034 Mannschaften des Veranstalters werden beim Anlegen markiert', 
     render(<Zustand start={draft({ numberOfFields: 2, hostTeamIds: [W1, W2] })} />);
 
     expect(screen.queryByTestId('wizard-host-choice')).toBeNull();
-    expect(screen.getByTestId('wizard-host-hint').textContent).toContain('Eine der markierten Mannschaften');
+    expect(screen.getByTestId('wizard-host-hint').textContent).toContain('Eine der markierten Mannschaften eröffnet als Heim.');
   });
 
   it('Entmarkieren löst die Markierung wieder', () => {
@@ -188,13 +188,13 @@ describe('@W4-034 / @W4-048 / @W4-050 Die Übersicht vor dem Fertigstellen', () 
     expect(screen.getByTestId('host-summary-mode').textContent).toBe('Eröffnung: Beide beginnen als Heim');
     const nummer = nummerDesDuells(t);
     expect(nummer).toBeGreaterThan(2);
-    expect(screen.getByTestId('host-summary-duel').textContent).toBe(`Das Vereinsduell ist Spiel ${nummer}.`);
+    expect(screen.getByTestId('host-summary-duel').textContent).toBe(`Vereinsduell: Spiel ${nummer}`);
   });
 
-  it('Gegenbeispiel: bei „Veranstalter gegen einen Gast“ keine Zeile zum Spiel des Vereinsduells', () => {
+  it('Gegenbeispiel: bei „Ein Team eröffnet als Heim“ keine Zeile zum Spiel des Vereinsduells', () => {
     uebersicht(draft({ hostTeamIds: [W1, W2] }));
 
-    expect(screen.getByTestId('host-summary-mode').textContent).toBe('Eröffnung: Veranstalter gegen einen Gast, Vereinsduell in Runde 2');
+    expect(screen.getByTestId('host-summary-mode').textContent).toBe('Eröffnung: Ein Team eröffnet als Heim');
     expect(screen.queryByTestId('host-summary-duel')).toBeNull();
   });
 
@@ -205,10 +205,8 @@ describe('@W4-034 / @W4-048 / @W4-050 Die Übersicht vor dem Fertigstellen', () 
     const erwartet = folgenImPlan(t);
     const satz = screen.getByTestId('host-summary-follows').textContent;
     expect(satz).toBe(erwartet === 0
-      ? 'Die beiden Mannschaften spielen nie direkt nacheinander, außer gegeneinander.'
-      : erwartet === 1
-        ? 'Ein Spiel der einen Mannschaft folgt noch einmal direkt auf ein Spiel der anderen.'
-        : `Ein Spiel der einen Mannschaft folgt noch ${erwartet} Mal direkt auf ein Spiel der anderen.`);
+      ? 'Direkt nacheinander: nie'
+      : `Direkt nacheinander: ${erwartet}-mal`);
   });
 
   it('@W4-050 Gegenbeispiel: die Zahl hängt an der Eröffnungsart (nicht für jede Art dieselbe)', () => {
@@ -227,7 +225,7 @@ describe('@W4-034 / @W4-048 / @W4-050 Die Übersicht vor dem Fertigstellen', () 
     const neu = nummerDesDuells({ ...t, matches: [] });
     const imAlten = alt.findIndex((m) => [matchSideTeamId(m, 'A'), matchSideTeamId(m, 'B')].every((id) => id === W1 || id === W2)) + 1;
     expect(neu).not.toBe(imAlten);
-    expect(screen.getByTestId('host-summary-duel').textContent).toBe(`Das Vereinsduell ist Spiel ${neu}.`);
+    expect(screen.getByTestId('host-summary-duel').textContent).toBe(`Vereinsduell: Spiel ${neu}`);
   });
 
   it('entfernte Teams: Übersicht und Neuplanung nennen dieselbe Duell-Nummer (Plan ohne die entfernten Teams)', () => {
@@ -236,7 +234,7 @@ describe('@W4-034 / @W4-048 / @W4-050 Die Übersicht vor dem Fertigstellen', () 
     uebersicht(t);
 
     const ohne = nummerDesDuells(draft({ hostTeamIds: [W1, W2], openingMode: 'both-home' }));
-    expect(screen.getByTestId('host-summary-duel').textContent).toBe(`Das Vereinsduell ist Spiel ${ohne}.`);
+    expect(screen.getByTestId('host-summary-duel').textContent).toBe(`Vereinsduell: Spiel ${ohne}`);
   });
 });
 

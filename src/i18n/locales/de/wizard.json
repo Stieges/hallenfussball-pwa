@@ -244,21 +244,21 @@
     },
     "host": {
       "label": "Mannschaft des Veranstalters",
-      "single": "{{name}} bestreitet das erste Spiel als Heimmannschaft.",
-      "oneOfThem": "Eine der markierten Mannschaften ({{names}}) bestreitet das erste Spiel als Heimmannschaft.",
-      "choiceTitle": "Eröffnung bei zwei Mannschaften des Veranstalters",
+      "single": "{{name}} eröffnet als Heim.",
+      "oneOfThem": "Eine der markierten Mannschaften eröffnet als Heim.",
+      "choiceTitle": "Eröffnung",
       "mode": {
         "guest": {
-          "title": "Veranstalter gegen einen Gast, Vereinsduell in Runde 2",
-          "description": "Spiel 1: eine markierte Mannschaft als Heim gegen einen Gast. Das Vereinsduell liegt in Runde 2. (Voreinstellung)"
+          "title": "Ein Team eröffnet als Heim",
+          "description": "Vereinsduell in Runde 2 · Voreinstellung"
         },
         "derby": {
           "title": "Vereinsduell eröffnet",
-          "description": "Spiel 1: {{a}} gegen {{b}}."
+          "description": "Spiel 1: {{a}} – {{b}}"
         },
         "bothHome": {
           "title": "Beide beginnen als Heim",
-          "description": "Spiel 1: {{a}} als Heim gegen einen Gast. Spiel 2: {{b}} als Heim gegen einen Gast."
+          "description": "Spiel 1 und 2 je gegen einen Gast"
         }
       },
       "ariaLabel": "Mannschaft des Veranstalters: {{name}}"
@@ -293,11 +293,11 @@
     "host": {
       "label": "Mannschaften des Veranstalters",
       "opening": "Eröffnung: {{mode}}",
-      "duel": "Das Vereinsduell ist Spiel {{number}}.",
-      "bothHomeFailed": "„Beide beginnen als Heim“ geht bei diesem Spielplan nicht auf. Der Spielplan folgt der Voreinstellung „Veranstalter gegen einen Gast“.",
-      "followsNone": "Die beiden Mannschaften spielen nie direkt nacheinander, außer gegeneinander.",
-      "follows_one": "Ein Spiel der einen Mannschaft folgt noch einmal direkt auf ein Spiel der anderen.",
-      "follows_other": "Ein Spiel der einen Mannschaft folgt noch {{count}} Mal direkt auf ein Spiel der anderen."
+      "duel": "Vereinsduell: Spiel {{number}}",
+      "bothHomeFailed": "„Beide beginnen als Heim“ geht hier nicht auf, es gilt „Ein Team eröffnet als Heim“.",
+      "followsNone": "Direkt nacheinander: nie",
+      "follows_one": "Direkt nacheinander: 1-mal",
+      "follows_other": "Direkt nacheinander: {{count}}-mal"
     }
   },
   "groupsAndFields": {

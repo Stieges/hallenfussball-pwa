@@ -244,21 +244,21 @@
     },
     "host": {
       "label": "Host team",
-      "single": "{{name}} plays the first match as the home team.",
-      "oneOfThem": "One of the marked teams ({{names}}) plays the first match as the home team.",
-      "choiceTitle": "Opening with two host teams",
+      "single": "{{name}} opens as the home team.",
+      "oneOfThem": "One of the marked teams opens as the home team.",
+      "choiceTitle": "Opening",
       "mode": {
         "guest": {
-          "title": "Host against a guest, club derby in round 2",
-          "description": "Match 1: one marked team at home against a guest. The club derby is in round 2. (default)"
+          "title": "One team opens at home",
+          "description": "Club derby in round 2 · default"
         },
         "derby": {
           "title": "Club derby opens",
-          "description": "Match 1: {{a}} against {{b}}."
+          "description": "Match 1: {{a}} – {{b}}"
         },
         "bothHome": {
           "title": "Both start at home",
-          "description": "Match 1: {{a}} at home against a guest. Match 2: {{b}} at home against a guest."
+          "description": "Matches 1 and 2 each against a guest"
         }
       },
       "ariaLabel": "Host team: {{name}}"
@@ -293,11 +293,11 @@
     "host": {
       "label": "Host teams",
       "opening": "Opening: {{mode}}",
-      "duel": "The club derby is match {{number}}.",
-      "bothHomeFailed": "\"Both start at home\" does not work out for this schedule. The schedule follows the default \"Host against a guest\".",
-      "followsNone": "The two teams never play directly after each other, except against each other.",
-      "follows_one": "A match of one team follows directly after a match of the other once more.",
-      "follows_other": "A match of one team follows directly after a match of the other {{count}} more times."
+      "duel": "Club derby: match {{number}}",
+      "bothHomeFailed": "\"Both start at home\" does not work here, \"One team opens at home\" applies.",
+      "followsNone": "Directly after each other: never",
+      "follows_one": "Directly after each other: 1 time",
+      "follows_other": "Directly after each other: {{count}} times"
     }
   },
   "groupsAndFields": {
