@@ -25,6 +25,8 @@ export interface HallStatusZeileProps {
   ohneLautsprecher?: boolean;
   /** Eintrag der Probe-Sitzung (`rang: 'probe'`); `null` = keine Probe. */
   probe?: StatusEintrag | null;
+  /** Cockpit (@HT-059): nur Störungen (und die Probe); „bereit“ samt „Prüfen“ und Hinweise entfallen. Die Kopfzeile bleibt Host. */
+  nurStoerungen?: boolean;
 }
 
 export function HallStatusZeile(props: HallStatusZeileProps): ReactElement | null {
@@ -43,18 +45,19 @@ export interface HallStatusZeileAnsichtProps {
   tonAktivieren: () => void;
   ohneLautsprecher?: boolean;
   probe?: StatusEintrag | null;
+  nurStoerungen?: boolean;
   'data-testid'?: string;
 }
 
 /** Nur Darstellung: Einträge aus der Anzeige bauen und die Zeile rendern (auch am Prüfstand der Bilder verwendet). */
-export function HallStatusZeileAnsicht({ anzeige, tournamentId, tonAktivieren, ohneLautsprecher, probe, 'data-testid': testId = 'hallenton-status-zeile' }: HallStatusZeileAnsichtProps): ReactElement | null {
+export function HallStatusZeileAnsicht({ anzeige, tournamentId, tonAktivieren, ohneLautsprecher, probe, nurStoerungen, 'data-testid': testId = 'hallenton-status-zeile' }: HallStatusZeileAnsichtProps): ReactElement | null {
   const { t } = useTranslation('hallenton');
   const { t: tCommon } = useTranslation('common');
   const navigate = useNavigate();
-  const eintraege = useMemo(
-    () => baueStatusEintraege(anzeige, { t, ziel: hallentonZiel(tournamentId), tonAktivieren, ohneLautsprecher, probe }),
-    [anzeige, t, tournamentId, tonAktivieren, ohneLautsprecher, probe],
-  );
+  const eintraege = useMemo(() => {
+    const alle = baueStatusEintraege(anzeige, { t, ziel: hallentonZiel(tournamentId), tonAktivieren, ohneLautsprecher, probe });
+    return nurStoerungen ? alle.filter((e) => e.rang === 'stoerung' || e.rang === 'probe') : alle;
+  }, [anzeige, t, tournamentId, tonAktivieren, ohneLautsprecher, probe, nurStoerungen]);
   return (
     <StatusZeile
       eintraege={eintraege}
@@ -67,7 +70,7 @@ export function HallStatusZeileAnsicht({ anzeige, tournamentId, tonAktivieren, o
   );
 }
 
-function HallStatusZeileMitRecht({ tournamentId, ohneLautsprecher = false, probe = null }: HallStatusZeileProps): ReactElement | null {
+function HallStatusZeileMitRecht({ tournamentId, ohneLautsprecher = false, probe = null, nurStoerungen = false }: HallStatusZeileProps): ReactElement | null {
   const status = useHallStatus(tournamentId);
   const lautsprecher = useHallLautsprecher(tournamentId);
   useStatusZeileHost(tournamentId);
@@ -90,5 +93,5 @@ function HallStatusZeileMitRecht({ tournamentId, ohneLautsprecher = false, probe
     [status.stand, status.felder, status.antwort, status.lautsprecherBekannt, lokal, angepfiffen, anderesFenster],
   );
   const aktivieren = useCallback(() => { void tonAktivieren(); }, [tonAktivieren]);
-  return <HallStatusZeileAnsicht anzeige={anzeige} tournamentId={tournamentId} tonAktivieren={aktivieren} ohneLautsprecher={ohneLautsprecher} probe={probe} />;
+  return <HallStatusZeileAnsicht anzeige={anzeige} tournamentId={tournamentId} tonAktivieren={aktivieren} ohneLautsprecher={ohneLautsprecher} probe={probe} nurStoerungen={nurStoerungen} />;
 }
