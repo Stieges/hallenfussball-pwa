@@ -215,9 +215,11 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   const readOnly = !kannSteuern;
   const isLocked = readOnly || match.status === 'FINISHED';
   const effectiveScore = getEffectiveScore(match);
+  // Die offene Leibchen-Wahl am Handy blendet den Bereich mit Tafel und Hinweisen aus (`LiveCockpitShell.module.css`, `display: none`)
+  const wahlVerdeckt = leibchen.wahlOffen && isMobile;
 
   return (
-    <div className={shell.container} data-layout={layout} data-stufe={layout === 'breit' ? stufe : undefined} data-testid="live-cockpit" data-leibchen-offen={leibchen.wahlOffen && isMobile ? 'true' : undefined}>
+    <div className={shell.container} data-layout={layout} data-stufe={layout === 'breit' ? stufe : undefined} data-testid="live-cockpit" data-leibchen-offen={wahlVerdeckt ? 'true' : undefined}>
       <Rollbar als="main" className={isMobile ? `${shell.content} ${shell.contentMobile}` : shell.content}>
         <LegacyPlayArea
           karte={layout === 'breit' ? leibchen.karte : null}
@@ -225,7 +227,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
             <>
               {tafel}
               <CockpitKopfStreifen
-                tournamentId={tournamentId} matchId={match.id} feldId={match.fieldId} zustand={phase.zustand} readOnly={readOnly} fremdGesteuert={Boolean(props.steuerung)}
+                tournamentId={tournamentId} matchId={match.id} feldId={match.fieldId} zustand={phase.zustand} verdeckt={wahlVerdeckt} readOnly={readOnly} fremdGesteuert={Boolean(props.steuerung)}
                 outboxStatus={outboxStatus} onOutboxReload={handleOutboxReload} nurZusehen={uebergabe?.art === 'zusehen' ? uebergabe.count : null}
               />
             </>

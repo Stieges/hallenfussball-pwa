@@ -19,6 +19,8 @@ export interface CockpitKopfStreifenProps {
   /** Feld des Spiels (`field-N`) und Zustand im Cockpit: Hinweise zum Hallen-Lautsprecher (H4-12, @HT-039). */
   feldId: string | undefined;
   zustand: CockpitZustand;
+  /** Der Bereich ist ausgeblendet (Leibchen-Wahl am Handy): die Hinweise stehen nicht im Bild (@HT-059, R1). */
+  verdeckt: boolean;
   /** Kein Steuerrecht: das Banner steht, außer die Zeile der Leiste sagt es schon (B-49, `steuerung`). */
   readOnly: boolean;
   fremdGesteuert: boolean;
@@ -44,14 +46,14 @@ function AusgangsHinweis(props: AusgangsHinweisProps): ReactElement {
   return useInRouterContext() ? <AusgangsHinweisMitAnmelden {...props} /> : <OutboxNotice {...props} />;
 }
 
-export function CockpitKopfStreifen({ tournamentId, matchId, feldId, zustand, readOnly, fremdGesteuert, outboxStatus, onOutboxReload, nurZusehen }: CockpitKopfStreifenProps): ReactElement {
+export function CockpitKopfStreifen({ tournamentId, matchId, feldId, zustand, verdeckt, readOnly, fremdGesteuert, outboxStatus, onOutboxReload, nurZusehen }: CockpitKopfStreifenProps): ReactElement {
   const { t } = useTranslation('cockpit');
   return (
     <>
       {/* @FU-109: Statuszeile im normalen Fluss unter der Anzeigetafel (Review Version-Fix R1) */}
       <AwaitingServerCopyLine tournamentId={tournamentId} />
       {/* H4-12: ruhige Hinweise zum Hallen-Lautsprecher (@HT-034, @HT-036, @HT-040, @HT-050); erscheinen nur mit eingerichtetem Lautsprecher am Feld */}
-      <CockpitHallHinweis tournamentId={tournamentId} feldId={feldId} zustand={zustand} kannSteuern={!readOnly} />
+      <CockpitHallHinweis tournamentId={tournamentId} feldId={feldId} zustand={zustand} kannSteuern={!readOnly} verdeckt={verdeckt} />
       {/* Task R2: Read-Only-Banner — nur bei fehlender Berechtigung, nicht bei beendetem Spiel und nicht bei fremd gesteuertem Feld (B-49: Zeile in der Leiste). */}
       {readOnly && !fremdGesteuert && (
         <div className={shell.readOnlyBanner} data-testid="cockpit-readonly-banner" role="status">

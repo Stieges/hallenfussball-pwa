@@ -19,7 +19,8 @@ const GROESSEN = [
 ] as const;
 const REIHE = ['foul-button-home', 'penalty-button-home', 'card-button-home', 'foul-button-away', 'penalty-button-away', 'card-button-away'] as const;
 const KEINE_ZEILE = ['ohne', 'bereit', 'pruefen', 'eigen'] as const;
-const STOERUNG: Record<'feld2' | 'ton', string> = { feld2: 'Lautsprecher Feld 2 nicht bereit', ton: 'Ton nicht aktiv – hier klicken' };
+// „ton“ (eigenes Gerät für Feld 1) steht seit H4-18 nicht mehr als Pille im Kopf (der Kasten zeigt es, hallenton-cockpit-kopf-h4-18.spec.ts); die Pille „Ton nicht aktiv“ steht noch bei „feld2ton“ (Gerät nur für Feld 2, @HT-059 Zeile 5)
+const STOERUNG: Record<'feld2' | 'feld2ton', string> = { feld2: 'Lautsprecher Feld 2 nicht bereit', feld2ton: 'Ton nicht aktiv – hier klicken' };
 const ZEILE = '[data-testid="hallenton-status-zeile"]';
 
 /** Hängt die Messung an `messwerte.jsonl` im Bilderordner (nur wenn H417_BILDER gesetzt ist). */
@@ -98,7 +99,7 @@ test.describe('@HT-059 H4-17 Cockpit: Statuszeile nur bei Störungen (Prüfstand
           expect(await hartBefunde(page, g.art), 'kein HART-Befund der visuellen Messung').toEqual([]);
         });
       }
-      for (const fall of ['feld2', 'ton'] as const) {
+      for (const fall of ['feld2', 'feld2ton'] as const) {
         test(`@HT-059 ${fall} ${g.name}, ${thema}: nur die Störungspille steht, Pille ≥ 44 px, nichts läuft über`, async ({ page }, testInfo) => {
           await oeffne(page, fall, g, thema);
           const zeile = page.locator(ZEILE);

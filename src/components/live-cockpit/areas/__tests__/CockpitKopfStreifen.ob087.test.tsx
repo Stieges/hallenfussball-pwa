@@ -30,7 +30,7 @@ function zeige(authRequired: boolean, adresse = '/tournament/t1/live') {
           path="*"
           element={(
             <CockpitKopfStreifen
-              tournamentId="t1" matchId="m1" feldId="field-1" zustand="laeuft" readOnly={false} fremdGesteuert={false}
+              tournamentId="t1" matchId="m1" feldId="field-1" zustand="laeuft" verdeckt={false} readOnly={false} fremdGesteuert={false}
               outboxStatus={{ ...emptyOutboxStatus(), authRequired }} onOutboxReload={vi.fn()} nurZusehen={null}
             />
           )}

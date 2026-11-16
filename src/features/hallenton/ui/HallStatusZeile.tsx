@@ -12,11 +12,13 @@ import type { StatusEintrag } from '../../../components/ui/molecules/statusZeile
 import { AuthContext } from '../../auth/context/authContextInstance';
 import { useCan } from '../../auth/hooks/useCan';
 import { hallAnzeige, type HallAnzeige } from '../hallAnzeige';
+import { hallAnzeigeOhneGezeigtenKasten } from '../hallAnzeigeCockpit';
 import { useHallLautsprecher } from '../useHallLautsprecher';
 import { useLaufendeSpiele } from '../useLaufendeSpiele';
 import { useAnderesFensterTont } from '../useAnderesFensterTont';
 import { useHallStatus } from '../useHallStatus';
 import { abgemeldeteFelder, baueStatusEintraege, hallentonZiel } from './hallStatusEintraege';
+import { useCockpitKaesten } from './CockpitKastenOrt';
 import { useStatusZeileHost } from './StatusZeileOrt';
 
 export interface HallStatusZeileProps {
@@ -25,7 +27,10 @@ export interface HallStatusZeileProps {
   ohneLautsprecher?: boolean;
   /** Eintrag der Probe-Sitzung (`rang: 'probe'`); `null` = keine Probe. */
   probe?: StatusEintrag | null;
-  /** Cockpit (@HT-059): nur Störungen (und die Probe); „bereit“ samt „Prüfen“ und Hinweise entfallen. Die Kopfzeile bleibt Host. */
+  /**
+   * Cockpit (@HT-059): nur Störungen (und die Probe); „bereit“ samt „Prüfen“ und Hinweise entfallen, ebenso „Status unbekannt“ und eine Störung des
+   * gezeigten Felds, die der Kasten unter der Tafel schon zeigt (H4-18). Die Kopfzeile bleibt Host.
+   */
   nurStoerungen?: boolean;
 }
 
@@ -58,7 +63,7 @@ export function HallStatusZeileAnsicht({ anzeige, tournamentId, tonAktivieren, o
   const navigate = useNavigate();
   const eintraege = useMemo(() => {
     const alle = baueStatusEintraege(anzeige, { t, ziel: hallentonZiel(tournamentId), tonAktivieren, ohneLautsprecher, abgemeldet, probe });
-    return nurStoerungen ? alle.filter((e) => e.rang === 'stoerung' || e.rang === 'probe') : alle;
+    return nurStoerungen ? alle.filter((e) => (e.rang === 'stoerung' || e.rang === 'probe') && e.id !== 'statusUnbekannt') : alle;
   }, [anzeige, t, tournamentId, tonAktivieren, ohneLautsprecher, abgemeldet, probe, nurStoerungen]);
   return (
     <StatusZeile
@@ -96,5 +101,8 @@ function HallStatusZeileMitRecht({ tournamentId, ohneLautsprecher = false, probe
   );
   const aktivieren = useCallback(() => { void tonAktivieren(); }, [tonAktivieren]);
   const abgemeldet = useMemo(() => abgemeldeteFelder(lautsprecher.abgeloest), [lautsprecher.abgeloest]);
-  return <HallStatusZeileAnsicht anzeige={anzeige} tournamentId={tournamentId} tonAktivieren={aktivieren} ohneLautsprecher={ohneLautsprecher} abgemeldet={abgemeldet} probe={probe} nurStoerungen={nurStoerungen} />;
+  // Nur im Cockpit (H4-18): was der Kasten unter der Tafel zeigt, steht nicht zusätzlich als Pille im Kopf
+  const kaesten = useCockpitKaesten(tournamentId);
+  const sichtbar = useMemo(() => (nurStoerungen ? hallAnzeigeOhneGezeigtenKasten(anzeige, kaesten) : anzeige), [nurStoerungen, anzeige, kaesten]);
+  return <HallStatusZeileAnsicht anzeige={sichtbar} tournamentId={tournamentId} tonAktivieren={aktivieren} ohneLautsprecher={ohneLautsprecher} abgemeldet={abgemeldet} probe={probe} nurStoerungen={nurStoerungen} />;
 }
