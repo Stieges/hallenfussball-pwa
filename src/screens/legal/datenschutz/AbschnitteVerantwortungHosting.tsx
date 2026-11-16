@@ -31,11 +31,11 @@ export function AbschnitteVerantwortungHosting() {
       <Section number={2} title="Das Wichtigste in Kürze">
         <BulletList
           items={[
-            <><Strong>Zuschauer</Strong> brauchen kein Konto. Ich speichere über dich keinen Namen und keine Kennung. Dein Gerät merkt sich nur, was du selbst auswählst („Mein Team“), und den letzten Spielstand für den Fall, dass das Netz ausfällt.</>,
+            <><Strong>Zuschauer</Strong> brauchen kein Konto. Ich speichere über dich keinen Namen und kein Konto. Technisch fallen nur die Angaben aus Abschnitt 3 an. Dein Gerät merkt sich nur, was du selbst auswählst („Mein Team“), und den letzten Spielstand für den Fall, dass das Netz ausfällt.</>,
             <><Strong>Turnierleitung und Co-Admins</Strong> haben ein Konto mit E-Mail-Adresse.</>,
             <><Strong>Helfer</Strong> melden sich ohne Konto mit einem selbst gewählten Namen an.</>,
             <>Von <Strong>Spielerinnen und Spielern</Strong> speichert die App <Strong>keine Namen</Strong>. Es gibt nur die <Strong>Rückennummer</Strong> bei Toren, Karten, Zeitstrafen und Strafstößen.</>,
-            <>Es gibt <Strong>keine Werbung, keine Reichweitenmessung, kein Tracking und keine Aufzeichnung deiner Sitzung</Strong>.</>,
+            <>Es gibt <Strong>keine Werbung, kein Tracking und keine Aufzeichnung deiner Sitzung</Strong>. Die Zuschauer-Seite wird nur als Summe gezählt, ohne dich wiederzuerkennen (Abschnitt 4).</>,
             <>Die App lädt <Strong>keine Schriften und keine Skripte von Google</Strong>. Alle Schriften liegen bei der App selbst.</>,
             <>Die Datenbank liegt auf Servern in der <Strong>EU (Frankfurt am Main)</Strong>.</>,
           ]}
@@ -66,8 +66,11 @@ export function AbschnitteVerantwortungHosting() {
         <BulletList
           items={[
             'Ich erfahre über dich nur die technischen Angaben aus Abschnitt 3 und die Abrufe bei der Datenbank (Abschnitt 9).',
-            <>Angezeigt werden: Turniername, Datum, Halle, Mannschaften mit Logo und Farben, Spiele und Ergebnisse. Bei jedem Spiel stehen außerdem Tore, Karten, Zeitstrafen und Strafstöße, <Strong>nur mit Mannschaft und Rückennummer</Strong> (nie mit Namen). Hat der Veranstalter eine Kontaktperson freigegeben, steht sie dabei. Ist es für ein Turnier freigegeben, steht nach dem Abschluss im Endstand zusätzlich eine Torschützen-Liste, ebenfalls nur mit Mannschaft und Rückennummer; im Kindermodus erscheint sie nie. Bei Kinder- und Jugendturnieren kann die Turnierleitung den „Kindermodus“ einschalten. Dann werden keine Ergebnisse, Tabellen, Tore, Karten, Zeitstrafen und Strafstöße gezeigt.</>,
+            <>Angezeigt werden: Turniername, Datum, Halle, Mannschaften mit Logo und Farben, Spiele und Ergebnisse. Bei jedem Spiel stehen außerdem Tore, Karten, Zeitstrafen und Strafstöße, <Strong>nur mit Mannschaft und Rückennummer</Strong> (nie mit Namen). Hat der Veranstalter eine Kontaktperson freigegeben, steht sie dabei. Ist es für ein Turnier freigegeben, steht zusätzlich eine Torschützen-Liste da (zwischendurch aus den Toren beendeter Spiele und im Endstand), ebenfalls nur mit Mannschaft und Rückennummer; im Kindermodus erscheint sie nie. Bei Kinder- und Jugendturnieren kann die Turnierleitung den „Kindermodus“ einschalten. Dann werden keine Ergebnisse, Tabellen, Tore, Karten, Zeitstrafen und Strafstöße gezeigt.</>,
             'Wer einen Eintrag eingegeben hat, siehst du als Zuschauer nie.',
+            <><Strong>Zählung (nur Summen):</Strong> Der Server zählt, wie oft die Zuschauer-Seite eines öffentlichen Turniers geöffnet wird, und solange die Seite sichtbar ist, einmal pro Minute ein Lebenszeichen. Gespeichert wird nur eine Summe je Turnier und 5-Minuten-Fenster, aufgeteilt nach Zugangsweg (QR-Code, Link oder direkt), Geräteklasse (Handy, Tablet oder großer Bildschirm), „als App vom Startbildschirm geöffnet: ja oder nein“ sowie Betriebssystem- und Browser-Familie (zum Beispiel „ios“ und „safari“, nie eine Versionsnummer). Es gibt keine Zeile je Besucher, keine IP-Adresse und keine Kennung deines Geräts in dieser Zählung; ich kann dich daran nicht wiedererkennen.</>,
+            'Für die Zählung liest die Seite auf deinem Gerät nur die Bildschirmgröße, die Bedienart (Finger oder Maus) und ob sie als App geöffnet wurde, und leitet daraus die Geräteklasse ab. Diese Werte selbst verlassen das Gerät nicht. Betriebssystem und Browser leitet der Server aus der Kennung ab, die dein Browser bei jedem Aufruf ohnehin mitschickt. Auf deinem Gerät wird dafür nichts gespeichert.',
+            'Zweck der Zählung: Ich will wissen, wie viele Menschen die Zuschauer-Seite nutzen und auf welchem Weg sie sie erreichen. Die Zahlen sind in der App nicht sichtbar; nur ich lese sie direkt in der Datenbank. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der Auswertung der Nutzung). Gezählt wird nur die öffentliche Zuschauer-Seite, nicht der Hallenmonitor, das Cockpit oder die Verwaltung. Die Summen werden mit dem Turnier gelöscht (Abschnitt 11).',
             'Auf deinem Gerät wird gespeichert, was in Abschnitt 14 steht. Für die Zuschauer-Seite sind das deine Auswahl „Mein Team“, der zuletzt geladene Turnierstand und der Zwischenspeicher der App.',
           ]}
         />

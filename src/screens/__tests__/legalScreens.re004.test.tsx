@@ -79,7 +79,7 @@ describe('@RE-004 Betreiberangaben in der Datenschutzerklärung', () => {
     const titel = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
     expect(titel).toEqual([
       '1. Wer ist verantwortlich?', '2. Das Wichtigste in Kürze', '3. Aufruf der App (Hosting)', '4. Zuschauer-Seite (per QR-Code oder Link)',
-      '5. Konto für Turnierleitung und Co-Admins', '6. Helfer am Turniertag', '7. Turnierdaten (Mannschaften, Spiele, Ergebnisse)', '8. Hallenmonitore',
+      '5. Konto für Turnierleitung und Co-Admins', '6. Helfer am Turniertag', '7. Turnierdaten (Mannschaften, Spiele, Ergebnisse)', '8. Hallenmonitore und Hallen-Lautsprecher',
       '9. Datenbank und Anmeldung (Supabase)', '10. Fehlerberichte (Sentry)', '11. Wie lange Daten gespeichert werden', '12. Kinder und Jugendliche',
       '13. Deine Rechte', '14. Speichern auf deinem Gerät (§ 25 TDDDG)', '15. Änderungen',
     ]);
@@ -97,5 +97,68 @@ describe('@RE-004 Betreiberangaben in der Datenschutzerklärung', () => {
   it('Aufsichtsbehörde kommt aus der Konfiguration und ist verlinkt', () => {
     mitRouter(<DatenschutzScreen onBack={vi.fn()} />);
     expect(screen.getByRole('link', { name: 'https://www.lda.bayern.de' })).toHaveAttribute('href', 'https://www.lda.bayern.de');
+  });
+});
+
+describe('@RE-004 Datenschutzerklärung sagt, was die App wirklich tut (Prüfung vom 14.11., Befunde 7, 8, 9, 10, 11, 16, 17, 18, 20)', () => {
+  const abschnitt = (nr: number) => {
+    mitRouter(<DatenschutzScreen onBack={vi.fn()} />);
+    return screen.getByTestId(`datenschutz-section-${nr}`).textContent ?? '';
+  };
+
+  it('Zuschauer-Zählung (Abschnitt 4): nur Summen, ohne Wiedererkennung, Familien statt Kennung, Rechtsgrundlage, Löschung mit dem Turnier', () => {
+    const text = abschnitt(4);
+    expect(text).toContain('Gespeichert wird nur eine Summe je Turnier und 5-Minuten-Fenster');
+    expect(text).toContain('Betriebssystem- und Browser-Familie');
+    expect(text).toContain('nie eine Versionsnummer');
+    expect(text).toContain('keine IP-Adresse und keine Kennung deines Geräts in dieser Zählung; ich kann dich daran nicht wiedererkennen');
+    expect(text).toContain('die Bildschirmgröße, die Bedienart (Finger oder Maus) und ob sie als App geöffnet wurde');
+    expect(text).toContain('Auf deinem Gerät wird dafür nichts gespeichert');
+    expect(text).toContain('Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO');
+    expect(text).toContain('Die Summen werden mit dem Turnier gelöscht (Abschnitt 11)');
+  });
+
+  it('Gegenbeispiel: „keine Reichweitenmessung“ steht nicht mehr da, und „keine Kennung“ wird nicht mehr pauschal versprochen', () => {
+    const { container } = mitRouter(<DatenschutzScreen onBack={vi.fn()} />);
+    const text = container.textContent ?? '';
+    expect(text).not.toContain('keine Reichweitenmessung');
+    expect(text).not.toContain('keinen Namen und keine Kennung');
+    expect(screen.getByTestId('datenschutz-section-2').textContent).toContain('keinen Namen und kein Konto. Technisch fallen nur die Angaben aus Abschnitt 3 an.');
+  });
+
+  it('Hallenton (Abschnitt 8): was gespeichert wird, öffentliche Tondatei, Mikrofon-Satz', () => {
+    const text = abschnitt(8);
+    expect(text).toContain('Hallen-Lautsprecher (Hallenton)');
+    expect(text).toContain('der Name, den die Turnierleitung dem Gerät gibt');
+    expect(text).toContain('für jeden abrufbar, der die lange, nicht erratbare Adresse der Datei kennt');
+    expect(text).toContain('fragt dein Browser einmal nach dem Mikrofon. Die App nimmt nichts auf. Sie gibt das Mikrofon sofort wieder frei und liest nur die Namen der Audio-Ausgänge');
+    expect(text).toContain('Die Namen bleiben auf deinem Gerät und werden nicht an einen Server gesendet');
+  });
+
+  it('Schiedsrichter und Helfer-Sicht (Abschnitte 6 und 7)', () => {
+    expect(abschnitt(7)).toContain('Auf den Hallenmonitoren erscheinen sie nur, wenn die Turnierleitung das einstellt; auf der Zuschauer-Seite nie.');
+    expect(screen.getByTestId('datenschutz-section-7').textContent).toContain('Schreib dort nichts hinein, was Helfer nicht lesen sollen');
+    expect(screen.getByTestId('datenschutz-section-6').textContent).toContain('interne Notizen und die Namen der Schiedsrichter');
+  });
+
+  it('Supabase in Singapur (Abschnitt 9)', () => {
+    expect(abschnitt(9)).toContain('Supabase selbst hat seinen Sitz in Singapur. Für Singapur gibt es keinen Angemessenheitsbeschluss der EU-Kommission');
+  });
+
+  it('Art. 13 Abs. 2 e und f und Widerspruchsrecht (Abschnitt 13)', () => {
+    const text = abschnitt(13);
+    expect(text).toContain('Dein Widerspruchsrecht:');
+    expect(text).toContain('Musst du Daten angeben?');
+    expect(text).toContain('Die App trifft keine automatisierten Entscheidungen über dich und bildet keine Profile.');
+  });
+
+  it('Speicherdauer und Gerätespeicher stimmen mit der App überein (Abschnitte 11, 14, 6, 10)', () => {
+    expect(abschnitt(11)).toContain('beim nächsten Öffnen der Zuschauer-Seite gelöscht');
+    expect(screen.getByTestId('datenschutz-section-11').textContent).toContain('Zahlen der Zuschauer-Zählung (nur Summen) und Daten des Hallen-Lautsprechers');
+    expect(screen.getByTestId('datenschutz-section-11').textContent).not.toContain('nur bis zum Ende des Turniertags');
+    expect(screen.getByTestId('datenschutz-section-14').textContent).toContain('Hallen-Lautsprecher: zugeordnete Spielfelder und Gerätename');
+    expect(screen.getByTestId('datenschutz-section-6').textContent).toContain('der Gerätetyp (Handy, Tablet oder Computer');
+    expect(screen.getByTestId('datenschutz-section-6').textContent).not.toContain('iPhone');
+    expect(screen.getByTestId('datenschutz-section-10').textContent).toContain('die Kennung des Kontos (eine zufällige Zeichenfolge, keine E-Mail, kein Name)');
   });
 });

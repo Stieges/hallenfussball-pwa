@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { getUnfilledPlaceholders, isPlaceholder, type LegalConfig } from '../legal';
+import { LEGAL_CONFIG, getUnfilledPlaceholders, isPlaceholder, type LegalConfig } from '../legal';
 
 const voll: LegalConfig = {
   name: 'Erika Mustermann', careOf: '', street: 'Hauptstraße 1', city: '12345 Musterstadt', email: 'erika@example.org',
@@ -64,4 +64,24 @@ describe('@RE-004 eine einzige Stelle', () => {
       .filter((pfad) => /\[(VORNAME NACHNAME|STRASSE NR|PLZ ORT|E-MAIL|c\/o NAME)\]/.test(readFileSync(pfad, 'utf8')));
     expect(treffer.map((pfad) => relative(wurzel, pfad))).toEqual([]);
   }, 60_000); // liest den ganzen Produktcode: bei Last (parallele Läufe) länger als die üblichen 5 s
+});
+
+describe('@RE-004 echte Betreiberangaben in der Konfiguration', () => {
+  it('Name, c/o-Dienstadresse, Straße und Ort sind eingetragen; Aufsichtsbehörde bleibt das BayLDA', () => {
+    expect(LEGAL_CONFIG.name).toBe('Daniel Stiegler');
+    expect(LEGAL_CONFIG.careOf).toBe('c/o MDC#2444');
+    expect(LEGAL_CONFIG.street).toBe('Welserstraße 3');
+    expect(LEGAL_CONFIG.city).toBe('87463 Dietmannsried');
+    expect(LEGAL_CONFIG.supervisoryAuthority.name).toContain('BayLDA');
+  });
+
+  it('die c/o-Zeile mit „#“ gilt nicht als Platzhalter; offen darf höchstens die E-Mail-Adresse sein', () => {
+    expect(isPlaceholder(LEGAL_CONFIG.careOf)).toBe(false);
+    const offen = getUnfilledPlaceholders(LEGAL_CONFIG);
+    expect(offen.filter((feld) => feld !== 'email')).toEqual([]);
+  });
+
+  it('Anschrift mit c/o-Zeile vollständig, E-Mail noch Platzhalter: gemeldet wird genau „email“ (Bau bricht ab)', () => {
+    expect(getUnfilledPlaceholders({ ...voll, careOf: 'c/o Büro 123', email: '[E-MAIL]' })).toEqual(['email']);
+  });
 });

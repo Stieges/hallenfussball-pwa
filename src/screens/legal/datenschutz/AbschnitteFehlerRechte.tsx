@@ -12,19 +12,21 @@ import { LEGAL_CONFIG } from '../../../config/legal';
 
 const SPEICHERDAUER: string[][] = [
   ['Turnier mit Spielen, Ereignissen, Rückennummern, Helfern und Monitor-Daten', 'spätestens 6 Monate nach dem Turnier von mir gelöscht oder anonymisiert. Endergebnisse und Tabellen ohne Rückennummern können länger bleiben, wenn der Veranstalter das Turnier behalten will.'],
+  ['Zahlen der Zuschauer-Zählung (nur Summen) und Daten des Hallen-Lautsprechers', 'gehören zum Turnier, siehe erste Zeile'],
   ['Konto', 'bis zur Löschung auf Anfrage'],
   ['Hosting-Protokolle (Vercel)', 'kurz, nach den Vorgaben von Vercel'],
   ['Datenbank-Protokolle (Supabase)', 'kurz, nach den Vorgaben von Supabase'],
   ['Fehlerberichte (Sentry)', 'höchstens 90 Tage'],
-  ['Daten auf deinem Gerät', 'bis du sie im Browser löschst. Der Zuschauer-Stand nur bis zum Ende des Turniertags.'],
+  ['Daten auf deinem Gerät', 'bis du sie im Browser löschst. Der Zuschauer-Stand wird an einem späteren Tag nicht mehr angezeigt und beim nächsten Öffnen der Zuschauer-Seite gelöscht.'],
 ];
 
 const GERAETESPEICHER: string[][] = [
   ['Anmeldung (Sitzungs-Token) und zwischengespeichertes Profil', 'lokaler Speicher', 'damit du angemeldet bleibst'],
   ['Geräte-Kennung', 'lokaler Speicher', 'damit immer nur ein Gerät ein Spielfeld steuert und Einträge zugeordnet werden'],
   ['Helfer-Zugang', 'lokaler Speicher', 'damit Helfer nicht jedes Mal neu anfragen müssen'],
+  ['Hallen-Lautsprecher: zugeordnete Spielfelder und Gerätename, Marken zu Abmeldung und Fehlern (nur am Lautsprecher-Gerät)', 'lokaler Speicher', 'damit das Gerät nach dem Neuladen weiter Ton gibt'],
   ['„Mein Team“ (Zuschauer)', 'lokaler Speicher', 'deine eigene Auswahl'],
-  ['Letzter Turnierstand (Zuschauer)', 'lokaler Speicher', 'Anzeige ohne Netz, verworfen am Ende des Turniertags'],
+  ['Letzter Turnierstand (Zuschauer)', 'lokaler Speicher', 'Anzeige ohne Netz, an einem späteren Tag nicht mehr angezeigt'],
   ['Turnierdaten für den Offline-Betrieb', 'Datenbank im Browser (IndexedDB)', 'damit Turnierleitung und Helfer ohne Netz weiterarbeiten'],
   ['App-Dateien und kurzzeitig zwischengespeicherte Abrufe (bis zu 1 Stunde)', 'Zwischenspeicher des Service Workers', 'schnelles Laden und Offline-Betrieb'],
   ['Darstellung: Thema, Schriftgröße, Kontrast, Sprache, Entwürfe von Formularen, Einstellung zu Fehlerberichten', 'lokaler Speicher', 'deine eigenen Einstellungen'],
@@ -43,7 +45,7 @@ export function AbschnitteFehlerRechte() {
         </Paragraph>
         <BulletList
           items={[
-            'Inhalt: Fehlermeldung und technischer Ablauf, aufgerufene Seite (ohne Zugangscodes), Browser, Betriebssystem, App-Version, einzelne Leistungsmessungen (nur ein kleiner Teil der Aufrufe) und bei Angemeldeten eine zufällige Nutzerkennung (keine E-Mail, kein Name). Bei jedem Start gehen einmal technische Angaben zum Zwischenspeicher der App mit.',
+            'Inhalt: Fehlermeldung und technischer Ablauf, aufgerufene Seite (ohne Zugangscodes), Browser, Betriebssystem, App-Version, einzelne Leistungsmessungen (nur ein kleiner Teil der Aufrufe) und bei Angemeldeten die Kennung des Kontos (eine zufällige Zeichenfolge, keine E-Mail, kein Name). Bei jedem Start gehen einmal technische Angaben zum Zwischenspeicher der App mit.',
             <>Die <Strong>IP-Adresse wird nicht gespeichert.</Strong> Technisch erreicht sie Sentry beim Empfang trotzdem kurz, wird aber nicht abgelegt. Es gibt <Strong>keine Aufzeichnung deiner Bildschirm-Sitzung.</Strong></>,
             'Zweck: Fehler finden und beheben, damit die App am Turniertag zuverlässig läuft',
             'Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer funktionierenden App). Die Fehlerberichte sind eingeschaltet, ohne dass du zustimmen musst.',
@@ -86,6 +88,15 @@ export function AbschnitteFehlerRechte() {
           Schreib dazu an <Betreiberemail />. Bei Turnierdaten kannst du dich auch direkt an den Veranstalter wenden.
         </Paragraph>
         <Paragraph>
+          <Strong>Dein Widerspruchsrecht:</Strong> Soweit ich Daten auf Grundlage berechtigter Interessen verarbeite (Art. 6 Abs. 1 lit. f DSGVO),
+          kannst du dem aus Gründen, die sich aus deiner besonderen Situation ergeben, jederzeit widersprechen (Art. 21 DSGVO).
+        </Paragraph>
+        <Paragraph>
+          <Strong>Musst du Daten angeben?</Strong> Für ein Konto brauche ich deine E-Mail-Adresse, sonst kannst du keine Turniere verwalten.
+          Helfer müssen einen Namen eingeben. Zuschauer geben nichts an. Die App trifft keine automatisierten Entscheidungen über dich
+          und bildet keine Profile.
+        </Paragraph>
+        <Paragraph>
           <Strong>Beschwerde:</Strong> Du kannst dich bei einer Datenschutz-Aufsichtsbehörde beschweren (Art. 77 DSGVO). Für mich zuständig ist:
           <br />
           {behoerde.name}, {behoerde.address}, <ExternalLink href={behoerde.url}>{behoerde.url}</ExternalLink>
@@ -102,7 +113,8 @@ export function AbschnitteFehlerRechte() {
         <DataTable headers={['Eintrag', 'Wo', 'Wofür']} rows={GERAETESPEICHER} />
         <Paragraph>
           Du kannst alles jederzeit in den Browser-Einstellungen löschen („Websitedaten löschen“). Angemeldete Geräte müssen sich danach
-          neu anmelden, und nicht synchronisierte Eingaben können verloren gehen.
+          neu anmelden, und nicht synchronisierte Eingaben können verloren gehen. Auch das Lesen der Namen der Audio-Ausgänge am
+          Hallen-Lautsprecher (Abschnitt 8) geschieht nur auf deinen eigenen Klick.
         </Paragraph>
       </Section>
 
