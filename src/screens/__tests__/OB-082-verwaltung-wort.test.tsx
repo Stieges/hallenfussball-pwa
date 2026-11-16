@@ -7,6 +7,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import deTournament from '../../i18n/locales/de/tournament.json';
 import type { Tournament } from '../../types/tournament';
+import { Icons } from '../../components/ui/Icons';
 import { OHNE_EMOJI } from '../../test/symbolText';
 
 vi.unmock('i18next');
@@ -66,6 +67,9 @@ describe('@OB-038 Taste „Admin Center“ im Kopf des Spielplans', () => {
     expect(knopf.querySelector('svg')).not.toBeNull();
     expect(knopf).toHaveTextContent(wort);
     expect(knopf.textContent).toBe(wort);
+    // das Zahnrad (nicht der frühere Strahlenkranz)
+    const { container } = render(<Icons.Settings />);
+    expect(knopf.querySelector('svg')!.innerHTML).toBe(container.querySelector('svg')!.innerHTML);
     expect(knopf.textContent).not.toMatch(OHNE_EMOJI);
   });
 });
