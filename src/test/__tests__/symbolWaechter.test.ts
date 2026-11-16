@@ -7,28 +7,37 @@
  * (Haken, Kreuz, Dreieck, Punkt, Menüpunkte, Briefumschlag, ein einzelnes ×); Pfeile und Trennpunkte im Fließtext sind Satzzeichen und bleiben erlaubt.
  *
  * Die Altstellen stehen mit der Zahl der Treffer je Datei in `symbolWaechterAusnahmen.ts`. Mehr Treffer als erlaubt: rot (neue Stelle –
- * stattdessen ein gezeichnetes Symbol aus `components/ui/Icons`, oder gar keins). Weniger: ebenfalls rot mit dem Hinweis „Liste anpassen“,
- * damit die Liste nur schrumpfen kann (die Zahl in der Liste senken oder den Eintrag streichen).
+ * stattdessen ein gezeichnetes Symbol aus `components/ui/Icons`, oder gar keins). Weniger: nur ein Hinweis „Liste anpassen“ in der Testausgabe
+ * (nie rot, damit parallele Aufräum-PRs main nicht brechen).
  */
 import { describe, expect, it } from 'vitest';
 import { SYMBOL_AUSNAHMEN } from '../symbolWaechterAusnahmen';
-import { trefferImJson, trefferImQuelltext, zaehleAlles } from '../symbolScan';
+import { trefferImJson, trefferImQuelltext, vergleiche, zaehleAlles } from '../symbolScan';
 
 const gezaehlt = zaehleAlles();
 
 describe('@OB-038 Wächter: kein Emoji und kein Symbolersatz in Oberflächentexten', () => {
+  const { zuViel, zuWenig } = vergleiche(gezaehlt, SYMBOL_AUSNAHMEN);
+
   it('keine Datei hat mehr Treffer, als die Liste der Altstellen erlaubt (neue Stellen werden abgewiesen)', () => {
-    const zuViel = [...gezaehlt]
-      .filter(([datei, n]) => n > (SYMBOL_AUSNAHMEN[datei] ?? 0))
-      .map(([datei, n]) => `${datei}: ${n} Treffer, erlaubt ${SYMBOL_AUSNAHMEN[datei] ?? 0}`);
     expect(zuViel, 'Neue Emoji oder Textzeichen als Symbol: ein gezeichnetes Symbol aus components/ui/Icons nehmen (oder nur das Wort)').toEqual([]);
   });
 
-  it('die Liste der Altstellen schrumpft: Treffer unter dem Eintrag verlangen „Liste anpassen“', () => {
-    const zuWenig = Object.entries(SYMBOL_AUSNAHMEN)
-      .filter(([datei, erlaubt]) => (gezaehlt.get(datei) ?? 0) < erlaubt)
-      .map(([datei, erlaubt]) => `${datei}: nur noch ${gezaehlt.get(datei) ?? 0} Treffer, in der Liste ${erlaubt}`);
-    expect(zuWenig, 'Liste anpassen: Zahl senken oder Eintrag streichen in src/test/symbolWaechterAusnahmen.ts').toEqual([]);
+  it('Hinweis (nie rot): Einträge der Liste, die gesenkt oder gestrichen werden können', () => {
+    if (zuWenig.length > 0) {
+      // Hinweis in der Testausgabe, kein Fehler: sonst machten zwei parallele Aufräum-PRs main rot
+      console.warn(`@OB-038 Liste anpassen (src/test/symbolWaechterAusnahmen.ts), diese Einträge können gesenkt werden:\n${zuWenig.join('\n')}`);
+    }
+    expect(true).toBe(true);
+  });
+
+  it('Vergleich: weniger Treffer als erlaubt bleibt grün (nur Hinweis), mehr Treffer ist rot, eine neue Datei ist rot', () => {
+    const liste = { 'a.tsx': 3 };
+    expect(vergleiche(new Map([['a.tsx', 2]]), liste)).toEqual({ zuViel: [], zuWenig: ['a.tsx: nur noch 2 Treffer, in der Liste 3'] });
+    expect(vergleiche(new Map(), liste).zuViel).toEqual([]);
+    expect(vergleiche(new Map([['a.tsx', 3]]), liste)).toEqual({ zuViel: [], zuWenig: [] });
+    expect(vergleiche(new Map([['a.tsx', 4]]), liste).zuViel).toHaveLength(1);
+    expect(vergleiche(new Map([['b.tsx', 1]]), liste).zuViel).toEqual(['b.tsx: 1 Treffer, erlaubt 0']);
   });
 
   it('Probe des Zählers: ein Emoji im Text, im JSX, im Attribut und in der Schablone wird gefunden, Satzzeichen nicht', () => {

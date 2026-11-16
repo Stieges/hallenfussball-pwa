@@ -74,3 +74,17 @@ export function zaehleAlles(): Map<string, number> {
   return zahlen;
 }
 
+
+/** Vergleicht die gezählten Treffer mit der Liste der Altstellen: `zuViel` (rot) = mehr als erlaubt, `zuWenig` (nur Hinweis) = Eintrag kann gesenkt werden. */
+export function vergleiche(
+  gezaehlt: ReadonlyMap<string, number>,
+  ausnahmen: Readonly<Record<string, number>>,
+): { zuViel: string[]; zuWenig: string[] } {
+  const zuViel = [...gezaehlt]
+    .filter(([datei, n]) => n > (ausnahmen[datei] ?? 0))
+    .map(([datei, n]) => `${datei}: ${n} Treffer, erlaubt ${ausnahmen[datei] ?? 0}`);
+  const zuWenig = Object.entries(ausnahmen)
+    .filter(([datei, erlaubt]) => (gezaehlt.get(datei) ?? 0) < erlaubt)
+    .map(([datei, erlaubt]) => `${datei}: nur noch ${gezaehlt.get(datei) ?? 0} Treffer, in der Liste ${erlaubt}`);
+  return { zuViel, zuWenig };
+}
