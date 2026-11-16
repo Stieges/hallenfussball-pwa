@@ -297,7 +297,11 @@ test.describe('Hallenton Störungen (zwei Geräte, lokaler Stack)', () => {
 
       await a.context.setOffline(false);
       await expect(a.page.getByTestId('hallenton-status-zeile')).toContainText('Lautsprecher Feld 1 bereit', { timeout: 40_000 });
-      await a.page.getByRole('button', { name: /Hallenton/ }).first().click();
+      // der Wechsel gleich nach dem Netz kann im Umbau der Seite untergehen: Tipp wiederholen, bis die Seite steht (kein fester Schlaf)
+      await expect(async () => {
+        await a.page.getByRole('button', { name: /Hallenton/ }).first().click();
+        await expect(a.page.getByTestId('hallenton-seite')).toBeVisible({ timeout: 5_000 });
+      }).toPass({ timeout: 40_000 });
       await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('bereit', { timeout: 40_000 });
       await expect(a.page.getByTestId('hallenton-kein-netz')).toHaveCount(0);
     } finally {
