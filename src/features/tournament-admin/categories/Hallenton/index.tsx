@@ -7,6 +7,8 @@ import { CategoryPage } from '../shared';
 import { HallentonSeite } from '../../../hallenton/ui/HallentonSeite';
 import { useBreakpoint } from '../../../../hooks/useBreakpoint';
 import { ADMIN_LAYOUT, getAdminCategory } from '../../constants/admin.constants';
+import { iconSizeValues } from '../../../../design-tokens';
+import { Icons } from '../../../../components/ui/Icons';
 import type { Tournament } from '../../../../types/tournament';
 
 interface HallentonCategoryProps {
@@ -18,7 +20,7 @@ export function HallentonCategory({ tournamentId, tournament }: HallentonCategor
   const kategorie = getAdminCategory('hallenton');
   const { isMobile } = useBreakpoint();
   return (
-    <CategoryPage icon={kategorie?.icon ?? '🔊'} title={kategorie?.label ?? 'Hallenton'} description={kategorie?.description}>
+    <CategoryPage icon={<Icons.Speaker size={iconSizeValues.md} />} title={kategorie?.label ?? 'Hallenton'} description={kategorie?.description}>
       <HallentonSeite tournamentId={tournamentId} felderAnzahl={tournament.numberOfFields} seitenleisteBreite={isMobile ? 0 : ADMIN_LAYOUT.sidebarWidth} />
     </CategoryPage>
   );

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect, useId, CSSProperties } from 'react';
-import { cssVars, displaySizes } from '../../design-tokens';
+import { cssVars, displaySizes, iconSizeValues } from '../../design-tokens';
+import { Icons } from './Icons';
 import { Button } from './Button';
 import { TeamAvatar } from './TeamAvatar';
 import { DialogSurface } from './molecules/DialogSurface';
@@ -282,7 +283,7 @@ export const LogoUploadDialog: React.FC<LogoUploadDialogProps> = ({
       <div style={headerStyles}>
         <h2 id={titleId} style={titleStyles}>Logo hochladen</h2>
         <button style={closeButtonStyles} onClick={onCancel} aria-label="Schließen">
-          ×
+          <Icons.X size={iconSizeValues.sm} />
         </button>
       </div>
 

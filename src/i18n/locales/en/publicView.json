@@ -62,7 +62,7 @@
     "liveWord": "Live"
   },
   "standings": {
-    "hidden": "🏆 Tables hidden",
+    "hidden": "Tables hidden",
     "bambini": "(Bambini mode enabled)"
   },
   "info": {
@@ -73,7 +73,7 @@
     "teams": "Teams:",
     "teamCount": "{{n}} teams",
     "theme": "Appearance",
-    "bambiTitle": "🔒 Bambini mode active",
+    "bambiTitle": "Bambini mode active",
     "hiddenScores": "Scores are not shown. ",
     "hiddenRankings": "Tables are not shown."
   },

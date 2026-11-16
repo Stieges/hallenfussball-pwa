@@ -3,7 +3,8 @@
  * Turnier-Details, Darstellung (Theme) und Bambini-Hinweis. Texte wörtlich übernommen; keine technische Kennung (kein Share-Code, @ZM-206).
  */
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../../design-tokens';
+import { cssVars, iconSizeValues } from '../../../design-tokens';
+import { Icons } from '../../../components/ui/Icons';
 import { Card } from '../../../components/ui/Card';
 import { BaseThemeSelector } from '../../settings/components/BaseThemeSelector';
 import { formatDateGerman } from '../../../utils/locationHelpers';
@@ -96,7 +97,8 @@ export const PublicInfoTab: React.FC<PublicInfoTabProps> = ({
             borderRadius: cssVars.borderRadius.md,
           }}
         >
-          <p style={{ color: cssVars.colors.warning, fontWeight: cssVars.fontWeights.medium }}>
+          <p style={{ color: cssVars.colors.warning, fontWeight: cssVars.fontWeights.medium, display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
+            <span aria-hidden="true" data-testid="public-info-bambini-icon" style={{ display: 'flex' }}><Icons.Lock size={iconSizeValues.sm} /></span>
             {t('info.bambiTitle')}
           </p>
           <p style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm, marginTop: cssVars.spacing.xs }}>

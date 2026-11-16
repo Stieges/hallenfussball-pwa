@@ -74,9 +74,11 @@ export const iconsAktion = {
     </svg>
   ),
 
+  /** Aktualisieren: offener Kreisbogen mit Pfeilspitze am Ende (Form wie „rotate-cw“ aus Feather, MIT); ersetzt die frühere Uhr (@OB-038). */
   Refresh: ({ size = 20, color = 'currentColor' }: IconProps) => (
-    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
-      <path d="M17 10a7 7 0 11-14 0 7 7 0 0114 0zM10 6v4l3 2" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+      <path d="M23 4v6h-6" />
     </svg>
   ),
 
@@ -116,10 +118,11 @@ export const iconsAktion = {
     </svg>
   ),
 
+  /** Einstellungen: Zahnrad mit 8 breiten, flachen Zähnen und Loch in der Mitte (ersetzt den Strahlenkranz, der wie eine Sonne wirkte, @OB-038). */
   Settings: ({ size = 20, color = 'currentColor' }: IconProps) => (
-    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
-      <circle cx="10" cy="10" r="3" stroke={color} strokeWidth="2" />
-      <path d="M10 1v2m0 14v2M19 10h-2M3 10H1m15.364-6.364l-1.414 1.414M5.05 14.95l-1.414 1.414m12.728 0l-1.414-1.414M5.05 5.05L3.636 3.636" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M10.47 5.37L10.56 2.91L13.44 2.91L13.53 5.37L15.60 6.23L17.41 4.56L19.44 6.59L17.77 8.40L18.63 10.47L21.09 10.56L21.09 13.44L18.63 13.53L17.77 15.60L19.44 17.41L17.41 19.44L15.60 17.77L13.53 18.63L13.44 21.09L10.56 21.09L10.47 18.63L8.40 17.77L6.59 19.44L4.56 17.41L6.23 15.60L5.37 13.53L2.91 13.44L2.91 10.56L5.37 10.47L6.23 8.40L4.56 6.59L6.59 4.56L8.40 6.23z" />
+      <circle cx="12" cy="12" r="2.8" />
     </svg>
   ),
 

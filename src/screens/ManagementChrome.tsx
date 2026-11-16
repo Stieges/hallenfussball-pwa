@@ -6,7 +6,7 @@
 import { useState, type CSSProperties, type ReactElement, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { borderWidths, cssVars, fontSizesMd3 } from '../design-tokens';
+import { borderWidths, cssVars, fontSizesMd3, iconSizeValues } from '../design-tokens';
 import { BottomNavigation, BottomSheet, BottomSheetItem, Icons } from '../components/ui';
 import type { BottomNavTab } from '../components/ui';
 import type { Tournament } from '../types/tournament';
@@ -144,7 +144,7 @@ export function ManagementHeader(p: ManagementHeaderProps): ReactElement {
           title={t('management.adminCenterTitle')}
           data-testid="management-admin-entry"
         >
-          <span aria-hidden="true">⚙️</span>
+          <span aria-hidden="true" style={{ display: 'flex' }}><Icons.Settings size={iconSizeValues.xs} /></span>
           <span>{isMobile ? t('management.adminEntry') : t('management.adminCenter')}</span>
         </button>
         {/* A-08f3e3 (M-1): wartende/nicht übernommene Einträge; im Live-Tab zeigt sie das Cockpit selbst */}

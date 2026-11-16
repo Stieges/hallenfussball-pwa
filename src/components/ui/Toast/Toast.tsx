@@ -5,8 +5,9 @@
  * Supports success, error, warning, and info variants.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { iconSizeValues } from '../../../design-tokens';
 import { Icons } from '../Icons';
 import styles from './Toast.module.css';
 
@@ -37,11 +38,12 @@ export interface ToastProps {
   };
 }
 
-const icons: Record<ToastType, string> = {
-  success: '\u2713', // ✓
-  error: '\u2717',   // ✗
-  warning: '\u26A0', // ⚠
-  info: '\u2139',    // ℹ
+/** Gezeichnete Symbole statt Textzeichen (@OB-038); sie erben die Textfarbe der Meldung. */
+const icons: Record<ToastType, ReactNode> = {
+  success: <Icons.Check size={iconSizeValues.sm} />,
+  error: <Icons.X size={iconSizeValues.sm} />,
+  warning: <Icons.AlertTriangle size={iconSizeValues.sm} />,
+  info: <Icons.Info size={iconSizeValues.sm} />,
 };
 
 const AUSBLENDEN_MS = 300;
@@ -119,7 +121,7 @@ export const Toast: React.FC<ToastProps> = ({
       role="alert"
       aria-live="polite"
     >
-      <span className={styles.icon} aria-hidden="true">
+      <span className={styles.icon} aria-hidden="true" data-testid="toast-icon">
         {icons[type]}
       </span>
       <span className={styles.message}>{message}</span>
@@ -142,7 +144,7 @@ export const Toast: React.FC<ToastProps> = ({
         aria-label={t('toast.dismissAriaLabel')}
         type="button"
       >
-        <Icons.X size={16} />
+        <Icons.X size={iconSizeValues.xs} />
       </button>
       {note !== null && <span className={styles.note} data-testid="toast-action-note">{note}</span>}
     </div>

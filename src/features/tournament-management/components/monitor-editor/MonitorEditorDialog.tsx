@@ -5,7 +5,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { dialogWidths } from '../../../../design-tokens';
+import { dialogWidths, iconSizeValues } from '../../../../design-tokens';
+import { Icons } from '../../../../components/ui/Icons';
 import type { Tournament } from '../../../../types/tournament';
 import type { SlideType, TournamentMonitor } from '../../../../types/monitor';
 import { useMonitors, useSponsors } from '../../../../hooks';
@@ -147,7 +148,7 @@ export function MonitorEditorDialog({ tournament, stored, onTournamentUpdate, on
         header={
           <div style={headerStyle}>
             <h2 id={titleId} style={titleStyle}>{stored.name}</h2>
-            <button style={closeButtonStyle} onClick={requestClose} aria-label={t('monitorEditor.close')} data-testid="monitor-editor-close">✕</button>
+            <button style={closeButtonStyle} onClick={requestClose} aria-label={t('monitorEditor.close')} data-testid="monitor-editor-close"><Icons.X size={iconSizeValues.sm} /></button>
           </div>
         }
         footer={

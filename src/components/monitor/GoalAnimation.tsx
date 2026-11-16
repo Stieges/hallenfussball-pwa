@@ -16,6 +16,7 @@ import { cssVars, colors } from '../../design-tokens'
 import { GoalEventInfo } from '../../hooks/useLiveMatches';
 import { useSportTerms } from '../../hooks/useSportTerms';
 import { SportId } from '../../config/sports';
+import { TorBallGrafik } from './TorBallGrafik';
 import { monitorTeamName } from '../../core/models/teamNameAbbrev';
 
 export interface GoalAnimationProps {
@@ -156,8 +157,11 @@ export const GoalAnimation: React.FC<GoalAnimationProps> = ({
     textAlign: 'center',
   };
 
+  // Die Tor-Einblendung ist eine Animation, kein Symbol – eigene Grafik erlaubt (Entscheidung 16.11.); Überarbeitung der Animation nach dem Turnier.
+  // Die Grafik (`TorBallGrafik`, Noto Emoji, Apache-2.0) füllt den Kasten, der wie bisher mit der Fensterbreite wächst.
   const goalIconStyle: CSSProperties = {
-    fontSize: 'clamp(60px, 8vw, 100px)',
+    width: 'clamp(60px, 8vw, 100px)',
+    height: 'clamp(60px, 8vw, 100px)',
   };
 
   const goalTextStyle: CSSProperties = {
@@ -192,7 +196,7 @@ export const GoalAnimation: React.FC<GoalAnimationProps> = ({
           style={celebrationContainerStyle}
           className="goal-celebration-box"
         >
-          <div className="goal-icon" style={goalIconStyle}>⚽</div>
+          <div className="goal-icon" style={goalIconStyle} aria-hidden="true" data-testid="goal-icon"><TorBallGrafik /></div>
           <div style={goalTextStyle}>{term('terminology.goalAnimationText')}</div>
           <div data-teamname style={teamNameStyle}>{monitorTeamName(currentEvent.teamName)}</div>
           <div style={scoreStyle}>
