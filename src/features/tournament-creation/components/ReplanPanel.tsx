@@ -15,6 +15,8 @@ import type { ReplanPreviewResult } from '../utils/replan';
 import { formatReplanTime } from '../utils/replan';
 import { Dialog } from '../../../components/dialogs/Dialog';
 import { Button } from '../../../components/ui';
+import { HostSummaryLines } from './HostSummaryLines';
+import { hostSummary, type HostSummaryInput } from '../utils/hostOpeningSummary';
 import { cssVars } from '../../../design-tokens';
 
 export interface ReplanPanelProps {
@@ -22,6 +24,8 @@ export interface ReplanPanelProps {
   preview: ReplanPreviewResult;
   previousMatches: Match[];
   teams: Team[];
+  /** Markierungen und Eröffnung des geänderten Turniers (@W4-034, @W4-049): das Fenster nennt sie vor dem Bestätigen. */
+  hostInput?: HostSummaryInput;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -53,6 +57,7 @@ export const ReplanPanel: React.FC<ReplanPanelProps> = ({
   preview,
   previousMatches,
   teams,
+  hostInput,
   onConfirm,
   onCancel,
 }) => {
@@ -89,6 +94,7 @@ export const ReplanPanel: React.FC<ReplanPanelProps> = ({
             )
         ).length
       : 0;
+  const host = preview.status === 'preview' && hostInput ? hostSummary(hostInput, preview.schedule) : undefined;
   const blocked = preview.status !== 'preview';
   const pairingOf = (matchId: string): string => {
     const match =
@@ -124,6 +130,12 @@ export const ReplanPanel: React.FC<ReplanPanelProps> = ({
               <div>{t('replan.newMatches', { count: newCount })}</div>
               <div>{t('replan.removedMatches', { count: droppedCount })}</div>
             </div>
+            {host && (
+              <div style={boxStyle} data-testid="replan-host">
+                <strong>{t('step5.host.label')}:</strong>
+                <HostSummaryLines summary={host} />
+              </div>
+            )}
             {preview.keptNotices.length > 0 && (
               <div style={boxStyle} data-testid="replan-kept-notices">
                 <p style={hintStyle}>{t('replan.keptHint')}</p>

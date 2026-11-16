@@ -37,7 +37,7 @@ function HallentonKarteMitRouter({ tournamentId }: { tournamentId: string }) {
       <h2 style={{ margin: 0, fontSize: cssVars.fontSizes.titleLg, fontWeight: cssVars.fontWeights.semibold }}>{t('toeneKarte.abschnitt')}</h2>
       <div style={kartenStil}>
         <h3 style={titelStil}>
-          <span aria-hidden="true">🔊</span>
+          <Icons.Speaker size={iconSizeValues.sm} />
           {t('toeneKarte.titel')} <Icons.ChevronRight size={iconSizeValues.xs} /> {t('toeneKarte.ziel')}
         </h3>
         <p style={textStil}>{t('toeneKarte.text')}</p>

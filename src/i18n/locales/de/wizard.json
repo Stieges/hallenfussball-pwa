@@ -241,6 +241,27 @@
       "gast": "Gast",
       "gewaehlt": "gewählt als {{position}}. Farbe",
       "max": "Höchstens zwei Farben"
+    },
+    "host": {
+      "label": "Mannschaft des Veranstalters",
+      "single": "{{name}} eröffnet als Heim.",
+      "oneOfThem": "Eine der markierten Mannschaften eröffnet als Heim.",
+      "choiceTitle": "Eröffnung",
+      "mode": {
+        "guest": {
+          "title": "Ein Team eröffnet als Heim",
+          "description": "Vereinsduell in Runde 2 · Voreinstellung"
+        },
+        "derby": {
+          "title": "Vereinsduell eröffnet",
+          "description": "Spiel 1: {{a}} – {{b}}"
+        },
+        "bothHome": {
+          "title": "Beide beginnen als Heim",
+          "description": "Spiel 1 und 2 je gegen einen Gast"
+        }
+      },
+      "ariaLabel": "Mannschaft des Veranstalters: {{name}}"
     }
   },
   "step5": {
@@ -268,7 +289,16 @@
     "breakTime": "Pause",
     "fields": "Felder",
     "rules": "Regeln",
-    "showPreview": "Vorschau anzeigen"
+    "showPreview": "Vorschau anzeigen",
+    "host": {
+      "label": "Mannschaften des Veranstalters",
+      "opening": "Eröffnung: {{mode}}",
+      "duel": "Vereinsduell: Spiel {{number}}",
+      "bothHomeFailed": "„Beide beginnen als Heim“ geht hier nicht auf, es gilt „Ein Team eröffnet als Heim“.",
+      "followsNone": "Direkt nacheinander: nie",
+      "follows_one": "Direkt nacheinander: 1-mal",
+      "follows_other": "Direkt nacheinander: {{count}}-mal"
+    }
   },
   "groupsAndFields": {
     "infoText": "Dieser Schritt ist optional. Du kannst direkt auf \"Weiter\" klicken – die Standard-Bezeichnungen (Gruppe A, B, C... und Feld 1, 2...) werden dann verwendet. Klappe die Sektionen unten auf, wenn du eigene Namen vergeben möchtest.",

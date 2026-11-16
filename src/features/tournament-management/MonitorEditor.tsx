@@ -8,7 +8,8 @@
  */
 
 import { useTranslation } from 'react-i18next';
-import { dialogWidths } from '../../design-tokens';
+import { dialogWidths, iconSizeValues } from '../../design-tokens';
+import { Icons } from '../../components/ui/Icons';
 import type { Tournament } from '../../types/tournament';
 import { DialogSurface } from '../../components/ui/molecules/DialogSurface';
 import { MonitorEditorDialog } from './components/monitor-editor/MonitorEditorDialog';
@@ -30,7 +31,7 @@ export function MonitorEditor({ tournament, monitorId, onTournamentUpdate, onClo
       <DialogSurface isOpen onClose={onClose} maxWidth={dialogWidths.lg} ariaLabel={t('monitorEditor.notFound')}>
         <div style={headerStyle}>
           <h2 style={titleStyle}>{t('monitorEditor.notFound')}</h2>
-          <button style={closeButtonStyle} onClick={onClose} aria-label={t('monitorEditor.close')}>✕</button>
+          <button style={closeButtonStyle} onClick={onClose} aria-label={t('monitorEditor.close')}><Icons.X size={iconSizeValues.sm} /></button>
         </div>
         <div style={contentStyle}>
           <p>{t('monitorEditor.notFoundMessage', { id: monitorId })}</p>

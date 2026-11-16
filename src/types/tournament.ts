@@ -19,10 +19,11 @@ export type ResultMode = 'goals' | 'winLossOnly';
 export type TournamentStatus = 'draft' | 'published';
 /**
  * Eröffnung bei zwei Mannschaften des Veranstalters (@W4-033): Veranstalter gegen einen Gast, Vereinsduell
- * in Runde 2 (Voreinstellung) oder Vereinsduell als Spiel 1. Wirkt nur im Runden-Spielplan (@W4-041).
+ * in Runde 2 (Voreinstellung), Vereinsduell als Spiel 1 oder beide beginnen als Heim gegen je einen Gast (@W4-048).
+ * Wirkt nur im Runden-Spielplan (@W4-041). Ältere Programmstände lesen den neuen Wert als „nicht gesetzt“ (Schema `.catch`).
  */
-export type OpeningMode = 'guest-opening' | 'club-derby';
-export const OPENING_MODES: readonly OpeningMode[] = ['guest-opening', 'club-derby'];
+export type OpeningMode = 'guest-opening' | 'club-derby' | 'both-home';
+export const OPENING_MODES: readonly OpeningMode[] = ['guest-opening', 'club-derby', 'both-home'];
 export const DEFAULT_OPENING_MODE: OpeningMode = 'guest-opening';
 
 /**
