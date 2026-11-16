@@ -18,7 +18,8 @@ import { HallentonKarte } from '../categories/MatchCockpit/HallentonKarte';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 const turnier = { id: 't1', title: 'Cup', teams: [], matches: [], numberOfFields: 2 } as unknown as Tournament;
-const lautsprecher = renderToStaticMarkup(<Icons.Speaker size={24} />);
+const innen = (markup: string): string => markup.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
+const lautsprecher = innen(renderToStaticMarkup(<Icons.Speaker size={24} />));
 
 describe('@OB-038 Seitenkopf „Hallenton“ in der Verwaltung', () => {
   it('der Kopf zeigt den gezeichneten Lautsprecher und das Wort „Hallenton“, kein Emoji', () => {
@@ -28,13 +29,16 @@ describe('@OB-038 Seitenkopf „Hallenton“ in der Verwaltung', () => {
     expect(kopf.textContent).not.toMatch(OHNE_EMOJI);
     const svg = kopf.querySelector('svg');
     expect(svg).not.toBeNull();
-    expect(svg!.innerHTML).toBe(lautsprecher.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, ''));
+    expect(svg!.innerHTML).toBe(lautsprecher);
   });
 
   it('Match Cockpit: die Karte „Töne → Hallenton“ trägt denselben Lautsprecher, kein Emoji', () => {
     render(<MemoryRouter><HallentonKarte tournamentId="t1" /></MemoryRouter>);
     const titel = screen.getByRole('heading', { level: 3 });
-    expect(titel.querySelector('svg')).not.toBeNull();
+    // der Lautsprecher steht vor dem Titel (das Pfeil-Symbol dahinter ist ein anderes)
+    const zeichnungen = [...titel.querySelectorAll('svg')].map((svg) => svg.innerHTML);
+    expect(zeichnungen[0]).toBe(lautsprecher);
+    expect(titel.firstChild).toBe(titel.querySelector('svg'));
     expect(titel.textContent).not.toMatch(OHNE_EMOJI);
   });
 });
