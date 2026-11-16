@@ -1,8 +1,9 @@
 /**
  * TorBallGrafik – der Ball der Tor-Einblendung am Monitor (@OB-038, Entscheidung des Product Owners 16.11.).
  *
- * Herkunft: Noto Emoji (Google), `2D/svg/emoji_u26bd.svg`, https://github.com/googlefonts/noto-emoji, Lizenz Apache-2.0
- * (siehe THIRD_PARTY_NOTICES.md). Unverändert bis auf: Entfernen von `id`, XML-Kopf und Kommentar am Wurzelelement,
+ * Copyright 2013 Google, Inc. All Rights Reserved.
+ * Herkunft: Noto Emoji, `2D/svg/emoji_u26bd.svg`, https://github.com/googlefonts/noto-emoji, Lizenz Apache-2.0 (maßgeblich: `2D/svg/LICENSE`;
+ * Volltext `public/lizenzen/Apache-2.0.txt`, Hinweise `public/THIRD_PARTY_NOTICES.txt` und THIRD_PARTY_NOTICES.md). Unverändert bis auf: Entfernen von `id`, XML-Kopf und Kommentar am Wurzelelement,
  * `style="fill:…"` als `fill`-Attribut geschrieben. Die Grafik hat eigene feste Farben: sie ist eine Illustration (farbiger Ball),
  * kein Symbol, das die Textfarbe erbt; deshalb stehen hier Farbwerte statt Tokens. Sie hat keine `id` und keinen `clipPath`
  * und kann mehrfach auf einer Seite stehen.

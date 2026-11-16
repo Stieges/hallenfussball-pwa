@@ -1,0 +1,19 @@
+Hinweise zu Drittanbieter-Bestandteilen / Third-party notices
+==============================================================
+
+Ball-Grafik der Tor-Einblendung am Monitor (Noto Emoji, emoji_u26bd.svg)
+------------------------------------------------------------------------
+Copyright 2013 Google, Inc. All Rights Reserved.
+
+Quelle / Source: https://github.com/googlefonts/noto-emoji, Datei 2D/svg/emoji_u26bd.svg
+(maßgeblich ist die Lizenzdatei 2D/svg/LICENSE des Projekts).
+Lizenz / License: Apache License, Version 2.0, http://www.apache.org/licenses/LICENSE-2.0
+Den vollständigen Lizenztext liefert diese App mit: /lizenzen/Apache-2.0.txt
+The full license text is shipped with this app: /lizenzen/Apache-2.0.txt
+Das Projekt enthält keine NOTICE-Datei / The project contains no NOTICE file.
+
+Änderungen / Changes: unverändert bis auf das Entfernen der id am Wurzelelement, des XML-Kopfs und des
+Generator-Kommentars sowie das Schreiben von style="fill:..." als fill-Attribut (src/components/monitor/TorBallGrafik.tsx).
+Modified only by removing the root id, the XML header and the generator comment, and by writing style="fill:..." as a fill attribute.
+
+Schrift Bebas Neue: siehe /lizenzen/BebasNeue-OFL-1.1.txt

@@ -19,12 +19,30 @@ describe('TorBallGrafik', () => {
     expect(container.querySelectorAll('[id]')).toHaveLength(0);
   });
 
-  it('Herkunft und Lizenz stehen im Baustein und in THIRD_PARTY_NOTICES.md', () => {
-    const baustein = readFileSync(join(__dirname, '..', 'TorBallGrafik.tsx'), 'utf8');
+  const wurzel = join(__dirname, '..', '..', '..', '..');
+  const lies = (...teile: string[]): string => readFileSync(join(wurzel, ...teile), 'utf8');
+  const COPYRIGHT = 'Copyright 2013 Google, Inc. All Rights Reserved.';
+
+  it('Herkunft, wörtlicher Copyright-Satz und Lizenz stehen im Baustein, in THIRD_PARTY_NOTICES.md und in der ausgelieferten Hinweisdatei', () => {
+    const baustein = lies('src', 'components', 'monitor', 'TorBallGrafik.tsx');
+    expect(baustein).toContain(COPYRIGHT);
     expect(baustein).toContain('Apache-2.0');
     expect(baustein).toContain('googlefonts/noto-emoji');
-    const hinweise = readFileSync(join(__dirname, '..', '..', '..', '..', 'THIRD_PARTY_NOTICES.md'), 'utf8');
-    expect(hinweise).toContain('Apache License, Version 2.0');
-    expect(hinweise).toContain('TorBallGrafik.tsx');
+    for (const datei of [['THIRD_PARTY_NOTICES.md'], ['public', 'THIRD_PARTY_NOTICES.txt']]) {
+      const text = lies(...datei);
+      expect(text, datei.join('/')).toContain(COPYRIGHT);
+      expect(text, datei.join('/')).toContain('2D/svg/LICENSE');
+      expect(text, datei.join('/')).toContain('Apache');
+      expect(text, datei.join('/')).toContain('Apache-2.0.txt');
+    }
+    expect(lies('public', 'THIRD_PARTY_NOTICES.txt')).toContain('TorBallGrafik.tsx');
+  });
+
+  it('der volle Apache-2.0-Lizenztext liegt unter public/lizenzen (wird mit ausgeliefert)', () => {
+    const lizenz = lies('public', 'lizenzen', 'Apache-2.0.txt');
+    expect(lizenz).toContain('Apache License');
+    expect(lizenz).toContain('Version 2.0, January 2004');
+    expect(lizenz).toContain('END OF TERMS AND CONDITIONS');
+    expect(lizenz.split('\n').length).toBeGreaterThan(190);
   });
 });
