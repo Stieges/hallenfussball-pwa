@@ -6,7 +6,8 @@
  */
 import { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../../design-tokens';
+import { cssVars, iconSizeValues } from '../../../design-tokens';
+import { Icons } from '../../../components/ui/Icons';
 import { publicPageContainerStyle, publicPageContentStyle } from '../publicPageStyles';
 import { Card } from '../../../components/ui/Card';
 import { ArbeitsTaste } from '../../../components/ui/molecules/ArbeitsTaste';
@@ -18,7 +19,9 @@ const errorContainerStyle: CSSProperties = {
 };
 
 const errorIconStyle: CSSProperties = {
-  fontSize: '4rem',
+  display: 'flex',
+  justifyContent: 'center',
+  color: cssVars.colors.textMuted,
   marginBottom: cssVars.spacing.lg,
 };
 
@@ -62,7 +65,7 @@ export const PublicNotFoundView: React.FC = () => {
     <div style={publicPageContentStyle}>
       <Card>
         <div style={errorContainerStyle} data-testid="public-not-found">
-          <div style={errorIconStyle} aria-hidden="true">🔍</div>
+          <div style={errorIconStyle} aria-hidden="true" data-testid="public-not-found-icon"><Icons.Search size={iconSizeValues.xl} /></div>
           <h2 style={{ fontSize: cssVars.fontSizes.xl }}>
             {t('notFound.title')}
           </h2>
@@ -85,7 +88,7 @@ export const PublicErrorView: React.FC<{ errorMessage: string | null; onRetry: (
     <div style={publicPageContentStyle}>
       <Card>
         <div style={errorContainerStyle}>
-          <div style={errorIconStyle}>⚠️</div>
+          <div style={{ ...errorIconStyle, color: cssVars.colors.warning }} aria-hidden="true" data-testid="public-error-icon"><Icons.AlertTriangle size={iconSizeValues.xl} /></div>
           <h2 style={{ fontSize: cssVars.fontSizes.xl, marginBottom: cssVars.spacing.md }}>
             {t('error.title')}
           </h2>
