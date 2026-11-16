@@ -11,6 +11,10 @@ import { generateTeamId } from '../../utils/idGenerator';
 import { sanitizeTeamName } from '../../core/utils/textSanitizer';
 import { activeTeams } from './utils/replanTeams';
 import { BibColorsSettings } from './components/BibColorsSettings';
+import { HostTeamToggle } from './components/HostTeamToggle';
+import { HostOpeningChoice } from './components/HostOpeningChoice';
+import { useHostSummary } from './hooks/useHostSummary';
+import { toggleHostTeam } from './utils/hostOpeningSummary';
 import styles from './Step4_Teams.module.css';
 
 interface Step4Props {
@@ -113,6 +117,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
   const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
 
   const teams = activeTeams(formData.teams ?? []);
+  const hostSummary = useHostSummary(formData); // @W4-034
   const canAssignGroups = formData.groupSystem === 'groupsAndFinals';
   const numberOfTeams = formData.numberOfTeams ?? 4;
   const numberOfGroups = formData.numberOfGroups ?? 2;
@@ -402,6 +407,13 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                   </div>
                 )}
 
+                <HostTeamToggle
+                  teamId={team.id}
+                  teamName={team.name}
+                  marked={formData.hostTeamIds?.includes(team.id) === true}
+                  onToggle={(id, marked) => onUpdate('hostTeamIds', toggleHostTeam(formData.hostTeamIds, id, marked))}
+                />
+
                 {/* Secondary row: Group selector (only on mobile, inline on desktop via CSS) */}
                 {canAssignGroups && (
                   <div className={styles.teamRowSecondary}>
@@ -426,6 +438,12 @@ export const Step4_Teams: React.FC<Step4Props> = ({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {hostSummary && (
+        <div style={{ marginTop: cssVars.spacing.md }}>
+          <HostOpeningChoice summary={hostSummary} onChange={(mode) => onUpdate('openingMode', mode)} />
         </div>
       )}
 
