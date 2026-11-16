@@ -17,13 +17,19 @@ describe('@OB-038 kurze Meldung am Bildschirmrand (Erfolg, Fehler, Warnung, Hinw
     expect(symbol.querySelector('svg')).not.toBeNull();
     expect(symbol.textContent).toBe('');
     const meldung = screen.getByRole('alert');
+    // das Symbol steht vor dem Text
+    expect(meldung.firstElementChild).toBe(symbol);
+    expect(symbol.nextElementSibling).toHaveTextContent('Gespeichert');
     expect(meldung.textContent).toBe('Gespeichert');
     expect(meldung.textContent).not.toMatch(OHNE_SYMBOLERSATZ);
   });
 
   it.each(['success', 'error', 'warning', 'info'] as const)('Cockpit-Meldung %s: gezeichnetes Symbol, Schließen als Kreuz-Symbol mit Namen', (type) => {
     render(<CockpitToast toast={{ id: 't', type, message: 'Tor erfasst' }} onDismiss={noop} />);
-    expect(screen.getByTestId('toast-icon').querySelector('svg')).not.toBeNull();
+    const symbol = screen.getByTestId('toast-icon');
+    expect(symbol.querySelector('svg')).not.toBeNull();
+    expect(symbol.parentElement!.firstElementChild).toBe(symbol);
+    expect(symbol.nextElementSibling).toHaveTextContent('Tor erfasst');
     const schliessen = screen.getByRole('button', { name: /dismissAriaLabel/ });
     expect(schliessen.querySelector('svg')).not.toBeNull();
     expect(schliessen.textContent).toBe('');
