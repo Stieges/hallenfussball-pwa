@@ -10,6 +10,7 @@ import { ageClassText } from '../../core/view';
 import { appTranslator } from '../../lib/pdf/appTranslator';
 import { buildPdfTexts, resolvePdfLocale } from '../../lib/pdf/translations';
 import { summaryFacts, type SummaryFacts } from './utils/summaryFacts';
+import { HostSummaryLines } from './components/HostSummaryLines';
 
 interface Step5Props {
   formData: Partial<Tournament>;
@@ -112,6 +113,10 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave, createD
           )}
           <InfoBox label={t('step5.locationLabel')}>{formData.location ? getFullLocationAddress(formData) : '-'}</InfoBox>
         </div>
+
+        {facts?.facts.host && (
+          <InfoBox label={t('step5.host.label')} testId="step5-host"><HostSummaryLines summary={facts.facts.host} /></InfoBox>
+        )}
 
         <InfoBox label={t('step5.teamsLabel')}>
           {t('step5.teamsCount', { count: activeTeams(formData.teams ?? []).length })}

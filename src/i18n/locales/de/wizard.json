@@ -241,6 +241,26 @@
       "gast": "Gast",
       "gewaehlt": "gewählt als {{position}}. Farbe",
       "max": "Höchstens zwei Farben"
+    },
+    "host": {
+      "label": "Mannschaft des Veranstalters",
+      "single": "{{name}} bestreitet das erste Spiel als Heimmannschaft.",
+      "oneOfThem": "Eine der markierten Mannschaften ({{names}}) bestreitet das erste Spiel als Heimmannschaft.",
+      "choiceTitle": "Eröffnung bei zwei Mannschaften des Veranstalters",
+      "mode": {
+        "guest": {
+          "title": "Veranstalter gegen einen Gast, Vereinsduell in Runde 2",
+          "description": "Spiel 1: eine markierte Mannschaft als Heim gegen einen Gast. Das Vereinsduell liegt in Runde 2. (Voreinstellung)"
+        },
+        "derby": {
+          "title": "Vereinsduell eröffnet",
+          "description": "Spiel 1: {{a}} gegen {{b}}."
+        },
+        "bothHome": {
+          "title": "Beide beginnen als Heim",
+          "description": "Spiel 1: {{a}} als Heim gegen einen Gast. Spiel 2: {{b}} als Heim gegen einen Gast."
+        }
+      }
     }
   },
   "step5": {
@@ -268,7 +288,16 @@
     "breakTime": "Pause",
     "fields": "Felder",
     "rules": "Regeln",
-    "showPreview": "Vorschau anzeigen"
+    "showPreview": "Vorschau anzeigen",
+    "host": {
+      "label": "Mannschaften des Veranstalters",
+      "opening": "Eröffnung: {{mode}}",
+      "duel": "Das Vereinsduell ist Spiel {{number}}.",
+      "bothHomeFailed": "„Beide beginnen als Heim“ geht bei diesem Spielplan nicht auf. Der Spielplan folgt der Voreinstellung „Veranstalter gegen einen Gast“.",
+      "followsNone": "Die beiden Mannschaften spielen nie direkt nacheinander, außer gegeneinander.",
+      "follows_one": "Ein Spiel der einen Mannschaft folgt noch einmal direkt auf ein Spiel der anderen.",
+      "follows_other": "Ein Spiel der einen Mannschaft folgt noch {{count}} Mal direkt auf ein Spiel der anderen."
+    }
   },
   "groupsAndFields": {
     "infoText": "Dieser Schritt ist optional. Du kannst direkt auf \"Weiter\" klicken – die Standard-Bezeichnungen (Gruppe A, B, C... und Feld 1, 2...) werden dann verwendet. Klappe die Sektionen unten auf, wenn du eigene Namen vergeben möchtest.",
