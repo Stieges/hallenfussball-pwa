@@ -45,6 +45,7 @@ function Ort() {
 }
 
 async function oeffne(eintraege: string[], index: number): Promise<void> {
+  window.history.replaceState({ idx: index }, ''); // Index im Verlauf, wie react-router ihn im Browser ablegt
   render(<MemoryRouter initialEntries={eintraege} initialIndex={index}><Ort /><App /></MemoryRouter>);
   fireEvent.click(await screen.findByTestId('seite-zurueck', {}, { timeout: 5000 }));
 }
