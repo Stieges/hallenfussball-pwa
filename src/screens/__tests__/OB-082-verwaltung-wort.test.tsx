@@ -7,6 +7,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import deTournament from '../../i18n/locales/de/tournament.json';
 import type { Tournament } from '../../types/tournament';
+import { OHNE_EMOJI } from '../../test/symbolText';
 
 vi.unmock('i18next');
 vi.unmock('react-i18next');
@@ -45,7 +46,9 @@ describe('@OB-082 Zahnrad am Handy mit dem Wort „Verwaltung“', () => {
   it('am Handy steht am Zahnrad das Wort „Verwaltung“, nicht nur ein Symbol', () => {
     kopf(true);
     const knopf = screen.getByTestId('management-admin-entry');
-    expect(knopf).toHaveTextContent('⚙️');
+    // @OB-038: das Zahnrad ist ein gezeichnetes Symbol, kein Emoji; das Wort steht daneben
+    expect(knopf.querySelector('svg')).not.toBeNull();
+    expect(knopf).not.toHaveTextContent('⚙');
     expect(knopf).toHaveTextContent('Verwaltung');
   });
 
@@ -53,5 +56,16 @@ describe('@OB-082 Zahnrad am Handy mit dem Wort „Verwaltung“', () => {
     kopf(true);
     fireEvent.click(screen.getByTestId('management-admin-entry'));
     expect(screen.getByText('Verwaltung geöffnet')).toBeInTheDocument();
+  });
+});
+
+describe('@OB-038 Taste „Admin Center“ im Kopf des Spielplans', () => {
+  it.each([[false, 'Admin Center'], [true, 'Verwaltung']] as const)('isMobile=%s: ein gezeichnetes Symbol mit dem Wort „%s“, kein Emoji', (isMobile, wort) => {
+    kopf(isMobile);
+    const knopf = screen.getByTestId('management-admin-entry');
+    expect(knopf.querySelector('svg')).not.toBeNull();
+    expect(knopf).toHaveTextContent(wort);
+    expect(knopf.textContent).toBe(wort);
+    expect(knopf.textContent).not.toMatch(OHNE_EMOJI);
   });
 });
