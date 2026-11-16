@@ -136,9 +136,12 @@ describe('@HT-059 Gegenbeispiele und Grenzen', () => {
     zeige(<HallStatusZeile tournamentId="t1" />);
     expect(buttons()).toEqual(['Lautsprecher Feld 2 nicht bereit', 'Lautsprecher Feld 1 bereit']);
   });
-  it('„Lautsprecher: Status unbekannt“ (Verwaltung ohne Netz) bleibt im Cockpit stehen', () => {
+  it('H4-18 „Lautsprecher: Status unbekannt“ (Verwaltung ohne Netz) steht im Cockpit nicht, in der Verwaltung weiter (@HT-041)', () => {
     doppel.status = status({}, 'unbekannt', true);
-    zeige(<HallStatusZeile tournamentId="t1" nurStoerungen />);
+    const cockpit = zeige(<HallStatusZeile tournamentId="t1" nurStoerungen />);
+    expect(screen.queryByTestId('hallenton-status-zeile')).toBeNull();
+    cockpit.unmount();
+    zeige(<HallStatusZeile tournamentId="t1" />);
     expect(buttons()).toEqual(['Lautsprecher: Status unbekannt']);
   });
   it('„Feld 1: Handy ohne Netz“ bleibt im Cockpit stehen, „Feld 1 bereit“ daneben entfällt', () => {

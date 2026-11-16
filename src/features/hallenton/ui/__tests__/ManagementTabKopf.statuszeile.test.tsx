@@ -74,7 +74,8 @@ describe('@HT-059 ManagementTabKopf (Einbaustelle im Cockpit)', () => {
     kopf();
     expect(screen.getByTestId('cockpit-slim-header')).toBeInTheDocument();
     expect(screen.queryByTestId('hallenton-status-zeile')).toBeNull();
-    expect(screen.getByTestId('cockpit-slim-header').textContent).not.toContain('bereit');
+    // die Statuszeile steht neben dem `<header>`, nicht darin: darum der ganze Kopfbereich, nicht nur `cockpit-slim-header`
+    expect(document.body.textContent).not.toContain('bereit');
   });
   it('Feld 1 bereit, Feld 2 nicht bereit: im Kopf steht nur die Pille „Lautsprecher Feld 2 nicht bereit“', () => {
     doppel.status = status({ 1: { art: 'bereit', pruefen: false }, 2: { art: 'nichtBereit', grund: 'background', pruefen: false } });

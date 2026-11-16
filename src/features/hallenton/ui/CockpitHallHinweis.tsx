@@ -28,6 +28,7 @@ import { useHallCockpitHinweis } from '../useHallCockpitHinweis';
 import { useHallLautsprecher } from '../useHallLautsprecher';
 import { useHallStatus } from '../useHallStatus';
 import { useUhrAbgeglichen } from '../useUhrAbgeglichen';
+import { useCockpitKastenMeldung } from './CockpitKastenOrt';
 import { formatUhrzeit } from './uhrzeit';
 import styles from './CockpitHallHinweis.module.css';
 
@@ -62,6 +63,24 @@ export function CockpitHallKasten({ symbol, titel, grund, grundEntfaelltKlein = 
 }
 
 /**
+ * Meldet den gezeigten Kasten „Hallen-Lautsprecher aus“ an den Kopf des Cockpits (H4-18, @HT-059): solange er im Baum steht, lässt der Kopf die doppelte
+ * Pille des Felds weg. Wo der Kasten nicht gezeigt wird (kein Spiel, kein Steuerrecht, `tontAufDiesemGeraet`), wird auch nichts gemeldet.
+ */
+function AusKasten({ tournamentId, feld, ...kasten }: KastenProps & { tournamentId: string; feld: number | null }): ReactElement {
+  return (
+    <>
+      {feld === null ? null : <KastenMelder tournamentId={tournamentId} feld={feld} />}
+      <CockpitHallKasten {...kasten} />
+    </>
+  );
+}
+
+function KastenMelder({ tournamentId, feld }: { tournamentId: string; feld: number }): null {
+  useCockpitKastenMeldung(tournamentId, feld);
+  return null;
+}
+
+/**
  * „Ton aktivieren“ (@OB-087 Zeile 5): nur wenn DIESES Gerät selbst der Hallen-Lautsprecher des Felds ist – ein Browser lässt den Ton nur per Tipp
  * am Gerät selbst zu (@HT-012), fernbedienen geht nicht. Auf jedem anderen Gerät steht der Kasten ohne Taste. Tönt das Gerät für das Feld
  * wirklich (`tontAufDiesemGeraet`: Laufzeit läuft, kein anderes Fenster, Feld bereit), steht der Server-Stand nur noch nicht nach: der Kasten tritt zurück.
@@ -78,7 +97,7 @@ function AusKastenMitTon({ tournamentId, feld, grund }: { tournamentId: string; 
   const taste = eigenes
     ? <ArbeitsTaste imHinweis laeuft={laeuft} onClick={starte} data-testid="cockpit-hall-ton-aktivieren">{t('aktivieren.taste')}</ArbeitsTaste>
     : undefined;
-  return <CockpitHallKasten symbol={<Icons.SpeakerOff size={iconSizeValues.md} />} titel={t('cockpit.titel')} grund={grund} grundEntfaelltKlein={taste !== undefined} testid="cockpit-hall-aus" taste={taste} />;
+  return <AusKasten tournamentId={tournamentId} feld={feld} symbol={<Icons.SpeakerOff size={iconSizeValues.md} />} titel={t('cockpit.titel')} grund={grund} grundEntfaelltKlein={taste !== undefined} testid="cockpit-hall-aus" taste={taste} />;
 }
 
 function ZeileAnsicht({ zeile, tournamentId, feld }: { zeile: CockpitHallZeile; tournamentId: string; feld: number | null }): ReactElement {
@@ -102,7 +121,7 @@ function ZeileAnsicht({ zeile, tournamentId, feld }: { zeile: CockpitHallZeile; 
       if (zeile.grund === 'tonNichtAktiviert' && feld !== null && grund !== undefined) {
         return <AusKastenMitTon tournamentId={tournamentId} feld={feld} grund={grund} />;
       }
-      return <CockpitHallKasten symbol={<Icons.SpeakerOff size={symbol} />} titel={t('cockpit.titel')} grund={grund} testid="cockpit-hall-aus" />;
+      return <AusKasten tournamentId={tournamentId} feld={feld} symbol={<Icons.SpeakerOff size={symbol} />} titel={t('cockpit.titel')} grund={grund} testid="cockpit-hall-aus" />;
     }
   }
 }
