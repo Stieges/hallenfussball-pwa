@@ -36,7 +36,7 @@ export const PublicStandingsTab: React.FC<PublicStandingsTabProps> = ({ tourname
             color: cssVars.colors.textMuted,
           }}
         >
-          <p style={{ fontSize: cssVars.fontSizes.lg, marginBottom: cssVars.spacing.sm, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: cssVars.spacing.sm }}>
+          <p style={{ fontSize: cssVars.fontSizes.lg, marginBottom: cssVars.spacing.sm, display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: cssVars.spacing.sm }}>
             <span aria-hidden="true" data-testid="public-standings-hidden-icon" style={{ display: 'flex' }}><Icons.Trophy size={iconSizeValues.md} /></span>
             {t('standings.hidden')}
           </p>
