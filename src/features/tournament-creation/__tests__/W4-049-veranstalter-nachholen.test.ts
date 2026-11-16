@@ -90,4 +90,18 @@ describe('@W4-049 Markierung im veröffentlichten Turnier nachholen', () => {
     expect(homeOfMatch(gespeichert, 0)).toBe(W1);
     expect(matchSideTeamId(gespeichert.matches[0], 'B')).toBe(W2);
   });
+
+  it.each([
+    { zustand: 'läuft', aenderung: { matchStatus: 'running' as const } },
+    { zustand: 'pausiert', aenderung: { matchStatus: 'paused' as const } },
+    { zustand: 'beendet mit eingetragenem Ergebnis', aenderung: { matchStatus: 'finished' as const, scoreA: 1, scoreB: 0 } },
+  ])('Gegenbeispiel nach dem Anpfiff ($zustand): keine Neuplanung, Grund genannt, Bestätigen ändert nichts', async ({ aenderung }) => {
+    const vorher = await veroeffentlicht();
+    const begonnen: Tournament = { ...vorher, matches: vorher.matches.map((m, i) => (i === 3 ? { ...m, ...aenderung } : m)) };
+
+    expect(getReplanAvailability(begonnen)).toBe('refused-after-kickoff');
+    const session = openReplan(begonnen, { ...begonnen, hostTeamIds: [W1, W2] }, getMatchStartState(begonnen.matches, undefined, true));
+    expect(session.preview).toMatchObject({ status: 'refused', reasonKey: 'replan.reasonRefusedKickoff' });
+    expect(session.confirm()).toBe(begonnen);
+  });
 });

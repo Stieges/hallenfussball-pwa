@@ -48,6 +48,15 @@ function Zustand({ start, onChange }: { start: Tournament; onChange?: (t: Tourna
 const box = (id: string): HTMLInputElement => screen.getByTestId(`wizard-host-team-${id}`);
 
 describe('@W4-034 Mannschaften des Veranstalters werden beim Anlegen markiert', () => {
+  it('jedes Ankreuzfeld hat einen zugänglichen Namen mit dem Teamnamen; der sichtbare Text bleibt', () => {
+    render(<Zustand start={draft()} />);
+
+    expect(screen.getByRole('checkbox', { name: 'Mannschaft des Veranstalters: TSV Waging 1' })).toBe(box(W1));
+    expect(screen.getByRole('checkbox', { name: 'Mannschaft des Veranstalters: TSV Waging 2' })).toBe(box(W2));
+    expect(screen.getAllByRole('checkbox')).toHaveLength(6);
+    expect(screen.getAllByText('Mannschaft des Veranstalters')).toHaveLength(6);
+  });
+
   it('jedes Team hat ein Ankreuzfeld „Mannschaft des Veranstalters“, anfangs nicht markiert', () => {
     render(<Zustand start={draft()} />);
 
@@ -139,6 +148,18 @@ function nummerDesDuells(t: Tournament): number {
   return reihe.findIndex((m) => [matchSideTeamId(m, 'A'), matchSideTeamId(m, 'B')].every((id) => id === W1 || id === W2)) + 1;
 }
 
+/** Unabhängig vom Produktivcode gezählt: Spiel nur von W1 direkt vor Spiel nur von W2 oder umgekehrt, in Spielreihenfolge. */
+function folgenImPlan(t: Tournament): number {
+  const reihe = [...generateFullSchedule(t).allMatches].sort((a, b) => (a.slot ?? 0) - (b.slot ?? 0) || a.field - b.field)
+    .map((m): Array<string | undefined> => [matchSideTeamId(m, 'A'), matchSideTeamId(m, 'B')]);
+  let n = 0;
+  for (let i = 0; i + 1 < reihe.length; i++) {
+    const nur = (p: Array<string | undefined>, id: string, anderer: string): boolean => p.includes(id) && !p.includes(anderer);
+    if ((nur(reihe[i], W1, W2) && nur(reihe[i + 1], W2, W1)) || (nur(reihe[i], W2, W1) && nur(reihe[i + 1], W1, W2))) { n++; }
+  }
+  return n;
+}
+
 describe('@W4-034 / @W4-048 / @W4-050 Die Übersicht vor dem Fertigstellen', () => {
   it('nennt die markierten Mannschaften', () => {
     uebersicht(draft({ hostTeamIds: [W1, W2] }));
@@ -177,10 +198,45 @@ describe('@W4-034 / @W4-048 / @W4-050 Die Übersicht vor dem Fertigstellen', () 
     expect(screen.queryByTestId('host-summary-duel')).toBeNull();
   });
 
-  it('@W4-050: nennt die verbleibende Zahl der Folgen in einem Satz', () => {
-    uebersicht(draft({ hostTeamIds: [W1, W2], openingMode: 'both-home' }));
+  it.each(['guest-opening', 'club-derby', 'both-home'] as const)('@W4-050 %s: die Übersicht nennt genau die unabhängig gezählte Zahl der Folgen', (mode) => {
+    const t = draft({ hostTeamIds: [W1, W2], openingMode: mode });
+    uebersicht(t);
 
-    expect(screen.getByTestId('host-summary-follows').textContent).toMatch(/noch \d+ Mal direkt auf ein Spiel der anderen|noch einmal direkt|nie direkt nacheinander/);
+    const erwartet = folgenImPlan(t);
+    const satz = screen.getByTestId('host-summary-follows').textContent;
+    expect(satz).toBe(erwartet === 0
+      ? 'Die beiden Mannschaften spielen nie direkt nacheinander, außer gegeneinander.'
+      : erwartet === 1
+        ? 'Ein Spiel der einen Mannschaft folgt noch einmal direkt auf ein Spiel der anderen.'
+        : `Ein Spiel der einen Mannschaft folgt noch ${erwartet} Mal direkt auf ein Spiel der anderen.`);
+  });
+
+  it('@W4-050 Gegenbeispiel: die Zahl hängt an der Eröffnungsart (nicht für jede Art dieselbe)', () => {
+    const zahlen = (['guest-opening', 'club-derby'] as const).map((mode) => folgenImPlan(draft({ hostTeamIds: [W1, W2], openingMode: mode })));
+
+    expect(new Set(zahlen).size).toBeGreaterThan(1);
+  });
+
+  it('Bearbeiten (@W4-049): bei vorhandenen Spielen nennt die Übersicht das Duell des NEUEN Plans, nicht des bestehenden', () => {
+    const alt = generateFullSchedule(draft()).allMatches.map((m, i) => ({
+      id: `alt-${i}`, round: i + 1, field: m.field, slot: m.slot, slotA: m.slotA, slotB: m.slotB, phase: 'groupStage' as const,
+    }));
+    const t = draft({ hostTeamIds: [W1, W2], openingMode: 'both-home', matches: alt as unknown as Tournament['matches'] });
+    uebersicht(t);
+
+    const neu = nummerDesDuells({ ...t, matches: [] });
+    const imAlten = alt.findIndex((m) => [matchSideTeamId(m, 'A'), matchSideTeamId(m, 'B')].every((id) => id === W1 || id === W2)) + 1;
+    expect(neu).not.toBe(imAlten);
+    expect(screen.getByTestId('host-summary-duel').textContent).toBe(`Das Vereinsduell ist Spiel ${neu}.`);
+  });
+
+  it('entfernte Teams: Übersicht und Neuplanung nennen dieselbe Duell-Nummer (Plan ohne die entfernten Teams)', () => {
+    const extra: Team = { id: testUuid(77), name: 'Entfernt', isRemoved: true };
+    const t = draft({ hostTeamIds: [W1, W2], openingMode: 'both-home', teams: [extra, ...TEAMS] });
+    uebersicht(t);
+
+    const ohne = nummerDesDuells(draft({ hostTeamIds: [W1, W2], openingMode: 'both-home' }));
+    expect(screen.getByTestId('host-summary-duel').textContent).toBe(`Das Vereinsduell ist Spiel ${ohne}.`);
   });
 });
 
