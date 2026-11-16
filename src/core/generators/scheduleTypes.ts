@@ -97,6 +97,8 @@ export interface SchedulePhase {
  *   wirklich schlechter wird: `duration` (zusätzliche Zeitfenster, Minuten, neues Ende der Gruppenphase; das Ende des
  *   ganzen Turniers steht in `GeneratedSchedule.endTime`), `longestPause` (Zeitfenster zwischen zwei eigenen Spielen,
  *   auf einem Feld = Spiele), `playedDiff` (größter Unterschied gespielter Spiele).
+ * - `hostBothHomeNotPossible` (@W4-048): „Beide beginnen als Heim“ geht nicht auf (z. B. mehr als zwei Markierte oder Spiel 1 und 2
+ *   teilen sich eine Mannschaft); der Plan entsteht nach der Vorgabe „Veranstalter gegen einen Gast“.
  * - `hostOpeningNotPossible`: Restfall ohne Szenario – kein Tausch hält die harte Mindestpause; Plan unverändert.
  */
 export type ScheduleNotice =
@@ -109,6 +111,7 @@ export type ScheduleNotice =
       playedDiff?: { before: number; after: number }
     }
   | { kind: 'hostOpeningNotPossible'; teamId: string }
+  | { kind: 'hostBothHomeNotPossible'; teamId: string }
 
 export interface GeneratedSchedule {
   /** Turnier-Metadaten */

@@ -67,6 +67,22 @@ export interface HallAnzeigeEingabe {
   anderesFensterTont?: boolean;
 }
 
+/** Am eigenen Gerät gilt der lokale Zustand, sobald die Laufzeit nicht aus oder still ist (die eine Regel für Anzeige und Kasten). */
+export function lokalGilt(lokal: LokaleLage | null): lokal is LokaleLage {
+  return lokal !== null && lokal.rolle !== 'aus' && lokal.rolle !== 'still';
+}
+
+/**
+ * Dieses Gerät tönt für das Feld wirklich (@OB-087 „Ton aktivieren“): der lokale Zustand gilt, kein anderes Fenster hält die Sperre
+ * (`andererTab` tönt nicht) und das Feld ist bereit (nach `lokaleAnzeige`). Ein stehengebliebenes `ready` bei `still` zählt nicht.
+ */
+export function tontAufDiesemGeraet(lokal: LokaleLage | null, feld: number): boolean {
+  if (!lokalGilt(lokal) || lokal.rolle === 'andererTab' || !lokal.felder.includes(feld)) {
+    return false;
+  }
+  return lokaleAnzeige(lokal.zustandJeFeld[`field-${feld}`], lokal.rolle, false, false).art === 'bereit';
+}
+
 /** Dieses Gerät steht auf „Ton nicht aktiv“ (die einzige Lage, in der ein anderes Fenster gefragt werden muss). */
 export function tonNichtAktivLokal(lokal: LokaleLage | null): boolean {
   return lokal !== null && lokal.rolle === 'wartet' && lokal.felder.some((feld) => lokal.zustandJeFeld[`field-${feld}`] === 'not_activated');
@@ -105,7 +121,7 @@ export function hallAnzeige({ server, lokal, angepfiffen, lautsprecherBekannt, a
     }
   }
   // Am eigenen Gerät gilt der lokale Zustand sofort, ohne auf den Server zu warten (G7); „Prüfen“ kennt nur der Server
-  if (lokal !== null && lokal.rolle !== 'aus' && lokal.rolle !== 'still') {
+  if (lokalGilt(lokal)) {
     for (const feld of lokal.felder) {
       const amServer = server.felder[feld];
       const pruefen = amServer?.art === 'bereit' && amServer.pruefen;

@@ -14,6 +14,7 @@
  */
 import type { GeplanterTon } from '../../../core/hallenton';
 import type { HallTonSpieler } from './hallTonSpieler';
+import { istAusgangsZustand } from './hallTonSpielerTypen';
 import type { TaktQuelle } from './taktQuelle';
 
 /** Weckruf aus dem Worker so lange vor dem Ton (Plan „Freigabe vor dem Ton“). */
@@ -110,6 +111,13 @@ export function erzeugeTonSteuerung({ takt, spieler }: TonSteuerungDeps): TonSte
         if (alt && begonnen(alt, now)) {
           continue; // ein begonnener Ton bleibt, wie er ist
         }
+        if (alt !== undefined && alt.geplantUm !== null) {
+          if (!begonnen(alt, now) && !spieler.geplant().includes(id)) {
+            // der Spieler hat den noch nicht begonnenen Ton abgebrochen (Ausgang verloren): ungeplant, regulär neu planen
+            alt.geplantUm = null;
+            alt.audioAt = null;
+          }
+        }
         const altAudio = alt?.audioAt ?? null;
         const audioGleich = altAudio !== null && Math.abs(spieler.audioZeitFuerServerZeit(ton.at, now) - altAudio) <= AUDIO_ABWEICHUNG_SEK;
         if (alt?.ton.at === ton.at && alt.geplantUm !== null && audioGleich) {
@@ -146,10 +154,17 @@ export function erzeugeTonSteuerung({ takt, spieler }: TonSteuerungDeps): TonSte
       // Bestätigung des Spielers: er hat den Ton angenommen, niemand hat ihn abgebrochen (nur diese Steuerung bricht ab),
       // und die Ausgabe läuft. Ob er schon wieder zu Ende ist (`geplant()` leer nach `ended`), zählt nicht – ein im
       // Hintergrund verspäteter Takt dürfte ihn sonst als ungespielt neu planen (doppelter Ton).
-      const ausgabeLaeuft = spieler.zustand() !== 'not_activated';
+      const zustand = spieler.zustand();
+      const ausgabeLaeuft = zustand !== 'not_activated' && !istAusgangsZustand(zustand); // H4-6: bei verlorenem Ausgang erklang nichts
+      // H4-11 (N1): Wechselt Olli den Ausgang genau beim Tonbeginn, steht der Spieler für die Dauer von `setSinkId` auf „unbestätigt“, der
+      // Ton klingt aber schon (der Kontext läuft, der Spieler hält ihn noch geplant). Er zählt als gespielt – sonst bräche der nächste Takt ihn
+      // ab und holte ihn nach: zweimal. Bei Verlust bricht der Spieler alles ab (nicht mehr geplant), steht der Kontext, erklang nichts.
+      // (nur bei einem fälligen Ton abfragen: `audioKontext()` legt den Kontext an, ohne Ton soll nichts angelegt werden)
+      const klingt = (id: string): boolean => spieler.audioKontext().state === 'running' && spieler.geplant().includes(id);
       for (const [id, eintrag] of eintraege) {
         if (eintrag.geplantUm !== null && eintrag.ton.at <= now) {
-          if (ausgabeLaeuft) {
+          const geklungen = spieler.endeVerbrauchen(id); // schon zu Ende geklungen, bevor dieser Takt kam (Restfall N1)
+          if (ausgabeLaeuft || geklungen || klingt(id)) {
             gespielt.push({ ton: eintrag.ton, at: Math.max(eintrag.ton.at, eintrag.geplantUm) });
           } else {
             spieler.abbrechen(id); // k1: die Ausgabe steht – sonst erklänge der Ton später nach altem Stand

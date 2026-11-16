@@ -96,8 +96,9 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: cssVars.spacing.lg,
-    borderBottom: `1px solid ${cssVars.colors.border}`,
+    // nur senkrecht: waagerecht bündig mit Karte, Filterzeile und Liste (am Handy standen die Tasten sonst 24 px eingerückt, @ZP-113)
+    padding: `${cssVars.spacing.lg} 0`,
+    borderBottom: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
     gap: cssVars.spacing.md,
     flexWrap: 'wrap',
   };
@@ -123,7 +124,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
     backgroundColor: cssVars.colors.background,
     borderRadius: cssVars.borderRadius.md,
     padding: cssVars.spacing.xs,
-    border: `1px solid ${cssVars.colors.borderControl}`,
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}`,
     marginLeft: isEditing ? cssVars.spacing.md : 0,
     gap: cssVars.spacing.xs,
   };

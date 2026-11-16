@@ -1,6 +1,6 @@
 /**
  * LautsprecherFeldKarte – die Karte je Feld im Unterpunkt „Hallenton“ (H4-4, @HT-039, @HT-016): Feldname, Zustand als
- * Marke (Symbol + Wort + Randart, Farbe nie allein), Gerät des Hallen-Lautsprechers und optional eine Pille daneben (z. B. „🔈? Prüfen“).
+ * Marke (Symbol + Wort + Randart, Farbe nie allein), Gerät des Hallen-Lautsprechers, optional eine Pille daneben (z. B. „🔈? Prüfen“) und unten die Taste „Abmelden“ (@HT-057).
  * Nur Darstellung mit Props; „von einem anderen Gerät übernommen“ (@HT-015) und „abgemeldet“ (@HT-057) sind Zustände des eigenen Geräts („Dieses Gerät“, H4-6), nicht des Felds und stehen deshalb nicht hier; die Wortlaute kommen aus dem Namensraum `hallenton`. Den Zustand liefert später `hallAnzeige` (H4-5/H4-6).
  * „unbekannt“ gibt es in zwei Formen, die getrennt bleiben: `zustandUnbekannt` (der Server meldet einen Zustand, den dieser App-Stand
  * nicht kennt: nur „nicht bereit“ ohne Grund, @HT-039) und `statusUnbekannt` (die Verwaltung hat selbst kein Netz, @HT-041).
@@ -34,6 +34,10 @@ export interface LautsprecherFeldKarteProps {
   geraet?: FeldGeraet;
   /** Zusatz neben dem Zustand (z. B. die Pille „Prüfen“). */
   pille?: ReactNode;
+  /** Unter dem Gerät: die Rückfrage „Gehört?“ und die Prüfpunkte nach „🔈? Prüfen“ (H4-11). */
+  extra?: ReactNode;
+  /** Ganz unten, rechtsbündig: die Taste „Abmelden“ (H4-11b, @HT-057). */
+  aktion?: ReactNode;
   'data-testid'?: string;
 }
 
@@ -71,8 +75,9 @@ const zustandStil: CSSProperties = { display: 'flex', flexWrap: 'wrap', alignIte
 const geraetStil: CSSProperties = { display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm, minWidth: 0, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.md, overflowWrap: 'break-word' };
 const nameStil: CSSProperties = { color: cssVars.colors.textPrimary, fontWeight: cssVars.fontWeights.semibold };
 const hinweisStil: CSSProperties = { margin: 0, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm, lineHeight: cssVars.lineHeights.bodySm };
+const aktionStil: CSSProperties = { display: 'flex', justifyContent: 'flex-end' };
 
-export function LautsprecherFeldKarte({ feld, zustand, geraet, pille, 'data-testid': testId = `lautsprecher-feld-${feld}` }: LautsprecherFeldKarteProps): ReactElement {
+export function LautsprecherFeldKarte({ feld, zustand, geraet, pille, extra, aktion, 'data-testid': testId = `lautsprecher-feld-${feld}` }: LautsprecherFeldKarteProps): ReactElement {
   const { t } = useTranslation('hallenton');
   const aussehen = AUSSEHEN[zustand.art];
   const text = zustandText(zustand, t);
@@ -93,6 +98,8 @@ export function LautsprecherFeldKarte({ feld, zustand, geraet, pille, 'data-test
           </span>
         </div>
       ) : null}
+      {extra}
+      {aktion === undefined ? null : <div style={aktionStil}>{aktion}</div>}
       {zustand.art === 'keinLautsprecher' ? <p style={hinweisStil}>{t('feld.keinLautsprecherHinweis')}</p> : null}
     </article>
   );

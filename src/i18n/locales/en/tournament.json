@@ -806,6 +806,26 @@
     "ariaLabel": "Match is currently running",
     "live": "Live"
   },
+  "scheduleHead": {
+    "title": "Matches",
+    "start": "Start {{start}}",
+    "end": "End about {{end}}",
+    "duration_one": "{{count}} minute per match",
+    "duration_other": "{{count}} minutes per match"
+  },
+  "scheduleCurrent": {
+    "live": "Running · {{name}} · Field {{field}}",
+    "next": "Next match · {{name}} · Field {{field}}",
+    "match": "Match {{number}}",
+    "field": "Field {{field}}",
+    "clockUnit": "",
+    "kickOff": "Kick off match in the cockpit",
+    "kickOffHint": "Opens the cockpit. You start the clock there.",
+    "toCockpit": "Go to cockpit",
+    "after": "After that:",
+    "afterMatch": "{{name}} · {{time}}",
+    "jumpToLive": "To the running match"
+  },
   "resultSheet": {
     "title": "Final result, match {{number}}",
     "cockpitScore": "Score in the cockpit {{score}}",
@@ -1091,7 +1111,6 @@
     "fieldsAlreadyOptimal": "Fields already optimally distributed",
     "matchesSwapped": "Matches {{match1}} and {{match2}} swapped",
     "matchAlreadyFinished": "This match is already finished. Use \"Correct result\".",
-    "liveMatchWarning": "WARNING: This match is currently LIVE in tournament management!\n\nIf you change the result here, it will overwrite the live management.\n\nDo you want to continue anyway?",
     "changesSaved": "Schedule changes saved",
     "refereesRedistributed_one": "Referee of {{count}} match redistributed",
     "refereesRedistributed_other": "Referees of {{count}} matches redistributed",
@@ -2054,7 +2073,9 @@
     "saveFailed": "Saving failed – the changes are not saved yet and stay in the draft.",
     "conflictHint_one": "{{count}} conflict in the schedule",
     "conflictHint_other": "{{count}} conflicts in the schedule",
-    "samePhaseOnly": "Only matches of the same phase can be swapped"
+    "samePhaseOnly": "Only matches of the same phase can be swapped",
+    "groupStaysInGroupPhase": "Group matches stay in the group phase",
+    "finalsStayInFinals": "Final-round matches stay in the final round"
   },
   "scheduleEditor": {
     "autoAssignReferees": "Assign referees automatically",

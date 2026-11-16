@@ -41,6 +41,8 @@ export class LzTab {
   readonly name: string;
   readonly geraete = new FalscheGeraeteMelder();
   readonly abgeloest: number[][] = [];
+  /** Die verlorenen Felder je Verlust mit Art (`abgeloest` = übernommen, `abgemeldet`), wie das Lebenszeichen sie meldet (H4-11b). */
+  readonly verloren: Array<Array<{ feld: number; art: 'abgeloest' | 'abgemeldet' }>> = [];
   nachLebenszeichen = 0;
   netz = true;
   /** Nur die Quittung scheitert am Netz. */
@@ -63,7 +65,7 @@ export class LzTab {
       deviceId: o.deviceId ?? 'laptop',
       laufzeit: this.tab.laufzeit,
       spieler: this.tab.spieler,
-      erzeugeAusgang: () => erzeugeAusgangsSignale({ kontext: this.tab.kontext, geraete: this.geraete }),
+      erzeugeAusgang: () => erzeugeAusgangsSignale({ kontext: this.tab.kontext, geraete: o.medien ?? this.geraete }),
       sperre: erzeugeGeraeteSperre(this.tab.geraet.sperren, MELDE_SPERRE_NAME),
       kanal: this.tab.kanal,
       zeitgeber: this.tab.uhr.gruppe(`lz${o.name ?? ''}`),
@@ -79,9 +81,10 @@ export class LzTab {
       beiFehler: (grund) => {
         this.fehler.push(grund);
       },
-      abgeloest: (bleiben) => {
+      abgeloest: (bleiben, verloren) => {
         this.tab.laufzeit.stop();
         this.abgeloest.push(bleiben);
+        this.verloren.push([...verloren]);
       },
       nachLebenszeichen: () => {
         this.nachLebenszeichen += 1;

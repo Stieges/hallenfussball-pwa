@@ -87,5 +87,13 @@ export function useEngineMatchInit({ currentMatchData, liveMatches, getLiveMatch
   // Minor 4: erhoeht `retryToken` (s. Abhaengigkeitsliste oben), der Effekt laeuft dadurch erneut.
   const handleRetryEngineReady = useCallback(() => setRetryToken((n) => n + 1), []);
 
+  // @OB-088: scheitert das Vorbereiten (`engineReadyError`), versucht es die App von selbst noch einmal, sobald das Gerät wieder Netz hat.
+  // Die Taste „Erneut versuchen“ bleibt; beide gehen denselben Weg, ein Versuch lädt nur dieses Spiel neu (kein Neuladen der Seite).
+  useEffect(() => {
+    if (!engineReadyError) { return undefined; }
+    window.addEventListener('online', handleRetryEngineReady);
+    return () => { window.removeEventListener('online', handleRetryEngineReady); };
+  }, [engineReadyError, handleRetryEngineReady]);
+
   return { isInitializingMatch, engineReadyError, awaitingTeams, notOnEngineReason, handleRetryEngineReady };
 }

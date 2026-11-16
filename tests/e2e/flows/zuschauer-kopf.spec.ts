@@ -208,11 +208,12 @@ test.describe('@ZM-141 ein Turnier-Kopf, darunter der Spielplan', () => {
     expect(oben.m).toBeLessThan(oben.plan);
   });
 
-  test('@ZM-141 Gegenbeispiel: die Verwaltung (Spielplan der Turnierleitung) behält ihre Turnierkarte', async ({ page }) => {
+  test('@ZM-141 Gegenbeispiel: die Verwaltung (Spielplan der Turnierleitung) hat den Kopfblock der Zuschauer nicht, sondern ihren eigenen Kopf (@ZP-113: Listenkopf statt Turnierkarte)', async ({ page }) => {
     await page.setViewportSize(HANDY);
     await installiereSaat(page.context(), leseSaat('hallencup-messlauf'));
     await page.goto('/#/tournament/hallencup-messlauf/schedule');
-    await expect(page.locator('.tournament-header')).toBeAttached({ timeout: 25000 });
+    await expect(page.getByTestId('schedule-list-head')).toBeAttached({ timeout: 25000 });
+    await expect(page.locator('.tournament-header')).toHaveCount(0); // @ZP-113: die Turnierkarte mit den acht Zeilen entfällt in der Verwaltung
     await expect(page.locator('[data-testid="public-current"]')).toHaveCount(0);
   });
 });

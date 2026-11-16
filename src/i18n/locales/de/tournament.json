@@ -806,6 +806,26 @@
     "ariaLabel": "Spiel läuft gerade",
     "live": "Live"
   },
+  "scheduleHead": {
+    "title": "Spiele",
+    "start": "Beginn {{start}} Uhr",
+    "end": "Ende etwa {{end}} Uhr",
+    "duration_one": "{{count}} Minute je Spiel",
+    "duration_other": "{{count}} Minuten je Spiel"
+  },
+  "scheduleCurrent": {
+    "live": "Läuft · {{name}} · Feld {{field}}",
+    "next": "Nächstes Spiel · {{name}} · Feld {{field}}",
+    "match": "Spiel {{number}}",
+    "field": "Feld {{field}}",
+    "clockUnit": "Uhr",
+    "kickOff": "Spiel im Cockpit anpfeifen",
+    "kickOffHint": "Öffnet das Cockpit. Die Uhr startest du dort.",
+    "toCockpit": "Zum Cockpit",
+    "after": "Danach:",
+    "afterMatch": "{{name}} · {{time}} Uhr",
+    "jumpToLive": "Zum laufenden Spiel"
+  },
   "resultSheet": {
     "title": "Endergebnis Spiel {{number}}",
     "cockpitScore": "Stand im Cockpit {{score}}",
@@ -1091,7 +1111,6 @@
     "fieldsAlreadyOptimal": "Felder bereits optimal verteilt",
     "matchesSwapped": "Spiele {{match1}} und {{match2}} getauscht",
     "matchAlreadyFinished": "Dieses Spiel ist bereits beendet. Verwende \"Ergebnis korrigieren\".",
-    "liveMatchWarning": "WARNUNG: Dieses Spiel läuft gerade LIVE in der Turnierleitung!\n\nWenn du hier das Ergebnis änderst, wird es die Live-Verwaltung überschreiben.\n\nMöchtest du trotzdem fortfahren?",
     "changesSaved": "Spielplan-Änderungen gespeichert",
     "refereesRedistributed_one": "Schiedsrichter von {{count}} Spiel neu verteilt",
     "refereesRedistributed_other": "Schiedsrichter von {{count}} Spielen neu verteilt",
@@ -2054,7 +2073,9 @@
     "saveFailed": "Speichern fehlgeschlagen – die Änderungen sind noch nicht gespeichert und bleiben im Entwurf.",
     "conflictHint_one": "{{count}} Konflikt im Spielplan",
     "conflictHint_other": "{{count}} Konflikte im Spielplan",
-    "samePhaseOnly": "Nur Spiele derselben Phase lassen sich tauschen"
+    "samePhaseOnly": "Nur Spiele derselben Phase lassen sich tauschen",
+    "groupStaysInGroupPhase": "Gruppenspiele bleiben in der Gruppenphase",
+    "finalsStayInFinals": "Finalspiele bleiben in der Finalrunde"
   },
   "scheduleEditor": {
     "autoAssignReferees": "Schiedsrichter automatisch zuweisen",

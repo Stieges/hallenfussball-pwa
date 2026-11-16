@@ -9,12 +9,16 @@
  *   → Ausgang, harter Stopp nach 5 s. Dieselbe Kennung ersetzt den alten Ton.
  * - Lautstärke je Ton (auch Torhymne, Regler `tor`) je Gerät in `localStorage` (`hallenton:lautstaerke`),
  *   nicht turnierweit (@HT-023). Abpfiff-Ton auf 0 % → Zustand `volume_zero` (@HT-039).
+ * - H4-6: Ausgang (`ausgang/ausgangSenke.ts`): `output_lost` / `output_unconfirmed` stehen vor `not_activated`, halten die Sperre,
+ *   planen und spielen nichts, holen nichts nach; ohne gespeicherte Wahl bleibt alles wie vorher (kein `setSinkId`).
  * - H3c: Torhymnen (`hymnen`, `torhymnenAusgabe.ts`) auf derselben Ausgabe; jeder hier geplante Ton beendet sie zu seinem Beginn.
  */
 import type { AudioKontext, AudioPuffer, GainKnoten, KompressorKnoten, QuellKnoten } from './webAudioTypen';
 import { browserSpeicher, gespeicherteLautstaerke, schreib, vergissAltenStummWert, LAUTSTAERKE_SCHLUESSEL, type TonArt } from './tonEinstellungen';
 import { erzeugeHallTonLader, HART_STOPP_SEK, type LadeStand, type TonWahl } from './hallTonLader';
-import type { HallTonSpieler, HallTonSpielerAbhaengigkeiten, SpielerZustand } from './hallTonSpielerTypen';
+import { istAusgangsZustand, type HallTonSpieler, type HallTonSpielerAbhaengigkeiten, type SpielerZustand } from './hallTonSpielerTypen';
+import { erzeugeSenke } from './ausgang/ausgangSenke';
+import { browserAusgang } from './ausgang/browserAusgang';
 import { erzeugeHupenVorschau } from './hallTonVorschau';
 import { erzeugeTorhymnenAusgabe } from './torhymnenAusgabe';
 
@@ -28,7 +32,7 @@ export type { HallTonSpieler, HallTonSpielerAbhaengigkeiten, SpielerZustand } fr
 /** `startAt`/`endetUm`: Audiozeit von Beginn und hartem Ende (für die Torhymne). */
 interface Geplant { quelle: QuellKnoten; gain: GainKnoten; art: TonArt; startAt: number; endetUm: number }
 
-export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: HallTonSpielerAbhaengigkeiten): HallTonSpieler {
+export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher, ausgang = null }: HallTonSpielerAbhaengigkeiten): HallTonSpieler {
   let kontextWert: AudioKontext | null = null;
   let begrenzerWert: KompressorKnoten | null = null;
   let aktiviert = false;
@@ -41,11 +45,13 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
   let jetztZaehler = 0;
   let letzterZustand: SpielerZustand = 'not_activated';
   const geplant = new Map<string, Geplant>();
+  const natuerlichBeendet = new Set<string>(); // Töne, die bis zu ihrem Ende klangen (nicht abgebrochen); `endeVerbrauchen` räumt auf
   const zuhoerer = new Set<(zustand: SpielerZustand) => void>();
 
-  const berechne = (): SpielerZustand => {
+  /** Zustand ohne den Ausgang (wie vor H4-6); der gewählte Ausgang muss gesetzt sein, sonst „Ton nicht aktiviert“. */
+  const grundZustand = (): SpielerZustand => {
     // @HT-012: ohne spielbaren Abpfiff-Ton gilt das Gerät ebenso als „Ton nicht aktiviert“ (der Klick lädt neu)
-    if (!aktiviert || kontextWert?.state !== 'running' || puffer.abpfiff === null) {
+    if (!aktiviert || kontextWert?.state !== 'running' || puffer.abpfiff === null || !senke.bereit()) {
       return 'not_activated';
     }
     if (lautstaerke.abpfiff === 0) {
@@ -53,6 +59,10 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
     }
     return eigenerTonFehlt.abpfiff || eigenerTonFehlt.halbzeit ? 'custom_sound_failed' : 'ready';
   };
+
+  /** @HT-054, @HT-055: der Ausgang geht vor `not_activated` (das Gerät zeigt „Ausgang verloren/bestätigen“). */
+  const berechne = (): SpielerZustand => senke.zustand() ?? grundZustand();
+  const spielbar = (): boolean => !istAusgangsZustand(berechne()) && berechne() !== 'not_activated';
 
   const bewerten = (): void => {
     const neu = berechne();
@@ -67,7 +77,11 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
   const kontext = (): AudioKontext => {
     if (!kontextWert) {
       kontextWert = erzeugeKontext();
-      kontextWert.addEventListener('statechange', bewerten);
+      kontextWert.addEventListener('statechange', () => {
+        senke.beiStatus(); // steht der Ausgang still, zuerst prüfen: verloren oder nur angehalten?
+        bewerten();
+      });
+      senke.kontextErzeugt();
     }
     return kontextWert;
   };
@@ -95,10 +109,25 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
   const vorschau = erzeugeHupenVorschau({ kontext, begrenzer });
   /** Klingt gerade ein echter End-Ton oder Testton? (Beginn erreicht, Ende noch nicht.) */
   const echterTonKlingt = (): boolean => [...geplant.values()].some((e) => e.startAt <= kontext().currentTime && kontext().currentTime < e.endetUm);
+  const senke = erzeugeSenke({
+    ausgang,
+    kontext: () => kontextWert,
+    geaendert: bewerten,
+    beiVerlust: () => {
+      // Ausgang weg oder unbestätigt: nichts Geplantes darf nach der Rückkehr nachgeholt werden (Web Audio spielt Vergangenes sofort)
+      for (const id of [...geplant.keys()]) {
+        abbrechen(id);
+      }
+      hymnen.stoppen();
+      vorschau.beenden();
+    },
+    darfResume: () => aktiviert,
+  });
+  letzterZustand = berechne();
   const hymnen = erzeugeTorhymnenAusgabe({
     kontext, begrenzer, dekodiere: lader.dekodiere, andereToene: () => geplant.values(), lautstaerke: () => lautstaerke.tor,
     vorschauBeenden: vorschau.beenden,
-    darf: () => aktiviert && kontextWert?.state === 'running' && lautstaerke.tor > 0, // ohne geladenen Abpfiff-Ton
+    darf: () => aktiviert && kontextWert?.state === 'running' && lautstaerke.tor > 0 && senke.zustand() === null && senke.bereit(), // ohne geladenen Abpfiff-Ton
   });
 
   const abbrechen = (id: string): void => {
@@ -120,10 +149,11 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
   // muss deshalb der Planer halten, der Spieler prüft sie nicht.
   const planen = (id: string, art: TonArt, startAtAudioSec: number): boolean => {
     const ton = puffer[art];
-    if (berechne() === 'not_activated' || lautstaerke[art] === 0 || !ton) {
+    if (!spielbar() || lautstaerke[art] === 0 || !ton) {
       return false;
     }
     abbrechen(id);
+    natuerlichBeendet.delete(id);
     vorschau.beendenUm(startAtAudioSec); // ein echter Ton beendet jedes Anhören zu seinem Beginn
     const k = kontext();
     const quelle = k.createBufferSource();
@@ -136,6 +166,7 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
     quelle.onended = () => {
       if (geplant.get(id) === eintrag) {
         geplant.delete(id);
+        natuerlichBeendet.add(id); // nicht abgebrochen (ein Abbruch nimmt den Eintrag vorher aus `geplant`): der Ton hat geklungen
       }
       trennen(eintrag);
     };
@@ -168,6 +199,7 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
       } catch {
         // verweigert: der Zustand bleibt not_activated
       }
+      await senke.fertig(); // der gewählte Ausgang ist gesetzt, bevor der Zustand gilt (H4-6)
       if (puffer.abpfiff === null && letzteWahl) {
         await laden(letzteWahl); // @HT-012: der Klick lädt einen nicht geladenen Abpfiff-Ton neu
       }
@@ -183,7 +215,7 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
     },
     anhoeren(art) {
       const ton = puffer[art];
-      if (berechne() === 'not_activated' || lautstaerke[art] === 0 || !ton) {
+      if (!spielbar() || lautstaerke[art] === 0 || !ton) {
         return false;
       }
       if (echterTonKlingt() || hymnen.laeuft()) {
@@ -221,11 +253,16 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
       bewerten();
     },
     zustand: berechne,
+    ausgabeLaeuft: () => grundZustand() !== 'not_activated',
+    tonGeladen: () => puffer.abpfiff !== null,
     onZustand(fn) {
       zuhoerer.add(fn);
       return () => zuhoerer.delete(fn);
     },
     geplant: () => [...geplant.keys()],
+    endeVerbrauchen(id) {
+      return natuerlichBeendet.delete(id);
+    },
     audioKontext: kontext,
     hymnen,
   };
@@ -242,5 +279,5 @@ async function holeDaten(url: string): Promise<ArrayBuffer> {
 /** Spieler mit echtem `AudioContext`, `fetch` und `localStorage` (Browser). */
 export function erzeugeBrowserHallTonSpieler(): HallTonSpieler {
   const erzeugeKontext = (): AudioKontext => new AudioContext();
-  return erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten: holeDaten, speicher: browserSpeicher() });
+  return erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten: holeDaten, speicher: browserSpeicher(), ausgang: browserAusgang().waechter });
 }

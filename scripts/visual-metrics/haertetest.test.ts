@@ -297,7 +297,7 @@ describe('@TA-012 Verdeckte Bedienelemente', () => {
     expect(schwebend(r.b)).toHaveLength(0)
   })
   it('Fixrunde 1 echter Stand: Spielplan meldet als Schwebendes nur Warnungen der Leiste Teilen/Als PDF (@OB-074: Leiste steht am Handy fest am Fensterrand); das Cockpit hat kein HART, jede Verdeckungs-Meldung ist bekannt oder eine Warnung (kein bestimmter Fehler erwartet)', async () => {
-    const plan = await messe('--app', '/#/tournament/hallencup-messlauf/schedule', '--erwarte', '[data-testid="schedule-view-table"]', '--saat', 'hallencup-messlauf', '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
+    const plan = await messe('--app', '/#/tournament/hallencup-messlauf/schedule', '--erwarte', '[data-testid="schedule-filter-bar"]', '--saat', 'hallencup-messlauf', '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
     expect(plan.b.status, plan.out).not.toBe('BLOCKED')
     // @OB-074: „Teilen“/„Als PDF“ stehen am Handy fest über der Liste. Beim Scrollen liegt die Leiste zeitweise über Zeilen-Bedienelementen,
     // die durch Weiterscrollen frei werden; das ist nach @TA-012 („schwebende Leiste über einem Element, das erst durch Weiterscrollen

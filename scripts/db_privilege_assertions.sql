@@ -1115,6 +1115,19 @@ SELECT 'lifecycle-guard-triggers-complete',
                                       to_regprocedure('public.hall_output_heard(uuid,integer)'))), false)
                              AND coalesce((SELECT position('IF public.tournament_is_closed(p_tournament_id) THEN' IN p.prosrc) > 0
                                              FROM pg_proc p WHERE p.oid = to_regprocedure('public.hall_require_open(uuid)')), false))
+                    -- Zuschauer-Zaehlung (20261124_003): public_view_counts ohne Sperr-Trigger, weil das Zaehlen nach dem Abschluss
+                    -- weitergeht (Zuschauer sehen den Endstand weiter an; ein Sperr-Trigger wuerde jeden Aufruf mit 55000 abweisen).
+                    -- Die Ausnahme gilt NUR, solange kein Client ein Recht auf die Tabelle hat (RLS an, keine Policy, nichts fuer
+                    -- anon/authenticated/PUBLIC) und der einzige Schreibweg count_public_view SECURITY DEFINER ist -- sonst
+                    -- verlangt diese Zeile wieder den Sperr-Trigger (Assertionen zuschauer-zaehlung-*).
+                    AND NOT (cl.relname = 'public_view_counts'
+                             AND cl.relrowsecurity
+                             AND NOT EXISTS (SELECT 1 FROM pg_policy pol WHERE pol.polrelid = cl.oid)
+                             AND NOT has_table_privilege('anon', cl.oid, 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN')
+                             AND NOT has_table_privilege('authenticated', cl.oid, 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN')
+                             AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(cl.relacl, acldefault('r', cl.relowner))) a WHERE a.grantee = 0)
+                             AND coalesce((SELECT p.prosecdef FROM pg_proc p
+                                            WHERE p.oid = to_regprocedure('public.count_public_view(text,text,text,text,boolean)')), false))
                     AND NOT EXISTS (SELECT 1 FROM pg_trigger t
                                      WHERE t.tgrelid = cl.oid AND t.tgname = cl.relname || '_guard_closed'
                                        AND t.tgfoid = to_regprocedure('public.guard_closed_tournament()')
@@ -1571,7 +1584,10 @@ SELECT 'hallenton-internal-no-client-execute',
 -- (5) Lebenszeichen ohne Browser-Kennzeichen: Grund aus fester Liste, Geraetename 1-60 Zeichen, keine Spalte user_agent.
 UNION ALL
 SELECT 'hallenton-heartbeat-fixed-reasons-no-user-agent',
-       coalesce((SELECT pg_get_constraintdef(con.oid) = 'CHECK (((state IS NULL) OR (state = ANY (ARRAY[''ready''::text, ''not_activated''::text, ''background''::text, ''slept''::text, ''custom_sound_failed''::text, ''volume_zero''::text]))))'
+       -- sechs Zustaende (20261121_001) ODER acht (seit 20261125_001: dazu output_lost, output_unconfirmed) -- die Zeile gilt vor und nach
+       -- dem Einspielen; die strenge Pruefung der acht steht in hallenton-output-states-heartbeat
+       coalesce((SELECT pg_get_constraintdef(con.oid) IN ('CHECK (((state IS NULL) OR (state = ANY (ARRAY[''ready''::text, ''not_activated''::text, ''background''::text, ''slept''::text, ''custom_sound_failed''::text, ''volume_zero''::text]))))',
+                                                          'CHECK (((state IS NULL) OR (state = ANY (ARRAY[''ready''::text, ''not_activated''::text, ''background''::text, ''slept''::text, ''custom_sound_failed''::text, ''volume_zero''::text, ''output_lost''::text, ''output_unconfirmed''::text]))))')
                    FROM pg_constraint con WHERE con.conrelid = to_regclass('public.hall_speakers') AND con.conname = 'hall_speakers_state_check'), false)
        AND coalesce((SELECT position('char_length(device_name) >= 1' IN pg_get_constraintdef(con.oid)) > 0
                             AND position('char_length(device_name) <= 60' IN pg_get_constraintdef(con.oid)) > 0
@@ -1779,4 +1795,111 @@ SELECT 'leibchen-kit-set-shape',
                             AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
                             AND NOT has_function_privilege('service_role', p.oid, 'EXECUTE')
                        FROM pg_proc p WHERE p.oid = to_regprocedure('public.match_kit_team_color(uuid)')), false)
+
+-- ---------------------------------------------------------------------------------------------------------------
+-- Zuschauer-Zaehlung (20261124_003_zuschauer_zaehlung.sql, Record Reichweite Zuschauersicht @RZ-024 bis @RZ-030): Pruefskript
+-- scripts/zuschauer-zaehlung-check.sh. Vor dem Live-Einspielen "f".
+-- ---------------------------------------------------------------------------------------------------------------
+-- (1) Tabelle: RLS an, keine Policy, kein Tabellenrecht fuer PUBLIC/anon/authenticated (@RZ-030: niemand liest oder schreibt
+--     ueber die Schnittstelle); SELECT nur fuer service_role (der Betreiber liest direkt).
+UNION ALL
+SELECT 'zuschauer-zaehlung-table-no-client-access',
+       coalesce((SELECT c.relrowsecurity
+                        AND NOT EXISTS (SELECT 1 FROM pg_policy pol WHERE pol.polrelid = c.oid)
+                        AND NOT has_table_privilege('anon', c.oid, 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN')
+                        AND NOT has_table_privilege('authenticated', c.oid, 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN')
+                        AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(c.relacl, acldefault('r', c.relowner))) a WHERE a.grantee = 0)
+                        AND has_table_privilege('service_role', c.oid, 'SELECT')
+                   FROM pg_class c WHERE c.oid = to_regclass('public.public_view_counts')), false)
+-- (1b) 20261124_004_zuschauer_zaehlung_ci_leser.sql (Werkzeugkette): die Drift-Check-Rolle MUSS die Tabelle lesen duerfen (sonst
+--     scheitert pg_dump --schema-only mit "permission denied for table public_view_counts") und sonst nichts (kein INSERT, UPDATE,
+--     DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN). Vor dem Live-Einspielen "f".
+UNION ALL
+SELECT 'zuschauer-zaehlung-ci-schema-reader-select',
+       coalesce((SELECT has_table_privilege('ci_schema_reader', c.oid, 'SELECT')
+                        AND NOT has_table_privilege('ci_schema_reader', c.oid, 'INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN')
+                   FROM pg_class c WHERE c.oid = to_regclass('public.public_view_counts')), false)
+-- (2) count_public_view: SECURITY DEFINER, search_path fest, EXECUTE nur anon/authenticated/service_role, nicht PUBLIC.
+UNION ALL
+SELECT 'zuschauer-zaehlung-rpc-definer-anon',
+       coalesce((SELECT p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                        AND has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                        AND has_function_privilege('service_role', p.oid, 'EXECUTE')
+                        AND p.proacl IS NOT NULL
+                        AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.count_public_view(text,text,text,text,boolean)')), false)
+-- Hallenton Zustaende des Ausgangs und Abmelden (20261125_001_hallenton_ausgang_zustaende.sql, Record Hallenton @HT-053, @HT-054,
+-- @HT-055, @HT-057): Pruefskript scripts/hallenton-check.sh (Kategorie A), Rollen-Zeilen scripts/rls-matrix.d/spur-hallenton.sh.
+-- Vor dem Live-Einspielen "f" (vom Drift-Check bis dahin ausgelassen).
+-- ---------------------------------------------------------------------------------------------------------------
+-- (1) Zustand aus fester Liste mit genau acht Werten (die sechs bisherigen, dazu output_lost und output_unconfirmed) -- in der
+--     Pruefregel UND im Lebenszeichen (sonst meldet die Tabelle 23514 statt 22023); das Lebenszeichen sperrt weiter nach dem Ende.
+UNION ALL
+SELECT 'hallenton-output-states-heartbeat',
+       coalesce((SELECT pg_get_constraintdef(con.oid) = 'CHECK (((state IS NULL) OR (state = ANY (ARRAY[''ready''::text, ''not_activated''::text, ''background''::text, ''slept''::text, ''custom_sound_failed''::text, ''volume_zero''::text, ''output_lost''::text, ''output_unconfirmed''::text]))))'
+                   FROM pg_constraint con WHERE con.conrelid = to_regclass('public.hall_speakers') AND con.conname = 'hall_speakers_state_check'), false)
+       AND coalesce((SELECT position('p_state NOT IN (''ready'', ''not_activated'', ''background'', ''slept'', ''custom_sound_failed'', ''volume_zero'', ''output_lost'', ''output_unconfirmed'')' IN p.prosrc) > 0
+                            AND position('PERFORM public.hall_require_open(p_tournament_id);' IN p.prosrc) > 0
+                            AND position('PERFORM public.hall_require(p_tournament_id, ''manageScreens'');' IN p.prosrc) > 0
+                       FROM pg_proc p WHERE p.oid = to_regprocedure('public.hall_speaker_heartbeat(uuid,uuid,integer[],text,boolean)')), false)
+-- (2) hall_speaker_unassign: SECURITY DEFINER, search_path fest, EXECUTE nur authenticated (anon nicht, service_role nicht, kein
+--     PUBLIC); prueft manageScreens und das offene Turnier (55000), bevor es loescht; gibt keine Geraete-Kennung heraus.
+UNION ALL
+SELECT 'hallenton-speaker-unassign-rpc-authenticated-only',
+       coalesce((SELECT p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                        AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('service_role', p.oid, 'EXECUTE')
+                        AND p.proacl IS NOT NULL
+                        AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+                        AND position('PERFORM public.hall_require(p_tournament_id, ''manageScreens'');' IN p.prosrc) > 0
+                        AND position('PERFORM public.hall_require_open(p_tournament_id);' IN p.prosrc) > 0
+                        AND position('device_id' IN p.prosrc) = 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.hall_speaker_unassign(uuid,integer[])')), false)
+-- ---------------------------------------------------------------------------------------------------------------
+-- Zuschauer-Zaehlung Stufe 1b (20261126_001_zuschauer_zaehlung_os_browser.sql, Record Reichweite Zuschauersicht @RZ-031, @RZ-032):
+-- Pruefskript scripts/zuschauer-zaehlung-check.sh. Vor dem Live-Einspielen "f" (vom Drift-Check bis dahin ausgelassen).
+-- ---------------------------------------------------------------------------------------------------------------
+-- (1) Tabelle: genau die neun Spalten (nur die zwei Familien kommen dazu, keine Kennung), beide Familien text NOT NULL mit Vorgabe
+--     'sonstige' und fester Werteliste, Primaerschluessel ueber alle sieben Schluesselspalten.
+UNION ALL
+SELECT 'zuschauer-zaehlung-os-browser-columns',
+       coalesce((SELECT string_agg(a.attname, ',' ORDER BY a.attnum)
+                          = 'tournament_id,window_start,channel,device_class,installed,views,heartbeats,os_family,browser_family'
+                   FROM pg_attribute a
+                  WHERE a.attrelid = to_regclass('public.public_view_counts') AND a.attnum > 0 AND NOT a.attisdropped), false)
+       AND coalesce((SELECT count(*) = 2
+                       FROM pg_attribute a
+                       JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
+                      WHERE a.attrelid = to_regclass('public.public_view_counts') AND a.attname IN ('os_family', 'browser_family')
+                        AND a.attnotnull AND a.atttypid = 'text'::regtype
+                        AND pg_get_expr(d.adbin, d.adrelid) = '''sonstige''::text'), false)
+       AND coalesce((SELECT pg_get_constraintdef(con.oid) = 'CHECK ((os_family = ANY (ARRAY[''ios''::text, ''android''::text, ''windows''::text, ''macos''::text, ''sonstige''::text])))'
+                       FROM pg_constraint con WHERE con.conrelid = to_regclass('public.public_view_counts') AND con.conname = 'public_view_counts_os_family_check'), false)
+       AND coalesce((SELECT pg_get_constraintdef(con.oid) = 'CHECK ((browser_family = ANY (ARRAY[''safari''::text, ''chrome''::text, ''firefox''::text, ''samsung''::text, ''sonstige''::text])))'
+                       FROM pg_constraint con WHERE con.conrelid = to_regclass('public.public_view_counts') AND con.conname = 'public_view_counts_browser_family_check'), false)
+       AND coalesce((SELECT string_agg(a.attname, ',' ORDER BY k.ord)
+                            = 'tournament_id,window_start,channel,device_class,installed,os_family,browser_family'
+                       FROM pg_constraint c
+                       CROSS JOIN LATERAL unnest(c.conkey) WITH ORDINALITY AS k(attnum, ord)
+                       JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum
+                      WHERE c.conrelid = to_regclass('public.public_view_counts') AND c.contype = 'p'), false)
+-- (2) Ableitung: die Hilfsfunktion ist unveraenderlich, kein SECURITY DEFINER, fester search_path und fuer PUBLIC/anon/authenticated
+--     NICHT ausfuehrbar (nur count_public_view ruft sie, als Eigentuemer); count_public_view liest die Kennung aus den Kopfzeilen und
+--     enthaelt kein RAISE (nie ein Fehler fuer den Zuschauer, @RZ-032).
+UNION ALL
+SELECT 'zuschauer-zaehlung-os-browser-derive-function',
+       coalesce((SELECT p.provolatile = 'i' AND NOT p.prosecdef AND p.proretset
+                        AND p.proconfig @> ARRAY['search_path=pg_catalog, pg_temp']
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                        AND p.proacl IS NOT NULL
+                        AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.public_view_agent_families(text)')), false)
+       AND coalesce((SELECT position('public_view_agent_families' IN p.prosrc) > 0
+                            AND position('request.headers' IN p.prosrc) > 0
+                            AND position('user-agent' IN p.prosrc) > 0
+                            AND position('RAISE' IN p.prosrc) = 0
+                       FROM pg_proc p WHERE p.oid = to_regprocedure('public.count_public_view(text,text,text,text,boolean)')), false)
 ;

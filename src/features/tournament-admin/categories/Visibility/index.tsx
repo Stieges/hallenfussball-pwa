@@ -15,14 +15,16 @@ import { CategoryPage, CollapsibleSection } from '../shared';
 import type { Tournament } from '../../../../types/tournament';
 import { useRepository } from '../../../../hooks/useRepository';
 import { useToast } from '../../../../components/ui/Toast';
-import { generateLiveUrl, generateTournamentUrl } from '../../../../utils/shareUtils';
+import { generateLiveUrl, generateTournamentUrl, withViewChannel } from '../../../../utils/shareUtils';
 import { isSupabaseConfigured } from '../../../../lib/supabase';
 import { isReleaseRefusal } from '../../../../core/repositories/OfflineRepository';
 import { useCan } from '../../../auth/hooks/useCan';
+import { useSperreAktion } from '../../../../hooks/useSperreAktion';
 import { useTournamentClosed } from '../../../../hooks/useTournamentClosed';
 import { TournamentClosedHint } from '../../../../components/ui/molecules/TournamentClosedHint';
 import { visibilityStyles as styles } from './visibilityStyles';
 import { SpectatorDisplaySection } from './SpectatorDisplaySection';
+import { VisibilityErrorNotice } from './VisibilityErrorNotice';
 
 // =============================================================================
 // PROPS
@@ -69,6 +71,8 @@ export function VisibilityCategory({
   const [shareCode, setShareCode] = useState<string | null>(tournament.shareCode ?? null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // @OB-087: welche Änderung gescheitert ist – „Erneut versuchen“ wiederholt genau diese (nur Veröffentlichen und Privatisieren)
+  const [failed, setFailed] = useState<'public' | 'private' | null>(null);
 
   // Sync state from tournament prop
   useEffect(() => {
@@ -83,6 +87,8 @@ export function VisibilityCategory({
 
   // Generate public URL based on share code (uses HashRouter: /#/live/...)
   const publicUrl = shareCode ? generateLiveUrl(shareCode) : null;
+  // „Kopieren“ trägt den Kanal Link (@RZ-029); der angezeigte Link bleibt ohne Zusatz
+  const copyUrl = publicUrl ? withViewChannel(publicUrl, 'l') : null;
 
   // Make tournament public (generate share code)
   const handleMakePublic = useCallback(async () => {
@@ -93,12 +99,14 @@ export function VisibilityCategory({
     }
 
     setIsUpdating(true);
-    setError(null);
+    if (failed === null) { setError(null); } // ein Wiederholen lässt den Hinweis (mit seiner Taste) stehen, bis es klappt
 
     try {
       const result = await repository.makeTournamentPublic(tournamentId);
 
       if (result) {
+        setError(null);
+        setFailed(null);
         setShareCode(result.shareCode);
         setIsPublic(true);
         onTournamentUpdate({
@@ -124,20 +132,23 @@ export function VisibilityCategory({
           ? err.message
           : t('visibility.errorMakingPublic'));
       setError(message);
+      setFailed('public');
       showError(message);
     } finally {
       setIsUpdating(false);
     }
-  }, [tournamentId, tournament, onTournamentUpdate, repository, t, isDraft, showError]);
+  }, [tournamentId, tournament, onTournamentUpdate, repository, t, isDraft, showError, failed]);
 
   // Make tournament private (remove share code)
   const handleMakePrivate = useCallback(async () => {
     setIsUpdating(true);
-    setError(null);
+    if (failed === null) { setError(null); }
 
     try {
       await repository.makeTournamentPrivate(tournamentId);
 
+      setError(null);
+      setFailed(null);
       setShareCode(null);
       setIsPublic(false);
       onTournamentUpdate({
@@ -152,15 +163,20 @@ export function VisibilityCategory({
     } catch (err) {
       console.error('Failed to make tournament private:', err);
       setError(t('visibility.errorMakingPrivate'));
+      setFailed('private');
     } finally {
       setIsUpdating(false);
     }
-  }, [tournamentId, tournament, onTournamentUpdate, repository, t]);
+  }, [tournamentId, tournament, onTournamentUpdate, repository, t, failed]);
+
+  // @OB-087: „Erneut versuchen“ wiederholt genau die gescheiterte Änderung; die Sperre fängt einen schnellen Doppeltipp ab
+  const { starte: wiederhole, laeuft: wiederholt } = useSperreAktion(() => (failed === 'public' ? handleMakePublic() : handleMakePrivate()));
 
   // Regenerate share code
   const handleRegenerateCode = useCallback(async () => {
     setIsUpdating(true);
     setError(null);
+    setFailed(null);
 
     try {
       const result = await repository.regenerateShareCode(tournamentId);
@@ -186,18 +202,18 @@ export function VisibilityCategory({
 
   // Handle copy to clipboard
   const handleCopy = async () => {
-    if (!publicUrl) {
+    if (!copyUrl) {
       return;
     }
 
     try {
-      await navigator.clipboard.writeText(publicUrl);
+      await navigator.clipboard.writeText(copyUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
       // Fallback for older browsers
       const textArea = document.createElement('textarea');
-      textArea.value = publicUrl;
+      textArea.value = copyUrl;
       document.body.appendChild(textArea);
       textArea.select();
       // eslint-disable-next-line @typescript-eslint/no-deprecated -- Fallback for browsers without Clipboard API
@@ -246,18 +262,7 @@ export function VisibilityCategory({
       <CollapsibleSection icon="📱" title={t('visibility.qrAndSharing')} defaultOpen>
         <div style={styles.qrContainer}>
           {/* Error Message */}
-          {error && (
-            <div style={{
-              padding: cssVars.spacing.md,
-              background: cssVars.colors.errorLight,
-              border: `1px solid ${cssVars.colors.errorBorder}`,
-              borderRadius: cssVars.borderRadius.md,
-              color: cssVars.colors.error,
-              marginBottom: cssVars.spacing.md,
-            }}>
-              {error}
-            </div>
-          )}
+          {error && <VisibilityErrorNotice message={error} onRetry={failed === null ? undefined : wiederhole} retrying={wiederholt || isUpdating} />}
 
           {/* Entwurf: kein Teilen, nur der Hinweis */}
           {isDraft && (

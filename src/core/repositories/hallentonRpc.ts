@@ -1,6 +1,6 @@
 /**
  * Client der Hallenton-Funktionen (`supabase/migrations/20261121_001_hallenton.sql`, Torhymne
- * `20261123_001_hallenton_torhymne.sql`, Record `docs/anforderungen/2026-10-15_hallenton.md`). Muster `fieldControlRpc.ts`: nur `.rpc`, Zeitlimit
+ * `20261123_001_hallenton_torhymne.sql`, Ausgang-Zustände `20261125_001_hallenton_ausgang_zustaende.sql`, Record `docs/anforderungen/2026-10-15_hallenton.md`). Muster `fieldControlRpc.ts`: nur `.rpc`, Zeitlimit
  * `withCloudReadTimeout`, jede `Json`-Antwort per zod genau nach der Antwortform der SQL-Funktion geprüft.
  *
  * Fehlerbild als Ergebnisart, nie ein Wurf:
@@ -23,7 +23,7 @@ type Functions = Database['public']['Functions'];
 type HallFunktion =
   | 'hall_speaker_assign' | 'hall_speaker_release' | 'hall_speaker_heartbeat' | 'hall_field_lead_heartbeat'
   | 'hall_test_tone_request' | 'hall_test_tone_ack' | 'hall_output_heard' | 'hall_sound_settings_set' | 'hall_sound_status'
-  | 'hall_goal_anthems_set';
+  | 'hall_goal_anthems_set' | 'hall_speaker_unassign';
 export type HallArgs<F extends HallFunktion> = Functions[F]['Args'];
 
 export type HallFehlerGrund = 'kein_recht' | 'ungueltig' | 'turnier_beendet' | 'netz' | 'antwort_unbekannt';
@@ -31,12 +31,15 @@ export interface HallFehler { ok: false; grund: HallFehlerGrund }
 export type HallErgebnis<T> = ({ ok: true } & T) | HallFehler;
 
 /** Zustand eines Lautsprechers aus fester Liste (CHECK `hall_speakers_state_check`); `null` = noch kein Lebenszeichen. */
-export const HALL_SPEAKER_STATES = ['ready', 'not_activated', 'background', 'slept', 'custom_sound_failed', 'volume_zero'] as const;
+export const HALL_SPEAKER_STATES = [
+  'ready', 'not_activated', 'background', 'slept', 'custom_sound_failed', 'volume_zero', 'output_lost', 'output_unconfirmed',
+] as const;
 export type HallSpeakerState = (typeof HALL_SPEAKER_STATES)[number];
 /**
- * Gelesener Zustand: ein Wert, den dieser App-Stand nicht kennt (der Server kann die Liste später erweitern, z. B. um
- * `output_lost`), wird `'zustandUnbekannt'`. Nur ein Lesewert – gesendet wird weiter nur `HallSpeakerState`, darum steht er nicht in
- * `HALL_SPEAKER_STATES`. `'zustandUnbekannt'` ist nicht bereit und kein „Status unbekannt“ der Verwaltung (@HT-039, @HT-041).
+ * Gelesener Zustand: ein Wert, den dieser App-Stand nicht kennt (der Server kann die Liste später erweitern), wird
+ * `'zustandUnbekannt'`. Nur ein Lesewert – gesendet wird weiter nur `HallSpeakerState`, darum steht er nicht in
+ * `HALL_SPEAKER_STATES`. `output_lost` und `output_unconfirmed` (Migration 20261125_001, H4-3) stehen seit H4-3 in der Liste und werden
+ * gelesen; GESENDET werden sie erst ab H4-6, angezeigt ab H4-11 (bis dahin wie ein unbekannter Zustand: nicht bereit, ohne Wortgrund). `'zustandUnbekannt'` ist nicht bereit und kein „Status unbekannt“ der Verwaltung (@HT-039, @HT-041).
  */
 export type HallSpeakerStateGelesen = HallSpeakerState | 'zustandUnbekannt';
 
@@ -59,6 +62,8 @@ const AssignSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('occupied'), fields: z.array(FeldGeraetSchema) }),
 ]);
 const ReleaseSchema = z.object({ status: z.literal('released'), fields: z.array(z.number().int()) });
+/** Antwort von `hall_speaker_unassign` (20261125_001): die Felder, die einen Lautsprecher hatten und jetzt keinen mehr haben; nie eine Geräte-Kennung. */
+const UnassignSchema = z.object({ status: z.literal('unassigned'), fields: z.array(z.number().int()) });
 
 const HeartbeatSchema = z.object({
   status: z.literal('ok'),
@@ -123,6 +128,7 @@ const SchmaleSichtSchema = z.object({
 
 export type HallAssignAntwort = z.infer<typeof AssignSchema>;
 export type HallReleaseAntwort = z.infer<typeof ReleaseSchema>;
+export type HallUnassignAntwort = z.infer<typeof UnassignSchema>;
 export type HallHeartbeatAntwort = z.infer<typeof HeartbeatSchema>;
 export type HallLeadHeartbeatAntwort = z.infer<typeof LeadHeartbeatSchema>;
 export type HallTestRequestAntwort = z.infer<typeof TestRequestSchema>;
@@ -180,6 +186,15 @@ export function hallSpeakerAssign(client: Client, args: HallArgs<'hall_speaker_a
 /** Schalter aus auf diesem Gerät (@HT-038): nur die eigenen Felder entfallen. */
 export function hallSpeakerRelease(client: Client, args: HallArgs<'hall_speaker_release'>): Promise<HallErgebnis<HallReleaseAntwort>> {
   return rufe(client, 'hall_speaker_release', args, mit(ReleaseSchema));
+}
+
+/**
+ * Die Turnierleitung (`manageScreens`) meldet den Hallen-Lautsprecher der Felder ab, gleich welches Gerät es ist (@HT-057). Der Server prüft das Recht
+ * (42501 → `kein_recht`), dass das Turnier offen ist (55000 → `turnier_beendet`) und die Felder (22023 → `ungueltig`); die Antwort nennt nur Felder.
+ * Das abgemeldete Gerät erfährt es mit seinem nächsten Lebenszeichen (`unassigned`).
+ */
+export function hallSpeakerUnassign(client: Client, args: HallArgs<'hall_speaker_unassign'>): Promise<HallErgebnis<HallUnassignAntwort>> {
+  return rufe(client, 'hall_speaker_unassign', args, mit(UnassignSchema));
 }
 
 /** Lebenszeichen des Lautsprechers mit Zustand und Anzeichen `p_output_changed` (@HT-047); Antwort mit Testton und Leitung. */

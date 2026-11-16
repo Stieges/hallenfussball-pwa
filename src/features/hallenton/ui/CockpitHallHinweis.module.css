@@ -1,0 +1,17 @@
+/* Hinweise unter der Tafel im Cockpit (Mockup „cockpit-*“, H4-12): im normalen Fluss, verdecken weder Uhr noch Tasten. Der Kasten selbst ist `HinweisMitTaste`. Nur Tokens. */
+.liste {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  min-width: 0;
+}
+
+/* Kleines Handy (@OB-087: Tor-Tasten und Reihe „Foul · Zeitstrafe · Karte“ bleiben mit dem Hinweis ganz im Bild): die Taste darf hier schmaler sein als 144 px
+   (nie niedriger als 44 px, volle Beschriftung): die Textspalte daneben wird breiter, der Satz braucht weniger Zeilen.
+   Höhengrenze wie die Stufe „knapp“ des Cockpits (`cockpitHeightSteps.knapp` = 720, Stufe gilt bei Höhe < 720): 719 px. */
+@media (max-width: 480px) and (max-height: 719px) {
+  .liste {
+    --hinweis-taste-min: calc(var(--spacing-xxl) * 2);
+    --hinweis-taste-polster: var(--spacing-sm);
+  }
+}

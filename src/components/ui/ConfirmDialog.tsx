@@ -9,8 +9,9 @@
 
 import { CSSProperties, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, dialogWidths, fontSizesMd3, mediaQueries } from '../../design-tokens'
+import { cssVars, dialogWidths, iconSizeValues, mediaQueries } from '../../design-tokens'
 import { DialogSurface } from './molecules/DialogSurface';
+import { Icons } from './Icons';
 export type ConfirmDialogVariant = 'warning' | 'danger' | 'info';
 
 /** Secondary action button configuration */
@@ -47,6 +48,8 @@ export interface ConfirmDialogProps {
   cancelLabel?: string;
   /** Alias for onCancel (for backwards compatibility with dialogs version) */
   onClose?: () => void;
+  /** Bestätigen ist vorübergehend gesperrt (sichtbar abgeblendet, `aria-disabled`, Tipps lösen nichts aus; „Abbrechen“ bleibt bedienbar), z. B. gegen Doppeltipp auf zwei aufeinanderfolgende Dialoge. */
+  confirmGesperrt?: boolean;
 }
 
 export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
@@ -64,6 +67,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   confirmLabel,
   cancelLabel,
   onClose,
+  confirmGesperrt = false,
 }) => {
   const { t } = useTranslation('common');
   // Handle backwards compatibility
@@ -100,7 +104,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
   const variantColors = {
     warning: {
-      icon: '⚠️',
+      icon: <Icons.AlertTriangle size={iconSizeValues.lg} />,
       accent: cssVars.colors.warning,
       headerBg: cssVars.colors.warningLight,
       // Weiß auf Warnfarbe wäre 3,19 : 1 (hell); der Hover-Ton hält 4,5 : 1 (@OB-055).
@@ -108,14 +112,15 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       confirmHover: cssVars.colors.warningHover,
     },
     danger: {
-      icon: '🚨',
+      // Gefahr = Warnsymbol in der Gefahr-Farbe, keine Sirene (@OB-038)
+      icon: <Icons.AlertTriangle size={iconSizeValues.lg} />,
       accent: cssVars.colors.error,
       headerBg: cssVars.colors.errorLight,
       confirmBg: cssVars.colors.error,
       confirmHover: cssVars.colors.errorHover,
     },
     info: {
-      icon: 'ℹ️',
+      icon: <Icons.Info size={iconSizeValues.lg} />,
       accent: cssVars.colors.primary,
       headerBg: cssVars.colors.primaryLight,
       confirmBg: cssVars.colors.primary,
@@ -134,8 +139,11 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     backgroundColor: variantConfig.headerBg,
   };
 
+  // Das Symbol erbt die Farbe der Stufe (Warnung/Gefahr/Hinweis) und ist nur Schmuck: der Titel daneben trägt die Aussage
   const iconStyle: CSSProperties = {
-    fontSize: fontSizesMd3.displaySmall,
+    display: 'flex',
+    flexShrink: 0,
+    color: variantConfig.accent,
   };
 
   const titleStyle: CSSProperties = {
@@ -202,6 +210,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     backgroundColor: variantConfig.confirmBg,
     border: `1px solid ${variantConfig.confirmBg}`,
     color: cssVars.colors.onWarning,
+    ...(confirmGesperrt ? { opacity: cssVars.opacity.disabled, cursor: 'not-allowed' } : {}),
   };
 
   const handleSecondaryAction = () => {
@@ -221,7 +230,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       suppressEnter={isDanger}
       header={
         <div style={headerStyle} className="confirm-dialog-inset">
-          <span style={iconStyle}>{variantConfig.icon}</span>
+          <span style={iconStyle} aria-hidden="true" data-testid="confirm-dialog-icon">{variantConfig.icon}</span>
           <h2 id="confirm-dialog-title" style={titleStyle}>{title}</h2>
         </div>
       }
@@ -265,7 +274,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           <button
             ref={confirmButtonRef}
             style={confirmButtonStyle}
-            onClick={onConfirm}
+            onClick={confirmGesperrt ? undefined : onConfirm}
+            aria-disabled={confirmGesperrt ? true : undefined}
             data-testid="confirm-dialog-confirm"
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = variantConfig.confirmHover;

@@ -38,9 +38,9 @@ export async function hartBefunde(page: Page, art: string): Promise<string[]> {
   return m.befunde.filter((b) => hart.has(b.metrik) && !b.selektor.includes('data-testid="auth-')).map((b) => `${b.metrik} ${b.selektor} ${b.ist}`);
 }
 
-/** Bild der ganzen Seite in den Ordner aus der Umgebungsvariable `umgebungsname`, sonst in die Testausgabe. */
-export async function speichereBild(page: Page, outputDir: string, umgebungsname: string, name: string): Promise<void> {
+/** Bild der ganzen Seite (`ganzeSeite`) oder des sichtbaren Ausschnitts in den Ordner aus der Umgebungsvariable `umgebungsname`, sonst in die Testausgabe. */
+export async function speichereBild(page: Page, outputDir: string, umgebungsname: string, name: string, ganzeSeite = true): Promise<void> {
   const ordner = process.env[umgebungsname] ?? outputDir;
   mkdirSync(ordner, { recursive: true });
-  await page.screenshot({ path: join(ordner, `${name}.png`), fullPage: true });
+  await page.screenshot({ path: join(ordner, `${name}.png`), fullPage: ganzeSeite });
 }

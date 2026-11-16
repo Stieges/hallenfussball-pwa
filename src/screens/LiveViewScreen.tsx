@@ -24,6 +24,7 @@ import { usePublicTournament } from '../features/public-view/usePublicTournament
 import { usePublicView } from '../features/public-view/usePublicView';
 import { usePublicFinalStandings } from '../features/public-view/usePublicFinalStandings';
 import { usePublicViewFilters } from '../features/public-view/usePublicViewFilters';
+import { usePublicViewCount } from '../features/public-view/usePublicViewCount';
 import { usePullToRefresh, getRefreshIndicatorStyle, getRefreshSpinnerStyle, PULL_THRESHOLD } from '../features/public-view/usePullToRefresh';
 import { publicPageContainerStyle, publicPageContentStyle } from '../features/public-view/publicPageStyles';
 import { PublicLoadingView, PublicNotFoundView, PublicErrorView } from '../features/public-view/components/PublicStatusViews';
@@ -75,6 +76,9 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
     selectMyTeam,
   } = usePublicViewFilters(shareCode);
 
+  // Zählt sich selbst (intern, @RZ-024..028): erst nach erfolgreichem Laden, eigener Aufruf, Fehler bleiben still
+  usePublicViewCount(shareCode, loadingState === 'success');
+
 
   // Die gemeinsame Ansicht der Zuschauer (A-36c): Status, Seitentexte, Endstand und Sichtbarkeit nur von hier
   // Der gespeicherte Endstand (R3-6): im Takt erst nach dem Abschluss (Z20), ohne Neuladen
@@ -89,7 +93,7 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
     return <PublicNotFoundView />;
   }
   if (loadingState === 'error') {
-    return <PublicErrorView errorMessage={errorMessage} />;
+    return <PublicErrorView errorMessage={errorMessage} onRetry={refresh} />;
   }
 
   // Success - show tournament

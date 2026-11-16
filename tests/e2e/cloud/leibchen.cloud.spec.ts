@@ -16,6 +16,7 @@ import { randomUUID } from 'node:crypto';
 import { test, expect } from './fixtures';
 import { engineCupTarget, expectEngineMatchRunningUi, expectSeededEngineMatch, fetchUserIdByEmail, newRoleContext, openCockpit } from './engineHelpers';
 import { restAsRole, serviceRest } from './restAsRole';
+import { TOURNAMENT_TIME_ZONE, toTournamentLocal } from '../../../src/core/view/time';
 import { E2E_LEIBCHEN_SHARE_CODES, E2E_USERS, engineCupIds, leibchenMonitorId, type LeibchenCupSlug } from './testData';
 
 interface SpielZeile { kit_decision: string | null; bib_side: string | null; match_status: string; team_a_id: string; team_b_id: string }
@@ -63,8 +64,11 @@ test.describe('Leibchen: Wahl, Server und Anzeige (zwei Kontexte, lokaler Stack)
     const olli = await newRoleContext(browser, 'owner');
     const halle = await browser.newContext();
     try {
-      // Anstoß in vier Minuten (Uhrzeit der Spalte `scheduled_start`, Zeitzone des Laufs): die Live-Folie des Hallenmonitors zeigt das nächste Spiel schon vor dem Anpfiff (@ZM-138)
-      const termin = await serviceRest('PATCH', `matches?id=eq.${ids.matchId}`, { scheduled_start: new Date(Date.now() + 240_000).toISOString().slice(11, 19) });
+      // Anstoß in vier Minuten als Wanduhr der Turnier-Ortszeit (so liest die App die Spalte `scheduled_start`, nicht als UTC): die Live-Folie des
+      // Hallenmonitors zeigt das nächste Spiel schon vor dem Anpfiff (@ZM-138). Rutscht „in vier Minuten“ über Mitternacht, ist der Anstoß am
+      // Turniertag überfällig und wird ebenfalls gezeigt (@ZM-141) – ein Fenster ohne Live-Folie gibt es nicht mehr (C-LEIBCHEN-CLOUDTEST-MITTERNACHT).
+      const anstoss = toTournamentLocal(new Date(Date.now() + 240_000), TOURNAMENT_TIME_ZONE).time;
+      const termin = await serviceRest('PATCH', `matches?id=eq.${ids.matchId}`, { scheduled_start: `${anstoss}:00` });
       expect(termin.status, termin.text).toBeLessThan(300);
       const vorher = await monitor(halle, 'LEIBCHENA');
       await expect(vorher.getByTestId('live-box-home-bib'), 'vor der Wahl keine Weste').toHaveCount(0);

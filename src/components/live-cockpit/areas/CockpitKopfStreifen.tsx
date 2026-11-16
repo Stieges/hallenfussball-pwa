@@ -1,0 +1,68 @@
+/**
+ * CockpitKopfStreifen: die Zeilen unter der Anzeigetafel im normalen Fluss – Statuszeile (@FU-109), Hinweise zum Hallen-Lautsprecher (H4-12), Berechtigungs-Banner, Ausgangs-Hinweis (W1)
+ * und die Übergabe-Zeile (B-50). Aus `LiveCockpit.tsx` gelöst (H4-12), Verhalten gleich; Hinweise sperren und verdecken nichts.
+ */
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useInRouterContext, useLocation, useNavigate } from 'react-router-dom';
+import { AwaitingServerCopyLine } from '../../../features/collaboration';
+import { merkeRueckkehr } from '../../../features/auth/utils/loginRueckkehr';
+import { OutboxNotice } from '../../../features/collaboration/outbox/OutboxNotice';
+import type { OutboxStatus } from '../../../core/match/client/outboxTypes';
+import { CockpitHallHinweis } from '../../../features/hallenton/ui/CockpitHallHinweis';
+import type { CockpitZustand } from '../model/cockpitPhase';
+import shell from '../LiveCockpitShell.module.css';
+
+export interface CockpitKopfStreifenProps {
+  tournamentId: string;
+  matchId: string;
+  /** Feld des Spiels (`field-N`) und Zustand im Cockpit: Hinweise zum Hallen-Lautsprecher (H4-12, @HT-039). */
+  feldId: string | undefined;
+  zustand: CockpitZustand;
+  /** Der Bereich ist ausgeblendet (Leibchen-Wahl am Handy): die Hinweise stehen nicht im Bild (@HT-059, R1). */
+  verdeckt: boolean;
+  /** Kein Steuerrecht: das Banner steht, außer die Zeile der Leiste sagt es schon (B-49, `steuerung`). */
+  readOnly: boolean;
+  fremdGesteuert: boolean;
+  outboxStatus: OutboxStatus;
+  onOutboxReload: () => void;
+  /** Anzahl übergebener Einträge, wenn das Gerät nur noch zusieht (B-50), sonst `null`. */
+  nurZusehen: number | null;
+}
+
+type AusgangsHinweisProps = Pick<React.ComponentProps<typeof OutboxNotice>, 'status' | 'matchId' | 'onReload'>;
+
+/**
+ * Der Ausgangs-Hinweis mit „Anmelden“ (@OB-087 Zeile 3): in der App führt die Taste zur Anmeldung und merkt vorher das Cockpit dieses Felds
+ * (`merkeRueckkehr`), damit die Person nach der Anmeldung wieder dort steht; ohne Router (einzelne Prüfstände, Tests) bleibt es beim Text.
+ */
+function AusgangsHinweisMitAnmelden(props: AusgangsHinweisProps): ReactElement {
+  const navigate = useNavigate();
+  const { pathname, search } = useLocation();
+  return <OutboxNotice {...props} onLogin={() => { merkeRueckkehr(`${pathname}${search}`); void navigate('/login'); }} />;
+}
+
+function AusgangsHinweis(props: AusgangsHinweisProps): ReactElement {
+  return useInRouterContext() ? <AusgangsHinweisMitAnmelden {...props} /> : <OutboxNotice {...props} />;
+}
+
+export function CockpitKopfStreifen({ tournamentId, matchId, feldId, zustand, verdeckt, readOnly, fremdGesteuert, outboxStatus, onOutboxReload, nurZusehen }: CockpitKopfStreifenProps): ReactElement {
+  const { t } = useTranslation('cockpit');
+  return (
+    <>
+      {/* @FU-109: Statuszeile im normalen Fluss unter der Anzeigetafel (Review Version-Fix R1) */}
+      <AwaitingServerCopyLine tournamentId={tournamentId} />
+      {/* H4-12: ruhige Hinweise zum Hallen-Lautsprecher (@HT-034, @HT-036, @HT-040, @HT-050); erscheinen nur mit eingerichtetem Lautsprecher am Feld */}
+      <CockpitHallHinweis tournamentId={tournamentId} feldId={feldId} zustand={zustand} kannSteuern={!readOnly} verdeckt={verdeckt} />
+      {/* Task R2: Read-Only-Banner — nur bei fehlender Berechtigung, nicht bei beendetem Spiel und nicht bei fremd gesteuertem Feld (B-49: Zeile in der Leiste). */}
+      {readOnly && !fremdGesteuert && (
+        <div className={shell.readOnlyBanner} data-testid="cockpit-readonly-banner" role="status">
+          {t('readOnly.banner')}
+        </div>
+      )}
+      {/* W1 (Nachtrag C3a-2a): rendert selbst nichts, solange kein Ausgangs-Zustand vorliegt. */}
+      <AusgangsHinweis status={outboxStatus} matchId={matchId} onReload={onOutboxReload} />
+      {nurZusehen !== null && <p className={shell.readOnlyBanner} data-testid="cockpit-uebergeben-zusehen" role="status">{t('leiste.nurZusehen', { count: nurZusehen })}</p>}
+    </>
+  );
+}

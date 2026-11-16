@@ -173,6 +173,17 @@ export function generateShortLiveUrl(shareCode: string, baseUrl?: string): strin
   return `${origin}/live/${shareCode}`;
 }
 
+/** Kanal-Zusatz der Zuschauer-Adresse (@RZ-029): `q` = QR-Code (Aushang, PDF, Dialog, Monitor), `l` = Link (kopieren, System-Teilen). */
+export type ViewChannelParam = 'q' | 'l';
+
+/**
+ * Hängt den Kanal-Zusatz `k=` an eine Zuschauer-Adresse (kurz `…/live/CODE` oder mit Hash `…/#/live/CODE`). Die Zuschauer-Seite liest ihn,
+ * zählt damit den Weg und entfernt ihn wieder aus der Adresszeile (siehe `features/public-view`). Der ANGEZEIGTE Link bleibt ohne Zusatz.
+ */
+export function withViewChannel(url: string, channel: ViewChannelParam): string {
+  return `${url}${url.includes('?') ? '&' : '?'}k=${channel}`;
+}
+
 /**
  * Generate tournament URL
  *

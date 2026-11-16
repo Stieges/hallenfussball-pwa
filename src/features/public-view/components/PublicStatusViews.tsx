@@ -6,10 +6,12 @@
  */
 import { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../../design-tokens';
+import { cssVars, iconSizeValues } from '../../../design-tokens';
+import { Icons } from '../../../components/ui/Icons';
 import { publicPageContainerStyle, publicPageContentStyle } from '../publicPageStyles';
 import { Card } from '../../../components/ui/Card';
-import { Button } from '../../../components/ui/Button';
+import { ArbeitsTaste } from '../../../components/ui/molecules/ArbeitsTaste';
+import { useSperreAktion } from '../../../hooks/useSperreAktion';
 
 const errorContainerStyle: CSSProperties = {
   textAlign: 'center',
@@ -17,7 +19,9 @@ const errorContainerStyle: CSSProperties = {
 };
 
 const errorIconStyle: CSSProperties = {
-  fontSize: '4rem',
+  display: 'flex',
+  justifyContent: 'center',
+  color: cssVars.colors.textMuted,
   marginBottom: cssVars.spacing.lg,
 };
 
@@ -61,7 +65,7 @@ export const PublicNotFoundView: React.FC = () => {
     <div style={publicPageContentStyle}>
       <Card>
         <div style={errorContainerStyle} data-testid="public-not-found">
-          <div style={errorIconStyle} aria-hidden="true">🔍</div>
+          <div style={errorIconStyle} aria-hidden="true" data-testid="public-not-found-icon"><Icons.Search size={iconSizeValues.xl} /></div>
           <h2 style={{ fontSize: cssVars.fontSizes.xl }}>
             {t('notFound.title')}
           </h2>
@@ -72,26 +76,26 @@ export const PublicNotFoundView: React.FC = () => {
   );
 };
 
-export const PublicErrorView: React.FC<{ errorMessage: string | null }> = ({ errorMessage }) => {
+/**
+ * Fehleransicht (@OB-088): „Erneut versuchen“ wiederholt nur den Abruf (`onRetry` = `pollNow`), ohne die Seite neu zu laden; kommt das Netz
+ * zurück, ruft `usePolling` von selbst noch einmal ab. Solange der Abruf läuft, ist die Taste gesperrt und zeigt den Kreisel.
+ */
+export const PublicErrorView: React.FC<{ errorMessage: string | null; onRetry: () => Promise<void> }> = ({ errorMessage, onRetry }) => {
   const { t } = useTranslation('publicView');
+  const { starte, laeuft } = useSperreAktion(onRetry);
   return (
   <div style={publicPageContainerStyle}>
     <div style={publicPageContentStyle}>
       <Card>
         <div style={errorContainerStyle}>
-          <div style={errorIconStyle}>⚠️</div>
+          <div style={{ ...errorIconStyle, color: cssVars.colors.warning }} aria-hidden="true" data-testid="public-error-icon"><Icons.AlertTriangle size={iconSizeValues.xl} /></div>
           <h2 style={{ fontSize: cssVars.fontSizes.xl, marginBottom: cssVars.spacing.md }}>
             {t('error.title')}
           </h2>
           <p style={{ color: cssVars.colors.textMuted, marginBottom: cssVars.spacing.lg }}>
             {errorMessage ?? t('error.unknown')}
           </p>
-          <Button
-            variant="secondary"
-            onClick={() => window.location.reload()}
-          >
-            {t('error.retry')}
-          </Button>
+          <ArbeitsTaste laeuft={laeuft} onClick={starte} data-testid="public-error-retry">{t('error.retry')}</ArbeitsTaste>
         </div>
       </Card>
     </div>

@@ -323,7 +323,7 @@ test.describe('Turnierlogo im Assistenten (gebauter Stand)', () => {
     await page.getByRole('button', { name: t('wizard:step4.uploadLogo') }).click();
 
     await page.locator('input[type="file"]').setInputFiles(svgDatei(SVG_BLAU, 'team.svg'));
-    await page.getByRole('checkbox').check();
+    await page.getByRole('dialog').getByRole('checkbox').check();
     await page.getByRole('button', { name: 'Logo speichern' }).click();
 
     await expect(page.getByRole('button', { name: t('wizard:step4.changeLogo') })).toBeVisible();

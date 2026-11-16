@@ -12,6 +12,7 @@ import { abonniereGeraet, geraetStand } from '../lautsprecherGeraet';
 import { useAnderesFensterTont } from '../useAnderesFensterTont';
 import { useHallLautsprecher } from '../useHallLautsprecher';
 import { HallStatusZeileAnsicht } from './HallStatusZeile';
+import { abgemeldeteFelder } from './hallStatusEintraege';
 import { useHatStatusZeileHost } from './StatusZeileOrt';
 
 const KEINE_FELDER: ReadonlySet<number> = new Set();
@@ -19,8 +20,9 @@ const OHNE_SERVER = { stand: 'laedt', felder: {}, antwort: null } as const;
 
 export function HallGeraetStreifen(): ReactElement | null {
   const kiosk = useKioskRoute();
-  const { einschaltung } = useSyncExternalStore(abonniereGeraet, geraetStand, geraetStand);
-  const turnierId = einschaltung?.turnierId ?? null;
+  const { einschaltung, abgeloest } = useSyncExternalStore(abonniereGeraet, geraetStand, geraetStand);
+  // Ist die Rolle weg, weil die Turnierleitung dieses Gerät abgemeldet hat, bleibt der Streifen für dieses Turnier stehen, bis „Verstanden“ (@HT-057)
+  const turnierId = einschaltung?.turnierId ?? (abgemeldeteFelder(abgeloest).length > 0 ? abgeloest?.turnierId ?? null : null);
   const hatHost = useHatStatusZeileHost(turnierId);
   if (kiosk || turnierId === null || hatHost) {
     return null;
@@ -29,12 +31,13 @@ export function HallGeraetStreifen(): ReactElement | null {
 }
 
 function Streifen({ turnierId }: { turnierId: string }): ReactElement {
-  const { laufzeit, felder, tonAktivieren } = useHallLautsprecher(turnierId);
+  const { laufzeit, felder, tonAktivieren, abgeloest } = useHallLautsprecher(turnierId);
+  const abgemeldet = useMemo(() => abgemeldeteFelder(abgeloest), [abgeloest]);
   const lokal = useMemo(() => (laufzeit === null ? null : { felder, rolle: laufzeit.rolle, zustandJeFeld: laufzeit.zustandJeFeld }), [laufzeit, felder]);
   const anderesFenster = useAnderesFensterTont(lokal);
   const anzeige = useMemo(() => hallAnzeige({
     server: OHNE_SERVER, lokal, angepfiffen: KEINE_FELDER, lautsprecherBekannt: false, anderesFensterTont: anderesFenster,
   }), [lokal, anderesFenster]);
   const aktivieren = useCallback(() => { void tonAktivieren(); }, [tonAktivieren]);
-  return <HallStatusZeileAnsicht anzeige={anzeige} tournamentId={turnierId} tonAktivieren={aktivieren} data-testid="hallenton-geraet-streifen" />;
+  return <HallStatusZeileAnsicht anzeige={anzeige} tournamentId={turnierId} tonAktivieren={aktivieren} abgemeldet={abgemeldet} data-testid="hallenton-geraet-streifen" />;
 }

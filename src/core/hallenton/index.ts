@@ -24,6 +24,10 @@ export {
 } from './planer';
 export { cockpitTonSchweigt } from './regeln';
 export {
+  STANDARD_AUSGANG_ID, bewerteAusgang, istBluetooth, istVirtuell, sortiereAusgaenge,
+  type AusgangBewertung, type AusgangEintrag, type AusgangLage, type AusgangRoh, type GewaehlterAusgang, type MikrofonErlaubnis,
+} from './ausgang';
+export {
   LEERES_TOR_GEDAECHTNIS, TORHYMNE_MAX_MS, naechsteHymne, planeTorhymne, wirksameTore,
   type LaufendeHymne, type TorEingabe, type TorErgebnis, type TorGedaechtnis, type WirksamesTor,
 } from './torhymne';

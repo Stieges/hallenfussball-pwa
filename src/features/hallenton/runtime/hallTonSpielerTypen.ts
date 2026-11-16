@@ -6,9 +6,19 @@ import type { AudioKontext } from './webAudioTypen';
 import type { LadeStand, TonWahl } from './hallTonLader';
 import type { AnhoerenErgebnis } from './hallTonVorschau';
 import type { ReglerArt, Speicher, TonArt } from './tonEinstellungen';
+import type { SpielerAusgang } from './ausgang/ausgangWaechter';
 import type { TorhymnenAusgabe } from './torhymnenAusgabe';
 
-export type SpielerZustand = 'not_activated' | 'volume_zero' | 'custom_sound_failed' | 'ready';
+/**
+ * `output_lost` / `output_unconfirmed` (H4-6, @HT-054, @HT-055) stehen vor `not_activated`: der gewählte Ausgang fehlt bzw. ist
+ * nach dem Neuladen nicht bestätigt. Sie halten die Sperre, planen nichts und holen nichts nach.
+ */
+export type SpielerZustand = 'not_activated' | 'volume_zero' | 'custom_sound_failed' | 'ready' | 'output_lost' | 'output_unconfirmed';
+
+/** Steht die Ausgabe wegen des Ausgangs (nichts darf erklingen)? */
+export function istAusgangsZustand(zustand: SpielerZustand): zustand is 'output_lost' | 'output_unconfirmed' {
+  return zustand === 'output_lost' || zustand === 'output_unconfirmed';
+}
 
 export interface HallTonSpieler {
   aktivieren(): Promise<boolean>;
@@ -27,8 +37,17 @@ export interface HallTonSpieler {
   lautstaerke(art: ReglerArt): number;
   setzeLautstaerke(art: ReglerArt, prozent: number): void;
   zustand(): SpielerZustand;
+  /** Dieser Tab ist aktiviert und die Ausgabe läuft – ohne Blick auf den Ausgang (wie `zustand() !== 'not_activated'` vor H4-6). */
+  ausgabeLaeuft(): boolean;
+  /** Der Abpfiff-Ton ist geladen (unabhängig vom Ausgang). */
+  tonGeladen(): boolean;
   onZustand(fn: (zustand: SpielerZustand) => void): () => void;
   geplant(): string[];
+  /**
+   * Der Ton `id` hat bis zu seinem Ende geklungen (nicht abgebrochen); ein Aufruf verbraucht die Auskunft (H4-11, Restfall N1: das Ende kam vor dem
+   * nächsten Takt, während `setSinkId` noch lief – der Ton zählt als gespielt und wird nicht nachgeholt).
+   */
+  endeVerbrauchen(id: string): boolean;
   /** Für `ausgangsSignale` (dieselbe Ausgabe). */
   audioKontext(): AudioKontext;
   /** Torhymnen (@HT-024): laden, spielen, stoppen. */
@@ -39,4 +58,6 @@ export interface HallTonSpielerAbhaengigkeiten {
   erzeugeKontext: () => AudioKontext;
   ladeDaten: (url: string) => Promise<ArrayBuffer>;
   speicher: Speicher | null;
+  /** Wächter des gewählten Ausgangs (H4-6); ohne ihn bleibt alles wie vor H4-6 (Standard-Ausgang). */
+  ausgang?: SpielerAusgang | null;
 }

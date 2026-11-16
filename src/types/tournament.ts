@@ -19,10 +19,11 @@ export type ResultMode = 'goals' | 'winLossOnly';
 export type TournamentStatus = 'draft' | 'published';
 /**
  * Eröffnung bei zwei Mannschaften des Veranstalters (@W4-033): Veranstalter gegen einen Gast, Vereinsduell
- * in Runde 2 (Voreinstellung) oder Vereinsduell als Spiel 1. Wirkt nur im Runden-Spielplan (@W4-041).
+ * in Runde 2 (Voreinstellung), Vereinsduell als Spiel 1 oder beide beginnen als Heim gegen je einen Gast (@W4-048).
+ * Wirkt nur im Runden-Spielplan (@W4-041). Ältere Programmstände lesen den neuen Wert als „nicht gesetzt“ (Schema `.catch`).
  */
-export type OpeningMode = 'guest-opening' | 'club-derby';
-export const OPENING_MODES: readonly OpeningMode[] = ['guest-opening', 'club-derby'];
+export type OpeningMode = 'guest-opening' | 'club-derby' | 'both-home';
+export const OPENING_MODES: readonly OpeningMode[] = ['guest-opening', 'club-derby', 'both-home'];
 export const DEFAULT_OPENING_MODE: OpeningMode = 'guest-opening';
 
 /**
@@ -683,11 +684,17 @@ export interface MatchCockpitSettings {
   finalPhaseMinutes: number;
 
   // Sound Settings
-  /** Enable end-of-match horn sound. Default: true (@W2A-038, Vorbelegung des Turniers) */
+  /**
+   * Enable end-of-match horn sound. Default: true (@W2A-038, Vorbelegung des Turniers)
+   * @deprecated seit H4-12 nicht mehr gelesen; Ein/Aus und Lautstärke je Gerät über `useCockpitTon` (@HT-009)
+   */
   soundEnabled: boolean;
   /** Sound preset ID or 'custom' for uploaded sound. Default: 'horn-1' */
   soundId: MatchSoundPreset | null;
-  /** Sound volume (0-100). Default: 80 */
+  /**
+   * Sound volume (0-100). Default: 80
+   * @deprecated seit H4-12 nicht mehr gelesen; Ein/Aus und Lautstärke je Gerät über `useCockpitTon` (@HT-009)
+   */
   soundVolume: number;
   /** Whether a custom sound has been uploaded. Default: false */
   hasCustomSound: boolean;
@@ -812,11 +819,17 @@ export interface MatchCockpitOverrides {
   nettoWarningEnabled?: boolean;
   /** Override auto-finish for this match */
   autoFinishEnabled?: boolean;
-  /** Override sound enabled for this match */
+  /**
+   * Override sound enabled for this match
+   * @deprecated seit H4-12 nicht mehr gelesen; Ein/Aus und Lautstärke je Gerät über `useCockpitTon` (@HT-009)
+   */
   soundEnabled?: boolean;
   /** Override sound preset for this match */
   soundId?: MatchSoundPreset | null;
-  /** Override volume for this match */
+  /**
+   * Override volume for this match
+   * @deprecated seit H4-12 nicht mehr gelesen; Ein/Aus und Lautstärke je Gerät über `useCockpitTon` (@HT-009)
+   */
   soundVolume?: number;
   /** Enable golden goal for this final (overrides tournament default) */
   goldenGoalEnabled?: boolean;

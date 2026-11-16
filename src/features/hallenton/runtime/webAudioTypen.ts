@@ -23,12 +23,16 @@ export interface AudioKontext {
   readonly currentTime: number;
   readonly outputLatency?: number;
   readonly state: string;
+  /** Gewählter Ausgang (H4-6, Chrome/Edge ab 110; fehlt in Safari und Firefox): Kennung oder „keiner“. */
+  readonly sinkId?: string | { readonly type: string };
   readonly destination: AudioZiel;
   resume(): Promise<void>;
+  /** Fehlt im Browser ohne Ausgangswahl (H4-6): dann bleibt es beim „Standard“ des Systems. */
+  setSinkId?(sinkId: string): Promise<void>;
   decodeAudioData(daten: ArrayBuffer): Promise<AudioPuffer>;
   createBufferSource(): QuellKnoten;
   createGain(): GainKnoten;
   createDynamicsCompressor(): KompressorKnoten;
-  addEventListener(type: 'statechange', fn: () => void): void;
-  removeEventListener(type: 'statechange', fn: () => void): void;
+  addEventListener(type: 'statechange' | 'sinkchange', fn: () => void): void;
+  removeEventListener(type: 'statechange' | 'sinkchange', fn: () => void): void;
 }

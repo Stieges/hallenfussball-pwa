@@ -1,5 +1,5 @@
 /**
- * H4-2: Ein Zustand, den dieser App-Stand nicht kennt (nach der nächsten Migration z. B. `output_lost`), macht die Antwort von
+ * H4-2: Ein Zustand, den dieser App-Stand nicht kennt (ein später ergänzter Wert; `output_lost`/`output_unconfirmed` kennt die Liste seit H4-3), macht die Antwort von
  * `hall_sound_status` und der Leitung nicht unlesbar. Der Zustand heißt dann `zustandUnbekannt`: nicht bereit, ohne Wortgrund (die Pille
  * wie @HT-039 auf anderen Geräten), und nicht „Status unbekannt“ (@HT-041, das bleibt dem Netzausfall der Verwaltung vorbehalten).
  * Die Antworten kommen als rohes JSON durch den echten Client `hallentonRpc.ts`, nicht aus dem Server-Doppel.
@@ -10,6 +10,7 @@ import { FalscherHallServer } from '../../../../test/hallenton/falscherHallServe
 import { ManuelleUhr } from '../../../../test/hallenton/manuelleUhr';
 import { cockpitTonSchweigt } from '../../../../core/hallenton';
 import { erzeugeHallStatusAbfrage } from '../hallStatusAbfrage';
+import { cockpitHallZeile, cockpitHallZeileAusServer } from '../../cockpitHallZeile';
 import { cockpitHinweisAus, cockpitHinweisAusLeitung, lautsprecherLage } from '../hallStatusAuswertung';
 import { erzeugeLeitungLebenszeichen } from '../leitungLebenszeichen';
 import { flush } from './feldStandTestlage';
@@ -26,12 +27,12 @@ function rohClient(data: unknown) {
 }
 
 const sprecher = (feld: number, state: unknown) => ({ field: feld, state, ageMs: 2000, outputHint: false });
-const SCHMAL = { serverNow: T0, speakers: [sprecher(1, 'output_lost'), sprecher(2, 'ready')] };
+const SCHMAL = { serverNow: T0, speakers: [sprecher(1, 'fast_bereit'), sprecher(2, 'ready')] };
 const VOLL = {
   serverNow: T0,
   closed: false,
   speakers: [1, 2].map((feld) => ({
-    ...sprecher(feld, feld === 1 ? 'output_lost' : 'ready'),
+    ...sprecher(feld, feld === 1 ? 'fast_bereit' : 'ready'),
     deviceName: `Rechner ${feld}`, isThisDevice: false, assignedAt: T0 - 60_000, hintAt: null, lastSeen: T0 - 2000, test: null,
   })),
   leads: [],
@@ -58,7 +59,7 @@ async function lies(data: unknown) {
 }
 
 describe('@HT-039 @HT-041 unbekannter Zustand in der Antwort von hall_sound_status', () => {
-  it('@HT-039 volle Sicht: Feld 1 „output_lost“, Feld 2 „ready“ → die Antwort gilt, Feld 2 bereit, Feld 1 nicht bereit ohne Grund', async () => {
+  it('@HT-039 volle Sicht: Feld 1 „fast_bereit“, Feld 2 „ready“ → die Antwort gilt, Feld 2 bereit, Feld 1 nicht bereit ohne Grund', async () => {
     const stand = await lies(VOLL);
     expect(stand.stand).toBe('aktuell');
     expect(stand.antwort?.sicht).toBe('voll');
@@ -95,7 +96,7 @@ describe('@HT-039 @HT-041 unbekannter Zustand in der Antwort von hall_sound_stat
   });
 
   it('Gegenbeispiel: nur der Zustand wird lockerer – ein anderes kaputtes Feld verwirft die Antwort weiter', async () => {
-    const kaputt = { ...SCHMAL, speakers: [{ ...sprecher(1, 'output_lost'), ageMs: 'zwei' }] };
+    const kaputt = { ...SCHMAL, speakers: [{ ...sprecher(1, 'fast_bereit'), ageMs: 'zwei' }] };
     expect(await hallSoundStatus(rohClient(kaputt), { p_tournament_id: TID })).toEqual({ ok: false, grund: 'antwort_unbekannt' });
   });
 
@@ -104,7 +105,7 @@ describe('@HT-039 @HT-041 unbekannter Zustand in der Antwort von hall_sound_stat
     const server = new FalscherHallServer(() => uhr.jetzt());
     server.zuordnen(1, 'laptop');
     server.zuordnen(2, 'laptop');
-    server.zustandSetzen(1, 'output_unconfirmed');
+    server.zustandSetzen(1, 'noch_nicht_da');
     server.zustandSetzen(2, 'ready');
     const antwort = await server.status({ p_tournament_id: TID, p_device_id: 'olli' });
     expect(antwort.ok && antwort.speakers.map((s) => s.state)).toEqual(['zustandUnbekannt', 'ready']);
@@ -124,8 +125,8 @@ describe('@HT-039 @HT-041 unbekannter Zustand in der Antwort der Leitung (hall_f
     return leitung;
   }
 
-  it('@HT-039 Feld 1 „output_lost“ → die Antwort gilt, im Cockpit „aus“ ohne Wortgrund, kein „Status unbekannt“', async () => {
-    const leitung = leitungMit({ state: 'output_lost', ageMs: 2000, outputHint: false });
+  it('@HT-039 Feld 1 „fast_bereit“ → die Antwort gilt, im Cockpit „aus“ ohne Wortgrund, kein „Status unbekannt“', async () => {
+    const leitung = leitungMit({ state: 'fast_bereit', ageMs: 2000, outputHint: false });
     leitung.start();
     await flush();
     const stand = leitung.stand(TID, 1);
@@ -153,5 +154,24 @@ describe('Regel 3 (nur Datenebene) – ein unbekannter Zustand gilt nicht als be
     expect(lautsprecherLage({ state: 'zustandUnbekannt', ageMs: 2000, outputHint: false }, T0).art).not.toBe('bereit');
     expect(cockpitTonSchweigt('field-1', bereit)).toBe(false);
     expect(cockpitTonSchweigt('field-2', bereit)).toBe(true);
+  });
+});
+
+/** H4-3: Die Liste kennt die zwei neuen Zustände der Migration 20261125_001 – gelesen werden sie als sie selbst, die Anzeige bleibt wie bei
+ *  einem unbekannten Zustand (nicht bereit, kein Wortgrund, nie „bereit“); Die Wortgründe „Ausgang verloren/bestätigen“ gelten seit H4-11 (@HT-039), Senden seit H4-6. */
+describe('H4-3 @HT-054 @HT-055 die neuen Zustände „output_lost“ und „output_unconfirmed“ (nur Lesen)', () => {
+  it.each([['output_lost', 'ausgangVerloren'], ['output_unconfirmed', 'ausgangBestaetigen']])('„%s“ wird als er selbst gelesen, ist nicht bereit und hat seit H4-11 den Wortgrund %s (@HT-039 Spalte Cockpit)', async (zustand, wortgrund) => {
+    const stand = await lies({ ...SCHMAL, speakers: [sprecher(1, zustand), sprecher(2, 'ready')] });
+    expect(stand.stand).toBe('aktuell');
+    expect(stand.felder[2]).toEqual({ art: 'bereit', pruefen: false });
+    expect(stand.felder[1]).toEqual({ art: 'nichtBereit', grund: zustand, pruefen: false });
+    expect(stand.felder[1]?.art).not.toBe('bereit');
+    expect(cockpitHallZeileAusServer(stand.felder[1], true)).toEqual({ art: 'aus', grund: wortgrund, zuletztServerMs: null });
+    expect(cockpitHallZeile(cockpitHinweisAus(stand.felder[1] ?? { art: 'keiner' }))).toEqual({ art: 'aus', grund: wortgrund, zuletztServerMs: null });
+  });
+
+  it('Gegenbeispiel: ein Zustand mit anderer Schreibweise („Output_Lost“) bleibt unbekannt', async () => {
+    const stand = await lies({ ...SCHMAL, speakers: [sprecher(1, 'Output_Lost'), sprecher(2, 'ready')] });
+    expect(stand.felder[1]).toEqual(OHNE_GRUND);
   });
 });

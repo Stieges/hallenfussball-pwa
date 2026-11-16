@@ -7,6 +7,7 @@ import { ErrorBoundary } from '../components/ErrorBoundary';
 import { ConfirmDialog, useConfirmDialog } from '../components/ui/ConfirmDialog';
 import { TournamentPreview } from '../features/tournament-creation/TournamentPreview';
 import { ReplanPanel } from '../features/tournament-creation/components/ReplanPanel';
+import { PublishErrorNotice } from '../features/tournament-creation/components/PublishErrorNotice';
 import type { ReplanSession } from '../features/tournament-creation/utils/replan';
 import { useGuardedReplan } from '../features/tournament-creation/hooks/useGuardedReplan';
 import { useTournamentStartState } from '../hooks/useTournamentStartState';
@@ -29,44 +30,7 @@ import { visibilityAfterPublish } from '../core/services/TournamentCreationServi
 import { shareAfterFirstRelease } from '../core/services/shareAfterFirstRelease';
 import { publishSharesByLink } from '../features/tournament-creation/utils/publishNotice';
 import { AuthSection } from '../components/layout/AuthSection';
-import { effectiveRoundCount } from '../core/generators/repeatRounds';
-
-/** E2 + Controller-Ruling Fixrunde 2: Struktur = alles, was die Generatoren
- *  außer Metadaten lesen — Teams, Felder, Modus, Gruppen, Finalrunde,
- *  Startzeit und Datum. Übrige Metadaten (Name, Ort, Texte) zählen nicht. */
-function hasStructuralChanges(current: Tournament, next: Tournament): boolean {
-  const teamSignature = (t: Tournament): string =>
-    [...t.teams]
-      .map((team) => `${team.id}:${team.isRemoved ? 1 : 0}`)
-      .sort()
-      .join('|');
-  return (
-    teamSignature(current) !== teamSignature(next) ||
-    current.numberOfFields !== next.numberOfFields ||
-    current.mode !== next.mode ||
-    current.tournamentType !== next.tournamentType ||
-    current.groupSystem !== next.groupSystem ||
-    current.groupPhaseGameDuration !== next.groupPhaseGameDuration ||
-    current.groupPhaseBreakDuration !== next.groupPhaseBreakDuration ||
-    current.finalRoundGameDuration !== next.finalRoundGameDuration ||
-    current.finalRoundBreakDuration !== next.finalRoundBreakDuration ||
-    current.breakBetweenPhases !== next.breakBetweenPhases ||
-    current.numberOfGroups !== next.numberOfGroups ||
-    current.date !== next.date ||
-    current.timeSlot !== next.timeSlot ||
-    current.startTime !== next.startTime ||
-    current.gamePeriods !== next.gamePeriods ||
-    current.halftimeBreak !== next.halftimeBreak ||
-    current.minRestSlots !== next.minRestSlots ||
-    effectiveRoundCount(current) !== effectiveRoundCount(next) || // @TM-152: Rundenzahl legt die Spielzahl fest
-    current.useDFBKeys !== next.useDFBKeys ||
-    current.dfbKeyPattern !== next.dfbKeyPattern ||
-    JSON.stringify(current.groups) !== JSON.stringify(next.groups) ||
-    JSON.stringify(current.finalsConfig) !== JSON.stringify(next.finalsConfig) ||
-    JSON.stringify(current.finals) !== JSON.stringify(next.finals) ||
-    JSON.stringify(current.refereeConfig) !== JSON.stringify(next.refereeConfig)
-  );
-}
+import { hasStructuralChanges } from '../features/tournament-creation/utils/structuralChanges';
 
 // Lazy load step components for better performance
 const Step1_SportAndType = lazy(() =>
@@ -135,6 +99,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
 }) => {
   const { showSuccess, showWarning } = useToast();
   const { t } = useTranslation('wizard');
+  const { t: tCommon } = useTranslation('common');
   const repository = useRepository();
   const authUser = useContext(AuthContext)?.user ?? null;
   const isOnline = useIsOnline();
@@ -210,6 +175,8 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   // @W1-023: Festlegen mit Ladezustand; Sperre verhindert zweites Turnier bei Doppelklick.
   const [isPublishing, setIsPublishing] = useState(false);
   const publishLockRef = useRef(false);
+  // @OB-087: die Angaben des letzten Veröffentlichens (z. B. neu geplante Spiele), damit „Erneut versuchen“ genau dasselbe wiederholt
+  const lastPublishOverrideRef = useRef<Partial<Tournament> | undefined>(undefined);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
   // Timer-Handles: beim Unmount löschen, sonst feuert setState nach Ende der Umgebung (CI: "window is not defined").
@@ -354,6 +321,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   const handlePublish = async (override?: Partial<Tournament>) => {
     if (publishLockRef.current) { return; }
     publishLockRef.current = true;
+    lastPublishOverrideRef.current = override;
     setIsPublishing(true);
     try {
       // @W1-020: Erstfestlegen? Dieselbe Entscheidung wie der Satz in der Vorschau (publishNoticeKey).
@@ -376,6 +344,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       await saveTournament(published);
       // @W1-023: Toast statt Inline-Banner — überlebt den Seitenwechsel über den
       // ToastProvider in App.tsx.
+      setScheduleError(null); // ein früherer Fehler (und sein „Erneut versuchen“) verschwindet mit dem Erfolg
       showSuccess(t('publish.success'));
       if (shared.status === 'failed') { showWarning(t('publish.shareFailed')); }
 
@@ -563,6 +532,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
           preview={replanSession.preview}
           previousMatches={existingTournament?.matches ?? []}
           teams={existingTournament?.teams ?? []}
+          hostInput={{ teams: formData.teams ?? [], hostTeamIds: formData.hostTeamIds, openingMode: formData.openingMode, groupSystem: formData.groupSystem }}
           onConfirm={() => void handleReplanConfirm()}
           onCancel={handleReplanCancel}
         />
@@ -735,58 +705,14 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
             {step === 6 && generatedSchedule && (
               <>
                 {scheduleError && (
-                  <div
-                    style={{
-                      marginBottom: '24px',
-                      padding: '16px',
-                      background: 'rgba(239, 68, 68, 0.1)',
-                      border: '2px solid rgba(239, 68, 68, 0.3)',
-                      borderRadius: cssVars.borderRadius.md,
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                      <div style={{ color: cssVars.colors.error, fontSize: fontSizesMd3.headlineMedium, flexShrink: 0 }}>
-                        ⚠️
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <h3
-                          style={{
-                            margin: '0 0 8px 0',
-                            fontSize: cssVars.fontSizes.lg,
-                            fontWeight: cssVars.fontWeights.semibold,
-                            color: cssVars.colors.error,
-                          }}
-                        >
-                          Turnier konnte nicht veröffentlicht werden
-                        </h3>
-                        <p
-                          style={{
-                            margin: '0 0 12px 0',
-                            fontSize: cssVars.fontSizes.md,
-                            color: cssVars.colors.textPrimary,
-                            lineHeight: '1.5',
-                          }}
-                        >
-                          {scheduleError}
-                        </p>
-                        <button
-                          onClick={() => setScheduleError(null)}
-                          style={{
-                            padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
-                            background: 'rgba(239, 68, 68, 0.2)',
-                            border: '1px solid rgba(239, 68, 68, 0.4)',
-                            borderRadius: cssVars.borderRadius.sm,
-                            color: cssVars.colors.textPrimary,
-                            fontSize: cssVars.fontSizes.sm,
-                            fontWeight: cssVars.fontWeights.medium,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          Schließen
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  <PublishErrorNotice
+                    title={t('publish.failedTitle')}
+                    message={scheduleError}
+                    closeLabel={tCommon('actions.close')}
+                    onRetry={() => void handlePublish(lastPublishOverrideRef.current)}
+                    onClose={() => setScheduleError(null)}
+                    retrying={isPublishing}
+                  />
                 )}
                 <TournamentPreview
                   tournament={createDraftTournament()}

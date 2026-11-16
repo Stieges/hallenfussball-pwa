@@ -21,6 +21,7 @@ import {
   RoundCountSummary,
 } from './components';
 import { useRoundRobinEstimate } from './hooks/useRoundRobinEstimate';
+import { useCockpitTon } from '../../components/live-cockpit/hooks/useCockpitTon';
 import { MatchCockpitSettingsPanel } from '../../components/match-settings/MatchCockpitSettingsPanel';
 import { ForfeitScoreField } from '../../components/match-settings/ForfeitScoreField';
 import { changeForfeitScore, effectiveForfeitScore, forfeitScoreLocked } from '../../core/models/forfeit';
@@ -108,7 +109,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
   const getCockpitSummary = (): string => {
     const settings = { ...DEFAULT_MATCH_COCKPIT_SETTINGS, ...formData.matchCockpitSettings };
     const features: string[] = [];
-    if (settings.soundEnabled) {features.push('Sound');}
+    if (settings.soundId !== null) {features.push('Sound');}
     if (settings.hapticEnabled) {features.push('Haptik');}
     if (features.length === 0) {return t('step2.summaries.cockpitStandard');}
     return features.join(' + ');
@@ -125,8 +126,9 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
     onUpdate('matchCockpitSettings', newSettings);
   };
 
-  // @HT-030: gewählten Ton schon im Assistenten anhören (wie im Admin-Cockpit)
-  const sound = useMatchSound(cockpitSettings.soundId, cockpitSettings.soundVolume, cockpitSettings.soundEnabled, formData.id ?? 'new');
+  // @HT-030: gewählten Ton schon im Assistenten anhören (wie im Admin-Cockpit), mit der Lautstärke dieses Geräts (H4-12)
+  const geraetTon = useCockpitTon();
+  const sound = useMatchSound(cockpitSettings.soundId, geraetTon.lautstaerke, cockpitSettings.soundId !== null, formData.id ?? 'new');
   const handleTestSound = () => { void sound.testPlay(); };
 
   return (

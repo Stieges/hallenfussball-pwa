@@ -407,7 +407,12 @@
     "foulLimitEnable": "Switch foul limit on",
     "foulLimitValue": "Limit: foul per half",
     "foulLimitDesc": "When off, the cockpit still counts fouls and shows only the number. When on, it warns from the set foul per half (suggested: the 5th).",
-    "foulLimitInvalid": "A whole number from {{min}} to {{max}} is valid – the value was not applied"
+    "foulLimitInvalid": "A whole number from {{min}} to {{max}} is valid – the value was not applied",
+    "deviceTitle": "Sound on this device",
+    "deviceSwitch": "End-of-match tone",
+    "deviceSwitchDesc": "Applies to this device only, not to the whole tournament.",
+    "deviceSwitchAria": "Sound on this device",
+    "deviceVolumeDesc": "Volume of this device: {{percent}}%"
   },
   "editScore": {
     "title": "Correct Score",

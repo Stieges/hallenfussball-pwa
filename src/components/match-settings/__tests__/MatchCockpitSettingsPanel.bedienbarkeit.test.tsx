@@ -51,7 +51,8 @@ describe('Match-Cockpit-Einstellungen: Namen und Mindestgrößen (C-MATCHCOCKPIT
     expect(screen.getByRole('combobox', { name: /Dauer.*Zeitstrafe|Zeitstrafe/i })).toBeTruthy();
     expect(screen.getByRole('combobox', { name: /Sound/i })).toBeTruthy();
     expect(screen.getByRole('spinbutton', { name: /Sch(ü|ue)tzen/i })).toBeTruthy();
-    expect(screen.getByRole('slider', { name: /Lautst/i })).toBeTruthy();
+    // H4-12: die Lautstärke gilt je Gerät und steht im Cockpit-Dialog, nicht mehr hier
+    expect(screen.queryByRole('slider')).toBeNull();
   });
 
   it('@OB-022 Auswahlfelder sind mindestens 44 hoch und haben mindestens 16 Schriftgröße', () => {
@@ -82,8 +83,8 @@ describe('Match-Cockpit-Einstellungen: Namen und Mindestgrößen (C-MATCHCOCKPIT
       ...Array.from(container.querySelectorAll('button')),
       ...Array.from(container.querySelectorAll<HTMLElement>('input[type="range"]')),
     ];
-    // Schalter Vibration, Anhören (am Ton), Stummschalten, Anhören, Hochladen, Löschen
-    expect(bedienelemente.length).toBeGreaterThanOrEqual(6);
+    // Schalter Vibration, Anhören (am Ton), Hochladen, Löschen (Stummschalten und Lautstärke: je Gerät, H4-12)
+    expect(bedienelemente.length).toBeGreaterThanOrEqual(4);
     for (const element of bedienelemente) {
       const ok = istMindestens44(element, 'height') || istMindestens44(element, 'minHeight');
       expect(ok, `${element.outerHTML.slice(0, 80)} -> Höhe ${element.style.height} / min ${element.style.minHeight}`).toBe(true);
@@ -98,17 +99,17 @@ describe('Match-Cockpit-Einstellungen: Namen und Mindestgrößen (C-MATCHCOCKPIT
     }
   });
 
-  it('@OB-022 Gegenbeispiel: die Tasten wirken weiter (Anhören spielt den Ton, Hochladen öffnet die Dateiauswahl, Stumm setzt 0)', () => {
+  it('@OB-022 Gegenbeispiel: die Tasten wirken weiter (Anhören spielt den Ton, Hochladen öffnet die Dateiauswahl); Ein/Aus und Lautstärke stehen hier nicht mehr (je Gerät, H4-12)', () => {
     const onChange = vi.fn();
     const onTestSound = vi.fn();
     const klick = vi.spyOn(HTMLInputElement.prototype, 'click');
     render(<MatchCockpitSettingsPanel settings={EINSTELLUNGEN} onChange={onChange} tournamentId="t1" onTestSound={onTestSound} />);
-    fireEvent.click(screen.getByTestId('settings-volume-listen'));
+    fireEvent.click(screen.getByTestId('settings-end-sound-listen'));
     expect(onTestSound).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole('button', { name: /Hochladen|Upload/i }));
     expect(klick).toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: /Stumm|Ton aus|Mute/i }));
-    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ soundVolume: 0 }));
+    expect(screen.queryByTestId('settings-volume-listen')).toBeNull();
+    expect(screen.queryByRole('slider')).toBeNull();
     klick.mockRestore();
   });
 });

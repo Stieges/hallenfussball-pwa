@@ -6,12 +6,18 @@
  * Gilt auf jedem angemeldeten Gerät, auch ohne Lautsprecher-Funktion; die Last bleibt gering: nur eigene Felder, nur während
  * eines angepfiffenen Spiels. Die Antwort (Zustand des Lautsprechers, `outputHint`) liegt je Turnier und Feld für die
  * Cockpit-Hinweise von H4 bereit (`stand`, @HT-040, @HT-050). Endet das Spiel oder die Steuer, fällt der Stand weg; eine
- * gescheiterte Anfrage lässt den alten Stand altern (der Hook macht daraus nach 15 s „unbekannt“). Nichts wirft.
+ * gescheiterte Anfrage lässt den alten Stand altern (der Hook macht daraus nach 15 s „unbekannt“) und setzt zusätzlich „Versuch gescheitert“
+ * (nur bei fehlendem Netz), damit „Kein Netz“ sofort erscheint (H4-12). Nichts wirft.
  */
 import type { HallArgs, HallErgebnis, HallLeadHeartbeatAntwort } from '../../../core/repositories/hallentonRpc';
 import type { Zeitgeber } from './zeitgeber';
 
 export const LEITUNG_LEBENSZEICHEN_MS = 5000;
+/**
+ * So lange gilt „Versuch gescheitert“ (kein Netz) höchstens (H4-12, @HT-034, @HT-035): bis zur nächsten erfolgreichen Antwort, spätestens
+ * nach zwei Takten – so zeigt das Cockpit „Kein Netz“ schon nach dem ersten gescheiterten Versuch und flackert nicht zwischen zwei Takten.
+ */
+export const VERSUCH_GESCHEITERT_MAX_MS = 2 * LEITUNG_LEBENSZEICHEN_MS;
 
 export interface LeitungStand {
   status: HallLeadHeartbeatAntwort['status'];
@@ -33,6 +39,8 @@ export interface LeitungLebenszeichen {
   start(): void;
   stop(): void;
   stand(turnierId: string, feld: number): LeitungStand | null;
+  /** Der letzte Versuch scheiterte wegen fehlendem Netz (jünger als `VERSUCH_GESCHEITERT_MAX_MS`, nach einer Antwort wieder weg). */
+  versuchGescheitert(turnierId: string, feld: number): boolean;
   /** Zählt jede Änderung (für `useSyncExternalStore`). */
   version(): number;
   jetzt(): number;
@@ -44,6 +52,7 @@ const schluessel = (turnierId: string, feld: number): string => `${turnierId}|${
 export function erzeugeLeitungLebenszeichen(d: LeitungDeps): LeitungLebenszeichen {
   const staende = new Map<string, LeitungStand>();
   const laufend = new Set<string>();
+  const gescheitert = new Map<string, number>();
   const zuhoerer = new Set<() => void>();
   let aktiv = new Set<string>();
   let stand = 0;
@@ -75,6 +84,12 @@ export function erzeugeLeitungLebenszeichen(d: LeitungDeps): LeitungLebenszeiche
         geaendert = true;
       }
     }
+    for (const key of [...gescheitert.keys()]) {
+      if (!aktiv.has(key)) {
+        gescheitert.delete(key);
+        geaendert = true;
+      }
+    }
     if (geaendert) {
       melden();
     }
@@ -93,9 +108,17 @@ export function erzeugeLeitungLebenszeichen(d: LeitungDeps): LeitungLebenszeiche
       .catch((): HallErgebnis<HallLeadHeartbeatAntwort> => ({ ok: false, grund: 'netz' }))
       .then((antwort) => {
         laufend.delete(key);
-        if (stoppen === null || !aktiv.has(key) || !antwort.ok) {
+        if (stoppen === null || !aktiv.has(key)) {
           return;
         }
+        if (!antwort.ok) {
+          if (antwort.grund === 'netz') {
+            gescheitert.set(key, d.zeitgeber.jetzt());
+            melden();
+          }
+          return;
+        }
+        gescheitert.delete(key);
         staende.set(key, { status: antwort.status, speaker: antwort.speaker, serverNow: antwort.serverNow, empfangenUm: d.zeitgeber.jetzt() });
         melden();
       });
@@ -113,12 +136,17 @@ export function erzeugeLeitungLebenszeichen(d: LeitungDeps): LeitungLebenszeiche
       stoppen?.();
       stoppen = null;
       aktiv = new Set();
-      if (staende.size > 0) {
+      if (staende.size > 0 || gescheitert.size > 0) {
         staende.clear();
+        gescheitert.clear();
         melden();
       }
     },
     stand: (turnierId, feld) => staende.get(schluessel(turnierId, feld)) ?? null,
+    versuchGescheitert(turnierId, feld) {
+      const um = gescheitert.get(schluessel(turnierId, feld));
+      return um !== undefined && d.zeitgeber.jetzt() - um <= VERSUCH_GESCHEITERT_MAX_MS;
+    },
     version: () => stand,
     jetzt: () => d.zeitgeber.jetzt(),
     subscribe(fn) {

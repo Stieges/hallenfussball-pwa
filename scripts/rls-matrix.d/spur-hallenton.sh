@@ -21,11 +21,14 @@
 # Hochladen RLS. Zusaetzlich wird der Wert danach als Superuser geprueft (nichts geaendert = abgelehnt wirkt).
 # Torhymne (20261123_001_hallenton_torhymne.sql, @HT-024, @HT-046): spielt diese Datei nach 20261121_001 ebenfalls ein;
 # je Identitaet Hymnen setzen (manageScreens), nach dem Turnierende Hymnen setzen und Lebenszeichen gesperrt (55000).
+# Ausgang-Zustaende (20261125_001_hallenton_ausgang_zustaende.sql, @HT-054, @HT-055, @HT-057): spielt diese Datei danach ebenfalls ein;
+# je Identitaet Lebenszeichen „Ausgang verloren“ und Abmelden eines fremden Geraets (manageScreens), nach dem Turnierende gesperrt (55000).
 
 HT_MISMATCHES=0
 HT_CELLS=0
 HT_FILE="$REPO_ROOT/supabase/migrations/20261121_001_hallenton.sql"
 HT_FOLLOW="$REPO_ROOT/supabase/migrations/20261123_001_hallenton_torhymne.sql"
+HT_AUSG="$REPO_ROOT/supabase/migrations/20261125_001_hallenton_ausgang_zustaende.sql"
 HT_STUB="$REPO_ROOT/scripts/lib/hallenton-storage-stub.sql"
 HT_HANDSTEP="$REPO_ROOT/supabase/handschritte/20261121_001_hallenton_storage_policies.sql"
 HT_DEV_R="$(uuid_for hallenton:device:rechner)"
@@ -67,6 +70,17 @@ if [[ "$HT_READY" -eq 1 && "${HALLENTON_OHNE_MIGRATION:-0}" != "1" ]] \
   else
     HT_READY=0
     ht_cell "Torhymne einspielbar (20261121_001 vorhanden?)" "nein" "ja"
+  fi
+fi
+
+if [[ "$HT_READY" -eq 1 && "${HALLENTON_OHNE_MIGRATION:-0}" != "1" ]] \
+   && [[ "$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT to_regprocedure('public.hall_speaker_unassign(uuid,integer[])') IS NOT NULL;")" != "t" ]]; then
+  if docker exec -i -e PGOPTIONS="-c client_min_messages=warning" "$CONTAINER_NAME" \
+       psql -U postgres -X -q -v ON_ERROR_STOP=1 < "$HT_AUSG" >/dev/null 2>&1; then
+    echo "hallenton: $(basename "$HT_AUSG") eingespielt"
+  else
+    HT_READY=0
+    ht_cell "Ausgang-Zustaende einspielbar (20261123_001 vorhanden?)" "nein" "ja"
   fi
 fi
 
@@ -175,6 +189,15 @@ if [[ "$HT_READY" -eq 1 ]]; then
     ht_cell "@HT-024 $ht_id setzt die Torhymnen" \
       "$(ht_probe "$ht_role" "$ht_uid" "" "SELECT 'htr:' || (public.hall_goal_anthems_set('$T_MAIN'::uuid, $HT_ANTHEM) ->> 'status');" "$HT_ANTHEMS")" \
       "$(ht_exp "$ht_manage" "saved|1" "$ht_deny" 0)"
+    ht_cell "@HT-054 $ht_id meldet „Ausgang verloren“ fuer den Rechner" \
+      "$(ht_probe "$ht_role" "$ht_uid" "$HT_SPEAKER" "SELECT 'htr:' || (public.hall_speaker_heartbeat('$T_MAIN'::uuid, '$HT_DEV_R'::uuid, '{1}'::int[], 'output_lost', false) ->> 'status');" "$HT_ROW")" \
+      "$(ht_exp "$ht_manage" "ok|$HT_DEV_R:output_lost" "$ht_deny" "$HT_ROW_R_NA")"
+    ht_cell "@HT-055 $ht_id meldet „Ausgang bestaetigen“ fuer den Rechner" \
+      "$(ht_probe "$ht_role" "$ht_uid" "$HT_SPEAKER" "SELECT 'htr:' || (public.hall_speaker_heartbeat('$T_MAIN'::uuid, '$HT_DEV_R'::uuid, '{1}'::int[], 'output_unconfirmed', false) ->> 'status');" "$HT_ROW")" \
+      "$(ht_exp "$ht_manage" "ok|$HT_DEV_R:output_unconfirmed" "$ht_deny" "$HT_ROW_R_NA")"
+    ht_cell "@HT-057 $ht_id meldet den Lautsprecher eines anderen Geraets ab (Feld 1)" \
+      "$(ht_probe "$ht_role" "$ht_uid" "$HT_SPEAKER" "SELECT 'htr:' || (public.hall_speaker_unassign('$T_MAIN'::uuid, '{1}'::int[]) ->> 'status');" "$HT_ROW")" \
+      "$(ht_exp "$ht_manage" "unassigned|keine" "$ht_deny" "$HT_ROW_R_NA")"
     ht_cell "@HT-049 $ht_id waehlt „Gehört“ (Hinweis weg)" \
       "$(ht_probe "$ht_role" "$ht_uid" "$HT_HINTED" "SELECT 'htr:' || (public.hall_output_heard('$T_MAIN'::uuid, 1) ->> 'status');" "$HT_HINT")" \
       "$(ht_exp "$ht_manage" "heard|weg" "$ht_deny" gesetzt)"
@@ -196,6 +219,12 @@ if [[ "$HT_READY" -eq 1 ]]; then
     ht_cell "@HT-046 abgeschlossen: $ht_id meldet „bereit“ (Lebenszeichen, 55000)" \
       "$(ht_probe "$ht_role" "$ht_uid" "$HT_SPEAKER $HT_CLOSED" "SELECT 'htr:' || (public.hall_speaker_heartbeat('$T_MAIN'::uuid, '$HT_DEV_R'::uuid, '{1}'::int[], 'ready', false) ->> 'status');" "$HT_ROW")" \
       "$ht_closed_deny|$HT_ROW_R_NA"
+    ht_cell "@HT-046 abgeschlossen: $ht_id meldet den Lautsprecher eines anderen Geraets ab" \
+      "$(ht_probe "$ht_role" "$ht_uid" "$HT_SPEAKER $HT_CLOSED" "SELECT 'htr:' || (public.hall_speaker_unassign('$T_MAIN'::uuid, '{1}'::int[]) ->> 'status');" "$HT_ROW")" \
+      "$ht_closed_deny|$HT_ROW_R_NA"
+    ht_cell "@HT-046 abgeschlossen: $ht_id meldet „Ausgang verloren“ (Lebenszeichen, 55000)" \
+      "$(ht_probe "$ht_role" "$ht_uid" "$HT_SPEAKER $HT_CLOSED" "SELECT 'htr:' || (public.hall_speaker_heartbeat('$T_MAIN'::uuid, '$HT_DEV_R'::uuid, '{1}'::int[], 'output_lost', false) ->> 'status');" "$HT_ROW")" \
+      "$ht_closed_deny|$HT_ROW_R_NA"
     ht_cell "@HT-046 abgeschlossen: $ht_id waehlt „Gehört“" \
       "$(ht_probe "$ht_role" "$ht_uid" "$HT_HINTED $HT_CLOSED" "SELECT 'htr:' || (public.hall_output_heard('$T_MAIN'::uuid, 1) ->> 'status');" "$HT_HINT")" \
       "$ht_closed_deny|gesetzt"
@@ -214,4 +243,4 @@ if [[ "$HT_READY" -eq 1 ]]; then
   done
 fi
 
-echo "hallenton: $HT_CELLS Zellen geprueft ((${#MATRIX_IDS[@]} Identitaeten + anon) x 20, davon 9 im abgeschlossenen Turnier), $HT_MISMATCHES Abweichung(en)"
+echo "hallenton: $HT_CELLS Zellen geprueft ((${#MATRIX_IDS[@]} Identitaeten + anon) x 25, davon 11 im abgeschlossenen Turnier), $HT_MISMATCHES Abweichung(en)"

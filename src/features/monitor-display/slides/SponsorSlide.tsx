@@ -1,11 +1,12 @@
 import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QRCodeSVG } from 'qrcode.react';
-import { cssVars, displayEffects, displayFontSizes, displaySpacing, monitorThemes, displayMonitor } from '../../../design-tokens';
+import { borderWidths, cssVars, displayEffects, displayFinal, displayFontSizes, displaySpacing, monitorThemes, displayMonitor } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { MonitorSlide, MonitorTheme, PerformanceSettings } from '../../../types/monitor';
 import { getSafeUrl, resolveTheme } from '../monitorDisplayHelpers';
 import { zuschauerUrl } from '../publicVisibility';
+import { withViewChannel } from '../../../utils/shareUtils';
 
 interface SponsorSlideProps {
   slide: MonitorSlide;
@@ -14,6 +15,20 @@ interface SponsorSlideProps {
   theme: MonitorTheme;
   style: CSSProperties;
 }
+
+/** Ring mit der Platzzahl (1 bis 3) vor der Stufe: Ringdurchmesser aus den Display-Abständen, Linie aus den Randstärken. */
+const tierRingStyle: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: displaySpacing.sectionMD,
+  height: displaySpacing.sectionMD,
+  boxSizing: 'border-box',
+  border: `${borderWidths.strong} solid`,
+  borderRadius: cssVars.borderRadius.full,
+  fontWeight: cssVars.fontWeights.bold,
+  verticalAlign: 'middle',
+};
 
 /** Sponsor-Folie: Logo oder Name, Stufen-Badge und QR-Code zur Zielseite. */
 export function SponsorSlide({ slide, tournament, performanceSettings, theme, style }: SponsorSlideProps) {
@@ -45,6 +60,8 @@ export function SponsorSlide({ slide, tournament, performanceSettings, theme, st
     : slide.config.qrTarget === 'custom' && slide.config.customQrUrl
       ? getSafeUrl(slide.config.customQrUrl, fallbackUrl ?? '')
       : fallbackUrl;
+  // Zeigt der QR ersatzweise auf die Zuschauer-Seite, trägt er den Kanal QR (@RZ-029); fremde Sponsor-Adressen bleiben unverändert.
+  const qrValue = qrUrl && qrUrl === fallbackUrl ? withViewChannel(qrUrl, 'q') : qrUrl;
 
   return (
     <div style={style}>
@@ -80,7 +97,20 @@ export function SponsorSlide({ slide, tournament, performanceSettings, theme, st
           marginBottom: displaySpacing.sectionMD,
           textTransform: 'capitalize',
         }}>
-          {sponsor.tier === 'gold' ? '🥇' : sponsor.tier === 'silver' ? '🥈' : '🥉'} {t('slides.sponsor.tier', { tier: sponsor.tier })}
+          {/* @OB-038: Platzzahl im Ring in der Farbe des Platzes statt Medaillen-Bild (Gold je Thema wie auf der Endstand-Folie) */}
+          <span
+            data-testid="sponsor-tier-ring"
+            data-tier={sponsor.tier}
+            aria-hidden="true"
+            style={{
+              ...tierRingStyle,
+              borderColor: sponsor.tier === 'gold' ? displayFinal.gold[resolvedTheme] : sponsor.tier === 'silver' ? cssVars.colors.medalSilver : cssVars.colors.medalBronze,
+              color: themeColors.text,
+            }}
+          >
+            {sponsor.tier === 'gold' ? 1 : sponsor.tier === 'silver' ? 2 : 3}
+          </span>
+          {' '}{t('slides.sponsor.tier', { tier: sponsor.tier })}
         </div>
       )}
 
@@ -93,7 +123,7 @@ export function SponsorSlide({ slide, tournament, performanceSettings, theme, st
           marginTop: displaySpacing.sectionMD,
         }}>
           <QRCodeSVG
-            value={qrUrl}
+            value={qrValue ?? ''}
             size={displayMonitor.qr.sizeSmall}
             bgColor={displayMonitor.qr.background}
             fgColor={displayMonitor.qr.foreground}

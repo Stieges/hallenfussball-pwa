@@ -68,6 +68,9 @@
 #
 # Nutzung:
 #   scripts/db-drift-check.sh                       # normaler Lauf, braucht SUPABASE_ACCESS_TOKEN
+#   scripts/db-drift-check.sh --nur-leserecht-waechter  # ohne Zugang zur Live-Datenbank: spielt Baseline + ALLE Migrationen
+#                                                     # (auch die in PENDING-LIVE.txt) in den Wegwerf-Container und prueft nur den
+#                                                     # Waechter "jede Relation hat SELECT fuer ci_schema_reader" (siehe unten).
 #   scripts/db-drift-check.sh --live-dump-file FILE  # Testmodus: FILE wird statt eines echten
 #                                                     # Live-Dumps als "Live-Schema" verwendet.
 #                                                     # Für den Rot-Beweis (künstliche Abweichung),
@@ -97,6 +100,7 @@ BASELINE_BASENAME="$(basename "$BASELINE_FILE")"
 WORKDIR="$(mktemp -d)"
 CONTAINER_NAME="db-drift-check-$$"
 LIVE_DUMP_OVERRIDE=""
+GUARD_ONLY=""
 PUBLICATION_ONLY_FILE=""
 HOST_PORT=""
 
@@ -111,6 +115,11 @@ while [[ $# -gt 0 ]]; do
     --live-dump-file)
       LIVE_DUMP_OVERRIDE="$2"
       shift 2
+      ;;
+    --nur-leserecht-waechter)
+      # Waechter ohne Live-Zugang (laeuft auf jedem PR mit Migration, siehe .github/workflows/ci-leserecht-waechter.yml)
+      GUARD_ONLY=1
+      shift
       ;;
     --realtime-publication-from)
       # Testmodus (A-13b-S M1): nur Abschnitt 4d gegen eine Datei mit `schema.tabelle` je Zeile (statt live), nach dem
@@ -194,6 +203,15 @@ pending_assertions_for() {
     20261118_001_verschieben_server.sql)
       echo "matches-guard-schedule-times-trigger-active matches-guard-schedule-times-invoker-no-client-execute matches-bump-change-revision-counts-original-start"
       ;;
+    20261124_003_zuschauer_zaehlung.sql)
+      echo "zuschauer-zaehlung-table-no-client-access zuschauer-zaehlung-rpc-definer-anon"
+      # Zuschauer-Zaehlung (@RZ-024..030): neue Tabelle ohne Client-Recht + eine Funktion; Verhalten in scripts/zuschauer-zaehlung-check.sh,
+      # Rechte als Assertionen am Ende von db_privilege_assertions.sql (die Ausnahme in lifecycle-guard-triggers-complete haengt daran).
+      ;;
+    20261124_004_zuschauer_zaehlung_ci_leser.sql)
+      echo "zuschauer-zaehlung-ci-schema-reader-select"
+      # Werkzeugkette: Leserecht der Drift-Check-Rolle auf public_view_counts (ohne es scheitert pg_dump live); Beweis in scripts/zuschauer-zaehlung-check.sh
+      ;;
     20261118_005_endstand_tabellenwerte.sql)
       # R3-5b: nur CREATE OR REPLACE match_engine.final_standing_row_valid (tableValues) -- keine eigene Rechte-Assertion
       ;;
@@ -254,6 +272,14 @@ pending_assertions_for() {
     20261123_001_hallenton_torhymne.sql)
       echo "hallenton-goal-anthems-rpc-authenticated-only hallenton-goal-anthems-column-checked hallenton-heartbeat-closed-tournament"
       ;;
+    # Hallenton Zustaende des Ausgangs und Abmelden (@HT-053 bis @HT-055, @HT-057): zwei neue Zustaende, hall_speaker_unassign
+    20261125_001_hallenton_ausgang_zustaende.sql)
+      echo "hallenton-output-states-heartbeat hallenton-speaker-unassign-rpc-authenticated-only"
+      ;;
+    # Zuschauer-Zaehlung Stufe 1b (@RZ-031, @RZ-032): Spalten os_family/browser_family, Hilfsfunktion der Ableitung (scripts/zuschauer-zaehlung-check.sh)
+    20261126_001_zuschauer_zaehlung_os_browser.sql)
+      echo "zuschauer-zaehlung-os-browser-columns zuschauer-zaehlung-os-browser-derive-function"
+      ;;
     *)
       return 1
       ;;
@@ -276,7 +302,7 @@ PENDING_ASSERTIONS=()
 PENDING_PUBLICATION_TABLES=()
 PENDING_JSON_COMMIT=""
 TODAY_UTC="$(date -u +%Y-%m-%d)"
-if [[ -f "$PENDING_FILE" ]]; then
+if [[ -f "$PENDING_FILE" && -z "$GUARD_ONLY" ]]; then
   while IFS= read -r pending_raw || [[ -n "$pending_raw" ]]; do
     pending_line="${pending_raw%%#*}"
     pending_line="$(echo "$pending_line" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
@@ -315,7 +341,9 @@ if [[ -f "$PENDING_FILE" ]]; then
     echo "PENDING-LIVE:   role_permissions live wird gegen $JSON_REL_PATH aus Commit $p_commit verglichen"
   done < "$PENDING_FILE"
 fi
-if [[ ${#PENDING_NAMES[@]} -eq 0 ]]; then
+if [[ -n "$GUARD_ONLY" ]]; then
+  echo "Waechter-Modus: PENDING-LIVE.txt wird nicht gelesen, ALLE Migrationen werden nachgespielt (kein Live-Zugang noetig)."
+elif [[ ${#PENDING_NAMES[@]} -eq 0 ]]; then
   echo "PENDING-LIVE: keine Ausnahmen -- alle Migrationen werden geprüft."
 fi
 
@@ -455,6 +483,65 @@ for f in "${NEWER_MIGRATIONS[@]:-}"; do
   [[ -z "$f" ]] && continue
   docker exec -i "$CONTAINER_NAME" psql -U postgres -v ON_ERROR_STOP=1 -q < "$f"
 done
+
+# --- 2b. Waechter: jede neue Relation braucht ein Leserecht fuer ci_schema_reader ------------------------------------------
+# Warum: pg_dump --schema-only sperrt jede Relation mit LOCK TABLE ... IN ACCESS SHARE MODE, das braucht SELECT. Die Drift-Check-Rolle
+# ci_schema_reader bekommt ihr Recht bewusst je Tabelle (kein ALTER DEFAULT PRIVILEGES, Datenbank-Programm 21.09.). Zweimal ging eine
+# neue Tabelle live, ohne dass die Migration das Recht vergab (20261110_003 -> _007, 20261124_003 -> _004); der Drift-Check brach erst
+# GEGEN LIVE ab ("permission denied for table ..."). Dieser Waechter faengt das schon im Container ab, ohne Live-Zugang.
+# Geprueft: alle Relationen (r, p, v, m, f) in public und match_engine, auf die ci_schema_reader kein SELECT hat.
+# Ausnahmen: die Baseline-Tabellen, denen das Recht im Repo-Stand bewusst fehlt (Baseline traegt keine GRANT-Zeilen; Kopfkommentar von
+# 20261110_007_ci_schema_reader_grants.sql, Freigabe-Unterlage ci-grants-sql-freigabe.md). Die Liste ist EINGEFROREN: sie wird nie
+# erweitert, um einen Fehler zu beruhigen -- jede neue Tabelle bekommt in ihrer Migration ein GRANT SELECT ... TO ci_schema_reader.
+# Live haben diese Tabellen das Recht (Datenbank-Programm 21.09.); nur der aus dem Repo gebaute Stand hat es nicht.
+# Die Liste wurde im Container ermittelt (Stand 15.11.2026: 12 Baseline-Tabellen; keine View, keine Tabelle aus einer Migration).
+# Bekannte Luecke: die Ausnahmen gelten per NAME. Wird eine Baseline-Tabelle geloescht und unter gleichem Namen neu angelegt, rutscht sie
+# durch (ein Vergleich per oid waere der spaetere Ausbau).
+CI_READER_EXEMPT=(
+  "public.match_events"
+  "public.matches"
+  "public.monitor_heartbeats"
+  "public.monitors"
+  "public.profiles"
+  "public.sponsors"
+  "public.sync_queue"
+  "public.team_players"
+  "public.teams"
+  "public.tournament_collaborators"
+  "public.tournament_templates"
+  "public.tournaments"
+)
+check_ci_reader_select() {
+  local raw rel missing=()
+  raw="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -q -tA -v ON_ERROR_STOP=1 <<'SQL'
+SELECT n.nspname || '.' || c.relname
+  FROM pg_class c
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+ WHERE n.nspname IN ('public', 'match_engine')
+   AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
+   AND NOT has_table_privilege('ci_schema_reader', c.oid, 'SELECT')
+ ORDER BY 1;
+SQL
+)" || { echo "::error::Waechter ci_schema_reader konnte die Relationen nicht lesen." >&2; return 1; }
+  while IFS= read -r rel; do
+    [[ -z "$rel" ]] && continue
+    local ex skip=""
+    for ex in "${CI_READER_EXEMPT[@]}"; do [[ "$ex" == "$rel" ]] && skip=1; done
+    [[ -z "$skip" ]] && missing+=("$rel")
+  done <<< "$raw"
+  if [[ ${#missing[@]} -gt 0 ]]; then
+    for rel in "${missing[@]}"; do
+      echo "::error::Waechter: ${rel} hat kein SELECT fuer ci_schema_reader. Die Migration, die ${rel} anlegt, braucht ein 'GRANT SELECT ON TABLE ${rel} TO ci_schema_reader;' -- sonst bricht pg_dump im Drift-Check gegen Live mit 'permission denied for table' ab (Vorbilder: 20261110_007, 20261124_004; bewusst kein ALTER DEFAULT PRIVILEGES)." >&2
+    done
+    return 1
+  fi
+  echo "Waechter gruen: jede Relation in public und match_engine hat SELECT fuer ci_schema_reader (ausser den ${#CI_READER_EXEMPT[@]} eingefrorenen Baseline-Tabellen)."
+  return 0
+}
+check_ci_reader_select || exit 1
+if [[ -n "$GUARD_ONLY" ]]; then
+  exit 0
+fi
 
 # --- 3. Rekonstruierten Dump über dieselbe CLI-Pipeline ziehen ----------------------------
 # `supabase db dump --db-url` startet intern einen eigenen Docker-Hilfscontainer, der den
@@ -781,6 +868,17 @@ PRIVILEGE_ASSERTION_NAMES=(
   # Leibchen Schritt 2a (20261124_002_leibchen_schritt2.sql, @SL-150, @SL-201 bis @SL-236): eigener Block am Ende von db_privilege_assertions.sql
   "leibchen-kit-set-rpc-authenticated-only"
   "leibchen-kit-set-shape"
+  # Zuschauer-Zaehlung (20261124_003_zuschauer_zaehlung.sql, @RZ-024 bis @RZ-030): eigener Block am Ende von db_privilege_assertions.sql
+  "zuschauer-zaehlung-table-no-client-access"
+  "zuschauer-zaehlung-rpc-definer-anon"
+  # Zuschauer-Zaehlung, Leserecht der Drift-Check-Rolle (20261124_004_zuschauer_zaehlung_ci_leser.sql): gleicher Block in db_privilege_assertions.sql
+  "zuschauer-zaehlung-ci-schema-reader-select"
+  # Hallenton Zustaende des Ausgangs und Abmelden (20261125_001_hallenton_ausgang_zustaende.sql, @HT-053 bis @HT-055, @HT-057): eigener Block am Ende von db_privilege_assertions.sql
+  "hallenton-output-states-heartbeat"
+  "hallenton-speaker-unassign-rpc-authenticated-only"
+  # Zuschauer-Zaehlung Stufe 1b (20261126_001_zuschauer_zaehlung_os_browser.sql, @RZ-031, @RZ-032): gleicher Block am Ende von db_privilege_assertions.sql
+  "zuschauer-zaehlung-os-browser-columns"
+  "zuschauer-zaehlung-os-browser-derive-function"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then

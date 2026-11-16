@@ -3,6 +3,7 @@
  * `CockpitSlimHeader` (Cockpit) mit dem Platz `statuszeile` – und der Streifen in einer Ansicht ohne Kopf. Die Zeile ist die echte
  * `HallStatusZeileAnsicht` (hallAnzeige → Einträge → StatusZeile), nur die Daten kommen von Hand statt aus den Hooks. Daten wie im
  * Mockup: Hallencup Süd, Feld 1/2, „Laptop Turnierleitung“, Probe als Platzhalter. Nur Testumgebung, nicht Teil des Builds.
+ * H4-17 (@HT-059): im Cockpit (`ort=cockpit`) zeigt die Zeile nur Störungen (`nurStoerungen`), wie `ManagementTabKopf` sie einbindet.
  * Aufruf: `?ort=verwaltung|cockpit|streifen`; je Szenario ein Block mit `data-testid="szenario-<id>"`.
  */
 import ReactDOM from 'react-dom/client';
@@ -62,8 +63,8 @@ const STREIFEN: Szenario[] = [
   { id: 'bereit', titel: 'bereit', eingabe: leer({ lokal: eigen('ready', 'toent') }) },
 ];
 
-const zeile = (s: Szenario, testId: string) => (
-  <HallStatusZeileAnsicht anzeige={hallAnzeige(s.eingabe)} tournamentId={TID} tonAktivieren={() => undefined} probe={s.probe ? probe : null} data-testid={testId} />
+const zeile = (s: Szenario, testId: string, nurStoerungen = false) => (
+  <HallStatusZeileAnsicht anzeige={hallAnzeige(s.eingabe)} tournamentId={TID} tonAktivieren={() => undefined} probe={s.probe ? probe : null} nurStoerungen={nurStoerungen} data-testid={testId} />
 );
 const rahmen = { border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`, borderRadius: cssVars.borderRadius.md, overflow: 'hidden', background: cssVars.colors.background } as const;
 const titelStil = { margin: `${cssVars.spacing.md} 0 ${cssVars.spacing.xs}`, fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary } as const;
@@ -86,7 +87,7 @@ export function Seite() {
             {ort === 'cockpit' && (
               <CockpitSlimHeader
                 tournamentId={TID} turnierName="Hallencup Süd" felder={2} feld={1} onFeld={() => undefined}
-                verbindung={<span data-testid="verbindung">Online</span>} statuszeile={zeile(s, `zeile-${s.id}`)}
+                verbindung={<span data-testid="verbindung">Online</span>} statuszeile={zeile(s, `zeile-${s.id}`, true)}
               />
             )}
             {ort === 'streifen' && (

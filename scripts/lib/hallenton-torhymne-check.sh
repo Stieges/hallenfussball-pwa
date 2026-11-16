@@ -33,7 +33,12 @@ follow_assertions() { # <erwartet t|f>
   for a in $FOLLOW_ASSERTIONS; do
     check T "Rechte-Assertion: $a |$1" "$a|$1" "$(grep -E "^$a\|" <<<"$priv" || true)"
   done
-  [[ "$1" == t ]] && check T "Rechte-Assertion nach der Torhymne: keine Zeile |f" "" "$(grep -v '|t$' <<<"$priv" || true)"
+  # Migrationen NACH der Torhymne (20261124_001/_002, 20261125_001 ...) sind in diesem Zeitpunkt noch nicht eingespielt: ihre Zeilen
+  # (Namen aus der Zuordnung in db-drift-check.sh) zaehlen hier nicht -- sie stehen im Pruefskript ihrer eigenen Kategorie bzw. Harness.
+  local later="" f
+  for f in ${AFTER[@]+"${AFTER[@]}"}; do [[ "$(basename "$f")" > "$FOLLOW_NAME" ]] && later="$later $(after_assertions "$(basename "$f")")"; done
+  [[ "$1" == t ]] && check T "Rechte-Assertion nach der Torhymne: keine Zeile |f (ausser den Zeilen spaeterer Migrationen)" "" \
+    "$(grep -v '|t$' <<<"$priv" | grep -vE "^($(echo $later | tr ' ' '|'))\\|" || true)"
   [[ "$1" == t ]] && check T "Drift-Check-Zuordnung: pending_assertions_for nennt fuer $FOLLOW_NAME genau die neuen Namen" \
     "$FOLLOW_ASSERTIONS" "$(after_assertions "$FOLLOW_NAME")"
   return 0

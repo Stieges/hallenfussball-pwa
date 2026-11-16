@@ -69,6 +69,7 @@ function createMinimalTournament(id: string) {
         teamB: '00000000-0000-4000-8000-0000000000a2',
         slotA: { kind: 'team', teamId: '00000000-0000-4000-8000-0000000000a1' },
         slotB: { kind: 'team', teamId: '00000000-0000-4000-8000-0000000000a2' },
+        round: 1,
         field: 1,
         status: 'scheduled',
         time: '10:00',
@@ -129,8 +130,9 @@ test.describe('Tournament Management Tabs', () => {
     await expect(page).toHaveURL(/.*\/tournament\/tab-test-tournament(\/schedule)?/);
 
     // Spielplan-Content ist sichtbar
-    const scheduleContent = page.getByRole('heading', { name: /Spielplan/i }).or(
-      page.locator('[data-testid^="match-card-"]')
+    // Seit @ZP-113 steht über den Spielen der Listenkopf „Spiele“ (die Überschrift „Spielplan“ entfiel); Spielzeilen tragen `data-match-card`
+    const scheduleContent = page.getByTestId('schedule-list-head').or(
+      page.locator('[data-match-card]')
     );
     await expect(scheduleContent.first()).toBeVisible({ timeout: 5000 });
   });

@@ -12,11 +12,13 @@ import type { StatusEintrag } from '../../../components/ui/molecules/statusZeile
 import { AuthContext } from '../../auth/context/authContextInstance';
 import { useCan } from '../../auth/hooks/useCan';
 import { hallAnzeige, type HallAnzeige } from '../hallAnzeige';
+import { hallAnzeigeOhneGezeigtenKasten } from '../hallAnzeigeCockpit';
 import { useHallLautsprecher } from '../useHallLautsprecher';
 import { useLaufendeSpiele } from '../useLaufendeSpiele';
 import { useAnderesFensterTont } from '../useAnderesFensterTont';
 import { useHallStatus } from '../useHallStatus';
-import { baueStatusEintraege, hallentonZiel } from './hallStatusEintraege';
+import { abgemeldeteFelder, baueStatusEintraege, hallentonZiel } from './hallStatusEintraege';
+import { useCockpitKaesten } from './CockpitKastenOrt';
 import { useStatusZeileHost } from './StatusZeileOrt';
 
 export interface HallStatusZeileProps {
@@ -25,6 +27,11 @@ export interface HallStatusZeileProps {
   ohneLautsprecher?: boolean;
   /** Eintrag der Probe-Sitzung (`rang: 'probe'`); `null` = keine Probe. */
   probe?: StatusEintrag | null;
+  /**
+   * Cockpit (@HT-059): nur Störungen (und die Probe); „bereit“ samt „Prüfen“ und Hinweise entfallen, ebenso „Status unbekannt“ und eine Störung des
+   * gezeigten Felds, die der Kasten unter der Tafel schon zeigt (H4-18). Die Kopfzeile bleibt Host.
+   */
+  nurStoerungen?: boolean;
 }
 
 export function HallStatusZeile(props: HallStatusZeileProps): ReactElement | null {
@@ -42,19 +49,22 @@ export interface HallStatusZeileAnsichtProps {
   tournamentId: string;
   tonAktivieren: () => void;
   ohneLautsprecher?: boolean;
+  /** Felder, die die Turnierleitung für dieses Gerät abgemeldet hat (bis „Verstanden“, @HT-057). */
+  abgemeldet?: readonly number[];
   probe?: StatusEintrag | null;
+  nurStoerungen?: boolean;
   'data-testid'?: string;
 }
 
 /** Nur Darstellung: Einträge aus der Anzeige bauen und die Zeile rendern (auch am Prüfstand der Bilder verwendet). */
-export function HallStatusZeileAnsicht({ anzeige, tournamentId, tonAktivieren, ohneLautsprecher, probe, 'data-testid': testId = 'hallenton-status-zeile' }: HallStatusZeileAnsichtProps): ReactElement | null {
+export function HallStatusZeileAnsicht({ anzeige, tournamentId, tonAktivieren, ohneLautsprecher, abgemeldet, probe, nurStoerungen, 'data-testid': testId = 'hallenton-status-zeile' }: HallStatusZeileAnsichtProps): ReactElement | null {
   const { t } = useTranslation('hallenton');
   const { t: tCommon } = useTranslation('common');
   const navigate = useNavigate();
-  const eintraege = useMemo(
-    () => baueStatusEintraege(anzeige, { t, ziel: hallentonZiel(tournamentId), tonAktivieren, ohneLautsprecher, probe }),
-    [anzeige, t, tournamentId, tonAktivieren, ohneLautsprecher, probe],
-  );
+  const eintraege = useMemo(() => {
+    const alle = baueStatusEintraege(anzeige, { t, ziel: hallentonZiel(tournamentId), tonAktivieren, ohneLautsprecher, abgemeldet, probe });
+    return nurStoerungen ? alle.filter((e) => (e.rang === 'stoerung' || e.rang === 'probe') && e.id !== 'statusUnbekannt') : alle;
+  }, [anzeige, t, tournamentId, tonAktivieren, ohneLautsprecher, abgemeldet, probe, nurStoerungen]);
   return (
     <StatusZeile
       eintraege={eintraege}
@@ -67,7 +77,7 @@ export function HallStatusZeileAnsicht({ anzeige, tournamentId, tonAktivieren, o
   );
 }
 
-function HallStatusZeileMitRecht({ tournamentId, ohneLautsprecher = false, probe = null }: HallStatusZeileProps): ReactElement | null {
+function HallStatusZeileMitRecht({ tournamentId, ohneLautsprecher = false, probe = null, nurStoerungen = false }: HallStatusZeileProps): ReactElement | null {
   const status = useHallStatus(tournamentId);
   const lautsprecher = useHallLautsprecher(tournamentId);
   useStatusZeileHost(tournamentId);
@@ -90,5 +100,9 @@ function HallStatusZeileMitRecht({ tournamentId, ohneLautsprecher = false, probe
     [status.stand, status.felder, status.antwort, status.lautsprecherBekannt, lokal, angepfiffen, anderesFenster],
   );
   const aktivieren = useCallback(() => { void tonAktivieren(); }, [tonAktivieren]);
-  return <HallStatusZeileAnsicht anzeige={anzeige} tournamentId={tournamentId} tonAktivieren={aktivieren} ohneLautsprecher={ohneLautsprecher} probe={probe} />;
+  const abgemeldet = useMemo(() => abgemeldeteFelder(lautsprecher.abgeloest), [lautsprecher.abgeloest]);
+  // Nur im Cockpit (H4-18): was der Kasten unter der Tafel zeigt, steht nicht zusätzlich als Pille im Kopf
+  const kaesten = useCockpitKaesten(tournamentId);
+  const sichtbar = useMemo(() => (nurStoerungen ? hallAnzeigeOhneGezeigtenKasten(anzeige, kaesten) : anzeige), [nurStoerungen, anzeige, kaesten]);
+  return <HallStatusZeileAnsicht anzeige={sichtbar} tournamentId={tournamentId} tonAktivieren={aktivieren} ohneLautsprecher={ohneLautsprecher} abgemeldet={abgemeldet} probe={probe} nurStoerungen={nurStoerungen} />;
 }

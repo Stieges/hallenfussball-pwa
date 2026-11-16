@@ -6,7 +6,7 @@
 import { useState, type CSSProperties, type ReactElement, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { borderWidths, cssVars, fontSizesMd3 } from '../design-tokens';
+import { borderWidths, cssVars, fontSizesMd3, iconSizeValues } from '../design-tokens';
 import { BottomNavigation, BottomSheet, BottomSheetItem, Icons } from '../components/ui';
 import type { BottomNavTab } from '../components/ui';
 import type { Tournament } from '../types/tournament';
@@ -42,11 +42,17 @@ const headerStyle: CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  // @OB-025: reicht die Breite nicht, rutschen die Tasten in eine zweite Zeile; der Titel bleibt lesbar (nie Buchstabe für Buchstabe)
+  // @OB-025: reicht die Breite nicht, rutschen die Tasten in eine zweite Zeile; der Titel bleibt lesbar (nie Buchstabe für Buchstabe).
+  // Bei jeder Breite (C-KOPF-UEBERLAUF-TABLET-LANGTEXT: am Tablet hochkant schob die Tastengruppe mit langem Text die Seite auf 800 px)
+  flexWrap: 'wrap',
   rowGap: cssVars.spacing.sm,
 };
-// Handy: Titel mindestens halbe Breite, die Tasten rutschen sonst in Zeile 2. Ab Tablet: eine Zeile, Titel nimmt den Rest (der Untertitel darf umbrechen)
-const headerContentStyle = (isMobile: boolean): CSSProperties => ({ flex: isMobile ? '1 1 50%' : '1 1 auto', minWidth: 0 });
+// Handy: Titel mindestens halbe Breite, die Tasten rutschen sonst in Zeile 2.
+// Ab Tablet: eine Zeile, der Titel nimmt den Rest und schrumpft zuerst (Grundgröße 0, Untergrenze ein knappes Drittel);
+// nur wenn selbst dann die Tastengruppe nicht daneben passt, rutscht sie als Ganzes in Zeile 2 (@OB-021, @OB-025)
+const headerContentStyle = (isMobile: boolean): CSSProperties => (
+  isMobile ? { flex: '1 1 50%', minWidth: 0 } : { flex: '1 1 0', minWidth: '30%' }
+);
 // Tastengruppe (Zahnrad, Status, Anmeldung): rechts oben; reicht die Breite nicht, rutscht sie als Ganzes in die zweite Zeile
 const headerActionsStyle: CSSProperties = { display: 'flex', alignItems: 'center', marginLeft: 'auto' };
 const backButtonStyle: CSSProperties = {
@@ -120,7 +126,7 @@ export function ManagementHeader(p: ManagementHeaderProps): ReactElement {
   const { tournament, isMobile, activeTab, isSettingsDirty, onTabChange } = p;
   return (
     <>
-      <header style={{ ...headerStyle, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
+      <header style={headerStyle}>
         {p.onBack && (
           <button onClick={p.onBack} style={backButtonStyle} title="Zurück zum Dashboard">←</button>
         )}
@@ -138,7 +144,7 @@ export function ManagementHeader(p: ManagementHeaderProps): ReactElement {
           title={t('management.adminCenterTitle')}
           data-testid="management-admin-entry"
         >
-          <span aria-hidden="true">⚙️</span>
+          <span aria-hidden="true" style={{ display: 'flex' }}><Icons.Settings size={iconSizeValues.xs} /></span>
           <span>{isMobile ? t('management.adminEntry') : t('management.adminCenter')}</span>
         </button>
         {/* A-08f3e3 (M-1): wartende/nicht übernommene Einträge; im Live-Tab zeigt sie das Cockpit selbst */}

@@ -1,0 +1,54 @@
+name: Zuschauer-Zaehlung
+
+# Zuschauer-Seite zaehlen, Stufe 1 (supabase/migrations/20261124_003_zuschauer_zaehlung.sql, Record Reichweite Zuschauersicht,
+# @RZ-024..030), Leserecht der Drift-Check-Rolle (20261124_004) und Stufe 1b (20261126_001_zuschauer_zaehlung_os_browser.sql, @RZ-031,
+# @RZ-032). scripts/zuschauer-zaehlung-check.sh spielt Baseline + Migrationen in einen eigenen Wegwerf-Container supabase/postgres
+# (mit Wegwerf-PostgREST fuer die Kennung des Aufrufs) und prueft Zaehlen, Nicht-Zaehlen, Rechte, Loeschen und Rueckwege; die
+# Gegenproben beweisen, dass der Check Fehler auch erkennt.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/rollbacks/20261124_003_zuschauer_zaehlung_rollback.sql'
+      - 'supabase/rollbacks/20261124_004_zuschauer_zaehlung_ci_leser_rollback.sql'
+      - 'supabase/rollbacks/20261126_001_zuschauer_zaehlung_os_browser_rollback.sql'
+      - 'scripts/zuschauer-zaehlung-check.sh'
+      - 'scripts/db_privilege_assertions.sql'
+      - 'scripts/lib/migrations-since-baseline.sh'
+      - '.github/workflows/zuschauer-zaehlung.yml'
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/rollbacks/20261124_003_zuschauer_zaehlung_rollback.sql'
+      - 'supabase/rollbacks/20261124_004_zuschauer_zaehlung_ci_leser_rollback.sql'
+      - 'supabase/rollbacks/20261126_001_zuschauer_zaehlung_os_browser_rollback.sql'
+      - 'scripts/zuschauer-zaehlung-check.sh'
+      - 'scripts/db_privilege_assertions.sql'
+      - 'scripts/lib/migrations-since-baseline.sh'
+      - '.github/workflows/zuschauer-zaehlung.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  zuschauer-zaehlung:
+    name: Zuschauer-Zaehlung (Postgres-Wegwerfcontainer)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Zaehlung pruefen
+        run: bash scripts/zuschauer-zaehlung-check.sh
+
+      - name: Gegenprobe A (ohne die Migration muessen die Pruefungen ROT sein)
+        run: bash scripts/zuschauer-zaehlung-check.sh --without-migration
+
+      - name: 'Gegenprobe A2 (Stand 003+004 ohne Stufe 1b - die Pruefungen der Stufe 1b muessen ROT sein)'
+        run: bash scripts/zuschauer-zaehlung-check.sh --without-1b
+
+      - name: Gegenprobe B (jede Mutation muss mindestens eine Pruefung ROT machen)
+        run: bash scripts/zuschauer-zaehlung-check.sh --gegenprobe

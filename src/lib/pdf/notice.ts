@@ -11,6 +11,7 @@ import type jsPDF from 'jspdf';
 import { printColors, printUnit } from '../../design-tokens/print';
 import { printNotice } from '../../design-tokens/print-notice';
 import { qrModules, shortViewerAddress, viewerUrl } from '../qr/publicQr';
+import { withViewChannel } from '../../utils/shareUtils';
 import { noticePdfFilename } from './filename';
 import { buildHints, hintNotes, type PdfHints } from './notes';
 import { ascentMm, descentMm, pageGeometry } from './layout';
@@ -139,7 +140,8 @@ export async function buildNoticePdf(input: PdfInput): Promise<NoticeBuild> {
   y = centered(ctx, notice.call, center, geo.contentWidth, y + printNotice.callGap, printNotice.callPt, 'bold');
 
   // QR: Vektor, mittig; die Ruhezone ist Teil der Fläche und der Abstand zu Aufruf und Schritten
-  const modules = qrModules(url);
+  // Der QR trägt den Kanal-Zusatz (@RZ-029); die Adresse zum Abtippen und der antippbare Link bleiben ohne
+  const modules = qrModules(withViewChannel(url, 'q'));
   const side = qrSide(modules.length, printNotice.qrEdge);
   drawQrSymbol(doc, modules, printNotice.qrEdge, center - side / 2, y);
   // Der QR ist antippbar und führt zur Zuschauer-Seite, wie beim Spielplan (@DR-038)

@@ -30,7 +30,8 @@ import { LoginRoute } from '../LoginRoute';
 import { FalscherSpeicher } from '../../../../test/hallenton/falschesGeraet';
 
 function Ort() {
-  return <span data-testid="ort">{useLocation().pathname}</span>;
+  const ort = useLocation();
+  return <span data-testid="ort">{`${ort.pathname}${ort.search}`}</span>;
 }
 function zeige(start: string) {
   render(
@@ -60,6 +61,18 @@ describe('@HT-026 Rücksprung je Anmeldeart', () => {
     zeige('/login');
     fireEvent.click(screen.getByTestId('login-erfolg'));
     expect(screen.getByTestId('ort')).toHaveTextContent(ADRESSE);
+  });
+  it('@OB-087 Zeile 3: Passwort – nach „Anmelden“ im Cockpit steht die Person wieder im Cockpit ihres Felds', () => {
+    merkeRueckkehr('/tournament/hallencup-nord/live?f=2');
+    zeige('/login');
+    fireEvent.click(screen.getByTestId('login-erfolg'));
+    expect(screen.getByTestId('ort')).toHaveTextContent('/tournament/hallencup-nord/live?f=2');
+  });
+  it('@OB-087 Zeile 3 Gegenbeispiel: ein untergeschobener Merker auf eine fremde Adresse führt zur Startseite', () => {
+    window.localStorage.setItem('loginRueckkehr', JSON.stringify({ pfad: '/tournament/hallencup-nord/live?f=2&next=https://evil.example', bis: Date.now() + 60_000 }));
+    zeige('/login');
+    fireEvent.click(screen.getByTestId('login-erfolg'));
+    expect(screen.getByTestId('ort')).toHaveTextContent(/^\/$/);
   });
   it('Gegenbeispiel Passwort: ohne Merker die Startseite', () => {
     zeige('/login');

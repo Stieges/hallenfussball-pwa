@@ -36,7 +36,7 @@ const mockContext = {
   store: { forAccount: vi.fn().mockResolvedValue([]) },
   // C3b-1: useEngineEventEditing fragt die Ansicht ab -- hier gibt es kein Engine-Spiel.
   // useEnginePhase (Tafel, 2.4) abonniert die Engine
-  engine: { view: () => null, serverNow: () => 0, subscribe: () => () => undefined },
+  engine: { view: () => null, serverNow: () => 0, clockSynced: () => true, subscribe: () => () => undefined },
   accountId: 'acc-outbox-notice-test',
 };
 vi.mock('../../../features/match-engine/useMatchEngineContext', () => ({

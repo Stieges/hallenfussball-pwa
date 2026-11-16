@@ -6,7 +6,7 @@
  * - Hat die Verwaltung selbst kein Netz (`statusUnbekannt`), steht bei fremden Feldern „Status unbekannt“ statt eines alten „bereit“
  *   (@HT-041); am eigenen Gerät gilt der lokale Zustand weiter (G7).
  * - Im Unterpunkt stehen die Gründe (@HT-039: auf anderen Geräten nur die Pille, hier der Grund); die Gründe „Ausgang verloren“ und
- *   „Ausgang bestätigen“ kennt die Karte schon, ihre Quelle liefert H4-6.
+ *   „Ausgang bestätigen“ kommen seit H4-11 vom Server (`output_lost`, `output_unconfirmed`) und vom eigenen Gerät.
  * - Das Gerät des Lautsprechers kennt nur die volle Sicht; die Art des Geräts (Laptop/Monitor/Handy) meldet der Server nicht, die Karte
  *   zeigt das Laptop-Symbol.
  */
@@ -18,6 +18,8 @@ import type { FeldGeraet, FeldGrund, FeldZustand } from './LautsprecherFeldKarte
 export interface SprecherInfo {
   field: number;
   deviceName: string;
+  /** Zeitpunkt der Zuordnung am Server (Serverzeit, ms); jede Übernahme erzeugt einen neuen. Nur intern (Abmelden vergleicht ihn), nie angezeigt. */
+  assignedAt?: number;
 }
 
 export interface FeldKarte {
@@ -30,6 +32,10 @@ export interface FeldKarte {
   hupeStattEigenerTon: boolean;
   /** Ein anderes Fenster dieses Geräts tönt (@HT-033 Zeile 8). */
   anderesFenster: boolean;
+  /** Der Lautsprecher des Felds ist DIESES Gerät (lokaler Zustand gilt): „Abmelden“ geht dann den bestehenden Weg des Schalters (H4-11b, @HT-057). */
+  eigenesGeraet: boolean;
+  /** `assignedAt` der Zuordnung, die die Karte zeigt (nur intern, nie anzeigen, in kein Attribut): „Abmelden“ erkennt daran ein gleichnamiges Gerät, das übernommen hat. */
+  zuordnung?: number;
 }
 
 export interface FeldKartenEingabe {
@@ -53,6 +59,8 @@ const SERVER_GRUND: Record<string, FeldGrund | undefined> = {
   background: 'hintergrund',
   slept: 'schlafenGelegt',
   volume_zero: 'lautstaerkeNull',
+  output_lost: 'ausgangVerloren', // H4-11 (@HT-039): die Gründe aus der Wahl des Ausgangs (@HT-054, @HT-055)
+  output_unconfirmed: 'ausgangBestaetigen',
 };
 
 const LOKAL_GRUND: Partial<Record<LokalerZustand, FeldGrund>> = {
@@ -60,6 +68,8 @@ const LOKAL_GRUND: Partial<Record<LokalerZustand, FeldGrund>> = {
   background: 'hintergrund',
   slept: 'schlafenGelegt',
   volume_zero: 'lautstaerkeNull',
+  output_lost: 'ausgangVerloren',
+  output_unconfirmed: 'ausgangBestaetigen',
   keineVerbindung: 'keineVerbindung',
 };
 
@@ -88,7 +98,7 @@ export function baueFeldKarten(e: FeldKartenEingabe): FeldKarte[] {
     const bekannt = e.sprecher.find((s) => s.field === feld);
     const name = bekannt?.deviceName ?? (fa?.eigenesGeraet === true ? e.eigenerName : null);
     const geraet: FeldGeraet | undefined = name === null || name === undefined ? undefined : { name, art: 'laptop' };
-    const leer = { pruefen: false, hupeStattEigenerTon: false, anderesFenster: false };
+    const leer = { pruefen: false, hupeStattEigenerTon: false, anderesFenster: false, eigenesGeraet: fa?.eigenesGeraet === true, zuordnung: bekannt?.assignedAt };
     if (fa === undefined) {
       // Ohne eigenes Netz kennt die Verwaltung nur den zuletzt bekannten Lautsprecher (@HT-041); sonst hat das Feld keinen
       return e.anzeige.statusUnbekannt && bekannt !== undefined

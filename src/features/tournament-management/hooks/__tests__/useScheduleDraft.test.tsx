@@ -229,6 +229,106 @@ describe('@ZP-107 Getauscht wird nur innerhalb derselben Phase', () => {
   });
 });
 
+describe('@ZP-115 Im Raster auf einen freien Platz einer anderen Phase ziehen geht nicht', () => {
+  // Spiel 9 (Gruppe) um 15:48 auf Feld 1, Halbfinale um 16:00 auf Feld 1; Feld 2 ist um 15:48 und um 16:00 frei
+  const mitHalbfinale = () => {
+    const t = hallencup();
+    return { ...t, matches: [...t.matches, spiel(9, { id: 'hf1', matchNumber: 10, phase: 'semifinal', isFinal: true, field: 1, scheduledTime: at(60) })] };
+  };
+  const ziehe = (h: ReturnType<typeof setup>, id: string, minute: number, feld: number) => {
+    const t = h.r().draft.draftTournament;
+    act(() => { h.r().edit.handleGridChange({ ...t, matches: t.matches.map((m) => (m.id === id ? { ...m, scheduledTime: at(minute), field: feld } : m)) }); });
+  };
+
+  it('@ZP-115 Gruppenspiel 1 auf den freien Platz neben dem Finale: bleibt, Meldung „Gruppenspiele bleiben in der Gruppenphase“, Zähler und Reihenfolge gleich', () => {
+    const h = setup(mitHalbfinale());
+    act(() => { h.r().draft.startEditing(); });
+    const vorher = h.r().draft.draftTournament.matches.map((m) => [m.id, m.field, new Date(m.scheduledTime!).getTime()]);
+    ziehe(h, 's1', 60, 2);
+    expect(h.r().draft.changeCount).toBe(0);
+    expect(h.r().draft.canUndo).toBe(false);
+    expect(h.r().draft.canRedo).toBe(false);
+    expect(h.showWarning).toHaveBeenCalledWith('tournament:draft.groupStaysInGroupPhase');
+    expect(h.r().draft.draftTournament.matches.map((m) => [m.id, m.field, new Date(m.scheduledTime!).getTime()])).toEqual(vorher);
+  });
+
+  it('@ZP-115 der Zähler bleibt gleich, auch wenn schon eine Änderung im Entwurf liegt', () => {
+    const h = setup(mitHalbfinale());
+    act(() => { h.r().draft.startEditing(); });
+    act(() => { h.r().edit.handleMatchSwap('s9', 's6'); });
+    expect(h.r().draft.changeCount).toBe(1);
+    ziehe(h, 's1', 60, 2);
+    expect(h.r().draft.changeCount).toBe(1);
+    expect(h.r().draft.canUndo).toBe(true);
+    expect(h.r().draft.canRedo).toBe(false);
+  });
+
+  it('@ZP-115 mit vorhandenem Wiederholen-Stapel: das abgewiesene Verschieben leert ihn nicht, Rückgängig und Wiederholen bleiben wie vorher', () => {
+    const h = setup(mitHalbfinale());
+    act(() => { h.r().draft.startEditing(); });
+    act(() => { h.r().edit.handleMatchSwap('s9', 's6'); });
+    act(() => { h.r().edit.handleRefereeAssignment('s4', 3); });
+    act(() => { h.r().draft.undo(); });
+    expect(h.r().draft.canUndo).toBe(true);
+    expect(h.r().draft.canRedo).toBe(true);
+    ziehe(h, 's1', 60, 2);
+    expect(h.r().draft.changeCount).toBe(1);
+    expect(h.r().draft.canUndo).toBe(true);
+    expect(h.r().draft.canRedo).toBe(true);
+    act(() => { h.r().draft.redo(); });
+    expect(h.r().draft.changeCount).toBe(2);
+  });
+
+  it('@ZP-115 Gegenbeispiel: Spiel 1 auf einen freien Platz innerhalb der Gruppenphase (15:48, Feld 2) lässt sich ziehen', () => {
+    const h = setup(mitHalbfinale());
+    act(() => { h.r().draft.startEditing(); });
+    ziehe(h, 's1', 48, 2);
+    expect(h.r().draft.changeCount).toBe(1);
+    expect(h.showWarning).not.toHaveBeenCalled();
+    expect(matchOf(h.r().draft.draftTournament, 's1').scheduledTime).toEqual(at(48));
+  });
+
+  it('@ZP-115 Gegenbeispiel: eine Lücke zwischen letztem Gruppenspiel und Finalrunde (15:54) ist frei', () => {
+    const h = setup(mitHalbfinale());
+    act(() => { h.r().draft.startEditing(); });
+    ziehe(h, 's1', 54, 2);
+    expect(h.r().draft.changeCount).toBe(1);
+  });
+
+  it('@ZP-115 umgekehrt: das Halbfinale auf den freien Platz in der Gruppenphase: bleibt, Meldung „Finalspiele bleiben in der Finalrunde“', () => {
+    const h = setup(mitHalbfinale());
+    act(() => { h.r().draft.startEditing(); });
+    ziehe(h, 'hf1', 48, 2);
+    expect(h.r().draft.changeCount).toBe(0);
+    expect(h.showWarning).toHaveBeenCalledWith('tournament:draft.finalsStayInFinals');
+    expect(matchOf(h.r().draft.draftTournament, 'hf1').scheduledTime).toEqual(at(60));
+  });
+
+  it('@ZP-115 Gegenbeispiel: das Halbfinale auf einen freien Platz in der Finalrunde (16:00, Feld 2) lässt sich ziehen', () => {
+    const h = setup(mitHalbfinale());
+    act(() => { h.r().draft.startEditing(); });
+    ziehe(h, 'hf1', 60, 2);
+    expect(h.r().draft.changeCount).toBe(1);
+  });
+
+  it('@ZP-107 Tauschen im Raster über die Phasengrenze bleibt gesperrt, mit der Tausch-Meldung (unverändert)', () => {
+    const h = setup(mitHalbfinale());
+    act(() => { h.r().draft.startEditing(); });
+    const t = h.r().draft.draftTournament;
+    act(() => { h.r().edit.handleGridChange({ ...t, matches: t.matches.map((m) => (m.id === 's9' ? { ...m, scheduledTime: at(60) } : m.id === 'hf1' ? { ...m, scheduledTime: at(48) } : m)) }); });
+    expect(h.r().draft.changeCount).toBe(0);
+    expect(h.showWarning).toHaveBeenCalledWith('tournament:draft.samePhaseOnly');
+  });
+
+  it('@ZP-093 ein angepfiffenes Gruppenspiel lässt sich auch im Raster nicht verschieben (Stand im Entwurf unverändert)', () => {
+    const start = mitHalbfinale();
+    const h = setup({ ...start, matches: start.matches.map((m) => (m.id === 's1' ? { ...m, matchStatus: 'running' as const } : m)) });
+    act(() => { h.r().draft.startEditing(); });
+    ziehe(h, 's1', 48, 2);
+    expect(matchOf(h.r().draft.draftTournament, 's1').scheduledTime).toEqual(at(0));
+  });
+});
+
 describe('@ZP-103 „Abbrechen“ verwirft die Änderungen erst nach Rückfrage', () => {
   const dreiAenderungen = () => {
     const h = setup();

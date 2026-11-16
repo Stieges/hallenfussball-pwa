@@ -34,6 +34,8 @@ export interface TeamSideHandlers { onTor: () => void; onFoul: () => void; onZei
 export interface CockpitCommandsArgs {
   props: LiveCockpitProps;
   settings: MatchCockpitSettings;
+  /** Cockpit-Ton dieses Geräts an (`useCockpitTon`, @HT-009): ersetzt das turnierweite `soundEnabled`. */
+  tonAn: boolean;
   sound: Pick<ReturnType<typeof useMatchSound>, 'play' | 'activate' | 'isActivated'>;
   flows: UseEntryFlowsReturn;
   sides: UseSideOrderReturn;
@@ -58,7 +60,7 @@ export interface CockpitCommands {
   onSidebarEventEdit?: LegacyPlayAreaProps['sidebar']['onEventEdit'];
 }
 
-export function useCockpitCommands({ props, settings, sound, flows, sides, melde, engineView, view }: CockpitCommandsArgs): CockpitCommands {
+export function useCockpitCommands({ props, settings, tonAn, sound, flows, sides, melde, engineView, view }: CockpitCommandsArgs): CockpitCommands {
   const { t } = useTranslation('cockpit');
   const { currentMatch: match, onStart, onPause, onResume, onFinish, onGoal, onAdjustTime, onUpdateSettings } = props;
   const readOnly = !props.kannSteuern;
@@ -115,7 +117,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
 
   // Uhr: Abschnittsende und Abpfiff von selbst, Wiederanpfiff sowie Ton und Vibration (einzige Quelle) in `useCockpitClock`.
   const cockpitClock = useCockpitClock({
-    tournamentId: props.tournamentId, match, readOnly, settings, engineView, melde,
+    tournamentId: props.tournamentId, match, readOnly, settings: { soundEnabled: tonAn, hapticEnabled: settings.hapticEnabled }, engineView, melde,
     playSound: useCallback(() => { void sound.play(); }, [sound]),
   });
   // LT-6 „Spiel fortsetzen“ (@SL-074, @SL-075): nur während der Endstand steht (nicht nach „Weiter“), mit Steuer, wenn die Engine es zulässt
@@ -123,7 +125,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
   const clock = useClockControls({
     match, abschnittspause: cockpitClock.abschnittspause,
     // Der Tipp auf Anpfiff/Pause/Weiter gibt den Ton frei (Browser-Geste); ein schwebender Hinweis entfällt.
-    sound: { aktiviere: () => { if (settings.soundEnabled && !sound.isActivated) { void sound.activate(); } } },
+    sound: { aktiviere: () => { if (tonAn && !sound.isActivated) { void sound.activate(); } } },
     onStart: (id) => { onStart(id); showSuccess(t('meldung.angepfiffen')); },
     onPause: (id) => { onPause(id); showInfo(t('meldung.pausiert')); },
     onResume: (id) => { onResume(id); showSuccess(t('meldung.fortgesetzt')); },

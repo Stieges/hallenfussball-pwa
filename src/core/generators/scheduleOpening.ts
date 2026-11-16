@@ -13,6 +13,7 @@
 import type { Match, OpeningMode, Team } from '../../types/tournament';
 import { requireTeamId, teamSlot } from '../models/matchSlot';
 import { inPlayOrder, measurePlanQuality, type PlanQuality } from './planQuality';
+import { hostFollowCount } from './hostSpacing';
 import type { ScheduleNotice } from './scheduleTypes';
 
 export interface HostOpeningInput {
@@ -259,6 +260,71 @@ function opponentInRound(arranged: Arranged, teamId: string, roundPosition: numb
   return home === teamId ? requireTeamId(match.slotB) : home;
 }
 
+/** Eine Art, die gewählte Eröffnung im fertigen Plan umzusetzen: Plan (evtl. gespiegelt) und Wünsche „Platz → echte Mannschaft“. */
+interface OpeningVariant {
+  arranged: Arranged;
+  wishes: Array<readonly [string, string]>;
+}
+
+/** Plan-Seiten gespiegelt (Fairness gleich); derselbe Plan, nur Heim und Gast getauscht. */
+function mirrored(arranged: Arranged): Arranged {
+  return { ...arranged, matches: mirrorHomeAway(arranged.matches) };
+}
+
+/**
+ * Alle Umbenennungen, die die gewählte Eröffnung erfüllen (@W4-033, @W4-048). Reihenfolge = bisherige Wahl zuerst:
+ * Bei Gleichstand der Folgen (@W4-050) bleibt es bei ihr, damit das Ergebnis stabil ist.
+ * - `club-derby`: Spiel 1 = erste gegen zweite markierte (nur eine Art).
+ * - `guest-opening`: Spiel 1 = erste markierte als Heim gegen einen Gast; die zweite ist die Gegnerin der ersten in Runde 2
+ *   (gespiegelte Seiten als zweite Art; die erste Art entfällt, wenn die Heimmannschaft in Runde 2 spielfrei hat).
+ * - `both-home`: Spiel 1 und 2 mit der ersten bzw. zweiten markierten als Heim (ungespiegelt, dann gespiegelt).
+ */
+function openingVariants(arranged: Arranged, hosts: readonly string[], mode: OpeningMode): OpeningVariant[] {
+  const plans = [arranged, mirrored(arranged)];
+  const variants: OpeningVariant[] = [];
+  for (const plan of plans) {
+    const ordered = inPlayOrder(plan.matches);
+    const first = ordered[0];
+    const home = requireTeamId(first.slotA);
+    if (mode === 'club-derby') {
+      if (plan === arranged) { variants.push({ arranged: plan, wishes: [[home, hosts[0]], [requireTeamId(first.slotB), hosts[1]]] }); }
+    } else if (mode === 'both-home') {
+      const second = ordered[1];
+      if (second) { variants.push({ arranged: plan, wishes: [[home, hosts[0]], [requireTeamId(second.slotA), hosts[1]]] }); }
+    } else {
+      const partner = opponentInRound(plan, home, 1);
+      if (partner !== undefined) { variants.push({ arranged: plan, wishes: [[home, hosts[0]], [partner, hosts[1]]] }); }
+    }
+  }
+  return variants;
+}
+
+/** „Beide beginnen als Heim“ aufgegangen: Spiel 1 und 2 haben je eine markierte als Heim gegen einen Gast. */
+function bothHomeHolds(matches: Match[], hosts: readonly string[]): boolean {
+  const [one, two] = inPlayOrder(matches);
+  if (!one || !two) { return false; }
+  const isGuest = (id: string): boolean => !hosts.includes(id);
+  return requireTeamId(one.slotA) === hosts[0] && isGuest(requireTeamId(one.slotB))
+    && requireTeamId(two.slotA) === hosts[1] && isGuest(requireTeamId(two.slotB));
+}
+
+/**
+ * Wählt unter den Umbenennungen die mit den wenigsten direkten Folgen der beiden Mannschaften (@W4-050), bei
+ * Gleichstand die erste (bisherige Wahl). Null, wenn keine Umbenennung die Eröffnung erfüllt.
+ */
+function chooseVariant(
+  variants: OpeningVariant[], groupTeamIds: string[], hosts: readonly string[], requireBothHome: boolean,
+): Match[] | null {
+  let best: { matches: Match[]; follows: number } | null = null;
+  for (const variant of variants) {
+    const matches = renameTeams(variant.arranged.matches, renameFor(groupTeamIds, variant.wishes));
+    if (requireBothHome && !bothHomeHolds(matches, hosts)) { continue; }
+    const follows = hostFollowCount(matches, hosts[0], hosts[1]);
+    if (best === null || follows < best.follows) { best = { matches, follows }; }
+  }
+  return best?.matches ?? null;
+}
+
 export function applyHostOpening(input: HostOpeningInput): HostOpeningResult {
   const groupOf = new Map<string, string>();
   input.groups.forEach((teams, groupId) => { for (const team of teams) { groupOf.set(team.id, groupId); } });
@@ -275,23 +341,25 @@ export function applyHostOpening(input: HostOpeningInput): HostOpeningResult {
   if (opened === null) {
     return { matches: input.matches, notices: [{ kind: 'hostOpeningNotPossible', teamId: primary }] };
   }
-  let arranged = opened.arranged;
+  const arranged = opened.arranged;
   const notices: ScheduleNotice[] = opened.costs ? [costsNotice(primary, opened.costs, arranged.matches, input)] : [];
 
   const groupTeamIds = (input.groups.get(hostGroup) ?? []).map((team) => team.id);
-  let first = inPlayOrder(arranged.matches)[0];
-  const wishes: Array<readonly [string, string]> = [[requireTeamId(first.slotA), primary]];
-  if (pairMode && input.openingMode === 'club-derby') {
-    wishes.push([requireTeamId(first.slotB), hosts[1]]);
-  } else if (pairMode) {
-    let partner = opponentInRound(arranged, requireTeamId(first.slotA), 1);
-    if (partner === undefined) { // Heimteam von Spiel 1 hat in Runde 2 spielfrei: Seiten spiegeln (Fairness gleich)
-      arranged = { ...arranged, matches: mirrorHomeAway(arranged.matches) };
-      first = inPlayOrder(arranged.matches)[0];
-      wishes[0] = [requireTeamId(first.slotA), primary];
-      partner = opponentInRound(arranged, requireTeamId(first.slotA), 1);
-    }
-    if (partner !== undefined) { wishes.push([partner, hosts[1]]); }
+  if (!pairMode) {
+    const first = inPlayOrder(arranged.matches)[0];
+    return { matches: renameTeams(arranged.matches, renameFor(groupTeamIds, [[requireTeamId(first.slotA), primary]])), notices };
   }
-  return { matches: renameTeams(arranged.matches, renameFor(groupTeamIds, wishes)), notices };
+
+  const pair = hosts.slice(0, 2);
+  if (input.openingMode === 'both-home') {
+    const chosen = hosts.length === 2 ? chooseVariant(openingVariants(arranged, pair, 'both-home'), groupTeamIds, pair, true) : null;
+    if (chosen) { return { matches: chosen, notices }; }
+    notices.push({ kind: 'hostBothHomeNotPossible', teamId: primary });
+  }
+  const mode: OpeningMode = input.openingMode === 'club-derby' ? 'club-derby' : 'guest-opening';
+  const chosen = chooseVariant(openingVariants(arranged, pair, mode), groupTeamIds, pair, false);
+  if (chosen) { return { matches: chosen, notices }; }
+  // Kein Rundenplan-Partner gefunden (Runde 2 fehlt): nur die Heimmannschaft in Spiel 1 setzen
+  const first = inPlayOrder(arranged.matches)[0];
+  return { matches: renameTeams(arranged.matches, renameFor(groupTeamIds, [[requireTeamId(first.slotA), primary]])), notices };
 }
