@@ -74,9 +74,11 @@ export const iconsAktion = {
     </svg>
   ),
 
+  /** Aktualisieren: offener Kreisbogen mit Pfeilspitze am Ende (Form wie „rotate-cw“ aus Feather, MIT); ersetzt die frühere Uhr (@OB-038). */
   Refresh: ({ size = 20, color = 'currentColor' }: IconProps) => (
-    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
-      <path d="M17 10a7 7 0 11-14 0 7 7 0 0114 0zM10 6v4l3 2" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+      <path d="M23 4v6h-6" />
     </svg>
   ),
 
