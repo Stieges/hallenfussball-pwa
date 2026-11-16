@@ -281,21 +281,23 @@ test.describe('Hallenton Störungen (zwei Geräte, lokaler Stack)', () => {
       await richteLautsprecherEin(b.page, cup.id, LAUTSPRECHER);
       await oeffneVerwaltung(a.page, cup.id);
       await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('bereit', { timeout: 30_000 });
+      // beide Unterpunkte einmal online besuchen (ihre Teile sind danach geladen), dann auf der Seite „Hallenton“ das Netz verlieren
       await a.page.getByRole('button', { name: /Dashboard/ }).first().click();
       await expect(a.page.getByTestId('hallenton-status-zeile')).toContainText('Lautsprecher Feld 1 bereit', { timeout: 20_000 });
       await a.page.getByRole('button', { name: /Hallenton/ }).first().click();
-      await expect(a.page.getByTestId('hallenton-seite')).toBeVisible();
-      await a.page.getByRole('button', { name: /Dashboard/ }).first().click();
+      await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('bereit', { timeout: 30_000 });
 
       await a.context.setOffline(true);
-      await expect(a.page.getByTestId('hallenton-status-zeile')).toContainText('Lautsprecher: Status unbekannt', { timeout: 40_000 });
-      await a.page.getByRole('button', { name: /Hallenton/ }).first().click();
-      await expect(a.page.getByTestId('hallenton-kein-netz')).toContainText('Kein Netz – Status unbekannt');
+      await expect(a.page.getByTestId('hallenton-kein-netz')).toContainText('Kein Netz – Status unbekannt', { timeout: 40_000 });
       await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('Status unbekannt');
       await a.page.getByTestId('testton-halle-1').click();
       await expect(a.page.getByTestId('testton-feld-1-ergebnis')).toContainText('Kein Testton: kein Netz');
+      await a.page.getByRole('button', { name: /Dashboard/ }).first().click();
+      await expect(a.page.getByTestId('hallenton-status-zeile')).toContainText('Lautsprecher: Status unbekannt', { timeout: 20_000 });
 
       await a.context.setOffline(false);
+      await expect(a.page.getByTestId('hallenton-status-zeile')).toContainText('Lautsprecher Feld 1 bereit', { timeout: 40_000 });
+      await a.page.getByRole('button', { name: /Hallenton/ }).first().click();
       await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('bereit', { timeout: 40_000 });
       await expect(a.page.getByTestId('hallenton-kein-netz')).toHaveCount(0);
     } finally {
