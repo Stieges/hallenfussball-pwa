@@ -76,8 +76,9 @@ test.describe('@HT-059 H4-17 Cockpit: Statuszeile nur bei Störungen (Prüfstand
       for (const fall of KEINE_ZEILE) {
         test(`@HT-059 ${fall} ${g.name}, ${thema}: keine Statuszeile, Foul-Reihe ganz im Bild, kein Streifen`, async ({ page }, testInfo) => {
           await oeffne(page, fall, g, thema);
-          await page.getByTestId('cockpit-verbindung').waitFor();
-          // Die Abfrage des Servers ist beantwortet, wenn die Verwaltung dieselbe Zeile zeigen würde: hier gibt es sie nie
+          // Erst die erste Antwort des (gefälschten) Servers abwarten und zwei Bilder lang rendern lassen, sonst prüfte „keine Zeile“ nur den Zustand vor der Antwort
+          await page.waitForFunction(() => document.documentElement.dataset.antwort === '1');
+          await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
           await expect(page.locator(ZEILE)).toHaveCount(0);
           await expect(page.getByText('bereit', { exact: false })).toHaveCount(0);
           const m = await messe(page);

@@ -125,10 +125,11 @@ export function Seite() {
   const [kontext, setKontext] = useState<MatchEngineContextValue | null>(null);
   useEffect(() => {
     let abgebrochen = false;
+    // `data-antwort="1"` am Wurzelelement: die erste Antwort des gefälschten Servers ist gegeben (die Tests warten darauf, bevor sie „keine Zeile“ prüfen)
     __setzeHallStatusRpcFuerPruefstand(() => Promise.resolve({
       ok: true as const, sicht: 'voll' as const, serverNow: ANPFIFF, closed: false, speakers: sprecherAm(fall), leads: [],
       settings: { halftimeSound: 'horn-1', halftimeCustomPath: null, endCustomPath: null, goalToneFields: [], goalAnthemPaths: [] },
-    } as never));
+    } as never).then((antwort) => { document.documentElement.dataset.antwort = '1'; return antwort; }));
     if (fall === 'ton' || fall === 'eigen') {
       setzeEinschaltung({ turnierId: TID, felder: [1], name: 'Handy Tom' });
       setzeLaufzeit(laufzeitDoppel(fall === 'ton' ? 'not_activated' : 'ready'));

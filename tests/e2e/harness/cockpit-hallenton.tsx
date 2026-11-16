@@ -6,7 +6,7 @@
  * echten `useHallStatus`; nur der Server-Aufruf ist gefälscht, der Ton je Gerät kommt aus `useCockpitTon` (echter `localStorage`).
  * Daten wie im Mockup: Hallencup Süd, Feld 1, Spiel 11, FC Nord – SV Süd, 14:02; 2:1, 2. Halbzeit, Restzeit 4:32 (Fall `halbzeit`: Pause).
  * Nur Testumgebung, nicht Teil des Builds.
- * Aufruf: `?fall=kein-netz|lautsprecher-aus|ausgang-geaendert|ausgang-verloren|halbzeit|anpfiff|uhr|dialog|admin|ohne|ton-aktivieren|kombi` (abgemeldet|kopf-ohne|kopf-bereit: echter Kopf (Feldwahl, Online-Anzeige) mit Eintrag „abgemeldet“ / ohne Eintrag / „Lautsprecher Feld 1 bereit“ unter dem Kopf; kombi: vor dem Anpfiff „Ton aktivieren“ UND „Uhr nicht abgeglichen“ untereinander; + `&lang=en`, `&lang=de`).
+ * Aufruf: `?fall=kein-netz|lautsprecher-aus|ausgang-geaendert|ausgang-verloren|halbzeit|anpfiff|uhr|dialog|admin|ohne|ton-aktivieren|kombi` (abgemeldet|kopf-ohne|kopf-bereit: echter Kopf (Feldwahl, Online-Anzeige) mit Eintrag „abgemeldet“ / ohne Eintrag / „Lautsprecher Feld 1 bereit“ (H4-17: im Cockpit nur Störungen, also ohne Zeile) unter dem Kopf; kombi: vor dem Anpfiff „Ton aktivieren“ UND „Uhr nicht abgeglichen“ untereinander; + `&lang=en`, `&lang=de`).
  */
 import ReactDOM from 'react-dom/client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -194,7 +194,7 @@ function StatusKopf({ eintrag }: { eintrag: 'ohne' | 'bereit' | 'abgemeldet' }) 
   return (
     <CockpitSlimHeader
       tournamentId={TID} turnierName="Hallencup Süd" felder={2} feld={1} onFeld={nichts} verbindung={<ConnectionPill tournamentId={TID} />}
-      statuszeile={<HallStatusZeileAnsicht anzeige={anzeige} tournamentId={TID} tonAktivieren={nichts} abgemeldet={eintrag === 'abgemeldet' ? [1] : undefined} />}
+      statuszeile={<HallStatusZeileAnsicht anzeige={anzeige} tournamentId={TID} tonAktivieren={nichts} abgemeldet={eintrag === 'abgemeldet' ? [1] : undefined} nurStoerungen />}
     />
   );
 }
