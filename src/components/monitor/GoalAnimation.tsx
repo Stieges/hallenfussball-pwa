@@ -16,6 +16,7 @@ import { cssVars, colors } from '../../design-tokens'
 import { GoalEventInfo } from '../../hooks/useLiveMatches';
 import { useSportTerms } from '../../hooks/useSportTerms';
 import { SportId } from '../../config/sports';
+import { MatchIcons } from '../ui/IconsMatch';
 import { monitorTeamName } from '../../core/models/teamNameAbbrev';
 
 export interface GoalAnimationProps {
@@ -156,8 +157,11 @@ export const GoalAnimation: React.FC<GoalAnimationProps> = ({
     textAlign: 'center',
   };
 
+  // Der Ball füllt den Kasten, der wie bisher die Emoji-Schrift mit der Fensterbreite wächst
   const goalIconStyle: CSSProperties = {
-    fontSize: 'clamp(60px, 8vw, 100px)',
+    width: 'clamp(60px, 8vw, 100px)',
+    height: 'clamp(60px, 8vw, 100px)',
+    color: cssVars.colors.onPrimary,
   };
 
   const goalTextStyle: CSSProperties = {
@@ -192,7 +196,7 @@ export const GoalAnimation: React.FC<GoalAnimationProps> = ({
           style={celebrationContainerStyle}
           className="goal-celebration-box"
         >
-          <div className="goal-icon" style={goalIconStyle}>⚽</div>
+          <div className="goal-icon" style={goalIconStyle} aria-hidden="true" data-testid="goal-icon"><MatchIcons.Ball size="100%" /></div>
           <div style={goalTextStyle}>{term('terminology.goalAnimationText')}</div>
           <div data-teamname style={teamNameStyle}>{monitorTeamName(currentEvent.teamName)}</div>
           <div style={scoreStyle}>

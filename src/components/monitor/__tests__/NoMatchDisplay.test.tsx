@@ -33,6 +33,7 @@ describe('NoMatchDisplay', () => {
     render(<NoMatchDisplay size="xl" />);
     expect(screen.getByTestId('no-match-title').style.fontSize).toBe(displayNoMatch.xl.title);
     expect(screen.getByTestId('no-match-text').style.fontSize).toBe(displayNoMatch.xl.text);
-    expect(screen.getByTestId('no-match-icon').style.fontSize).toBe(displayNoMatch.xl.icon);
+    // @OB-038: statt des Emoji ein gezeichnetes Symbol in der Größe des Tokens
+    expect(screen.getByTestId('no-match-icon').querySelector('svg')?.getAttribute('width')).toBe(displayNoMatch.xl.icon);
   });
 });
