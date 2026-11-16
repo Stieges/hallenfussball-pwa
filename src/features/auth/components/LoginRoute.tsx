@@ -4,16 +4,18 @@
  */
 import type { ReactElement } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useBackOrHome } from '../../../hooks/useBackOrHome';
 import { holeRueckkehr } from '../utils/loginRueckkehr';
 import { LoginScreen } from './LoginScreen';
 
 export function LoginRoute(): ReactElement {
   const navigate = useNavigate();
+  const backOrHome = useBackOrHome();
   return (
     <LoginScreen
       onSuccess={() => void navigate(holeRueckkehr() ?? '/')}
       onNavigateToRegister={() => void navigate('/register')}
-      onBack={() => void navigate(-1)}
+      onBack={backOrHome}
       onContinueAsGuest={() => void navigate('/')}
       onNavigateToLegal={(path) => void navigate(path)}
     />
