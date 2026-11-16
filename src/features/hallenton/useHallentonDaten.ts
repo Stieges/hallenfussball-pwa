@@ -41,7 +41,7 @@ export function useHallentonDaten(tournamentId: string, felderAnzahl: number): H
   const [sprecher, setSprecher] = useState<readonly SprecherInfo[]>([]);
   useEffect(() => {
     if (status.antwort?.sicht === 'voll') {
-      setSprecher(status.antwort.speakers.map((s) => ({ field: s.field, deviceName: s.deviceName })));
+      setSprecher(status.antwort.speakers.map((s) => ({ field: s.field, deviceName: s.deviceName, assignedAt: s.assignedAt })));
     }
   }, [status.antwort]);
 

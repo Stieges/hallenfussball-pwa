@@ -47,6 +47,8 @@ export interface ConfirmDialogProps {
   cancelLabel?: string;
   /** Alias for onCancel (for backwards compatibility with dialogs version) */
   onClose?: () => void;
+  /** Bestätigen ist vorübergehend gesperrt (sichtbar abgeblendet, `aria-disabled`, Tipps lösen nichts aus; „Abbrechen“ bleibt bedienbar), z. B. gegen Doppeltipp auf zwei aufeinanderfolgende Dialoge. */
+  confirmGesperrt?: boolean;
 }
 
 export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
@@ -64,6 +66,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   confirmLabel,
   cancelLabel,
   onClose,
+  confirmGesperrt = false,
 }) => {
   const { t } = useTranslation('common');
   // Handle backwards compatibility
@@ -202,6 +205,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     backgroundColor: variantConfig.confirmBg,
     border: `1px solid ${variantConfig.confirmBg}`,
     color: cssVars.colors.onWarning,
+    ...(confirmGesperrt ? { opacity: cssVars.opacity.disabled, cursor: 'not-allowed' } : {}),
   };
 
   const handleSecondaryAction = () => {
@@ -265,7 +269,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           <button
             ref={confirmButtonRef}
             style={confirmButtonStyle}
-            onClick={onConfirm}
+            onClick={confirmGesperrt ? undefined : onConfirm}
+            aria-disabled={confirmGesperrt ? true : undefined}
             data-testid="confirm-dialog-confirm"
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = variantConfig.confirmHover;

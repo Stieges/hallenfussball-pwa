@@ -16,7 +16,7 @@ import { useHallLautsprecher } from '../useHallLautsprecher';
 import { useLaufendeSpiele } from '../useLaufendeSpiele';
 import { useAnderesFensterTont } from '../useAnderesFensterTont';
 import { useHallStatus } from '../useHallStatus';
-import { baueStatusEintraege, hallentonZiel } from './hallStatusEintraege';
+import { abgemeldeteFelder, baueStatusEintraege, hallentonZiel } from './hallStatusEintraege';
 import { useStatusZeileHost } from './StatusZeileOrt';
 
 export interface HallStatusZeileProps {
@@ -44,20 +44,22 @@ export interface HallStatusZeileAnsichtProps {
   tournamentId: string;
   tonAktivieren: () => void;
   ohneLautsprecher?: boolean;
+  /** Felder, die die Turnierleitung für dieses Gerät abgemeldet hat (bis „Verstanden“, @HT-057). */
+  abgemeldet?: readonly number[];
   probe?: StatusEintrag | null;
   nurStoerungen?: boolean;
   'data-testid'?: string;
 }
 
 /** Nur Darstellung: Einträge aus der Anzeige bauen und die Zeile rendern (auch am Prüfstand der Bilder verwendet). */
-export function HallStatusZeileAnsicht({ anzeige, tournamentId, tonAktivieren, ohneLautsprecher, probe, nurStoerungen, 'data-testid': testId = 'hallenton-status-zeile' }: HallStatusZeileAnsichtProps): ReactElement | null {
+export function HallStatusZeileAnsicht({ anzeige, tournamentId, tonAktivieren, ohneLautsprecher, abgemeldet, probe, nurStoerungen, 'data-testid': testId = 'hallenton-status-zeile' }: HallStatusZeileAnsichtProps): ReactElement | null {
   const { t } = useTranslation('hallenton');
   const { t: tCommon } = useTranslation('common');
   const navigate = useNavigate();
   const eintraege = useMemo(() => {
-    const alle = baueStatusEintraege(anzeige, { t, ziel: hallentonZiel(tournamentId), tonAktivieren, ohneLautsprecher, probe });
+    const alle = baueStatusEintraege(anzeige, { t, ziel: hallentonZiel(tournamentId), tonAktivieren, ohneLautsprecher, abgemeldet, probe });
     return nurStoerungen ? alle.filter((e) => e.rang === 'stoerung' || e.rang === 'probe') : alle;
-  }, [anzeige, t, tournamentId, tonAktivieren, ohneLautsprecher, probe, nurStoerungen]);
+  }, [anzeige, t, tournamentId, tonAktivieren, ohneLautsprecher, abgemeldet, probe, nurStoerungen]);
   return (
     <StatusZeile
       eintraege={eintraege}
@@ -93,5 +95,6 @@ function HallStatusZeileMitRecht({ tournamentId, ohneLautsprecher = false, probe
     [status.stand, status.felder, status.antwort, status.lautsprecherBekannt, lokal, angepfiffen, anderesFenster],
   );
   const aktivieren = useCallback(() => { void tonAktivieren(); }, [tonAktivieren]);
-  return <HallStatusZeileAnsicht anzeige={anzeige} tournamentId={tournamentId} tonAktivieren={aktivieren} ohneLautsprecher={ohneLautsprecher} probe={probe} nurStoerungen={nurStoerungen} />;
+  const abgemeldet = useMemo(() => abgemeldeteFelder(lautsprecher.abgeloest), [lautsprecher.abgeloest]);
+  return <HallStatusZeileAnsicht anzeige={anzeige} tournamentId={tournamentId} tonAktivieren={aktivieren} ohneLautsprecher={ohneLautsprecher} abgemeldet={abgemeldet} probe={probe} nurStoerungen={nurStoerungen} />;
 }

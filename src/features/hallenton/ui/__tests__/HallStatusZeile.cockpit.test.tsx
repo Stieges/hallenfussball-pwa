@@ -171,6 +171,14 @@ describe('@HT-059 Gegenbeispiele und Grenzen', () => {
     expect(screen.queryByTestId('hallenton-status-zeile')).toBeNull();
     expect(screen.queryAllByRole('button')).toHaveLength(0);
   });
+  it('@HT-057 der Störungseintrag „abgemeldet“ bleibt im Cockpit stehen, „bereit“ daneben entfällt', () => {
+    doppel.status = status({ 1: bereit });
+    doppel.lautsprecher = { ...lautsprecher(null), abgeloest: { felder: [{ feld: 1, art: 'abgemeldet' }], um: 1 } } as unknown as HallLautsprecher;
+    zeige(<HallStatusZeile tournamentId="t1" nurStoerungen />);
+    expect(buttons()).toHaveLength(1);
+    expect(buttons()[0]).toBe(de.statuszeile.abgemeldet.replace('{{feld}}', '1'));
+    expect(document.body.textContent).not.toContain('bereit');
+  });
   it('die Probe (rang „probe“) läuft unverändert durch, „bereit“ daneben entfällt', () => {
     doppel.status = status({ 1: bereit });
     zeige(<HallStatusZeile tournamentId="t1" nurStoerungen probe={probe} />);
