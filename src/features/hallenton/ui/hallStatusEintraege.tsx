@@ -17,6 +17,11 @@ const GROESSE = iconSizeValues.xs;
 /** Ziel der Pillen: der Unterpunkt „Hallenton“ im Admin-Center (H4-8, Route `/tournament/:id/admin/:category`). */
 export const hallentonZiel = (turnierId: string): string => `/tournament/${turnierId}/admin/hallenton`;
 
+/** Die Felder der Marke mit der Art „abgemeldet“ (nicht „übernommen“: das sagt der Hinweis im Unterpunkt, @HT-015). */
+export function abgemeldeteFelder(marke: { felder: ReadonlyArray<{ feld: number; art: string }> } | null | undefined): number[] {
+  return marke === null || marke === undefined ? [] : marke.felder.filter((v) => v.art === 'abgemeldet').map((v) => v.feld);
+}
+
 export interface EintragWerkzeug {
   t: TFunction<'hallenton'>;
   /** Ziel der Pillen ohne eigene Aktion (der Unterpunkt „Hallenton“). */
@@ -24,6 +29,8 @@ export interface EintragWerkzeug {
   tonAktivieren: () => void;
   /** Im Unterpunkt „Hallenton“ entfällt der Lautsprecher-Eintrag (Regel 8). */
   ohneLautsprecher?: boolean;
+  /** Felder, für die die Turnierleitung DIESES Gerät als Hallen-Lautsprecher abgemeldet hat und die noch nicht „verstanden“ sind (H4-11b, @HT-057, @HT-012). */
+  abgemeldet?: readonly number[];
   probe?: StatusEintrag | null;
 }
 
@@ -90,6 +97,15 @@ export function baueStatusEintraege(anzeige: HallAnzeige, w: EintragWerkzeug): S
       eintraege.push({
         id: 'handyOhneNetz', rang: 'stoerung', reihe: anzeige.handyOhneNetz[0], ton: 'warn', symbol: <Icons.Phone size={GROESSE} />,
         text: w.t('statuszeile.handyOhneNetz', { feld }), aktion: { art: 'navigiere', ziel: w.ziel },
+      });
+    }
+    if (w.abgemeldet !== undefined && w.abgemeldet.length > 0) {
+      // kein stilles Verschwinden der Rolle: das abgemeldete Gerät sagt es in jeder Ansicht, bis „Verstanden“ (im Unterpunkt „Hallenton“) getippt ist
+      const feld = w.abgemeldet.join(', ');
+      const text = w.t('statuszeile.abgemeldet', { feld });
+      eintraege.push({
+        id: 'abgemeldet', rang: 'stoerung', reihe: w.abgemeldet[0], ton: 'warn', symbol: <Icons.SpeakerOff size={GROESSE} />,
+        text, kurz: w.t('statuszeile.abgemeldetKurz', { feld }), lesetext: text, aktion: { art: 'navigiere', ziel: w.ziel },
       });
     }
     if (anzeige.statusUnbekannt) {

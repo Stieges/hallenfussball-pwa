@@ -5,6 +5,7 @@
  * Aufruf: `?fall=leer|eingerichtet|bereit|abloesen|abgeloest|anleitung|wechseln` (H4-9) oder `lautstaerke0|schlafen|angehalten|anderesFenster|anhoerenFrage|gesperrt` (H4-10);
  * `&browser=chrome|edge|safari`. Zustand je Feld aus den echten Funktionen (`geraeteZustandAus`, `feldZustaende`, `hallAnzeige`, `baueGeraetBanner`), die Frage beim
  * Anhören aus dem echten Hook `useAnhoerenRueckfrage`; nur die Werte der Regler und die Tasten sind von Hand.
+ * H4-11b: `abgemeldet` (Hinweis am abgemeldeten Gerät mit „Verstanden“, @HT-057), `ausgangStandardGescheitert` („Standard“ gewählt, der Wechsel dorthin hat nicht geklappt → „Ausgang bestätigen“).
  * H4-11 (Ausgang): `ausgangStandard|ausgangGewaehlt|ausgangMikrofon|ausgangVerloren|ausgangBestaetigen|ausgangOhneWahl|ausgangLang` und `pruefenPille|pruefenFrage|pruefenLeer`
  * (`&lang=en`): die echte Zeile „Ausgang“ mit dem echten Hook `useHallAusgang`, dem echten Wächter und gefälschten `mediaDevices`/`AudioContext` (Test-Doppel aus H4-6);
  * der Zustand des Geräts folgt aus der Lage des Ausgangs über die echten Funktionen; „Ändern“, Mikrofon, Wahl klickt der Test wie Olli. „Prüfen“: die echte Karte mit dem
@@ -49,9 +50,9 @@ import type { HallTonSpieler } from '../../../src/features/hallenton/runtime/hal
 
 const SERVER_JETZT = new Date(2026, 10, 21, 14, 2, 30).getTime();
 const EIGEN = 'Laptop Turnierleitung';
-const AUSGANG_FAELLE = ['ausgangStandard', 'ausgangGewaehlt', 'ausgangMikrofon', 'ausgangVerloren', 'ausgangBestaetigen', 'ausgangOhneWahl', 'ausgangLang'] as const;
+const AUSGANG_FAELLE = ['ausgangStandard', 'ausgangGewaehlt', 'ausgangMikrofon', 'ausgangVerloren', 'ausgangBestaetigen', 'ausgangOhneWahl', 'ausgangLang', 'ausgangStandardGescheitert'] as const;
 const PRUEFEN_FAELLE = ['pruefenPille', 'pruefenFrage', 'pruefenLeer'] as const;
-const FALL = ['leer', 'eingerichtet', 'bereit', 'abloesen', 'abgeloest', 'anleitung', 'wechseln', 'lautstaerke0', 'schlafen', 'angehalten', 'anderesFenster', 'anhoerenFrage', 'gesperrt', 'lautstaerke100', ...AUSGANG_FAELLE, ...PRUEFEN_FAELLE] as const;
+const FALL = ['leer', 'eingerichtet', 'bereit', 'abloesen', 'abgeloest', 'abgemeldet', 'anleitung', 'wechseln', 'lautstaerke0', 'schlafen', 'angehalten', 'anderesFenster', 'anhoerenFrage', 'gesperrt', 'lautstaerke100', ...AUSGANG_FAELLE, ...PRUEFEN_FAELLE] as const;
 type Fall = (typeof FALL)[number];
 
 interface Sprecher { name: string; state: 'ready' | 'not_activated' | 'output_lost' | 'output_unconfirmed'; ich: boolean; hinweis?: boolean; gespielt?: boolean }
@@ -141,7 +142,11 @@ function richteAusgangEin(): void {
   __setzeGeraetFuerTests({ spieler: { aktivieren: () => { pruefstand.aktivieren += 1; return Promise.resolve(true); } } as unknown as HallTonSpieler });
   const liste = erzeugeAusgangListe({ geraete: medien, berechtigungen: medien });
   const wahl = erzeugeAusgangWahl({ speicher, seite: null });
-  __setzeAusgangFuerTests({ liste, wahl, waechter: erzeugeAusgangWaechter({ liste, wahl }) });
+  const waechter = erzeugeAusgangWaechter({ liste, wahl });
+  if (fall === 'ausgangStandardGescheitert') {
+    waechter.senkeMelden('', true); // H4-11b: „Standard“ gewählt, der Wechsel dorthin ist gescheitert (`setSinkId('')` hat nicht geklappt): Lage „unbestätigt“ ohne gespeicherte Wahl
+  }
+  __setzeAusgangFuerTests({ liste, wahl, waechter });
 }
 richteAusgangEin();
 
@@ -169,7 +174,9 @@ export function Seite() {
     gehoert: () => { setHinweis(false); return Promise.resolve({ ok: true, status: 'ok', serverNow: SERVER_JETZT } as never); },
   };
   const istLautsprecher = lokal !== null;
-  const abgeloest = fall === 'abgeloest' ? { felder: [{ feld: 1, art: 'abgeloest' as const }], um: SERVER_JETZT } : null;
+  // H4-11b: `abgemeldet` = die Turnierleitung hat dieses Gerät als Hallen-Lautsprecher abgemeldet (@HT-057); der Rechner ist es nicht mehr, Feld 1 hat keinen Lautsprecher
+  const abgeloest = fall === 'abgeloest' ? { felder: [{ feld: 1, art: 'abgeloest' as const }], um: SERVER_JETZT }
+    : fall === 'abgemeldet' ? { felder: [{ feld: 1, art: 'abgemeldet' as const }], um: SERVER_JETZT } : null;
   const banner = baueGeraetBanner({
     rolle: istLautsprecher ? 'diesesTurnier' : 'keiner', felder: istLautsprecher ? [1] : [], name: istLautsprecher ? EIGEN : null, abgeloest,
     eigeneAnzeige: anzeige.felder.filter((f) => f.eigenesGeraet), karten,

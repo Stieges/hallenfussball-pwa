@@ -1,6 +1,8 @@
 {
   "statuszeile": {
     "weitere": "+{{count}} weitere",
+    "abgemeldet": "Feld {{feld}}: als Hallen-Lautsprecher abgemeldet",
+    "abgemeldetKurz": "Feld {{feld}} abgemeldet",
     "weniger": "weniger",
     "bereit": "Lautsprecher Feld {{feld}} bereit",
     "bereitKurz": "Feld {{feld}} bereit",
@@ -121,6 +123,29 @@
     "testton": "{{lage}} Testton trotzdem in der Halle spielen?",
     "testtonTitel": "Testton, obwohl ein Spiel läuft",
     "testtonBestaetigen": "Testton spielen"
+  },
+  "abmelden": {
+    "taste": "Abmelden",
+    "tasteLesetext": "Hallen-Lautsprecher für Feld {{feld}} abmelden",
+    "titel": "Hallen-Lautsprecher abmelden?",
+    "frage": "Soll „{{name}}“ als Hallen-Lautsprecher für Feld {{feld}} abgemeldet werden?",
+    "folge": "Für Feld {{feld}} ertönt danach kein Hallenton, bis ein Gerät wieder eingeschaltet wird.",
+    "folgeEigenes": "Das ist dieses Gerät. Für Feld {{feld}} ertönt danach kein Hallenton, bis du es wieder einschaltest.",
+    "bestaetigen": "Abmelden",
+    "abbrechen": "Abbrechen",
+    "nochmal": "Erneut versuchen",
+    "spielTitel": "Abmelden, obwohl ein Spiel läuft",
+    "spiel": "Auf Feld {{feld}} läuft Spiel {{spiel}}. „{{name}}“ trotzdem als Hallen-Lautsprecher abmelden? Danach ertönt für Feld {{feld}} kein Abpfiff.",
+    "spielBestaetigen": "Trotzdem abmelden",
+    "ergebnis": "Feld {{feld}} abgemeldet – kein Hallen-Lautsprecher",
+    "fehler": {
+      "weg": "Nicht abgemeldet: für Feld {{feld}} gibt es inzwischen keinen Hallen-Lautsprecher mehr.",
+      "netz": "Nicht abgemeldet: kein Netz. Der Lautsprecher für Feld {{feld}} ist unverändert.",
+      "kein_recht": "Nicht abgemeldet: dafür fehlt dir das Recht.",
+      "turnier_beendet": "Nicht abgemeldet: das Turnier ist beendet.",
+      "ungueltig": "Nicht abgemeldet: Feld {{feld}} wurde nicht gefunden.",
+      "antwort_unbekannt": "Nicht abgemeldet: das hat nicht geklappt. Der Lautsprecher für Feld {{feld}} ist unverändert."
+    }
   },
   "seite": {
     "felderTitel": "Lautsprecher je Feld",

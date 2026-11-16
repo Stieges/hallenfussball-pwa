@@ -10,7 +10,7 @@
 import { lautsprecherZustandLesen } from '../../core/repositories/hallentonRpc';
 import type {
   HallArgs, HallErgebnis, HallFehlerGrund, HallHeartbeatAntwort, HallHeardAntwort, HallLeadHeartbeatAntwort,
-  HallSpeakerState, HallSpeakerStateGelesen, HallStatusAntwort, HallTestAckAntwort, HallTestRequestAntwort,
+  HallSpeakerState, HallSpeakerStateGelesen, HallStatusAntwort, HallTestAckAntwort, HallTestRequestAntwort, HallUnassignAntwort,
 } from '../../core/repositories/hallentonRpc';
 
 interface Lautsprecher {
@@ -44,6 +44,8 @@ export class FalscherHallServer {
   /** Antwort auf Lebenszeichen kommt so viel später an (ms, über `spaeter`). */
   verzoegerungMs = 0;
   vollSicht = true;
+  /** Hat der Aufrufer `manageScreens`? (`hall_speaker_unassign`: sonst 42501.) */
+  darfVerwalten = true;
   /** Turnier abgeschlossen/abgebrochen (20261123_001: Lebenszeichen 55000). */
   turnierBeendet = false;
   /** „Ton bei Tor“ je Feld und Torhymnen (Pfade) der vollen Sicht. */
@@ -116,6 +118,25 @@ export class FalscherHallServer {
     }
     return new Promise((resolve) => {
       this.spaeter(() => resolve(lauf), this.verzoegerungMs);
+    });
+  }
+
+  /**
+   * `hall_speaker_unassign` (20261125_001, @HT-057): Recht `manageScreens` (42501), Turnier offen (55000), löscht die Zuordnung der Felder gleich welches
+   * Gerät; die Antwort nennt nur die Felder, die einen Lautsprecher hatten, nie eine Kennung.
+   */
+  abmelden(a: HallArgs<'hall_speaker_unassign'>): Promise<HallErgebnis<HallUnassignAntwort>> {
+    if (this.netz === 'ok' && !this.darfVerwalten) {
+      this.aufrufe.push('hall_speaker_unassign');
+      return Promise.resolve({ ok: false, grund: 'kein_recht' });
+    }
+    if (this.netz === 'ok' && this.turnierBeendet) {
+      this.aufrufe.push('hall_speaker_unassign');
+      return Promise.resolve({ ok: false, grund: 'turnier_beendet' });
+    }
+    return this.antwort('hall_speaker_unassign', (): HallUnassignAntwort => {
+      const entfernt = [...new Set(a.p_fields)].sort((x, y) => x - y).filter((feld) => this.lautsprecher.delete(feld));
+      return { status: 'unassigned', fields: entfernt };
     });
   }
 

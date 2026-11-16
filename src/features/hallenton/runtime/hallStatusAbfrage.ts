@@ -35,7 +35,10 @@ export interface HallStatusAbfrageDeps {
 export interface HallStatusAbfrage {
   start(): void;
   stop(): void;
-  /** Sofort neu lesen (z. B. nach einem Testton). */
+  /**
+   * Sofort neu lesen (z. B. nach einem Testton oder dem Abmelden). Läuft gerade eine Abfrage, deren Antwort ÄLTER ist als die Änderung, folgt
+   * gleich nach ihr eine zweite (H4-11b): sonst zeigte die Karte bis zum nächsten Takt noch den alten Stand.
+   */
   abfragen(): void;
   getSnapshot(): HallStatusSchnappschuss;
   subscribe(fn: () => void): () => void;
@@ -58,6 +61,7 @@ export function erzeugeHallStatusAbfrage(d: HallStatusAbfrageDeps): HallStatusAb
   let versucht = false;
   let laeuft = false;
   let gestartet = false;
+  let nochmal = false; // `abfragen()` kam, während eine Abfrage lief: nach ihr gleich noch einmal
   const ab: Array<() => void> = [];
   let ablauf: (() => void) | null = null;
   let snapshot: HallStatusSchnappschuss = { stand: 'laedt', antwort: null, felder: {} };
@@ -82,8 +86,13 @@ export function erzeugeHallStatusAbfrage(d: HallStatusAbfrageDeps): HallStatusAb
     }
   }
 
-  function abfragen(): void {
-    if (!gestartet || laeuft) {
+  /** `vormerken`: ein ausdrücklicher Auftrag (nicht der Takt) – läuft schon eine Abfrage, folgt eine zweite. */
+  function abfragen(vormerken = false): void {
+    if (!gestartet) {
+      return;
+    }
+    if (laeuft) {
+      nochmal = nochmal || vormerken;
       return;
     }
     if (!d.online()) {
@@ -107,6 +116,10 @@ export function erzeugeHallStatusAbfrage(d: HallStatusAbfrageDeps): HallStatusAb
           ablauf = d.zeitgeber.spaeter(melden, HALL_STATUS_GUELTIG_MS + 1); // veraltet auch ohne weitere Antwort
         }
         melden();
+        if (nochmal) {
+          nochmal = false;
+          abfragen();
+        }
       });
   }
 
@@ -117,7 +130,7 @@ export function erzeugeHallStatusAbfrage(d: HallStatusAbfrageDeps): HallStatusAb
       }
       gestartet = true;
       melden(); // ein Stand aus einer früheren Einbindung kann inzwischen veraltet sein
-      ab.push(d.zeitgeber.wiederholen(abfragen, HALL_STATUS_TAKT_MS));
+      ab.push(d.zeitgeber.wiederholen(() => abfragen(), HALL_STATUS_TAKT_MS));
       abfragen();
     },
     stop() {
@@ -128,7 +141,7 @@ export function erzeugeHallStatusAbfrage(d: HallStatusAbfrageDeps): HallStatusAb
       ablauf?.();
       ablauf = null;
     },
-    abfragen,
+    abfragen: () => abfragen(true),
     getSnapshot: () => snapshot,
     subscribe(fn) {
       zuhoerer.add(fn);

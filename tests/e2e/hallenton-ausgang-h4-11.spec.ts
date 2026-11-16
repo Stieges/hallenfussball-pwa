@@ -116,6 +116,24 @@ const FAELLE: readonly Fall[] = [
     },
   },
   {
+    // H4-11b: die Lage, die in H4-11 kein Bild hatte – „Standard“ gewählt, der Wechsel dorthin hat nicht geklappt (@HT-053, @HT-055)
+    name: 'ausgang-standard-gescheitert', fall: 'ausgangStandardGescheitert', async ablauf(page, s) {
+      await expect(page.locator('[data-zustand][data-ton]')).toContainText(s === 'de' ? 'Grund: Ausgang bestätigen' : 'Reason: confirm output');
+      await expect(page.getByTestId('ausgang-bestaetigen')).toContainText(s === 'de' ? 'Der Wechsel auf „Standard“ hat nicht geklappt.' : 'Switching to “Default” did not work.');
+      await expect(page.getByTestId('ausgang-bestaetigen-taste')).toHaveText(T[s].bestaetigen);
+      expect((await page.getByTestId('ausgang-bestaetigen-taste').boundingBox())?.height ?? 0, 'Haupttaste ≥ 56 px').toBeGreaterThanOrEqual(56);
+      expect(await aufruf(page), 'ohne Tipp nichts gelesen, kein Mikrofon-Dialog').toEqual({ lesen: 0, mikrofon: 0, erlaubnis: 0 });
+    },
+  },
+  {
+    name: 'ausgang-standard-gescheitert-getippt', fall: 'ausgangStandardGescheitert', sprachen: ['de'], async ablauf(page) {
+      await page.getByTestId('ausgang-bestaetigen-taste').click();
+      await expect(page.getByTestId('ausgang-bestaetigen')).toHaveCount(0); // ein Tipp versucht den Wechsel erneut und er gelingt
+      expect((await aufruf(page)).mikrofon, 'bei „Standard“ ist kein Mikrofon nötig').toBe(0);
+      expect(await page.evaluate(() => window.__ausgangPruefstand!.aktivieren), 'der Tipp war zugleich „Ton aktivieren“').toBe(1);
+    },
+  },
+  {
     name: 'ausgang-ohne-wahl', fall: 'ausgangOhneWahl', async ablauf(page, s) {
       await expect(page.getByTestId('ausgang-ohne-wahl')).toContainText(s === 'de' ? 'Dieser Browser kann den Ausgang nicht wählen. Lege den Ausgang in den Einstellungen des Systems fest.' : 'This browser cannot choose the output.');
       await expect(page.getByTestId('ausgang-aendern')).toHaveCount(0);

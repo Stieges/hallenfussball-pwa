@@ -23,6 +23,8 @@ import { useGeraetAbschnitt } from './useGeraetAbschnitt';
 import { AnhoerenRueckfrageDialog } from './AnhoerenRueckfrageDialog';
 import { useAnhoeren } from './useAnhoeren';
 import { useAnhoerenRueckfrage, type AnhoerenRueckfrage } from './useAnhoerenRueckfrage';
+import { AbmeldenDialog } from './AbmeldenDialog';
+import { useLautsprecherAbmelden, type LautsprecherAbmelden } from './useLautsprecherAbmelden';
 import { TesttonAbschnitt } from './TesttonAbschnitt';
 import { TesttonHalleKontext } from './TesttonHalleKontext';
 import { useTesttonHalle } from './useTesttonHalle';
@@ -45,6 +47,7 @@ export function HallentonSeite({ tournamentId, felderAnzahl, seitenleisteBreite 
   const rueckfrage = useAnhoerenRueckfrage(daten.laufendeSpiele);
   const anhoeren = useAnhoeren(lautsprecher, rueckfrage);
   const geraet = useGeraetAbschnitt({ daten, felderAnzahl, darfAendern, anhoeren });
+  const abmelden = useLautsprecherAbmelden({ tournamentId, karten, stand: status.stand, darfAendern, lautsprecher, laufendeSpiele: daten.laufendeSpiele });
   return (
     <HallentonSeiteAnsicht
       karten={karten}
@@ -58,6 +61,7 @@ export function HallentonSeite({ tournamentId, felderAnzahl, seitenleisteBreite 
       geraetName={lautsprecher.name}
       geraet={<DiesesGeraetAbschnitt abschnitt={geraet} darfAendern={darfAendern} leisteLinks={seitenleisteBreite} />}
       geraetOben={geraet.oben}
+      abmelden={abmelden}
     />
   );
 }
@@ -79,10 +83,12 @@ export interface HallentonSeiteAnsichtProps {
   geraet?: ReactNode;
   /** „Dieses Gerät“ steht vor den Feldkarten (Einrichtung, dieses Gerät ist Lautsprecher). */
   geraetOben?: boolean;
+  /** „Abmelden“ an den Karten (H4-11b, @HT-057): Taste, Rückfragen, Fehler; ohne die Angabe keine Taste. */
+  abmelden?: LautsprecherAbmelden;
 }
 
 /** Nur Darstellung (auch am Prüfstand der Bilder verwendet): Hinweise oben, „Dieses Gerät“ (oben oder unten), Karten je Feld, Testton. */
-export function HallentonSeiteAnsicht({ karten, keinLautsprecherImTurnier, status, darfAendern, abgeschlossen, hierAnhoeren, hierHinweis = null, geraetName, rueckfrage, geraet = null, geraetOben = false }: HallentonSeiteAnsichtProps): ReactElement {
+export function HallentonSeiteAnsicht({ karten, keinLautsprecherImTurnier, status, darfAendern, abgeschlossen, hierAnhoeren, hierHinweis = null, geraetName, rueckfrage, geraet = null, geraetOben = false, abmelden }: HallentonSeiteAnsichtProps): ReactElement {
   const { t } = useTranslation('hallenton');
   const keinNetz = status.stand === 'unbekannt';
   const testton = useTesttonHalle(karten, status, rueckfrage); // einmal je Seite: Taste, Empfehlung nach der Wahl und „🔈? Prüfen“ teilen Auftrag und Quittung
@@ -97,10 +103,11 @@ export function HallentonSeiteAnsicht({ karten, keinLautsprecherImTurnier, statu
         </InlineNotice>
       ) : null}
       {geraetOben ? geraet : null}
-      <FeldKartenAbschnitt karten={karten} keinLautsprecherImTurnier={keinLautsprecherImTurnier && status.stand === 'aktuell'} testton={testton} status={status} darfAendern={darfAendern} />
+      <FeldKartenAbschnitt karten={karten} keinLautsprecherImTurnier={keinLautsprecherImTurnier && status.stand === 'aktuell'} testton={testton} status={status} darfAendern={darfAendern} abmelden={abmelden} />
       {darfAendern ? <TesttonAbschnitt karten={karten} status={status} hierAnhoeren={hierAnhoeren} hierHinweis={hierHinweis} geraetName={geraetName} testton={testton} /> : null}
       {geraetOben ? null : geraet}
       <AnhoerenRueckfrageDialog frage={rueckfrage.frage} onJa={rueckfrage.ja} onNein={rueckfrage.nein} />
+      {abmelden === undefined ? null : <AbmeldenDialog frage={abmelden.frage} onJa={abmelden.bestaetigen} onNein={abmelden.abbrechen} />}
     </div>
     </TesttonHalleKontext.Provider>
   );

@@ -109,6 +109,13 @@ export function useGeraetAbschnitt({ daten, felderAnzahl, darfAendern, anhoeren 
   const gewaehlt = lautsprecher.felder;
   const felder = useMemo(() => Array.from({ length: felderAnzahl }, (_, i) => i + 1), [felderAnzahl]);
   const eigeneAnzeige = useMemo(() => anzeige.felder.filter((f) => f.eigenesGeraet), [anzeige]);
+  // H4-11b: tönt ein ANDERES Fenster dieses Geräts, kennt dieses Fenster die Lage des Ausgangs nicht selbst (der Fehler lebt im Wächter des tönenden Tabs). Meldet der Server für
+  // dieses Gerät „Ausgang bestätigen“, zeigt dieses Fenster die Taste trotzdem – ein Tipp stößt den tönenden Tab an (`useHallAusgang`).
+  const andererTabTont = lautsprecher.laufzeit?.rolle === 'andererTab';
+  const serverUnbestaetigt = status.antwort?.sicht === 'voll' && status.antwort.speakers.some((s) => s.isThisDevice && s.state === 'output_unconfirmed');
+  const ausgangAnzeige = useMemo((): HallAusgang => (
+    andererTabTont && serverUnbestaetigt && (ausgang.zustand === 'standard' || ausgang.zustand === 'ok') ? { ...ausgang, zustand: 'unconfirmed' } : ausgang
+  ), [ausgang, andererTabTont, serverUnbestaetigt]);
 
   const ausfuehren = useCallback(async <T,>(aktion: () => Promise<T>): Promise<T> => {
     setBeschaeftigt(true);
@@ -208,7 +215,7 @@ export function useGeraetAbschnitt({ daten, felderAnzahl, darfAendern, anhoeren 
     regler: istLautsprecher
       ? { lautstaerke, gesperrt: !darfAendern, onLautstaerke: setzeLautstaerke, onAnhoeren: (art) => anhoeren.anhoeren(art, 'regler'), hinweis: anhoeren.hinweis }
       : null,
-    ausgang: istLautsprecher ? ausgang : null,
+    ausgang: istLautsprecher ? ausgangAnzeige : null,
     felder, gewaehlt, an: istLautsprecher || vorgemerkt, name, setzeName: setName, nameVerlassen, schalterUmlegen, feldUmschalten,
     beschaeftigt, fehler, handy: istHandy(), installiert: laeuftAlsApp(), installAngebot, installieren: () => { void installiereApp(); },
     schalterErledigt: istLautsprecher, tonErledigt: istLautsprecher && eigeneAnzeige.some((f) => f.anzeige.art === 'bereit'),

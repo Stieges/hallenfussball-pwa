@@ -51,6 +51,11 @@ const geteilt = erzeugeGeteilteAbfragen((turnierId) => erzeugeHallStatusAbfrage(
   zeitgeber: echterZeitgeber,
 }), () => (typeof window === 'undefined' ? null : window), echterZeitgeber);
 
+/** Den Stand des Turniers sofort neu lesen (nach dem Abmelden eines Lautsprechers, H4-11b); ohne laufende Abfrage nichts. */
+export function hallStatusNeuLesen(turnierId: string): void {
+  geteilt.abfragen(turnierId);
+}
+
 /** Nur für Tests: die geteilten Abfragen beenden und vergessen (der Nachlauf überlebt sonst den Test). */
 export function __setzeHallStatusFuerTests(): void {
   geteilt.zuruecksetzen();

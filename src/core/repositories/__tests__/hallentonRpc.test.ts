@@ -15,6 +15,7 @@ import {
   hallSpeakerAssign,
   hallSpeakerHeartbeat,
   hallSpeakerRelease,
+  hallSpeakerUnassign,
   hallTestToneAck,
   hallTestToneRequest,
 } from '../hallentonRpc';
@@ -81,6 +82,44 @@ describe('hallSpeakerRelease (hall_speaker_release)', () => {
     const args = { p_tournament_id: TID, p_fields: [1, 2], p_device_id: RECHNER };
     expect(await hallSpeakerRelease(client, args)).toEqual({ ok: true, status: 'released', fields: [1] });
     expect(rpc).toHaveBeenCalledWith('hall_speaker_release', args);
+  });
+});
+
+describe('hallSpeakerUnassign (hall_speaker_unassign, @HT-057)', () => {
+  const args = { p_tournament_id: TID, p_fields: [1] };
+
+  it('@HT-057 Olli meldet den Lautsprecher für Feld 1 ab: sendet Turnier und Felder (keine Geräte-Kennung), liest „unassigned“ mit den Feldern', async () => {
+    const { client, rpc } = clientWith({ data: { status: 'unassigned', fields: [1] }, error: null });
+    expect(await hallSpeakerUnassign(client, args)).toEqual({ ok: true, status: 'unassigned', fields: [1] });
+    expect(rpc).toHaveBeenCalledWith('hall_speaker_unassign', args);
+    expect(Object.keys((rpc.mock.calls as unknown as Array<[string, object]>)[0][1]).sort()).toEqual(['p_fields', 'p_tournament_id']);
+  });
+
+  it('@HT-057 ein Feld ohne Lautsprecher kommt nicht in der Antwort vor (nichts zu entfernen) – gelesen wird die Liste, wie der Server sie meldet', async () => {
+    const { client } = clientWith({ data: { status: 'unassigned', fields: [] }, error: null });
+    expect(await hallSpeakerUnassign(client, { ...args, p_fields: [2] })).toEqual({ ok: true, status: 'unassigned', fields: [] });
+  });
+
+  it.each([
+    ['42501', 'kein_recht'], ['55000', 'turnier_beendet'], ['22023', 'ungueltig'],
+  ] as const)('@HT-022 @HT-046 Fehlercode %s → %s (kein Wurf, Zustand ändert sich nicht)', async (code, grund) => {
+    const { client } = clientWith({ data: null, error: { code, message: 'x' } });
+    expect(await hallSpeakerUnassign(client, args)).toEqual({ ok: false, grund });
+  });
+
+  it('@HT-041 kein Client, Zeitlimit oder Netzfehler → netz; ein unbekannter Serverfehler → antwort_unbekannt', async () => {
+    expect(await hallSpeakerUnassign(null, args)).toEqual({ ok: false, grund: 'netz' });
+    const { client: weg } = clientWith(() => Promise.reject(new TypeError('Failed to fetch')));
+    expect(await hallSpeakerUnassign(weg, args)).toEqual({ ok: false, grund: 'netz' });
+    const { client: sonst } = clientWith({ data: null, error: { code: 'XX000', message: 'boom' } });
+    expect(await hallSpeakerUnassign(sonst, args)).toEqual({ ok: false, grund: 'antwort_unbekannt' });
+  });
+
+  it('eine Antwort, die nicht zum Vertrag passt (falscher Status, Felder keine Zahlen, Geräte-Kennung als Zusatz stört nicht), wird nie geraten', async () => {
+    for (const data of [{ status: 'released', fields: [1] }, { status: 'unassigned', fields: ['1'] }, { status: 'unassigned' }, null]) {
+      const { client } = clientWith({ data, error: null });
+      expect(await hallSpeakerUnassign(client, args)).toEqual({ ok: false, grund: 'antwort_unbekannt' });
+    }
   });
 });
 
