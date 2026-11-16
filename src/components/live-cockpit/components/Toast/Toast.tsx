@@ -54,26 +54,26 @@ export function Toast({ toast, onDismiss }: ToastProps) {
     switch (toast.type) {
       case 'success':
         return {
-          bg: `${cssVars.colors.success}15`,
+          bg: cssVars.colors.successLight,
           border: cssVars.colors.success,
           icon: '✓',
         };
       case 'warning':
         return {
-          bg: `${cssVars.colors.warning}15`,
+          bg: cssVars.colors.warningLight,
           border: cssVars.colors.warning,
           icon: '⚠',
         };
       case 'error':
         return {
-          bg: `${cssVars.colors.error}15`,
+          bg: cssVars.colors.errorLight,
           border: cssVars.colors.error,
           icon: '✕',
         };
       case 'info':
       default:
         return {
-          bg: `${cssVars.colors.info}15`,
+          bg: cssVars.colors.infoLight,
           border: cssVars.colors.info,
           icon: 'ℹ',
         };
@@ -112,7 +112,7 @@ export function Toast({ toast, onDismiss }: ToastProps) {
     padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
     fontSize: cssVars.fontSizes.sm,
     fontWeight: 600,
-    color: typeStyles.border,
+    color: cssVars.colors.textPrimary,
     backgroundColor: 'transparent',
     border: `1px solid ${typeStyles.border}`,
     borderRadius: cssVars.borderRadius.sm,

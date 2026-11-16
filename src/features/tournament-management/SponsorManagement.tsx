@@ -15,7 +15,7 @@
 
 import { useState, useRef, CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card, Input } from '../../components/ui';
+import { Card, Input, InlineNotice } from '../../components/ui';
 import { cssVars } from '../../design-tokens';
 import type { Tournament } from '../../types/tournament';
 import type { Sponsor, SponsorTier } from '../../types/sponsor';
@@ -406,21 +406,14 @@ export function SponsorManagement({
     border: `1px dashed ${cssVars.colors.border}`,
   };
 
-  const errorStyle: CSSProperties = {
-    padding: cssVars.spacing.sm,
-    background: `${cssVars.colors.error}22`,
-    color: cssVars.colors.error,
-    borderRadius: cssVars.borderRadius.sm,
-    fontSize: cssVars.fontSizes.sm,
-    marginBottom: cssVars.spacing.md,
-  };
+  const errorWrapStyle: CSSProperties = { marginBottom: cssVars.spacing.md };
 
   const deleteConfirmStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
     gap: cssVars.spacing.sm,
     padding: cssVars.spacing.sm,
-    background: `${cssVars.colors.error}22`,
+    background: cssVars.colors.errorLight,
     borderRadius: cssVars.borderRadius.sm,
     marginTop: cssVars.spacing.sm,
   };
@@ -446,7 +439,11 @@ export function SponsorManagement({
         </div>
 
         {/* Error */}
-        {error && <div style={errorStyle}>{error}</div>}
+        {error && (
+          <div style={errorWrapStyle}>
+            <InlineNotice tone="error">{error}</InlineNotice>
+          </div>
+        )}
 
         {/* Form */}
         {isEditing && (
@@ -626,7 +623,7 @@ export function SponsorManagement({
                     {/* Delete Confirmation */}
                     {isDeleting && (
                       <div style={deleteConfirmStyle}>
-                        <span style={{ flex: 1, fontSize: cssVars.fontSizes.sm, color: cssVars.colors.error }}>
+                        <span style={{ flex: 1, fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textPrimary }}>
                           {isUsed
                             ? t('sponsor.deleteUsedConfirm')
                             : t('sponsor.deleteConfirm')}

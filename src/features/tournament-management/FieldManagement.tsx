@@ -14,7 +14,7 @@
 
 import { useState, CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card, Input } from '../../components/ui';
+import { Card, Input, InlineNotice } from '../../components/ui';
 import { cssVars } from '../../design-tokens';
 import type { Tournament, TournamentField } from '../../types/tournament';
 import { useFields } from '../../hooks';
@@ -235,14 +235,7 @@ export function FieldManagement({
     opacity: isLoading ? 0.7 : 1,
   };
 
-  const errorStyle: CSSProperties = {
-    padding: cssVars.spacing.sm,
-    background: `${cssVars.colors.error}22`,
-    color: cssVars.colors.error,
-    borderRadius: cssVars.borderRadius.sm,
-    fontSize: cssVars.fontSizes.sm,
-    marginBottom: cssVars.spacing.md,
-  };
+  const errorWrapStyle: CSSProperties = { marginBottom: cssVars.spacing.md };
 
   const emptyStateStyle: CSSProperties = {
     padding: cssVars.spacing.xl,
@@ -255,7 +248,7 @@ export function FieldManagement({
 
   const usedBadgeStyle: CSSProperties = {
     padding: `2px 6px`,
-    background: `${cssVars.colors.primary}22`,
+    background: cssVars.colors.primaryLight,
     color: cssVars.colors.primary,
     borderRadius: cssVars.borderRadius.sm,
     fontSize: cssVars.fontSizes.xs,
@@ -282,7 +275,11 @@ export function FieldManagement({
         </div>
 
         {/* Error */}
-        {error && <div style={errorStyle}>{error}</div>}
+        {error && (
+          <div style={errorWrapStyle}>
+            <InlineNotice tone="error">{error}</InlineNotice>
+          </div>
+        )}
 
         {/* List */}
         {fields.length === 0 && derivedFields.length > 0 ? (

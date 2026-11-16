@@ -274,6 +274,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
         text: t('ranking.playoffNotStarted'),
         color: cssVars.colors.textSecondary,
         bgColor: cssVars.colors.neutralStatusBg,
+        borderColor: cssVars.colors.borderSubtle,
       };
     } else if (playoffStatus === 'in-progress') {
       return {
@@ -281,6 +282,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
         text: t('ranking.playoffInProgress', { completed: completedFinalsCount, total: totalFinalsCount }),
         color: cssVars.colors.warning,
         bgColor: cssVars.colors.warningBannerBgStrong,
+        borderColor: cssVars.colors.warningBorderStrong,
       };
     } else {
       return {
@@ -288,6 +290,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
         text: t('ranking.tournamentCompleted'),
         color: cssVars.colors.primary,
         bgColor: cssVars.colors.editorEditModeBg,
+        borderColor: cssVars.colors.primaryBorderStrong,
       };
     }
   };
@@ -387,7 +390,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
           padding: isMobile ? cssVars.spacing.sm : cssVars.spacing.md,
           background: cssVars.colors.rankingPlacementBg,
           borderRadius: cssVars.borderRadius.md,
-          border: `1px solid ${cssVars.colors.primary}40`,
+          border: `1px solid ${cssVars.colors.primaryBorderStrong}`,
         }}>
           <div style={{
             fontSize: cssVars.fontSizes.sm,
@@ -431,7 +434,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
             padding: isMobile ? cssVars.spacing.sm : cssVars.spacing.md,
             background: playoffStatusInfo.bgColor,
             borderRadius: cssVars.borderRadius.md,
-            border: `1px solid ${playoffStatusInfo.color}40`,
+            border: `1px solid ${playoffStatusInfo.borderColor}`,
           }}>
             <span style={{ fontSize: isMobile ? '16px' : '20px' }}>{playoffStatusInfo.icon}</span>
             <span style={{

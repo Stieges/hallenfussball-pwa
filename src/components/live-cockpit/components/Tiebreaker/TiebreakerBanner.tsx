@@ -75,12 +75,12 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
   };
 
   const headerStyle: CSSProperties = {
-    background: `${cssVars.colors.warning}20`,
+    background: cssVars.colors.warningSelected,
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.lg}`,
     display: 'flex',
     alignItems: 'center',
     gap: cssVars.spacing.sm,
-    borderBottom: `1px solid ${cssVars.colors.warning}40`,
+    borderBottom: `1px solid ${cssVars.colors.warningBorderStrong}`,
   };
 
   const warningIconStyle: CSSProperties = {
@@ -90,7 +90,7 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
   const headerTextStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.sm,
     fontWeight: cssVars.fontWeights.semibold,
-    color: cssVars.colors.warning,
+    color: cssVars.colors.textPrimary,
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
   };
@@ -275,7 +275,7 @@ const PrimaryButton: React.FC<ButtonProps> = ({ onClick, children }) => {
     border: 'none',
     borderRadius: cssVars.borderRadius.lg,
     cursor: 'pointer',
-    boxShadow: `0 4px 15px ${cssVars.colors.primary}40`,
+    boxShadow: `0 4px 15px ${cssVars.colors.primaryGlowLight}`,
     transition: 'all 0.15s ease',
   };
 

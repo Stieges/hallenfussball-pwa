@@ -16,6 +16,7 @@ interface StatusConfig {
   labelKey: string;
   icon: React.ReactNode;
   color: string;
+  bgColor: string;
 }
 
 const STATUS_OPTIONS: StatusConfig[] = [
@@ -24,18 +25,21 @@ const STATUS_OPTIONS: StatusConfig[] = [
     labelKey: 'filter.status.scheduled',
     icon: <Icons.Calendar size={14} />,
     color: cssVars.colors.statusUpcoming,
+    bgColor: cssVars.colors.statusUpcomingBg,
   },
   {
     id: 'running',
     labelKey: 'filter.status.running',
     icon: <Icons.Play size={14} />,
     color: cssVars.colors.statusLive,
+    bgColor: cssVars.colors.statusLiveBg,
   },
   {
     id: 'finished',
     labelKey: 'filter.status.finished',
     icon: <Icons.Check size={14} />,
     color: cssVars.colors.statusFinished,
+    bgColor: cssVars.colors.statusFinishedBg,
   },
 ];
 
@@ -96,8 +100,8 @@ export const StatusMultiSelect: React.FC<StatusMultiSelectProps> = ({
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     border: `1px solid ${isActive ? config.color : cssVars.colors.borderControl}`,
-    background: isActive ? `${config.color}15` : 'transparent',
-    color: isActive ? config.color : cssVars.colors.textSecondary,
+    background: isActive ? config.bgColor : 'transparent',
+    color: isActive ? cssVars.colors.textPrimary : cssVars.colors.textSecondary,
     whiteSpace: 'nowrap',
     minHeight: '44px',
   });
