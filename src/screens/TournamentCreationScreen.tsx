@@ -30,44 +30,7 @@ import { visibilityAfterPublish } from '../core/services/TournamentCreationServi
 import { shareAfterFirstRelease } from '../core/services/shareAfterFirstRelease';
 import { publishSharesByLink } from '../features/tournament-creation/utils/publishNotice';
 import { AuthSection } from '../components/layout/AuthSection';
-import { effectiveRoundCount } from '../core/generators/repeatRounds';
-
-/** E2 + Controller-Ruling Fixrunde 2: Struktur = alles, was die Generatoren
- *  außer Metadaten lesen — Teams, Felder, Modus, Gruppen, Finalrunde,
- *  Startzeit und Datum. Übrige Metadaten (Name, Ort, Texte) zählen nicht. */
-function hasStructuralChanges(current: Tournament, next: Tournament): boolean {
-  const teamSignature = (t: Tournament): string =>
-    [...t.teams]
-      .map((team) => `${team.id}:${team.isRemoved ? 1 : 0}`)
-      .sort()
-      .join('|');
-  return (
-    teamSignature(current) !== teamSignature(next) ||
-    current.numberOfFields !== next.numberOfFields ||
-    current.mode !== next.mode ||
-    current.tournamentType !== next.tournamentType ||
-    current.groupSystem !== next.groupSystem ||
-    current.groupPhaseGameDuration !== next.groupPhaseGameDuration ||
-    current.groupPhaseBreakDuration !== next.groupPhaseBreakDuration ||
-    current.finalRoundGameDuration !== next.finalRoundGameDuration ||
-    current.finalRoundBreakDuration !== next.finalRoundBreakDuration ||
-    current.breakBetweenPhases !== next.breakBetweenPhases ||
-    current.numberOfGroups !== next.numberOfGroups ||
-    current.date !== next.date ||
-    current.timeSlot !== next.timeSlot ||
-    current.startTime !== next.startTime ||
-    current.gamePeriods !== next.gamePeriods ||
-    current.halftimeBreak !== next.halftimeBreak ||
-    current.minRestSlots !== next.minRestSlots ||
-    effectiveRoundCount(current) !== effectiveRoundCount(next) || // @TM-152: Rundenzahl legt die Spielzahl fest
-    current.useDFBKeys !== next.useDFBKeys ||
-    current.dfbKeyPattern !== next.dfbKeyPattern ||
-    JSON.stringify(current.groups) !== JSON.stringify(next.groups) ||
-    JSON.stringify(current.finalsConfig) !== JSON.stringify(next.finalsConfig) ||
-    JSON.stringify(current.finals) !== JSON.stringify(next.finals) ||
-    JSON.stringify(current.refereeConfig) !== JSON.stringify(next.refereeConfig)
-  );
-}
+import { hasStructuralChanges } from '../features/tournament-creation/utils/structuralChanges';
 
 // Lazy load step components for better performance
 const Step1_SportAndType = lazy(() =>
@@ -569,6 +532,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
           preview={replanSession.preview}
           previousMatches={existingTournament?.matches ?? []}
           teams={existingTournament?.teams ?? []}
+          hostInput={{ teams: formData.teams ?? [], hostTeamIds: formData.hostTeamIds, openingMode: formData.openingMode, groupSystem: formData.groupSystem }}
           onConfirm={() => void handleReplanConfirm()}
           onCancel={handleReplanCancel}
         />

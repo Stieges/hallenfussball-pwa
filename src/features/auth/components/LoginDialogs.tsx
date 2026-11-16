@@ -11,7 +11,8 @@
 
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, dialogWidths } from '../../../design-tokens';
+import { cssVars, dialogWidths, iconSizeValues } from '../../../design-tokens';
+import { Icons } from '../../../components/ui/Icons';
 import { Button } from '../../../components/ui/Button';
 import { loginStyles as styles } from './LoginScreen.styles';
 import { DialogSurface } from '../../../components/ui/molecules/DialogSurface';
@@ -130,7 +131,7 @@ export const LoginSuccessDialog: React.FC<LoginSuccessDialogProps> = ({
           style={styles.successCloseButton}
           aria-label={t('login.close')}
         >
-          ✕
+          <Icons.X size={iconSizeValues.sm} />
         </button>
         <div style={styles.successIcon}>✓</div>
         <h2 id="login-success-title" style={styles.successTitle}>{t('loginDialogs.success.title')}</h2>

@@ -14,7 +14,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, dialogWidths } from '../../../../design-tokens';
+import { cssVars, dialogWidths, iconSizeValues } from '../../../../design-tokens';
+import { Icons } from '../../../../components/ui/Icons';
 import { DialogSurface } from '../../../ui/molecules/DialogSurface';
 import { useDialogTimer } from '../../../../hooks';
 import type { CardType } from '../../../../types/tournament';
@@ -409,7 +410,7 @@ export function CardDialog({
           data-testid="dialog-close-button"
           style={styles.closeButton}
         >
-          ✕
+          <Icons.X size={iconSizeValues.sm} />
         </button>
         {step === 1 && renderStep1CardType()}
         {step === 2 && renderStep2Team()}

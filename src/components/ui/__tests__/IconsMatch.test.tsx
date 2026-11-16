@@ -19,4 +19,19 @@ describe('Symbole fürs Cockpit (Plan 3.1)', () => {
     const { container } = render(<MatchIcons.Ball size={32} />);
     expect(container.querySelector('svg')).toHaveAttribute('width', '32');
   });
+
+  it('Ball G: Kreis plus gefüllte Felder ohne Strich, ohne clipPath und ohne Kennung (mehrfach auf einer Seite möglich)', () => {
+    const { container } = render(<><MatchIcons.Ball /><MatchIcons.Ball /></>);
+    const svgs = container.querySelectorAll('svg');
+    expect(svgs).toHaveLength(2);
+    for (const svg of svgs) {
+      expect(svg.querySelector('circle[r="9"]')).not.toBeNull();
+      const felder = svg.querySelector('path[fill="currentColor"]');
+      expect(felder).not.toBeNull();
+      expect(felder).toHaveAttribute('stroke', 'none');
+      expect(felder!.getAttribute('d')!.match(/M/g)).toHaveLength(6);
+      expect(svg.querySelector('clipPath')).toBeNull();
+    }
+    expect(container.querySelectorAll('[id]')).toHaveLength(0);
+  });
 });

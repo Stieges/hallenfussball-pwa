@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { cssVars, displayNoMatch } from '../../design-tokens';
 import type { MonitorTheme } from '../../types/monitor';
 import { useMonitorTheme } from '../../hooks';
+import { MonitorIcons } from '../ui/IconsMonitor';
 
 export interface NoMatchDisplayProps {
   /** Überschrift; ohne Angabe der übersetzte Standardtext */
@@ -46,8 +47,8 @@ export const NoMatchDisplay: React.FC<NoMatchDisplayProps> = ({
 
   return (
     <div style={containerStyle}>
-      <div data-testid="no-match-icon" style={{ fontSize: sizes.icon, marginBottom: cssVars.spacing.xl, opacity: 0.6 }}>
-        ⏸️
+      <div data-testid="no-match-icon" aria-hidden="true" style={{ display: 'flex', color: themeColors.text, marginBottom: cssVars.spacing.xl }}>
+        <MonitorIcons.Pause size={sizes.icon} />
       </div>
       <div
         data-testid="no-match-title"

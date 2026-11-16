@@ -59,4 +59,20 @@ describe('supabaseMappers — hostTeamIds und openingMode (@W4-034, @W4-044)', (
 
     expect(read.openingMode).toBeUndefined();
   });
+
+  it('@W4-048: „Beide beginnen als Heim“ übersteht Hin- und Rückweg', () => {
+    const back = roundTrip({ hostTeamIds: [ROT, BLAU], openingMode: 'both-home' });
+
+    expect(back.openingMode).toBe('both-home');
+  });
+
+  it('Bestandsschutz: alle bisherigen Werte lesen sich unverändert, der neue Wert braucht keine Migration', () => {
+    for (const mode of ['guest-opening', 'club-derby'] as const) {
+      expect(roundTrip({ hostTeamIds: [ROT, BLAU], openingMode: mode }).openingMode).toBe(mode);
+    }
+    // ein Turnier ohne Felder bleibt ohne Felder (kein Standardwert wird eingeschrieben)
+    const { tournamentRow } = mapTournamentToSupabase(roundTrip({}), 'user-1');
+    expect(tournamentRow.config).not.toHaveProperty('openingMode');
+    expect(tournamentRow.config).not.toHaveProperty('hostTeamIds');
+  });
 });

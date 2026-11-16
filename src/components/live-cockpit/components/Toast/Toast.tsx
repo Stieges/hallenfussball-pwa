@@ -7,8 +7,10 @@
  * - Undo performed
  */
 
-import { useEffect, useState, type CSSProperties } from 'react';
-import { cssVars } from '../../../../design-tokens'
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { cssVars, iconSizeValues } from '../../../../design-tokens';
+import { Icons } from '../../../ui/Icons';
 
 export type ToastType = 'success' | 'info' | 'warning' | 'error';
 
@@ -29,6 +31,7 @@ interface ToastProps {
 }
 
 export function Toast({ toast, onDismiss }: ToastProps) {
+  const { t } = useTranslation('common');
   const [isVisible, setIsVisible] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
 
@@ -50,32 +53,32 @@ export function Toast({ toast, onDismiss }: ToastProps) {
     };
   }, [toast.id, duration, onDismiss]);
 
-  const getTypeStyles = (): { bg: string; border: string; icon: string } => {
+  const getTypeStyles = (): { bg: string; border: string; icon: ReactNode } => {
     switch (toast.type) {
       case 'success':
         return {
           bg: cssVars.colors.successLight,
           border: cssVars.colors.success,
-          icon: '✓',
+          icon: <Icons.Check size={iconSizeValues.sm} />,
         };
       case 'warning':
         return {
           bg: cssVars.colors.warningLight,
           border: cssVars.colors.warning,
-          icon: '⚠',
+          icon: <Icons.AlertTriangle size={iconSizeValues.sm} />,
         };
       case 'error':
         return {
           bg: cssVars.colors.errorLight,
           border: cssVars.colors.error,
-          icon: '✕',
+          icon: <Icons.X size={iconSizeValues.sm} />,
         };
       case 'info':
       default:
         return {
           bg: cssVars.colors.infoLight,
           border: cssVars.colors.info,
-          icon: 'ℹ',
+          icon: <Icons.Info size={iconSizeValues.sm} />,
         };
     }
   };
@@ -98,7 +101,8 @@ export function Toast({ toast, onDismiss }: ToastProps) {
   };
 
   const iconStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.lg,
+    display: 'flex',
+    flexShrink: 0,
     color: typeStyles.border,
   };
 
@@ -135,15 +139,20 @@ export function Toast({ toast, onDismiss }: ToastProps) {
 
   return (
     <div style={containerStyle}>
-      <span style={iconStyle}>{typeStyles.icon}</span>
+      <span style={iconStyle} aria-hidden="true" data-testid="toast-icon">{typeStyles.icon}</span>
       <span style={messageStyle}>{toast.message}</span>
       {toast.action && (
         <button style={actionStyle} onClick={toast.action.onClick}>
           {toast.action.label}
         </button>
       )}
-      <button style={dismissStyle} onClick={() => onDismiss(toast.id)}>
-        ×
+      <button
+        type="button"
+        style={dismissStyle}
+        onClick={() => onDismiss(toast.id)}
+        aria-label={t('toast.dismissAriaLabel')}
+      >
+        <Icons.X size={iconSizeValues.xs} />
       </button>
     </div>
   );

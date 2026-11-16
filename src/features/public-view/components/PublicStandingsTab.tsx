@@ -4,7 +4,8 @@
  */
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../../design-tokens';
+import { cssVars, iconSizeValues } from '../../../design-tokens';
+import { Icons } from '../../../components/ui/Icons';
 import { Card } from '../../../components/ui/Card';
 import { TieMarker } from '../../../components/ui/molecules/TieMarker';
 import { standingsGroups } from '../../../core/models/standingsGroups';
@@ -35,7 +36,8 @@ export const PublicStandingsTab: React.FC<PublicStandingsTabProps> = ({ tourname
             color: cssVars.colors.textMuted,
           }}
         >
-          <p style={{ fontSize: cssVars.fontSizes.lg, marginBottom: cssVars.spacing.sm }}>
+          <p style={{ fontSize: cssVars.fontSizes.lg, marginBottom: cssVars.spacing.sm, display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: cssVars.spacing.sm }}>
+            <span aria-hidden="true" data-testid="public-standings-hidden-icon" style={{ display: 'flex' }}><Icons.Trophy size={iconSizeValues.md} /></span>
             {t('standings.hidden')}
           </p>
           <p style={{ fontSize: cssVars.fontSizes.sm }}>
