@@ -40,6 +40,8 @@ function g_turnier(): Record<string, unknown> {
 
 async function bild(page: Page, name: string, breite: number, thema: string): Promise<void> {
   if (!BILDER) { return; }
+  // Einblend-Animation (Dialog) bis zum Ende abwarten, keine feste Wartezeit
+  await page.evaluate(() => Promise.all(document.getAnimations().filter((a) => a.effect?.getComputedTiming().iterations !== Infinity).map((a) => a.finished)));
   mkdirSync(BILDER, { recursive: true });
   await page.screenshot({ path: join(BILDER, `${name}-${breite}-${thema}.png`), fullPage: false });
 }
