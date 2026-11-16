@@ -10,7 +10,7 @@ import { expect, type Page } from '@playwright/test';
 import { E2E_NIKOLAUS_CUPS, E2E_NIKOLAUS_HOST_TEAM_NAMES } from '../../testData';
 import { expectPageAnchor, expectSollMarker, vorbedingung } from './shared';
 import { openCockpit } from '../../engineHelpers';
-import { fetchNikolausSpiele, handyKontext, ladeSpielplan, openNikolausPath, paarung, spielnummer, type NikolausMatch } from './nikolaus-shared';
+import { fetchNikolausSpiele, handyKontext, ladeSpielplan, NIKOLAUS, openNikolausPath, paarung, spielnummer, type NikolausMatch } from './nikolaus-shared';
 import type { StepContext, TurniertagStep } from './types';
 
 const ZWILLING = E2E_NIKOLAUS_CUPS.zeitplan;
@@ -109,13 +109,24 @@ async function eroeffnungWaging({ asRole }: StepContext): Promise<void> {
   expect(await zeilenImSpielplan(ownerPage), 'der Spielplan der Turnierleitung zeigt den Plan der Cloud mit denselben Spielnummern (@SL-049)').toEqual(spiele.map((s) => `${spielnummer(s)} ${(s.scheduled_start ?? '').slice(0, 5)} ${paarung(s, namen)}`));
 }
 
-/** N2b: im Assistenten markiert die Turnierleitung „TSV Waging rot“ als „Mannschaft des Veranstalters“ (@W4-034). */
+/**
+ * N2b: im Assistenten (Turnier bearbeiten, Schritt „Teams“) stehen „TSV Waging rot“ und „TSV Waging blau“ als Mannschaften des Veranstalters markiert,
+ * alle anderen nicht; bei zwei Markierten erscheint die Wahl der Eröffnung mit der Voreinstellung „Ein Team eröffnet als Heim“, und die Übersicht
+ * nennt beide (@W4-034, @W4-033). Es wird nichts geändert und nichts gespeichert (nur Lesen im Assistenten).
+ */
 async function markierungImAssistenten({ asRole }: StepContext): Promise<void> {
   const ownerPage = await asRole('owner');
-  await ownerPage.goto('/#/tournament/new?step=5');
-  await ownerPage.waitForLoadState('networkidle');
+  await openNikolausPath(ownerPage, '/edit?step=5');
   await expectPageAnchor(ownerPage.getByTestId('wizard-add-team'), 'Assistent, Schritt Teams');
-  await expectSollMarker(ownerPage, 'wizard-team-host-checkbox');
+  const feld = (name: (typeof E2E_NIKOLAUS_HOST_TEAM_NAMES)[number] | 'DJK Kammer') => ownerPage.getByTestId(`wizard-host-team-${NIKOLAUS.teamId(name)}`);
+  for (const name of E2E_NIKOLAUS_HOST_TEAM_NAMES) {
+    await expect(feld(name), `${name} ist als Mannschaft des Veranstalters markiert`).toBeChecked();
+  }
+  await expect(feld('DJK Kammer'), 'DJK Kammer ist nicht markiert').not.toBeChecked();
+  await expect(ownerPage.getByTestId('wizard-host-choice'), 'bei zwei Markierten erscheint die Wahl der Eröffnung').toBeVisible();
+  await expect(ownerPage.getByTestId('wizard-opening-guest-opening'), 'Voreinstellung „Ein Team eröffnet als Heim“').toHaveAttribute('aria-checked', 'true');
+  await ownerPage.getByTestId('wizard-footer-bar').getByRole('button', { name: 'Weiter' }).click();
+  await expect(ownerPage.getByTestId('host-summary-teams'), 'die Übersicht nennt beide Mannschaften des Veranstalters').toHaveText('TSV Waging rot, TSV Waging blau');
 }
 
 /**
@@ -169,6 +180,6 @@ export const steps: readonly TurniertagStep[] = [
   { id: 'N1b', title: 'Spielplan: kein Team dreimal hintereinander Heim oder Gast', scenarios: ['@W4-030'], owner: 'Runden-Spielplan (gebaut, #290)', expectedFail: false, run: heimGastWechsel },
   { id: 'N1c', title: 'Spielplan: Abstand zwischen zwei Spielen eines Teams wie im DFB-Schlüssel', scenarios: ['@W4-031'], owner: 'Runden-Spielplan (gebaut, #290)', expectedFail: false, run: abstand },
   { id: 'N2a', title: 'Eröffnung: Waging als Heim gegen Gast, Vereinsduell in Runde 2', scenarios: ['@W4-027', '@W4-033'], owner: 'Runden-Spielplan (gebaut, #290)', expectedFail: false, run: eroeffnungWaging },
-  { id: 'N2b', title: 'Assistent: Mannschaft des Veranstalters markieren', scenarios: ['@W4-034'], owner: 'Assistent Veranstalter-Markierung (W4-034)', expectedFail: true, run: markierungImAssistenten },
+  { id: 'N2b', title: 'Assistent: Mannschaft des Veranstalters markieren', scenarios: ['@W4-034', '@W4-033'], owner: 'Assistent Veranstalter-Markierung (gebaut, #547)', expectedFail: false, run: markierungImAssistenten },
   { id: 'N5', title: 'Zeitplan vor dem ersten Anpfiff um 15 Minuten vorziehen, Zuschauer und Monitor ohne Neuladen', scenarios: ['@ZP-089', '@ZP-090'], befunde: ['C-MONITOR-OHNE-NAECHSTES-SPIEL'], owner: 'B-26 / B-27', expectedFail: true, run: zeitplanVorziehen },
 ];
