@@ -85,6 +85,8 @@ test.describe('@HT-059 H4-18 Cockpit-Kopf: Messung (Prüfstand)', () => {
             await expect(page.locator(ZEILE)).toHaveCount(0);
             await expect(page.locator(KASTEN)).toBeVisible();
             expect(m.zeile).toBe(0);
+            // @HT-059 Zeile 4 und 6, Folge: die Tor-Tasten stehen im Bild (die Foul-Reihe verlangt die Anforderung hier nicht, sie steht im Bericht als Befund)
+            expect(m.tore.imBild, `Tor-Tasten im Bild: ${JSON.stringify(m.tore)}`).toBe(true);
           } else {
             expect(m.zeile, 'vorher stand die Pille zusätzlich zum Kasten').toBeGreaterThan(0);
           }

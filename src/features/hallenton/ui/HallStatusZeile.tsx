@@ -18,7 +18,7 @@ import { useLaufendeSpiele } from '../useLaufendeSpiele';
 import { useAnderesFensterTont } from '../useAnderesFensterTont';
 import { useHallStatus } from '../useHallStatus';
 import { abgemeldeteFelder, baueStatusEintraege, hallentonZiel } from './hallStatusEintraege';
-import { useCockpitKastenFelder } from './CockpitKastenOrt';
+import { useCockpitKaesten } from './CockpitKastenOrt';
 import { useStatusZeileHost } from './StatusZeileOrt';
 
 export interface HallStatusZeileProps {
@@ -102,7 +102,7 @@ function HallStatusZeileMitRecht({ tournamentId, ohneLautsprecher = false, probe
   const aktivieren = useCallback(() => { void tonAktivieren(); }, [tonAktivieren]);
   const abgemeldet = useMemo(() => abgemeldeteFelder(lautsprecher.abgeloest), [lautsprecher.abgeloest]);
   // Nur im Cockpit (H4-18): was der Kasten unter der Tafel zeigt, steht nicht zusätzlich als Pille im Kopf
-  const kastenFelder = useCockpitKastenFelder(tournamentId);
-  const sichtbar = useMemo(() => (nurStoerungen ? hallAnzeigeOhneGezeigtenKasten(anzeige, kastenFelder) : anzeige), [nurStoerungen, anzeige, kastenFelder]);
+  const kaesten = useCockpitKaesten(tournamentId);
+  const sichtbar = useMemo(() => (nurStoerungen ? hallAnzeigeOhneGezeigtenKasten(anzeige, kaesten) : anzeige), [nurStoerungen, anzeige, kaesten]);
   return <HallStatusZeileAnsicht anzeige={sichtbar} tournamentId={tournamentId} tonAktivieren={aktivieren} ohneLautsprecher={ohneLautsprecher} abgemeldet={abgemeldet} probe={probe} nurStoerungen={nurStoerungen} />;
 }

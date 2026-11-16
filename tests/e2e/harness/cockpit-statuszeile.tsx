@@ -5,7 +5,7 @@
  * Daten wie im Mockup: Hallencup Süd, Feld 1, Spiel 11, FC Nord – SV Süd, 2:1, 2. Halbzeit. Nur Testumgebung, nicht Teil des Builds.
  * Aufruf: `?fall=ohne|bereit|pruefen|feld2|ton|eigen&alt=1` (`alt=1`: Kopf wie vor H4-17, die Statuszeile ohne `nurStoerungen`; `&thema` kommt vom Test).
  *   ohne: kein Hallen-Lautsprecher · bereit: Feld 1 bereit · pruefen: Feld 1 bereit mit „Prüfen“ · feld2: Feld 1 bereit, Feld 2 nicht bereit ·
- *   feld1 (H4-18): Feld 1 nicht bereit (anderes Gerät, Server-Stand) · ton: dieses Handy ist Lautsprecher von Feld 1, Ton nicht aktiviert · eigen: dieses Handy ist Lautsprecher von Feld 1 und bereit (Streifen darf nicht erscheinen).
+ *   feld2ton (H4-18): dieses Handy ist Lautsprecher nur von Feld 2, Ton nicht aktiviert (Cockpit von Feld 1) · feld1 (H4-18): Feld 1 nicht bereit (anderes Gerät, Server-Stand) · ton: dieses Handy ist Lautsprecher von Feld 1, Ton nicht aktiviert · eigen: dieses Handy ist Lautsprecher von Feld 1 und bereit (Streifen darf nicht erscheinen).
  */
 import ReactDOM from 'react-dom/client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -43,7 +43,7 @@ const SPIEL = 'match-11';
 const CTX: MatchContext = { matchId: SPIEL, teamAId: 'fc-nord', teamBId: 'sv-sued' };
 const MIN = 60_000;
 const ANPFIFF = new Date(2026, 10, 21, 14, 2).getTime();
-const FAELLE = ['ohne', 'bereit', 'pruefen', 'feld2', 'ton', 'eigen', 'feld1'] as const;
+const FAELLE = ['ohne', 'bereit', 'pruefen', 'feld2', 'ton', 'eigen', 'feld1', 'feld2ton'] as const;
 type Fall = (typeof FAELLE)[number];
 
 const turnier = {
@@ -58,6 +58,7 @@ function sprecherAm(fall: Fall): Sprecher[] {
     case 'bereit': case 'eigen': return [{ field: 1, state: 'ready', ageMs: 1000, outputHint: false }];
     case 'pruefen': return [{ field: 1, state: 'ready', ageMs: 1000, outputHint: true }];
     case 'feld2': return [{ field: 1, state: 'ready', ageMs: 1000, outputHint: false }, { field: 2, state: 'not_activated', ageMs: 1000, outputHint: false }];
+    case 'feld2ton': return [{ field: 1, state: 'ready', ageMs: 1000, outputHint: false }, { field: 2, state: 'not_activated', ageMs: 1000, outputHint: false }];
     case 'feld1': return [{ field: 1, state: 'not_activated', ageMs: 1000, outputHint: false }];
     case 'ton': return [{ field: 1, state: 'not_activated', ageMs: 1000, outputHint: false }];
     default: return [];
@@ -65,9 +66,9 @@ function sprecherAm(fall: Fall): Sprecher[] {
 }
 
 /** Doppel der Laufzeit dieses Geräts (die echte braucht ein Konto am Server und den Ton-Spieler). */
-function laufzeitDoppel(zustand: 'not_activated' | 'ready'): HallLautsprecherLaufzeit {
+function laufzeitDoppel(zustand: 'not_activated' | 'ready', feld = 1): HallLautsprecherLaufzeit {
   const snapshot: LaufzeitSnapshot = {
-    rolle: 'wartet', turnierId: TID, felder: [1], geraeteZustand: 'ready', zustandJeFeld: { 'field-1': zustand },
+    rolle: 'wartet', turnierId: TID, felder: [feld], geraeteZustand: 'ready', zustandJeFeld: { [`field-${feld}`]: zustand },
     naechsterTon: null, taktFehler: false, warAngehalten: false, verfuegbarkeit: null,
   };
   return { subscribe: () => () => undefined, getSnapshot: () => snapshot, stop: () => undefined } as unknown as HallLautsprecherLaufzeit;
@@ -131,9 +132,10 @@ export function Seite() {
       ok: true as const, sicht: 'voll' as const, serverNow: ANPFIFF, closed: false, speakers: sprecherAm(fall), leads: [],
       settings: { halftimeSound: 'horn-1', halftimeCustomPath: null, endCustomPath: null, goalToneFields: [], goalAnthemPaths: [] },
     } as never).then((antwort) => { document.documentElement.dataset.antwort = '1'; return antwort; }));
-    if (fall === 'ton' || fall === 'eigen') {
-      setzeEinschaltung({ turnierId: TID, felder: [1], name: 'Handy Tom' });
-      setzeLaufzeit(laufzeitDoppel(fall === 'ton' ? 'not_activated' : 'ready'));
+    if (fall === 'ton' || fall === 'eigen' || fall === 'feld2ton') {
+      const feld = fall === 'feld2ton' ? 2 : 1;
+      setzeEinschaltung({ turnierId: TID, felder: [feld], name: 'Handy Tom' });
+      setzeLaufzeit(laufzeitDoppel(fall === 'eigen' ? 'ready' : 'not_activated', feld));
     }
     void baueKontext({ wert: ANPFIFF }).then((k) => { if (!abgebrochen) { setKontext(k); } });
     return () => { abgebrochen = true; };

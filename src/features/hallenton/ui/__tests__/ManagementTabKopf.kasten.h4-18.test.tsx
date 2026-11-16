@@ -80,12 +80,12 @@ const eigenesGeraet = (felder: number[], zustand: string, tonAktivieren = vi.fn(
 };
 const huelle = (ui: React.ReactElement) => <AuthContext.Provider value={{} as never}><MemoryRouter>{ui}</MemoryRouter></AuthContext.Provider>;
 /** Das Cockpit von Feld `feld`: der schmale Kopf mit der Statuszeile UND der Kasten unter der Tafel. */
-const cockpit = (o: { feld?: number; zustand?: CockpitZustand; kannSteuern?: boolean } = {}) => {
+const cockpit = (o: { feld?: number; zustand?: CockpitZustand; kannSteuern?: boolean; verdeckt?: boolean } = {}) => {
   const feld = o.feld ?? 1;
   return (
     <>
       <ManagementTabKopf tournament={turnier} feld={feld} onFeld={() => undefined} halter={{}} onTastenkuerzel={() => undefined} />
-      <CockpitHallHinweis tournamentId="t1" feldId={`field-${feld}`} zustand={o.zustand ?? 'laeuft'} kannSteuern={o.kannSteuern ?? true} />
+      <CockpitHallHinweis tournamentId="t1" feldId={`field-${feld}`} zustand={o.zustand ?? 'laeuft'} kannSteuern={o.kannSteuern ?? true} verdeckt={o.verdeckt ?? false} />
     </>
   );
 };
@@ -153,6 +153,44 @@ describe('@HT-059 Cockpit-Kopf und Kasten unter der Tafel: jede Störung genau e
     zeige(cockpit());
     expect(pillen()).toEqual(['Lautsprecher Feld 2 nicht bereit']);
     expect(screen.getByTestId(KASTEN)).toBeInTheDocument();
+  });
+  it('@HT-059 Zeile 8 (Leibchen-Wahl): der Lautsprecher von Feld 1 ist nicht bereit, die Wahl verdeckt den Kasten → die Pille „Lautsprecher Feld 1 nicht bereit“ steht; schließt Olli die Wahl, steht wieder nur der Kasten', () => {
+    doppel.status = status({ 1: nichtBereit });
+    const r = zeige(cockpit({ verdeckt: true }));
+    expect(pillen()).toEqual(['Lautsprecher Feld 1 nicht bereit']);
+    r.rerender(huelle(cockpit({ verdeckt: false })));
+    expect(kopfText()).toBeNull();
+    expect(screen.getByTestId(KASTEN)).toBeInTheDocument();
+    r.rerender(huelle(cockpit({ verdeckt: true })));
+    expect(pillen()).toEqual(['Lautsprecher Feld 1 nicht bereit']);
+  });
+  it('@HT-059 Zeile 9 (schlafen gelegt): eigenes Gerät für Feld 1, vom Browser schlafen gelegt → der Kasten nennt den Grund ohne Taste, die Pille „Ton aktivieren“ bleibt und aktiviert', async () => {
+    doppel.status = status({ 1: { art: 'nichtBereit', grund: 'slept', pruefen: false } });
+    const aktivieren = vi.fn(() => Promise.resolve(true));
+    eigenesGeraet([1], 'slept', aktivieren);
+    zeige(cockpit());
+    expect(screen.getByTestId(KASTEN)).toHaveTextContent('Grund: schlafen gelegt');
+    expect(screen.queryByTestId('cockpit-hall-ton-aktivieren')).toBeNull();
+    expect(pillen()).toHaveLength(1);
+    await act(async () => { fireEvent.click(within(screen.getByTestId('hallenton-status-zeile')).getByRole('button')); await Promise.resolve(); });
+    expect(aktivieren).toHaveBeenCalledTimes(1);
+  });
+  it('G1: der Kasten zeigt (noch) einen anderen Grund ohne Taste, lokal steht „Ton nicht aktiv“ → die Pille bleibt', () => {
+    doppel.status = status({ 1: nichtBereit });
+    eigenesGeraet([1], 'not_activated');
+    zeige(cockpit());
+    expect(screen.getByTestId(KASTEN)).toHaveTextContent('Grund: Hintergrund');
+    expect(screen.queryByTestId('cockpit-hall-ton-aktivieren')).toBeNull();
+    expect(pillen()).toEqual(['Ton nicht aktiv – hier klicken']);
+  });
+  it('Feld 1 und 2 am eigenen Gerät (Feld 1 ohne Ton, Feld 2 schlafen gelegt) → „Ton nicht aktiv“ bleibt', () => {
+    doppel.status = status({ 1: ohneTon, 2: { art: 'nichtBereit', grund: 'slept', pruefen: false } });
+    const aktivieren = vi.fn(() => Promise.resolve(true));
+    eigenesGeraet([1, 2], 'not_activated', aktivieren);
+    doppel.lautsprecher = { ...doppel.lautsprecher, laufzeit: { ...laufzeit([1, 2], 'not_activated'), zustandJeFeld: { 'field-1': 'not_activated', 'field-2': 'slept' } } } as unknown as HallLautsprecher;
+    zeige(cockpit());
+    expect(screen.getByTestId(KASTEN)).toBeInTheDocument();
+    expect(pillen()).toContain('Ton nicht aktiv – hier klicken');
   });
   it('@HT-059 Zeile 8: Ollis Handy hat kein Netz → im Cockpit keine Statuszeile, auch nicht „Status unbekannt“; in der Verwaltung steht sie weiter (@HT-041)', () => {
     doppel.status = status({}, 'unbekannt');

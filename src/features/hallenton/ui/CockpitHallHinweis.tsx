@@ -12,7 +12,7 @@
  * - Last: höchstens eine Abfrage je 5 s und Gerät (eine je Turnier, geteilt mit Kopfzeile und Uhr-Zeile), nur solange die Leitung keinen Stand hat.
  * - Ohne Netz: `stand` `unbekannt`, `felder` leer → kein Kasten; die allgemeine Offline-Anzeige des Cockpits genügt (Kein Netz gilt nur im Spiel).
  */
-import type { ReactElement, ReactNode } from 'react';
+import { createContext, useContext, type ReactElement, type ReactNode } from 'react';
 import type { CockpitZustand } from '../../../components/live-cockpit/model/cockpitPhase';
 import { useTranslation } from 'react-i18next';
 import { iconSizeValues } from '../../../design-tokens';
@@ -38,6 +38,8 @@ export interface CockpitHallHinweisProps {
   feldId: string | null | undefined;
   /** Zustand des Spiels im Cockpit: vor dem Anpfiff gibt es die Uhr-Zeile (@HT-036), ohne laufendes oder bevorstehendes Spiel keinen Hinweis. */
   zustand: CockpitZustand;
+  /** Der Bereich mit dem Kasten ist ausgeblendet (Leibchen-Wahl am Handy, `display: none`): der Kasten bleibt im Baum, steht aber nicht im Bild (@HT-059). */
+  verdeckt?: boolean;
   /** Steuerrecht (`writeMatchData`): nur damit darf der Server-Stand gelesen werden (sonst 42501 alle 5 s). */
   kannSteuern: boolean;
 }
@@ -67,18 +69,22 @@ export function CockpitHallKasten({ symbol, titel, grund, grundEntfaelltKlein = 
  * Pille des Felds weg. Wo der Kasten nicht gezeigt wird (kein Spiel, kein Steuerrecht, `tontAufDiesemGeraet`), wird auch nichts gemeldet.
  */
 function AusKasten({ tournamentId, feld, ...kasten }: KastenProps & { tournamentId: string; feld: number | null }): ReactElement {
+  const verdeckt = useContext(VerdecktKontext);
   return (
     <>
-      {feld === null ? null : <KastenMelder tournamentId={tournamentId} feld={feld} />}
+      {feld === null || verdeckt ? null : <KastenMelder tournamentId={tournamentId} feld={feld} mitTonTaste={kasten.taste !== undefined} />}
       <CockpitHallKasten {...kasten} />
     </>
   );
 }
 
-function KastenMelder({ tournamentId, feld }: { tournamentId: string; feld: number }): null {
-  useCockpitKastenMeldung(tournamentId, feld);
+function KastenMelder({ tournamentId, feld, mitTonTaste }: { tournamentId: string; feld: number; mitTonTaste: boolean }): null {
+  useCockpitKastenMeldung(tournamentId, feld, mitTonTaste);
   return null;
 }
+
+/** Steht der Kasten nicht im Bild (die Leibchen-Wahl am Handy blendet den Bereich aus, R1)? Dann meldet er sich nicht, und der Kopf zeigt die Pille. */
+const VerdecktKontext = createContext(false);
 
 /**
  * „Ton aktivieren“ (@OB-087 Zeile 5): nur wenn DIESES Gerät selbst der Hallen-Lautsprecher des Felds ist – ein Browser lässt den Ton nur per Tipp
@@ -152,7 +158,11 @@ function MitServerStand({ tournamentId, feld, leitungZeile, serverFrage, imSpiel
   return <Zeilen zeile={zeile} uhr={uhrZeile && lage !== undefined} tournamentId={tournamentId} feld={feld} />;
 }
 
-export function CockpitHallHinweis({ tournamentId, feldId, zustand, kannSteuern }: CockpitHallHinweisProps): ReactElement | null {
+export function CockpitHallHinweis({ verdeckt = false, ...props }: CockpitHallHinweisProps): ReactElement | null {
+  return <VerdecktKontext.Provider value={verdeckt}><CockpitHallHinweisInnen {...props} /></VerdecktKontext.Provider>;
+}
+
+function CockpitHallHinweisInnen({ tournamentId, feldId, zustand, kannSteuern }: Omit<CockpitHallHinweisProps, 'verdeckt'>): ReactElement | null {
   const hinweis = useHallCockpitHinweis(tournamentId, feldId ?? '');
   const leitungZeile = cockpitHallZeile(hinweis);
   const uhrAbgeglichen = useUhrAbgeglichen();
