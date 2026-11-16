@@ -24,6 +24,7 @@ import { tournamentFieldList } from '../../core/services/monitorConfigTransferCh
 import { useMonitors } from '../../hooks';
 import { useMonitorHeartbeats } from '../../hooks/useMonitorHeartbeats';
 import { useCan } from '../auth/hooks/useCan';
+import { InlineNotice } from '../../components/ui';
 import { MonitorCard } from './components/MonitorCard';
 import { MonitorCreateForm } from './components/MonitorCreateForm';
 import { MonitorEmptyStart } from './components/MonitorEmptyStart';
@@ -388,19 +389,12 @@ export function MonitorsConfigTab({
     gap: cssVars.spacing.xs,
   });
 
-  const errorStyle: CSSProperties = {
-    padding: cssVars.spacing.sm,
-    background: `${cssVars.colors.error}22`,
-    color: cssVars.colors.error,
-    borderRadius: cssVars.borderRadius.sm,
-    fontSize: cssVars.fontSizes.sm,
-    marginBottom: cssVars.spacing.md,
-  };
+  const errorWrapStyle: CSSProperties = { marginBottom: cssVars.spacing.md };
 
   const deleteConfirmStyle: CSSProperties = {
     marginTop: cssVars.spacing.md,
     padding: cssVars.spacing.md,
-    background: `${cssVars.colors.error}15`,
+    background: cssVars.colors.errorSubtle,
     borderRadius: cssVars.borderRadius.md,
     display: 'flex',
     alignItems: 'center',
@@ -452,7 +446,11 @@ export function MonitorsConfigTab({
         </div>
 
         {/* Error */}
-        {error && <div style={errorStyle}>{error}</div>}
+        {error && (
+          <div style={errorWrapStyle}>
+            <InlineNotice tone="error">{error}</InlineNotice>
+          </div>
+        )}
 
         {/* Create Form */}
         {isCreating && (

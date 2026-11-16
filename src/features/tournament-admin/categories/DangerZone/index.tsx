@@ -10,6 +10,7 @@ import { CSSProperties, useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage } from '../shared';
+import { Button } from '../../../../components/ui/Button';
 import { DANGER_ACTIONS } from '../../constants/admin.constants';
 import { Dialog } from '../../../../components/dialogs/Dialog';
 import { useTournamentStartState } from '../../../../hooks/useTournamentStartState';
@@ -119,21 +120,6 @@ const styles = {
     flexShrink: 0,
   } as CSSProperties,
 
-  button: {
-    padding: `${cssVars.spacing.sm} ${cssVars.spacing.lg}`,
-    border: 'none',
-    borderRadius: cssVars.borderRadius.md,
-    fontSize: cssVars.fontSizes.bodyMd,
-    fontWeight: cssVars.fontWeights.medium,
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-  } as CSSProperties,
-
-  buttonDanger: {
-    background: cssVars.colors.error,
-    color: cssVars.colors.onError,
-  } as CSSProperties,
-
   buttonWarning: {
     background: cssVars.colors.warning,
     color: cssVars.colors.onWarning,
@@ -194,30 +180,6 @@ const styles = {
     justifyContent: 'flex-end',
   } as CSSProperties,
 
-  cancelButton: {
-    padding: `${cssVars.spacing.sm} ${cssVars.spacing.lg}`,
-    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}`,
-    borderRadius: cssVars.borderRadius.md,
-    background: 'transparent',
-    color: cssVars.colors.textPrimary,
-    fontSize: cssVars.fontSizes.bodyMd,
-    fontWeight: cssVars.fontWeights.medium,
-    cursor: 'pointer',
-  } as CSSProperties,
-
-  confirmButton: {
-    padding: `${cssVars.spacing.sm} ${cssVars.spacing.lg}`,
-    border: 'none',
-    borderRadius: cssVars.borderRadius.md,
-    fontSize: cssVars.fontSizes.bodyMd,
-    fontWeight: cssVars.fontWeights.medium,
-    cursor: 'pointer',
-  } as CSSProperties,
-
-  confirmButtonDisabled: {
-    opacity: 0.5,
-    cursor: 'not-allowed',
-  } as CSSProperties,
 } as const;
 
 // =============================================================================
@@ -338,16 +300,14 @@ export function DangerZoneCategory({
           ))}
         </ul>
 
-        <button
-          data-testid={action === 'delete_tournament' ? 'danger-zone-delete' : undefined}
-          style={{
-            ...styles.button,
-            ...(isDanger ? styles.buttonDanger : styles.buttonWarning),
-          }}
+        <Button
+          data-testid={action === 'delete_tournament' ? 'danger-zone-delete' : 'danger-zone-action'}
+          variant="danger"
+          style={isDanger ? undefined : styles.buttonWarning}
           onClick={() => { void handleOpenDialog(action); }}
         >
           {config.buttonLabel}
-        </button>
+        </Button>
       </div>
     );
   };
@@ -410,27 +370,22 @@ export function DangerZoneCategory({
             />
 
             <div style={styles.dialogActions}>
-              <button
+              <Button
                 ref={cancelButtonRef}
-                style={styles.cancelButton}
+                variant="secondary"
                 onClick={handleCloseDialog}
                 disabled={isExecuting}
               >
                 {t('dangerZone.cancel')}
-              </button>
-              <button
-                style={{
-                  ...styles.confirmButton,
-                  ...(pendingAction.severity === 'danger'
-                    ? styles.buttonDanger
-                    : styles.buttonWarning),
-                  ...(!isConfirmEnabled ? styles.confirmButtonDisabled : {}),
-                }}
+              </Button>
+              <Button
+                variant="danger"
+                style={pendingAction.severity === 'danger' ? undefined : styles.buttonWarning}
                 onClick={() => void handleConfirm()}
                 disabled={!isConfirmEnabled || isExecuting}
               >
                 {isExecuting ? t('dangerZone.executing') : pendingAction.buttonLabel}
-              </button>
+              </Button>
             </div>
           </>
         )}

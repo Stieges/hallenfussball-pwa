@@ -144,7 +144,7 @@ function AppContent() {
   const { showError } = useToast();
   const { isGuest } = useAuth();
   const navigate = useNavigate();
-  const backOrHome = useBackOrHome(); // Impressum/Datenschutz: nie aus der App heraus (@RE-005)
+  const backOrHome = useBackOrHome(); // Zurück bleibt in der App (@RE-005, @OB-090): Impressum, Datenschutz, Registrieren, Profil, Einstellungen
   const location = useLocation();
 
   // QW-002: Show toast if auth initialization timed out
@@ -490,7 +490,7 @@ function AppContent() {
           <RegisterScreen
             onSuccess={() => void navigate('/')}
             onNavigateToLogin={() => void navigate('/login')}
-            onBack={() => void navigate(-1)}
+            onBack={backOrHome}
             onNavigateToLegal={(path) => void navigate(path)}
           />
         )}
@@ -507,7 +507,7 @@ function AppContent() {
             onUnauthenticated={() => setScreen('login')}
           >
             <UserProfileScreen
-              onBack={() => void navigate(-1)}
+              onBack={backOrHome}
               onOpenSettings={() => void navigate('/settings')}
             />
           </AuthGuard>
@@ -515,7 +515,7 @@ function AppContent() {
 
         {screen === 'settings' && (
           <SettingsScreen
-            onBack={() => void navigate(-1)}
+            onBack={backOrHome}
           />
         )}
 

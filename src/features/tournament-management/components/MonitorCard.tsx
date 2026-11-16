@@ -161,7 +161,7 @@ function MonitorCard({
           aria-live="polite"
           style={styles.deleteConfirmStyle as CSSProperties}
         >
-          <span style={{ flex: 1, color: cssVars.colors.error }}>
+          <span style={{ flex: 1, color: cssVars.colors.textPrimary }}>
             {t('monitors.deleteConfirmMessage', { name: monitor.name })}
           </span>
           <button
