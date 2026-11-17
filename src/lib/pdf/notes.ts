@@ -6,7 +6,7 @@
  */
 import { printMetrics } from '../../design-tokens/print';
 import { unrenderableChars, type GlyphCheck } from './fonts';
-import { printable } from './printable';
+import { prepareForPrint, printable } from './printable';
 import type { PdfTexts } from './translations';
 
 /** Ein Text, wie er eingegeben wurde, und wie er gedruckt wird (nicht druckbare Zeichen als „?“). */
@@ -52,11 +52,11 @@ export function hasHints(hints: PdfHints): boolean {
 }
 
 /**
- * Hinweise auf Zeichen, die die gewählte Schrift nicht trägt: gedruckte Freitexte und Teamnamen (Daniel 14.10./15.10.;
+ * Hinweise auf Zeichen, die die gewählte Schrift nicht trägt (geprüft wird der aufbereitete Text, @DR-055): gedruckte Freitexte und Teamnamen (Daniel 14.10./15.10.;
  * Fixrunde F8), dazu der Schrift-Rückfall und unbrauchbare Grafiken.
  */
 export function buildHints({ fields, teamNames, mode, logoFailures }: HintInput): PdfHints {
-  const problem = (text: string): boolean => text !== '' && unrenderableChars(text, mode.covers).length > 0;
+  const problem = (text: string): boolean => text !== '' && unrenderableChars(prepareForPrint(text), mode.covers).length > 0;
   return {
     fontFallback: mode.fallback,
     fields: fields
