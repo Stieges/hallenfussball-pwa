@@ -27,6 +27,7 @@ import type { MatchSlot } from '../core/models/schemas/MatchSlotSchema';
 import { FILE_SOURCE_KEY, checkImportedFinalsPlan, parseFileSource, parseFinalsPhase, type FileSide } from './importFinalsPlan';
 import { defaultPlacementLogic } from '../core/standings/placementDefaults';
 import { localDateIso } from '../core/view/time';
+import { IMPORT_SOURCE_COMPLETE, IMPORT_SOURCE_TEAMS_ONLY } from './importSource';
 import {
   isTiebreakerMode,
   isTiebreakerRoundKey,
@@ -349,7 +350,7 @@ function parseJSONTournament(content: string): ImportValidationResult {
 
   // Determine import completeness
   const hasMatches = matches.length > 0;
-  const externalSource = hasMatches ? 'Import (komplett)' : 'Import (nur Teams)';
+  const externalSource = hasMatches ? IMPORT_SOURCE_COMPLETE : IMPORT_SOURCE_TEAMS_ONLY;
 
   // If JSON has complete match data, set status to 'published' (skip wizard/scheduler)
   // If only teams, set to 'draft' (needs wizard to generate schedule)
@@ -513,7 +514,7 @@ export function parseCSVTeamsToTournament(content: string): ImportValidationResu
     id: generateUniqueId(),
     status: 'draft',
     isExternal: true,
-    externalSource: 'Import (nur Teams)',
+    externalSource: IMPORT_SOURCE_TEAMS_ONLY,
 
     title: `Importiertes Turnier (${teams.length} Teams)`,
     sport: 'football',
