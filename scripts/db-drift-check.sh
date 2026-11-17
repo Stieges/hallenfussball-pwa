@@ -280,6 +280,10 @@ pending_assertions_for() {
     20261126_001_zuschauer_zaehlung_os_browser.sql)
       echo "zuschauer-zaehlung-os-browser-columns zuschauer-zaehlung-os-browser-derive-function"
       ;;
+    # Zuschauer-Zaehlung Stufe 1c (@RZ-033 bis @RZ-036): Zaehler outages_short/outages_long, neue Arten in count_public_view (scripts/zuschauer-zaehlung-check.sh)
+    20261127_001_zuschauer_zaehlung_netzstoerung.sql)
+      echo "zuschauer-zaehlung-netzstoerung-columns"
+      ;;
     *)
       return 1
       ;;
@@ -879,6 +883,8 @@ PRIVILEGE_ASSERTION_NAMES=(
   # Zuschauer-Zaehlung Stufe 1b (20261126_001_zuschauer_zaehlung_os_browser.sql, @RZ-031, @RZ-032): gleicher Block am Ende von db_privilege_assertions.sql
   "zuschauer-zaehlung-os-browser-columns"
   "zuschauer-zaehlung-os-browser-derive-function"
+  # Zuschauer-Zaehlung Stufe 1c (20261127_001_zuschauer_zaehlung_netzstoerung.sql, @RZ-033 bis @RZ-036): gleicher Block am Ende von db_privilege_assertions.sql
+  "zuschauer-zaehlung-netzstoerung-columns"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then

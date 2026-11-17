@@ -90,7 +90,8 @@ done <<< "$(migrations_newer_than_baseline "$MIGRATIONS_DIR" "$BASELINE_FILE")"
 #   20261125_001_hallenton_ausgang_zustaende.sql (hall_speakers_state_check, hall_speaker_heartbeat, hall_speaker_unassign; setzt die
 #     Torhymne voraus, die hier nicht eingespielt wird) -> scripts/hallenton-check.sh (Kategorie A)
 #   20261126_001_zuschauer_zaehlung_os_browser.sql (Spalten und Hilfsfunktion der Zaehlung, setzt 003 voraus) -> scripts/zuschauer-zaehlung-check.sh
-OWN_HARNESS_LATER=" 20261123_001_hallenton_torhymne.sql 20261124_001_zeitstrafe_endet_bei_gegentor.sql 20261124_002_leibchen_schritt2.sql 20261124_003_zuschauer_zaehlung.sql 20261124_004_zuschauer_zaehlung_ci_leser.sql 20261125_001_hallenton_ausgang_zustaende.sql 20261126_001_zuschauer_zaehlung_os_browser.sql "
+#   20261127_001_zuschauer_zaehlung_netzstoerung.sql (Zaehler fuer Netzstoerungen, setzt 20261126_001 voraus) -> scripts/zuschauer-zaehlung-check.sh
+OWN_HARNESS_LATER=" 20261123_001_hallenton_torhymne.sql 20261124_001_zeitstrafe_endet_bei_gegentor.sql 20261124_002_leibchen_schritt2.sql 20261124_003_zuschauer_zaehlung.sql 20261124_004_zuschauer_zaehlung_ci_leser.sql 20261125_001_hallenton_ausgang_zustaende.sql 20261126_001_zuschauer_zaehlung_os_browser.sql 20261127_001_zuschauer_zaehlung_netzstoerung.sql "
 KEPT=()
 for f in ${AFTER[@]+"${AFTER[@]}"}; do [[ "$OWN_HARNESS_LATER" == *" $(basename "$f") "* ]] || KEPT+=("$f"); done
 AFTER=(${KEPT[@]+"${KEPT[@]}"})

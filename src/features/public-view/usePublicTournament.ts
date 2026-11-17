@@ -5,6 +5,11 @@
  * Hintergrund gar nicht), hält den letzten Stand und rechnet Spielplan und Tabellen nur neu, wenn sich die Version ändert.
  * Ohne Netz bleibt der letzte Stand stehen (@ZM-032); nach 20 Sekunden meldet `connectionHint` „Stand von 14:32 – keine
  * Verbindung“. Ein Stand vom selben Turniertag überlebt das Neuladen ohne Netz (`publicStandStore`).
+ * Überstandene Störungen (@RZ-033): scheitern Abrufe und gelingt danach wieder einer, steht EINE Meldung (kurz unter 20 Sekunden, sonst lang) in
+ * `recoveredOutages`; nur im Arbeitsspeicher, nichts auf dem Gerät. „Nichts Neues“ gilt als Erfolg, „nicht gefunden“ beendet die Folge ohne Meldung.
+ * Die Dauer läuft ab dem ERSTEN Fehlschlag der Folge, gemessen mit der monotonen Uhr (`performance.now`: kein Sprung durch Uhrabgleich).
+ * Bekannt und so gewollt: Der Hinweis zählt ab dem letzten ERFOLG, die Störung ab dem ersten FEHLSCHLAG; sie kann daher um bis zu einen Abfrage-Takt kürzer
+ * erscheinen als die Frist des Hinweises. Seite im Hintergrund: der Takt ruht, die Störung bleibt offen und zählt nach der Rückkehr mit der verstrichenen Zeit.
  * Die Quelle muss stabil sein (Modulkonstante oder useMemo), sonst startet der Hook bei jedem Render neu.
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
@@ -18,7 +23,10 @@ import { applyPublicDelta } from './publicDelta';
 import { defaultPublicTournamentSource } from './defaultPublicSource';
 import { usePolling } from './usePolling';
 import { withTimeout } from './withTimeout';
-import { useConnectionHint, type ConnectionHint, type ContactLoss } from './useConnectionHint';
+import { useConnectionHint, CONNECTION_HINT_AFTER_MS, type ConnectionHint, type ContactLoss } from './useConnectionHint';
+import {
+  NO_OUTAGE, monotonicNowMs, noteOutageFailure, noteOutageRecovery, type OutageState, type RecoveredOutage,
+} from '../../core/viewCount/publicOutage';
 import {
   browserStandStorage, clearStand, loadStand, purgeOldStands, saveContact, saveStand, type StandStorage,
 } from './publicStandStore';
@@ -52,6 +60,8 @@ export interface PublicTournamentState {
   fetchedAtMs: number | null;
   /** Jetzt in Serverzeit (ms) */
   nowMs: () => number;
+  /** Überstandene Netzstörungen, jede genau einmal (aufsteigende `id`); die Zählung der Zuschauer-Seite sendet sie (@RZ-033) */
+  recoveredOutages: readonly RecoveredOutage[];
 }
 
 export interface UsePublicTournamentOptions {
@@ -97,11 +107,14 @@ export function usePublicTournament(
   const [loadingState, setLoadingState] = useState<LoadingState>(restored === null ? 'loading' : 'success');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loss, setLoss] = useState<ContactLoss | null>(null);
+  const [recoveredOutages, setRecoveredOutages] = useState<readonly RecoveredOutage[]>([]);
 
   const versionRef = useRef<string | null>(restored?.snapshot.version ?? null);
   const snapshotRef = useRef<Snapshot | null>(restored?.snapshot ?? null);
   const lastContactRef = useRef<{ atMs: number; deviceMs: number } | null>(restored?.contact ?? null);
   const requestRef = useRef(0);
+  const outageRef = useRef<OutageState>(NO_OUTAGE);
+  const outageSeqRef = useRef(0);
 
   const commit = useCallback((next: Snapshot | null) => {
     snapshotRef.current = next;
@@ -114,12 +127,20 @@ export function usePublicTournament(
     const contact = { atMs: source.nowMs(), deviceMs: Date.now() };
     lastContactRef.current = contact;
     saveContact(storage, shareCode, contact);
+    const recovery = noteOutageRecovery(outageRef.current, monotonicNowMs(), CONNECTION_HINT_AFTER_MS);
+    outageRef.current = recovery.state;
+    if (recovery.outage !== null) {
+      outageSeqRef.current += 1;
+      const outage: RecoveredOutage = { id: outageSeqRef.current, shareCode, kind: recovery.outage };
+      setRecoveredOutages((current) => [...current, outage]);
+    }
     setLoss(null);
     setLoadingState('success');
     setErrorMessage(null);
   }, [source, storage, shareCode]);
 
   const noteFailure = useCallback(() => {
+    outageRef.current = noteOutageFailure(outageRef.current, monotonicNowMs());
     const last = lastContactRef.current;
     setLoss((current) => current ?? (last === null ? null : { lastAtMs: last.atMs, lastDeviceMs: last.deviceMs }));
     if (snapshotRef.current === null) {
@@ -153,6 +174,7 @@ export function usePublicTournament(
       case 'not-found':
         clearStand(storage, shareCode);
         commit(null);
+        outageRef.current = NO_OUTAGE;
         setLoss(null);
         setLoadingState('not-found');
         return false;
@@ -205,6 +227,7 @@ export function usePublicTournament(
     if (keyRef.current.shareCode !== shareCode || keyRef.current.source !== source) {
       keyRef.current = { shareCode, source };
       requestRef.current += 1;
+      outageRef.current = NO_OUTAGE;
     }
   }, [shareCode, source]);
 
@@ -220,5 +243,6 @@ export function usePublicTournament(
     connectionHint,
     fetchedAtMs: snapshot?.fetchedAtMs ?? null,
     nowMs: source.nowMs,
+    recoveredOutages,
   };
 }
