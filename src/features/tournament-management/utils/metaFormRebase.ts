@@ -13,15 +13,16 @@
  */
 import type { Tournament } from '../../../types/tournament';
 
-export type MetaForm = Pick<Partial<Tournament>, 'title' | 'organizer' | 'ageClass' | 'location' | 'contactInfo' | 'startDate' | 'startTime'>;
+export type MetaForm = Pick<Partial<Tournament>, 'title' | 'organizer' | 'rulebook' | 'ageClass' | 'location' | 'contactInfo' | 'startDate' | 'startTime'>;
 
-const META_KEYS = ['title', 'organizer', 'ageClass', 'location', 'contactInfo', 'startDate', 'startTime'] as const;
+const META_KEYS = ['title', 'organizer', 'rulebook', 'ageClass', 'location', 'contactInfo', 'startDate', 'startTime'] as const;
 
 /** Die Formularwerte, die ein Turnier-Stand vorgibt. */
 export function metaFormOf(tournament: Tournament): MetaForm {
   return {
     title: tournament.title,
     organizer: tournament.organizer,
+    rulebook: tournament.rulebook,
     ageClass: tournament.ageClass,
     location: tournament.location,
     contactInfo: tournament.contactInfo,
@@ -81,7 +82,7 @@ function conflictsValue(current: unknown, base: unknown, incoming: unknown): boo
 export function rebaseMetaForm(current: MetaForm, base: MetaForm, incoming: MetaForm): MetaForm {
   const pick = <K extends keyof MetaForm>(key: K): MetaForm[K] => rebaseValue(current[key], base[key], incoming[key]) as MetaForm[K];
   return {
-    title: pick('title'), organizer: pick('organizer'), ageClass: pick('ageClass'), location: pick('location'),
+    title: pick('title'), organizer: pick('organizer'), rulebook: pick('rulebook'), ageClass: pick('ageClass'), location: pick('location'),
     contactInfo: pick('contactInfo'), startDate: pick('startDate'), startTime: pick('startTime'),
   };
 }
