@@ -26,17 +26,17 @@ export interface LegalConfig {
 }
 
 export const LEGAL_CONFIG: LegalConfig = {
-  name: '[VORNAME NACHNAME]',
-  careOf: '', // optional, z. B. 'c/o Vorname Nachname'
-  street: '[STRASSE NR]',
-  city: '[PLZ ORT]',
-  email: '[E-MAIL]',
+  name: 'Daniel Stiegler',
+  careOf: 'c/o MDC#2444', // optional, Zeile „c/o …“ (leerer Text blendet sie aus)
+  street: 'Welserstraße 3',
+  city: '87463 Dietmannsried',
+  email: 'stieges99.turnierplan@gmail.com',
   supervisoryAuthority: {
     name: 'Bayerisches Landesamt für Datenschutzaufsicht (BayLDA)',
     address: 'Promenade 18, 91522 Ansbach (Postanschrift: Postfach 1349, 91504 Ansbach)',
     url: 'https://www.lda.bayern.de',
   },
-  lastUpdated: 'November 2026',
+  lastUpdated: '17. November 2026',
 };
 
 /** Pflichtfelder, die der Betreiber ausfüllen muss (`careOf` ist optional). */

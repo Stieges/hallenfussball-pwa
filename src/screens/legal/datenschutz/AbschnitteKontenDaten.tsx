@@ -26,8 +26,9 @@ export function AbschnitteKontenDaten() {
         <Paragraph>Helfer tragen Ergebnisse und Ereignisse an einem Spielfeld ein. Sie brauchen kein Konto.</Paragraph>
         <BulletList
           items={[
-            <>Daten: der <Strong>Name, den du selbst eingibst</Strong> (am besten Vorname oder Kürzel), eine zufällige Gerätekennung, der Gerätetyp (z. B. „iPhone“, aus deinem Browser abgeleitet), wann du zuletzt aktiv warst, ob die Turnierleitung dich zugelassen hat, und welche Einträge (Tore, Karten …) von deinem Gerät kamen.</>,
+            <>Daten: der <Strong>Name, den du selbst eingibst</Strong> (am besten Vorname oder Kürzel), eine zufällige Gerätekennung, der Gerätetyp (Handy, Tablet oder Computer, aus deinem Browser abgeleitet), wann du zuletzt aktiv warst, ob die Turnierleitung dich zugelassen hat, und welche Einträge (Tore, Karten …) von deinem Gerät kamen.</>,
             'Die Turnierleitung sieht deinen Namen und den Gerätetyp. Zuschauer sehen nie, wer etwas eingetragen hat.',
+            'Zugelassene Helfer können ihrerseits alle Daten des Turniers lesen, auch eine nicht veröffentlichte Kontaktperson, interne Notizen und die Namen der Schiedsrichter.',
             'Zweck: geordnete Turnierdurchführung, Nachvollziehbarkeit von Einträgen',
             'Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse des Veranstalters an einem korrekten Turnierablauf)',
             'Speicherdauer: siehe Abschnitt 11',
@@ -40,7 +41,8 @@ export function AbschnitteKontenDaten() {
           items={[
             <>Daten: Mannschaftsnamen, Logos und Farben, Spielplan, Ergebnisse, Tabellen, Ereignisse im Spiel (Tore, Karten, Zeitstrafen, Strafstöße) mit <Strong>Rückennummer</Strong>, Name und Anschrift der Halle, optional eine Kontaktperson des Veranstalters (Name, E-Mail, Telefon). <Strong>Namen von Spielerinnen und Spielern speichert die App nicht.</Strong></>,
             <>Teamlogos: Bitte nur Vereinswappen hochladen, <Strong>keine Fotos von Personen</Strong>. Die App nimmt selbst keine Fotos auf.</>,
-            'Öffentlich sichtbar ist nur, was der Veranstalter freigibt (Abschnitt 4).',
+            'Schiedsrichter: Die Turnierleitung kann Namen von Schiedsrichtern eintragen. Auf den Hallenmonitoren erscheinen sie nur, wenn die Turnierleitung das einstellt; auf der Zuschauer-Seite nie.',
+            'Öffentlich sichtbar ist nur, was der Veranstalter freigibt (Abschnitt 4). Interne Notizen sind nicht öffentlich, aber für zugelassene Helfer lesbar (Abschnitt 6): Schreib dort nichts hinein, was Helfer nicht lesen sollen.',
             'Zweck: Turnier planen, durchführen und Ergebnisse bekanntgeben',
             'Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse des Veranstalters an der Durchführung und Bekanntgabe des Turniers). Bei Vereinsmitgliedern ggf. Art. 6 Abs. 1 lit. b DSGVO (Mitgliedschaft).',
             'Verantwortlich ist hierfür der Veranstalter (Abschnitt 1).',
@@ -48,24 +50,37 @@ export function AbschnitteKontenDaten() {
         />
       </Section>
 
-      <Section number={8} title="Hallenmonitore">
+      <Section number={8} title="Hallenmonitore und Hallen-Lautsprecher">
         <Paragraph>
           Ein Hallenmonitor zeigt Spielplan und Ergebnisse auf einem großen Bildschirm. Gespeichert werden die Kennung des Monitors, die
           Browserkennung des Geräts (User-Agent), wann er zuletzt Kontakt hatte, welche Folie lief und ob der Bildschirm wach gehalten
           wird. Das dient dazu, dass die Turnierleitung sieht, ob die Monitore laufen. Hinter einem Hallengerät steht in der Regel keine
           erkennbare Person. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO. Speicherdauer: siehe Abschnitt 11.
         </Paragraph>
+        <Paragraph>
+          <Strong>Hallen-Lautsprecher (Hallenton):</Strong> Ein Gerät in der Halle, das die Turnierleitung einem Spielfeld zuordnet, spielt dort
+          Töne ab (zum Beispiel zur Halbzeit und zum Abpfiff).
+        </Paragraph>
+        <BulletList
+          items={[
+            'Daten: der Name, den die Turnierleitung dem Gerät gibt, eine zufällige Gerätekennung, wann sich das Gerät zuletzt gemeldet hat, sein Zustand (zum Beispiel „bereit“ oder „Ton nicht aktiviert“), der letzte Testton und wann das Gerät einen Wechsel seines Audio-Ausgangs bemerkt hat. Das Gerät, das ein Spielfeld leitet, meldet sich ebenfalls regelmäßig (nur Gerätekennung und Zeitpunkt, kein Name).',
+            'Eigene Töne, die die Turnierleitung hochlädt, liegen bei Supabase (Abschnitt 9) und sind für jeden abrufbar, der die lange, nicht erratbare Adresse der Datei kennt. Lade bitte nur Töne hoch, auf denen keine Personen zu hören sind.',
+            'Zweck: Ton zur richtigen Zeit und die Anzeige für die Turnierleitung, ob der Lautsprecher bereit ist',
+            'Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO',
+            'Speicherdauer: Die Hallenton-Daten werden gelöscht, wenn ich das Turnier endgültig lösche (spätestens nach 6 Monaten, Abschnitt 11).',
+            <><Strong>Mikrofon:</Strong> Wählst du an einem Hallen-Lautsprecher einen bestimmten Audio-Ausgang, fragt dein Browser einmal nach dem Mikrofon. Die App nimmt nichts auf. Sie gibt das Mikrofon sofort wieder frei und liest nur die Namen der Audio-Ausgänge, um sie dir zur Auswahl zu zeigen. Die Namen bleiben auf deinem Gerät und werden nicht an einen Server gesendet. Lehnst du ab, bleibt der Standard-Ausgang.</>,
+          ]}
+        />
       </Section>
 
       <Section number={9} title="Datenbank und Anmeldung (Supabase)">
         <Paragraph>
-          Alle Daten aus den Abschnitten 5 bis 8 liegen bei Supabase Pte. Ltd., 65 Chulia Street #38-02/03, OCBC Centre, Singapur 049513.
+          Die Daten aus den Abschnitten 4 bis 8 liegen bei Supabase Pte. Ltd., 65 Chulia Street #38-02/03, OCBC Centre, Singapur 049513: in der Datenbank, die Tondateien des Hallen-Lautsprechers im Dateispeicher desselben Dienstes. Nur auf deinem Gerät bleiben die Namen der Audio-Ausgänge und die Einträge aus Abschnitt 14.
           Die Datenbank läuft in der <Strong>Region „Central EU (Frankfurt)“</Strong> (AWS eu-central-1).
         </Paragraph>
         <BulletList
           items={[
-            'Mit Supabase gilt ein Vertrag zur Auftragsverarbeitung (Art. 28 DSGVO). Er wird mit den Nutzungsbedingungen von Supabase angenommen.',
-            'Supabase kann für Betrieb und Support Unterauftragnehmer außerhalb der EU einsetzen (u. a. USA, Singapur). Dafür gelten die Standardvertragsklauseln der EU-Kommission.',
+            'Mein Vertragspartner ist Supabase Pte. Ltd. mit Sitz in Singapur; die Daten selbst liegen in Frankfurt (siehe oben). Supabase und seine Unterauftragnehmer (u. a. in den USA) können für Betrieb und Support von außerhalb der EU auf die Daten zugreifen. Für Singapur gibt es keinen Angemessenheitsbeschluss der EU-Kommission; als Garantie sieht der Vertrag zur Auftragsverarbeitung von Supabase die Standardvertragsklauseln der EU-Kommission vor (einsehbar unter supabase.com/legal/dpa).',
             'Supabase führt technische Protokolle (u. a. IP-Adresse bei Anmeldungen und Abrufen). Sie werden nur kurz nach den Vorgaben von Supabase aufbewahrt.',
             'Für die Anmeldung von Helfern erhält dein Gerät eine anonyme Gerätesitzung, ohne dass du ein Konto anlegst.',
           ]}

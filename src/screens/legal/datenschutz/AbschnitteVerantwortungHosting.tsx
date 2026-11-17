@@ -31,11 +31,11 @@ export function AbschnitteVerantwortungHosting() {
       <Section number={2} title="Das Wichtigste in Kürze">
         <BulletList
           items={[
-            <><Strong>Zuschauer</Strong> brauchen kein Konto. Ich speichere über dich keinen Namen und keine Kennung. Dein Gerät merkt sich nur, was du selbst auswählst („Mein Team“), und den letzten Spielstand für den Fall, dass das Netz ausfällt.</>,
+            <><Strong>Zuschauer</Strong> brauchen kein Konto. Ich speichere über dich keinen Namen und kein Konto. Technisch fallen nur die Angaben aus Abschnitt 3 an. Dein Gerät merkt sich nur, was du selbst auswählst („Mein Team“), und den letzten Spielstand für den Fall, dass das Netz ausfällt.</>,
             <><Strong>Turnierleitung und Co-Admins</Strong> haben ein Konto mit E-Mail-Adresse.</>,
             <><Strong>Helfer</Strong> melden sich ohne Konto mit einem selbst gewählten Namen an.</>,
             <>Von <Strong>Spielerinnen und Spielern</Strong> speichert die App <Strong>keine Namen</Strong>. Es gibt nur die <Strong>Rückennummer</Strong> bei Toren, Karten, Zeitstrafen und Strafstößen.</>,
-            <>Es gibt <Strong>keine Werbung, keine Reichweitenmessung, kein Tracking und keine Aufzeichnung deiner Sitzung</Strong>.</>,
+            <>Es gibt <Strong>keine Werbung, kein Tracking und keine Aufzeichnung deiner Sitzung</Strong>. Die Zuschauer-Seite wird nur als Summe gezählt, ohne dich wiederzuerkennen (Abschnitt 4).</>,
             <>Die App lädt <Strong>keine Schriften und keine Skripte von Google</Strong>. Alle Schriften liegen bei der App selbst.</>,
             <>Die Datenbank liegt auf Servern in der <Strong>EU (Frankfurt am Main)</Strong>.</>,
           ]}
@@ -53,6 +53,7 @@ export function AbschnitteVerantwortungHosting() {
             'Zweck: App ausliefern, Angriffe und Störungen erkennen',
             'Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einem sicheren und funktionierenden Angebot)',
             'Drittland: Vercel ist ein US-Unternehmen. Es ist nach dem EU-US Data Privacy Framework zertifiziert (Angemessenheitsbeschluss der EU-Kommission vom 10.07.2023). Wo nötig, verwendet Vercel zusätzlich Standardvertragsklauseln der EU-Kommission. Die App-Dateien werden über das weltweite Auslieferungsnetz von Vercel bereitgestellt, also von einem Standort in deiner Nähe.',
+            'Vertrag: Ich nutze Vercel im kostenlosen Tarif. Einen gesonderten Vertrag zur Auftragsverarbeitung mit Vercel sage ich dafür nicht zu; es gelten die Nutzungsbedingungen und die Datenschutzerklärung von Vercel.',
             'Speicherdauer: Die Protokolle werden nur kurz nach den Vorgaben von Vercel aufbewahrt.',
           ]}
         />
@@ -66,9 +67,21 @@ export function AbschnitteVerantwortungHosting() {
         <BulletList
           items={[
             'Ich erfahre über dich nur die technischen Angaben aus Abschnitt 3 und die Abrufe bei der Datenbank (Abschnitt 9).',
-            <>Angezeigt werden: Turniername, Datum, Halle, Mannschaften mit Logo und Farben, Spiele und Ergebnisse. Bei jedem Spiel stehen außerdem Tore, Karten, Zeitstrafen und Strafstöße, <Strong>nur mit Mannschaft und Rückennummer</Strong> (nie mit Namen). Hat der Veranstalter eine Kontaktperson freigegeben, steht sie dabei. Bei Kinder- und Jugendturnieren kann die Turnierleitung den „Kindermodus“ einschalten. Dann werden keine Ergebnisse, Tabellen, Tore, Karten, Zeitstrafen und Strafstöße gezeigt.</>,
+            <>Angezeigt werden: Turniername, Datum, Halle, Mannschaften mit Logo und Farben, Spiele und Ergebnisse. Bei jedem Spiel stehen außerdem Tore, Karten, Zeitstrafen und Strafstöße, <Strong>nur mit Mannschaft und Rückennummer</Strong> (nie mit Namen). Hat der Veranstalter eine Kontaktperson freigegeben, steht sie dabei. Bei Kinder- und Jugendturnieren kann die Turnierleitung den „Kindermodus“ einschalten. Dann werden keine Ergebnisse, Tabellen, Tore, Karten, Zeitstrafen und Strafstöße gezeigt. Ist es für ein Turnier freigegeben, steht zusätzlich eine Torschützen-Liste da (zwischendurch aus den bisherigen Toren, laufende Spiele nur, wenn der Live-Spielstand öffentlich ist, und im Endstand), ebenfalls nur mit Mannschaft und Rückennummer; im Kindermodus erscheint sie nie.</>,
             'Wer einen Eintrag eingegeben hat, siehst du als Zuschauer nie.',
             'Auf deinem Gerät wird gespeichert, was in Abschnitt 14 steht. Für die Zuschauer-Seite sind das deine Auswahl „Mein Team“, der zuletzt geladene Turnierstand und der Zwischenspeicher der App.',
+          ]}
+        />
+        <Paragraph>
+          <Strong>Zählung:</Strong> Ich zähle, wie oft die Zuschauer-Seite geöffnet wird, wie lange sie offen bleibt und ob die Verbindung zwischendurch gestört war, nur als Summe. Gespeichert wird dabei
+          keine IP-Adresse, kein Cookie und keine Gerätekennung; die Browserkennung (User-Agent) liest der Server nur, um Betriebssystem und Browser grob einzuordnen. Die Einzelheiten:
+        </Paragraph>
+        <BulletList
+          items={[
+            'Was gezählt wird: Der Server zählt, wie oft die Zuschauer-Seite eines öffentlichen Turniers geöffnet wird, und solange die Seite sichtbar ist, einmal pro Minute ein Lebenszeichen. Gespeichert wird nur eine Summe je Turnier und 5-Minuten-Fenster, aufgeteilt nach Zugangsweg (QR-Code, Link oder direkt), Geräteklasse (Handy, Tablet oder großer Bildschirm), „als App vom Startbildschirm geöffnet: ja oder nein“ sowie Betriebssystem- und Browser-Familie (zum Beispiel „ios“ und „safari“, nie eine Versionsnummer). Es gibt keine Zeile je Besucher, keine IP-Adresse und keine Kennung deines Geräts in dieser Zählung; ich kann dich daran nicht wiedererkennen.',
+            'Verbindungsstörungen: Die Seite zählt auch mit, wenn die Verbindung zwischendurch gestört war und wieder da ist. Eine Störung gilt als „kurz“, wenn vom letzten gelungenen Abruf bis zur Rückkehr der Verbindung weniger als 20 Sekunden vergangen sind, sonst als „lang“. Mehrere Fehlschläge hintereinander zählen als eine Störung. Gemeldet wird sie einmal, sobald die Verbindung wieder da ist. Gespeichert wird auch hier nur eine Summe je Turnier und 5-Minuten-Zeitraum, aufgeteilt wie die Aufrufe. Dafür merkt sich die Seite die Störung nur, solange sie geöffnet ist, im Arbeitsspeicher; auf deinem Gerät wird dafür nichts gespeichert. Schließt du die Seite während einer Störung, wird diese Störung nicht gezählt.',
+            'Was die Seite dafür auf deinem Gerät liest: nur die Bildschirmgröße, die Bedienart (Finger oder Maus) und ob sie als App geöffnet wurde. Daraus leitet sie die Geräteklasse ab; diese Werte selbst verlassen das Gerät nicht. Betriebssystem und Browser leitet der Server aus der Kennung ab, die dein Browser bei jedem Aufruf ohnehin mitschickt. Auf deinem Gerät wird dafür nichts gespeichert: kein Cookie, kein lokaler Speicher, keine Kennung. Dass ein Aufruf nur einmal gezählt wird, merkt sich die geöffnete Seite nur im Arbeitsspeicher, bis du sie schließt. Ein Zusatz wie „?k=q“ im Link (er sagt nur, ob du per QR-Code oder Link kamst) wird gelesen und danach aus der Adresszeile entfernt.',
+            'Zweck der Zählung: Ich will wissen, wie viele Menschen die Zuschauer-Seite nutzen, auf welchem Weg sie sie erreichen und wie oft Zuschauer-Geräte in der Halle die Verbindung verlieren. Die Zahlen sind in der App nicht sichtbar; nur ich lese sie direkt in der Datenbank. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der Auswertung der Nutzung). Gezählt wird nur die öffentliche Zuschauer-Seite, nicht der Hallenmonitor, das Cockpit oder die Verwaltung. Die Summen werden gelöscht, wenn ich das Turnier endgültig lösche (spätestens nach 6 Monaten, Abschnitt 11).',
           ]}
         />
       </Section>
