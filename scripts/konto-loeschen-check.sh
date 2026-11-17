@@ -52,6 +52,7 @@ psql_stdin() { docker exec -i -e PGOPTIONS="-c client_min_messages=warning" "$C"
 q() { docker exec -i -e PGOPTIONS="-c client_min_messages=warning" "$C" psql -U postgres -X -q -tA -v ON_ERROR_STOP=0 <<<"$1" 2>&1 | tr '\n' ' ' | sed 's/ *$//' || true; }
 qfile() { docker exec -i -e PGOPTIONS="-c client_min_messages=warning" "$C" psql -U postgres -X -q -tA -v ON_ERROR_STOP=1 < "$1" 2>&1 | tr '\n' ' ' | sed 's/ *$//' || true; }
 schema_dump() { docker exec "$C" pg_dump -U postgres --schema-only --schema=public postgres | grep -vE '^\\(un)?restrict '; }
+priv_run() { { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | docker exec -i -e PGOPTIONS="-c client_min_messages=warning" "$C" psql -U postgres -X -q -tA -v ON_ERROR_STOP=0 2>&1; }
 rowq() { docker exec -i -e PGOPTIONS="-c client_min_messages=warning" "$C" psql -U postgres -X -q -tA -F'|' -v ON_ERROR_STOP=0 < "$1" 2>&1 | tr '\n' ' ' | sed 's/ *$//'; }
 sum_of() { if command -v md5sum >/dev/null 2>&1; then md5sum | cut -d' ' -f1; else md5 -q; fi; }
 
@@ -316,7 +317,8 @@ run_suite() { # <Mutation|""> <Umfang: rsv|rsvh>
     has A "Olli (Eigentuemer): Loeschen scheitert heute ebenfalls (an den Verweisen), Turniere unveraendert" "ERROR.*violates foreign key constraint" "$(q "DELETE FROM auth.users WHERE id='$U_OLLI';")"
     check A "Turniere von Olli nach den abgelehnten Versuchen unveraendert (2 Turniere da)" "2" "$(q "SELECT count(*) FROM public.tournaments WHERE owner_id='$U_OLLI';")"
   fi
-  local PV="" PN="" out
+  local PV="" PN="" out PRIV0="" PRIV1=""
+  if [[ -z "$mut" ]]; then PRIV0="$(priv_run)"; fi
   [[ -z "$mut" ]] && PV="$(rowq "$REPO_ROOT/scripts/konto-loeschen-vorher.sql")"
   out="$(psql_stdin < "$TARGET_FILE" 2>&1 | tr '\n' ' ')"
   [[ -z "$mut" ]] && check H "Migration spielt ohne Fehler ein (keine Ausgabe)" "" "$out"
@@ -324,6 +326,9 @@ run_suite() { # <Mutation|""> <Umfang: rsv|rsvh>
   [[ -n "$mut" ]] && q "$mut" >/dev/null
   if [[ -z "$mut" ]]; then
     PN="$(rowq "$REPO_ROOT/scripts/konto-loeschen-nachher.sql")"
+    PRIV1="$(priv_run)"
+    check H "Rechte-Zusicherungen (db_privilege_assertions.sql als ci_schema_reader) VOR der Migration: die zwei konto-loeschen-* sind |f" "konto-loeschen-check-function-service-role-only|f konto-loeschen-fk-rules|f" "$(grep '^konto-loeschen-' <<<"$PRIV0" | sort | tr '\n' ' ' | sed 's/ *$//')"
+    check H "Rechte-Zusicherungen NACH der Migration: alle Zeilen |t, die zwei konto-loeschen-* dabei" "keine|2" "$(NF="$(grep -v '|t$' <<<"$PRIV1" | sed -n 1,3p | tr '\n' ';')"; echo "${NF:-keine}")|$(grep -c '^konto-loeschen-.*|t$' <<<"$PRIV1" || true)"
     check H "Pruefabfrage VORHER (scripts/konto-loeschen-vorher.sql) auf dem Stand vor der Migration: urteil OK" "OK" "${PV%%|*}"
     check H "Pruefabfrage NACHHER (scripts/konto-loeschen-nachher.sql): urteil OK" "OK" "${PN%%|*}"
     check H "Pruefsummen vorher = nachher (die Migration aendert und loescht keine Zeile)" "${PV##*|}" "${PN##*|}"
