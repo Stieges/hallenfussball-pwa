@@ -108,6 +108,39 @@ describe('@ZM-212 Profil „Halle (sehr fern)“: nur die Live-Folie', () => {
     expect(screen.getByTestId('hall-teamname-home')).toHaveTextContent('DJK Berg');
   });
 
+  describe('nach dem Turnierabschluss (@ZM-212): das zuletzt beendete Spiel des Felds bleibt mit „Endstand“ stehen, keine Abschluss-Liste', () => {
+    const abgeschlossen = (profil: boolean, spiele: Match[]): Tournament => attachMonitor(
+      buildTournament({ matches: spiele, lifecycleStatus: 'finished', finishedAt: '2026-11-28T12:10:00+00:00' }),
+      withMonitor({ slides: [slide('live', { fieldId: 'field-1' })], ...(profil ? { profile: HALLE } : {}) }),
+    );
+    const spiel7Beendet = withMatch('match-7', { matchStatus: 'finished', scoreA: 2, scoreB: 1, decidedBy: 'regular' });
+
+    it('Feld 1 hat ein beendetes Spiel: Farbseiten mit „Endstand“ und dem Stand, nicht die Abschluss-Folie', async () => {
+      await starte(abgeschlossen(true, spiel7Beendet));
+      expect(screen.getByTestId('hall-display')).toBeInTheDocument();
+      expect(screen.getByTestId('hall-endstand')).toHaveTextContent('Endstand');
+      expect(screen.getByTestId('hall-digits-home')).toHaveTextContent('2');
+      expect(screen.getByTestId('hall-digits-away')).toHaveTextContent('1');
+      expect(screen.getByTestId('hall-teamname-home')).toHaveTextContent('FC Nord');
+      expect(screen.queryByTestId('final-standings-slide')).toBeNull();
+      await vorspulen(60_000);
+      expect(screen.getByTestId('hall-endstand')).toBeInTheDocument(); // bleibt stehen
+    });
+
+    it('Gegenbeispiel: derselbe Abschluss ohne Profil zeigt weiter die Abschluss-Folie, keine Farbseiten (Bestandsschutz)', async () => {
+      await starte(abgeschlossen(false, spiel7Beendet));
+      expect(screen.queryByTestId('hall-display')).toBeNull();
+      expect(screen.queryByTestId('hall-endstand')).toBeNull();
+    });
+
+    it('Gegenbeispiel: ohne beendetes Spiel auf dem Feld gilt der Satz „Auf Feld 1 folgt heute kein Spiel mehr“', async () => {
+      const keinFeld1 = withMatch('match-7', {}).filter((m) => m.field !== 1); // auf Feld 1 gibt es kein Spiel
+      await starte(abgeschlossen(true, keinFeld1));
+      expect(screen.getByTestId('hall-no-match')).toHaveTextContent('Auf Feld 1 folgt heute kein Spiel mehr');
+      expect(screen.queryByTestId('hall-endstand')).toBeNull();
+    });
+  });
+
   it('Ein unbekannter Profilwert (z. B. aus einer neueren Fassung) gilt als nicht gesetzt: bisherige Darstellung, kein Absturz', async () => {
     const unbekannt = { profile: 'zukunft-profil' } as unknown as Partial<TournamentMonitor>;
     await starte(monitorMit([text('Willkommen'), slide('live', { fieldId: 'field-2' })], unbekannt));

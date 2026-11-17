@@ -50,9 +50,10 @@ export function LiveSlide({ slide, tournament, view, theme, style, pinnedMatchId
   const resolvedTheme = resolveTheme(theme);
   const themeColors = monitorThemes[resolvedTheme];
 
-  const { fieldName, shown, runningMatch, nextMatch, nextRaw } = liveSlideState(slide, tournament, view, pinnedMatchId, t);
-  const { teams } = tournament;
   const hall = profile === 'hall-very-far';
+  // Profil „Halle (sehr fern)“: nach dem Abschluss bleibt das zuletzt beendete Spiel des Felds mit „Endstand“ stehen (@ZM-212), nie die Abschluss-Liste
+  const { fieldName, shown, runningMatch, nextMatch, nextRaw } = liveSlideState(slide, tournament, view, pinnedMatchId, t, hall && tournament.lifecycleStatus === 'finished');
+  const { teams } = tournament;
   // Beide Anordnungen nehmen dieselben Daten; die Fassung für die Hallentiefe braucht kein `fullscreen`
   const Display = hall ? HallMatchDisplay : FullscreenLiveMatchDisplay;
   // @ZM-215 (nur Profil „Halle (sehr fern)“): Feld und Gruppe stehen im Band nur, wenn das Turnier mehr als eins davon hat

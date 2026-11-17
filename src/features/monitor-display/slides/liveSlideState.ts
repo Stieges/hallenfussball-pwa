@@ -22,13 +22,14 @@ export interface LiveSlideState {
   nextRaw: Match | undefined;
 }
 
-export function liveSlideState(slide: MonitorSlide, tournament: Tournament, view: TournamentView, pinnedMatchId: string | null | undefined, t: TFunction<'monitor'>): LiveSlideState {
+export function liveSlideState(slide: MonitorSlide, tournament: Tournament, view: TournamentView, pinnedMatchId: string | null | undefined, t: TFunction<'monitor'>, nachAbschluss = false): LiveSlideState {
   const fieldNumber = fieldIdToNumber(slide.config.fieldId);
   const fieldConfig = tournament.fields?.find((f) => f.id === slide.config.fieldId);
   const fieldName = fieldConfig?.customName ?? fieldConfig?.defaultName ?? t('fieldSelector.field', { field: fieldNumber });
   const { matches } = tournament;
   const field = view.currentFor(fieldNumber);
-  const shown = (pinnedMatchId ? view.byId.get(pinnedMatchId) : undefined) ?? field.live[0];
+  // Nach dem Turnierabschluss im Profil „Halle (sehr fern)“ (@ZM-212): das zuletzt beendete Spiel des Felds bleibt stehen
+  const shown = (pinnedMatchId ? view.byId.get(pinnedMatchId) : undefined) ?? field.live[0] ?? (nachAbschluss ? field.lastFinished : undefined);
   const runningMatch = shown === undefined ? undefined : matches.find((m) => m.id === shown.id);
   const nextMatch = runningMatch ? undefined : field.next;
   const nextRaw = nextMatch === undefined ? undefined : matches.find((m) => m.id === nextMatch.id);

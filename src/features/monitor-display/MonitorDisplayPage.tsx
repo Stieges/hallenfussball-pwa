@@ -145,7 +145,8 @@ function MonitorDisplayPageContent({
     [monitor, profile, qrMoeglich, view, tournament]
   );
   // Nach dem Abschluss ersetzt die Folie „Endstand“ Live-Spiel, Tabellen, Nächste Spiele und Spielplan (R3-7, @ZM-121)
-  const slides = useMemo(() => applyEnd(programSlides, end), [programSlides, end]);
+  // Profil „Halle (sehr fern)“ (@ZM-212): die Abschluss-Liste ersetzt die Live-Folie nicht, das zuletzt beendete Spiel bleibt mit „Endstand“ stehen
+  const slides = useMemo(() => (profile === 'hall-very-far' ? programSlides : applyEnd(programSlides, end)), [programSlides, end, profile]);
   // Rückfall (B-16e1 Ruling, @ZM-122): Sind alle Live-Folien ohne Spiel, zeigt die Seite QR bzw. Spielplan.
   // Nur ohne Pin: Während eines Spiels und der 30-s-Haltezeit (@ZM-077) bleibt die Live-Folie sichtbar.
   const rueckfallFolie = qrMoeglich ? ZUSCHAUER_QR_SLIDE : SPIELPLAN_FALLBACK_SLIDE;
