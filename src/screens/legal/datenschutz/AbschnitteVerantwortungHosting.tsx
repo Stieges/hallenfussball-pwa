@@ -73,8 +73,8 @@ export function AbschnitteVerantwortungHosting() {
           ]}
         />
         <Paragraph>
-          <Strong>Zählung:</Strong> Ich zähle, wie oft die Zuschauer-Seite geöffnet wird und wie lange sie offen bleibt, nur als Summe. Es gibt dabei keine
-          IP-Adresse, kein Cookie und keine Kennung. Die Einzelheiten:
+          <Strong>Zählung:</Strong> Ich zähle, wie oft die Zuschauer-Seite geöffnet wird und wie lange sie offen bleibt, nur als Summe. Gespeichert wird dabei
+          keine IP-Adresse, kein Cookie und keine Gerätekennung; die Browserkennung (User-Agent) liest der Server nur, um Betriebssystem und Browser grob einzuordnen. Die Einzelheiten:
         </Paragraph>
         <BulletList
           items={[

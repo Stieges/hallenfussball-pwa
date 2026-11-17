@@ -28,6 +28,8 @@ const GERAETESPEICHER: string[][] = [
   ['Hallen-Lautsprecher: gewählter Audio-Ausgang (Kennung und Name)', 'lokaler Speicher', 'damit das Gerät denselben Ausgang weiter benutzt; verlässt das Gerät nie'],
   ['Hallen-Lautsprecher: Lautstärke je Ton (in Prozent)', 'lokaler Speicher', 'deine eigene Einstellung'],
   ['Hallen-Lautsprecher: Kennungen schon gespielter Testtöne und Zeitpunkte zuletzt gespielter Töne (letzte 10 Minuten)', 'lokaler Speicher', 'damit ein Ton nach dem Neuladen nicht noch einmal ertönt'],
+  ['Hallen-Lautsprecher: Zeitstempel „Ausgang prüfen“ (Signal an die anderen Tabs desselben Geräts)', 'lokaler Speicher', 'damit alle Tabs den gewählten Ausgang neu prüfen; verlässt das Gerät nie'],
+  ['Cockpit: Ton an oder aus und Lautstärke', 'lokaler Speicher', 'deine eigene Einstellung je Gerät'],
   ['„Mein Team“ (Zuschauer)', 'lokaler Speicher', 'deine eigene Auswahl'],
   ['Letzter Turnierstand (Zuschauer)', 'lokaler Speicher', 'Anzeige ohne Netz, an einem späteren Tag nicht mehr angezeigt'],
   ['Turnierdaten für den Offline-Betrieb', 'Datenbank im Browser (IndexedDB)', 'damit Turnierleitung und Helfer ohne Netz weiterarbeiten'],
@@ -48,9 +50,9 @@ export function AbschnitteFehlerRechte() {
         </Paragraph>
         <BulletList
           items={[
-            'Inhalt: Fehlermeldung und technischer Ablauf, aufgerufene Seite (ohne Zugangscodes), Browser, Betriebssystem, App-Version, einzelne Leistungsmessungen (nur ein kleiner Teil der Aufrufe) und bei Angemeldeten die Kennung des Kontos (eine zufällige Zeichenfolge, keine E-Mail, kein Name). Außerdem sendet die App bei jedem Start einmal einen kurzen Start-Bericht (siehe unten).',
+            'Inhalt: Fehlermeldung und technischer Ablauf, aufgerufene Seite (ohne Zugangscodes), Browser, Betriebssystem, App-Version, einzelne Leistungsmessungen (nur ein kleiner Teil der Aufrufe) und bei Angemeldeten die Kennung des Kontos (eine zufällige Zeichenfolge, keine E-Mail, kein Name).',
             <>Die <Strong>IP-Adresse wird nicht gespeichert.</Strong> Technisch erreicht sie Sentry beim Empfang trotzdem kurz, wird aber nicht abgelegt. Es gibt <Strong>keine Aufzeichnung deiner Bildschirm-Sitzung.</Strong></>,
-            'Start-Bericht: Außerdem sendet die App bei jedem Start einmal einen kurzen Start-Bericht: App-Version, ob das Gerät online ist, Zustand des Service Workers und die Namen der Zwischenspeicher und Datenbanken der App (keine Inhalte). Damit erkenne ich Ladeprobleme bei schlechtem Netz in der Halle. Er wird nur gesendet, solange Fehlerberichte eingeschaltet sind.',
+            'Start-Bericht: Außerdem sendet die App bei jedem Start einmal einen kurzen Start-Bericht: App-Version, ob das Gerät online ist, Zustand des Service Workers samt der Adresse seines Skripts und die Namen der Zwischenspeicher und Datenbanken der App (keine Inhalte). Damit erkenne ich Ladeprobleme bei schlechtem Netz in der Halle. Er wird nur gesendet, solange Fehlerberichte eingeschaltet sind.',
             'Zweck: Fehler finden und beheben, damit die App am Turniertag zuverlässig läuft',
             'Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer funktionierenden App). Die Fehlerberichte sind eingeschaltet, ohne dass du zustimmen musst.',
             <><Strong>Widerspruch:</Strong> Du kannst Fehlerberichte jederzeit in den <Link to="/settings" style={sectionStyles.link} data-testid="datenschutz-einstellungen-link">Einstellungen der App</Link> abschalten (Art. 21 DSGVO). Das gilt ab dann für dieses Gerät.</>,
@@ -122,14 +124,14 @@ export function AbschnitteFehlerRechte() {
         <Paragraph>
           <Strong>Nur gelesen, nicht gespeichert:</Strong> Zwei Dinge liest die App von deinem Gerät, ohne dass du dazu etwas tust, und legt
           sie dort nicht ab. Erstens beim Start der App die Namen der Zwischenspeicher und Datenbanken der App, den Zustand des Service Workers
-          und ob das Gerät online ist, für den Start-Bericht an Sentry (Abschnitt 10), damit ich Ladeprobleme bei schlechtem Netz in der Halle
-          erkenne; das hört auf, wenn du Fehlerberichte abschaltest. Zweitens beim Öffnen der Zuschauer-Seite die Bildschirmgröße, die Bedienart
+          samt der Adresse seines Skripts und ob das Gerät online ist, für den Start-Bericht an Sentry (Abschnitt 10), damit ich Ladeprobleme bei schlechtem Netz in der Halle
+          erkenne. Gelesen wird bei jedem Start, gesendet wird nur, solange Fehlerberichte eingeschaltet sind. Zweitens beim Öffnen der Zuschauer-Seite die Bildschirmgröße, die Bedienart
           (Finger oder Maus) und ob die Seite als App geöffnet wurde, für die Zählung (Abschnitt 4), damit ich Zuschauer-Geräte nach Geräteklasse
           zählen kann. Dafür frage ich keine Einwilligung ab.
         </Paragraph>
         <Paragraph>
-          Die Namen der Audio-Ausgänge am Hallen-Lautsprecher (Abschnitt 8) liest die App erst, nachdem du dort selbst einen Ausgang gewählt hast.
-          Danach prüft das Gerät von selbst, ob der Ausgang noch angeschlossen ist.
+          Die Namen der Audio-Ausgänge am Hallen-Lautsprecher (Abschnitt 8) liest die App erst, wenn du dort selbst die Auswahl der Ausgänge öffnest.
+          Hast du einen Ausgang gewählt, prüft die App ihn danach beim Start und immer dann, wenn ein Gerät an- oder abgesteckt wird.
         </Paragraph>
       </Section>
 

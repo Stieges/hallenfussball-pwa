@@ -75,7 +75,7 @@ export function AbschnitteKontenDaten() {
 
       <Section number={9} title="Datenbank und Anmeldung (Supabase)">
         <Paragraph>
-          Alle Daten aus den Abschnitten 4 bis 8 liegen in der Datenbank von Supabase Pte. Ltd., 65 Chulia Street #38-02/03, OCBC Centre, Singapur 049513.
+          Die Daten aus den Abschnitten 4 bis 8 liegen bei Supabase Pte. Ltd., 65 Chulia Street #38-02/03, OCBC Centre, Singapur 049513: in der Datenbank, die Tondateien des Hallen-Lautsprechers im Dateispeicher desselben Dienstes. Nur auf deinem Gerät bleiben die Namen der Audio-Ausgänge und die Einträge aus Abschnitt 14.
           Die Datenbank läuft in der <Strong>Region „Central EU (Frankfurt)“</Strong> (AWS eu-central-1).
         </Paragraph>
         <BulletList

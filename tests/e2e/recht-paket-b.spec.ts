@@ -8,6 +8,7 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Locator, Page } from '@playwright/test';
 import { test, expect } from '@playwright/test';
+import { LEGAL_CONFIG } from '../../src/config/legal';
 // @ts-expect-error – .mjs ohne Typen; derselbe Lader wie bei `npm run visual:metrics --saat`
 import { installiereSaat, leseSaat } from '../../scripts/visual-metrics/saat/lader.mjs';
 import { neuLaden } from './helpers/neuLaden';
@@ -134,7 +135,7 @@ test.describe('@RE-001 Einstieg frei, Impressum und Datenschutz überall', () =>
       for (const [route, titel, name] of [['/#/impressum', 'Impressum', 'impressum'], ['/#/datenschutz', 'Datenschutzerklärung', 'datenschutz']] as const) {
         await oeffne(page, g, route);
         await expect(page.getByRole('heading', { level: 1, name: titel })).toBeVisible({ timeout: 25000 });
-        await expect(page.getByTestId('legal-stand')).toHaveText('Stand: November 2026');
+        await expect(page.getByTestId('legal-stand')).toHaveText(`Stand: ${LEGAL_CONFIG.lastUpdated}`);
         const breite = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, fenster: window.innerWidth }));
         expect(breite.scroll, `${name}: keine waagrechte Rollleiste`).toBeLessThanOrEqual(breite.fenster);
         await bild(page, `${name}-${g.name}`);

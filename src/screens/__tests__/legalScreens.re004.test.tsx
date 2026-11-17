@@ -111,6 +111,8 @@ describe('@RE-004 Datenschutzerklärung sagt, was die App wirklich tut (Prüfung
     expect(text).toContain('Gespeichert wird nur eine Summe je Turnier und 5-Minuten-Fenster');
     expect(text).toContain('Betriebssystem- und Browser-Familie');
     expect(text).toContain('nie eine Versionsnummer');
+    expect(text).toContain('Gespeichert wird dabei keine IP-Adresse, kein Cookie und keine Gerätekennung; die Browserkennung (User-Agent) liest der Server nur');
+    expect(text).not.toContain('Es gibt dabei keine IP-Adresse, kein Cookie und keine Kennung');
     expect(text).toContain('keine IP-Adresse und keine Kennung deines Geräts in dieser Zählung; ich kann dich daran nicht wiedererkennen');
     expect(text).toContain('die Bildschirmgröße, die Bedienart (Finger oder Maus) und ob sie als App geöffnet wurde');
     expect(text).toContain('Auf deinem Gerät wird dafür nichts gespeichert: kein Cookie, kein lokaler Speicher, keine Kennung');
@@ -168,15 +170,22 @@ describe('@RE-004 Datenschutzerklärung sagt, was die App wirklich tut (Prüfung
     expect(s14).toContain('Start-Bericht an Sentry (Abschnitt 10)');
     expect(s14).toContain('die Bildschirmgröße, die Bedienart (Finger oder Maus) und ob die Seite als App geöffnet wurde');
     expect(s14).toContain('in der folgenden Tabelle ist unbedingt erforderlich');
-    expect(s14).toContain('liest die App erst, nachdem du dort selbst einen Ausgang gewählt hast');
-    for (const eintrag of ['gewählter Audio-Ausgang (Kennung und Name)', 'Lautstärke je Ton', 'Kennungen schon gespielter Testtöne']) {
+    expect(s14).toContain('liest die App erst, wenn du dort selbst die Auswahl der Ausgänge öffnest');
+    expect(s14).toContain('prüft die App ihn danach beim Start und immer dann, wenn ein Gerät an- oder abgesteckt wird');
+    expect(s14).not.toContain('nachdem du dort selbst einen Ausgang gewählt hast');
+    expect(s14).toContain('Gelesen wird bei jedem Start, gesendet wird nur, solange Fehlerberichte eingeschaltet sind.');
+    expect(s14).not.toContain('das hört auf, wenn du Fehlerberichte abschaltest');
+    expect(s14).toContain('Zustand des Service Workers samt der Adresse seines Skripts');
+    for (const eintrag of ['Zeitstempel „Ausgang prüfen“', 'Cockpit: Ton an oder aus und Lautstärke', 'gewählter Audio-Ausgang (Kennung und Name)', 'Lautstärke je Ton', 'Kennungen schon gespielter Testtöne']) {
       expect(s14).toContain(eintrag);
     }
     const s15 = screen.getByTestId('datenschutz-section-15').textContent ?? '';
     expect(s15).toContain('Derzeit holt die App keine Einwilligung ein; was sie auf deinem Gerät speichert und liest, steht in Abschnitt 14.');
     expect(s15).not.toContain('Für alles, was eine Einwilligung braucht');
     const s10 = screen.getByTestId('datenschutz-section-10').textContent ?? '';
-    expect(s10).toContain('Außerdem sendet die App bei jedem Start einmal einen kurzen Start-Bericht: App-Version, ob das Gerät online ist, Zustand des Service Workers und die Namen der Zwischenspeicher und Datenbanken der App (keine Inhalte). Damit erkenne ich Ladeprobleme bei schlechtem Netz in der Halle.');
+    expect(s10.split('einen kurzen Start-Bericht')).toHaveLength(2); // genau einmal genannt
+    expect(s10).toContain('Zustand des Service Workers samt der Adresse seines Skripts und die Namen');
+    expect(s10).toContain('Außerdem sendet die App bei jedem Start einmal einen kurzen Start-Bericht: App-Version, ob das Gerät online ist, Zustand des Service Workers samt der Adresse seines Skripts und die Namen der Zwischenspeicher und Datenbanken der App (keine Inhalte). Damit erkenne ich Ladeprobleme bei schlechtem Netz in der Halle.');
     expect(screen.getByTestId('datenschutz-section-6').textContent).toContain('der Gerätetyp (Handy, Tablet oder Computer');
     expect(screen.getByTestId('datenschutz-section-6').textContent).not.toContain('iPhone');
     expect(screen.getByTestId('datenschutz-section-10').textContent).toContain('die Kennung des Kontos (eine zufällige Zeichenfolge, keine E-Mail, kein Name)');
@@ -187,6 +196,10 @@ describe('@RE-004 Datenschutzerklärung sagt, was die App wirklich tut (Prüfung
     expect(text3).toContain('Ich nutze Vercel im kostenlosen Tarif. Einen gesonderten Vertrag zur Auftragsverarbeitung mit Vercel sage ich dafür nicht zu');
     expect(screen.getByTestId('datenschutz-section-4').textContent).toContain('laufende Spiele nur, wenn der Live-Spielstand öffentlich ist');
     expect(screen.getByTestId('datenschutz-section-8').textContent).toContain('werden gelöscht, wenn ich das Turnier endgültig lösche (spätestens nach 6 Monaten, Abschnitt 11)');
-    expect(screen.getByTestId('datenschutz-section-9').textContent).toContain('Alle Daten aus den Abschnitten 4 bis 8');
+    const s9 = screen.getByTestId('datenschutz-section-9').textContent ?? '';
+    expect(s9).toContain('Die Daten aus den Abschnitten 4 bis 8 liegen bei Supabase');
+    expect(s9).toContain('die Tondateien des Hallen-Lautsprechers im Dateispeicher desselben Dienstes');
+    expect(s9).toContain('Nur auf deinem Gerät bleiben die Namen der Audio-Ausgänge und die Einträge aus Abschnitt 14');
+    expect(s9).not.toContain('Alle Daten aus den Abschnitten 4 bis 8');
   });
 });
