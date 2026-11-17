@@ -9,7 +9,9 @@
  * Fristen: „nach höchstens 15 Sekunden“ wird ab der auslösenden Handlung gezählt (`frist(t0)`: 15 s plus 2 s Messtoleranz, begründet in
  * `hallentonHelfer.ts`), nicht mit einem großzügigen Timeout abgewartet. Ein Fall, der damit rot wird, ist ein Befund der App.
  *
- * Nicht abgedeckt (bewusst): @HT-054 Zeile 3 (Dock höchstens 5 s nach dem Ende zurück: verspäteter Ton) und Zeile 4 (anderer Ausgang gewählt);
+ * Nicht abgedeckt (bewusst): @HT-003 nur Beispielzeile 2 (Abpfiff von Hand) und 6 (Anpfiff ohne Ton); Zeilen 1, 3, 4, 5 (Ablauf der Spielzeit, Halbzeit-Töne) nicht;
+ * @HT-007 (Halbzeit-Ton höchstens 1 s nach der Bestätigung, bei 6:00 kein weiterer Ton) prüft kein Fall;
+ * @HT-054 Zeile 3 (Dock höchstens 5 s nach dem Ende zurück: verspäteter Ton) und Zeile 4 (anderer Ausgang gewählt);
  * @HT-039 Zeilen Hintergrund, schlafen gelegt, Lautstärke 0 % (nur „Ton nicht aktiviert“, „meldet sich nicht“, Ausgang verloren/bestätigen geprüft); @HT-002 (ein Gerät für mehrere Felder; geprüft wird nur Feld 1), @HT-008 Kern (Spielzeit läuft ab, fortgesetztes
  * Spiel endet erneut: braucht eine Turnierkopie mit Spielzeit von Sekunden; geprüft wird nur „zweites Cockpit gibt keinen zweiten Ton“).
  */
@@ -24,16 +26,16 @@ import {
   aktiviereTon, beobachteAbfragen, beobachteKeinenWeiterenTon, bleibtText, entferneAusgang, frist, installiereAusgangAttrappe, installiereTonSpion,
   klingtUm, medienPlays, neuesGeraet, oeffneVerwaltung, richteLautsprecherEin, sinkAufrufe, steckeAusgangAn, stelleUhrVor, tonBeginne, warteAufEndeAmServer, warteAufToene,
 } from './hallentonHelfer';
-import type { BrowserContext, Page } from '@playwright/test';
+import type { Browser, BrowserContext, Page } from '@playwright/test';
 
 const LAUTSPRECHER = 'Rechner der Turnierleitung';
-// „meldet sich nicht“: das letzte Lebenszeichen liegt VOR dem Schließen, also gilt die Frist ab dem Schließen unverändert (`frist(t)`, 15 s + 2 s).
-// Laut Code: `MELDET_SICH_NICHT_AB_MS` 10 s nach dem letzten Lebenszeichen + Abfrage der Verwaltung alle 5 s = 15 s ab dem letzten Lebenszeichen.
 /**
- * Abpfiff-Ton nach dem Klick auf „Beenden“, harte Grenze = Bauart-Grenze von `feldStand`/`laufzeitTakt`: Abfragetakt 1000 ms
- * (`TAKT_ANGEPFIFFEN_MS`) + Prüftakt der Laufzeit 250 ms + Planung 250 ms + Laufzeit/Schreibweg (Klick bis Annahme am Server, Audio-Vorlauf) 500 ms
- * = 2000 ms. Die Anforderung sagt „fragt jede Sekunde nach“ und zugleich „höchstens etwa 1 s“: ein Widerspruch (Befund
- * C-HALLENTON-TON-NACH-ENDE-ZU-SPAET, Entscheidung beim Product Owner). Die gemessene Zeit steht im Protokoll (`[H4-14] Abpfiff-Ton … ms`).
+ * Abpfiff-Ton nach dem Klick auf „Beenden“: Budget von 2000 ms für den lokalen Stack, KEINE harte Bauart-Grenze. Zusammengesetzt aus Abfragetakt
+ * 1000 ms (`TAKT_ANGEPFIFFEN_MS`) + Prüftakt der Laufzeit 250 ms (`laufzeitTakt.ts`) + Ablesen im nächsten Takt 250 ms + Laufzeit/Schreibweg
+ * (Klick bis Annahme am Server, Audio-Vorlauf) 500 ms. Nicht hergeleitet und nur durch die 500 ms abgedeckt: der Spielplan-Abruf alle 10 s in
+ * derselben Runde vor der Ereignis-Abfrage (`feldStand.ts`, Abbruch erst nach 3 s), Pausen während des Uhrabgleichs (`syncLaeuft`, `laufzeitTakt.ts`),
+ * ein übersprungener Takt bei noch laufender Runde. Die Anforderung sagt „fragt jede Sekunde nach“ und zugleich „höchstens etwa 1 s“: ein Widerspruch
+ * (Befund C-HALLENTON-TON-NACH-ENDE-ZU-SPAET, Entscheidung beim Product Owner). Die gemessene Zeit steht im Protokoll (`[H4-14] Abpfiff-Ton … ms`).
  */
 const TON_NACH_BESTAETIGUNG_MS = 1_000 + 250 + 250 + 500;
 
@@ -58,6 +60,69 @@ function jetztMinuten(): number {
 async function pfeifeAn(page: Page): Promise<void> {
   await page.locator('[data-testid="match-start-button"]').click();
   await expectEngineMatchRunningUi(page);
+}
+
+/**
+ * Ablauf zu @HT-057: B ist Lautsprecher, das Spiel läuft und B fragt im 1-s-Takt ab (Gegenprobe mit expect, nicht nur gewartet). Mit `abmelden`:
+ * die Turnierleitung meldet B ab, B zeigt es, dann endet das Spiel; erwartet kein Ton auf B und keine Abfrage von B mehr (ab 1 s nach dem Hinweis auf
+ * B, weil eine begonnene Abfrage noch ankommen kann). Ohne `abmelden` (Gegenprobe): derselbe Ablauf, B bleibt Lautsprecher, und es MUSS ein Ton kommen.
+ * Zusammen zeigen beide, dass ein fälschlich weiterlaufender Lautsprecher im Fenster einen Ton erzeugen würde (ersetzt eine Mutationsprobe, die lokal
+ * ohne Stack nicht läuft).
+ */
+async function ablauf057(browser: Browser, abmelden: boolean): Promise<void> {
+  const cup = await cloneReleaseCup(abmelden ? 'ht57' : 'ht57g', { withCoAdmin: false });
+  const a = await neuesGeraet(browser, 'owner');
+  const b = await neuesGeraet(browser, 'owner');
+  try {
+    await installiereTonSpion(b.context);
+    const abfragen = beobachteAbfragen(b.page);
+    await richteLautsprecherEin(b.page, cup.id, LAUTSPRECHER);
+    const cockpit = await a.context.newPage();
+    await openCockpit(cockpit, cup.id, cup.matchId);
+    await pfeifeAn(cockpit);
+    await abfragen.warteAufEngenTakt(); // Gegenprobe: B kennt das laufende Spiel und fragt jede Sekunde
+    await oeffneVerwaltung(a.page, cup.id);
+    await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('bereit', { timeout: 30_000 });
+
+    let seit = Date.now();
+    if (abmelden) {
+      await a.page.getByTestId('lautsprecher-feld-1-abmelden').click();
+      await expect(a.page.getByRole('dialog')).toContainText('abgemeldet werden');
+      await a.page.getByTestId('confirm-dialog-confirm').click();
+      // läuft ein Spiel, kommt eine zweite Rückfrage mit kurzer Sperre der Taste
+      const zweite = await a.page.getByRole('dialog').filter({ hasText: 'obwohl ein Spiel läuft' }).waitFor({ timeout: 8_000 }).then(() => true, () => false);
+      if (zweite) {
+        const taste = a.page.getByTestId('confirm-dialog-confirm');
+        await expect(taste).not.toHaveAttribute('aria-disabled', 'true', { timeout: 5_000 });
+        await taste.click();
+      }
+      await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('kein Hallen-Lautsprecher', { timeout: 30_000 });
+      await expect(b.page.getByTestId('geraet-banner-abgemeldet')).toContainText('Die Turnierleitung hat dieses Gerät als Hallen-Lautsprecher für Feld 1 abgemeldet.', { timeout: 30_000 });
+      await expect(b.page.getByTestId('geraet-verstanden')).toHaveText('Verstanden');
+      await expect(b.page.getByTestId('geraet-banner-uebernommen'), 'nicht „von einem anderen Gerät übernommen“').toHaveCount(0);
+      seit = Date.now();
+    }
+
+    await abpfiffHaltenBisRueckfrage(cockpit);
+    await cockpit.getByTestId('finish-confirm-beenden').click();
+    await warteAufEndeAmServer(cup.matchId);
+    if (!abmelden) {
+      await warteAufToene(b.page, 1);
+      expect(await tonBeginne(b.page), 'Gegenprobe: B bleibt Lautsprecher und tönt').toHaveLength(1);
+      return;
+    }
+    await beobachteKeinenWeiterenTon(b.page, 0, 6000);
+    const abfragenDanach = abfragen.anzahlSeit(seit + 1000);
+    process.stdout.write(`[H4-14] B-Abfragen von match_events ab 1 s nach dem Abmelden bis nach dem Fenster: ${abfragenDanach}\n`);
+    expect(abfragenDanach, 'B fragt nach dem Abmelden das Spiel nicht mehr ab').toBe(0);
+
+    await b.page.getByTestId('geraet-verstanden').click();
+    await expect(b.page.getByTestId('geraet-banner-abgemeldet')).toHaveCount(0);
+  } finally {
+    await a.context.close();
+    await b.context.close();
+    await safeCleanup('HT57 Kopie löschen', () => deleteCup(cup.id));
+  }
 }
 
 test.describe('Hallenton (zwei Geräte, lokaler Stack)', () => {
@@ -91,7 +156,7 @@ test.describe('Hallenton (zwei Geräte, lokaler Stack)', () => {
     }
   });
 
-  test('@HT-003 A beendet das Spiel: B spielt genau einen Abpfiff-Ton spätestens nach der Bauart-Grenze (1-s-Takt + Laufzeit), siehe Befund C-HALLENTON-TON-NACH-ENDE-ZU-SPAET; @HT-008 (nur zweites Cockpit) kein zweiter Ton', async ({ browser }) => {
+  test('@HT-003 (nur Zeilen 2 und 6) A beendet das Spiel: B spielt genau einen Abpfiff-Ton spätestens nach der Bauart-Grenze (1-s-Takt + Laufzeit), siehe Befund C-HALLENTON-TON-NACH-ENDE-ZU-SPAET; @HT-008 (nur zweites Cockpit) kein zweiter Ton', async ({ browser }) => {
     test.setTimeout(180_000);
     const cup = await cloneReleaseCup('ht2', { withCoAdmin: false });
     const a = await neuesGeraet(browser, 'owner');
@@ -172,45 +237,14 @@ test.describe('Hallenton (zwei Geräte, lokaler Stack)', () => {
     }
   });
 
-  test('@HT-057 Die Turnierleitung meldet B ab: B zeigt „abgemeldet“ mit „Verstanden“ (nicht „übernommen“), kein Ton, die Verwaltung zeigt „kein Hallen-Lautsprecher“', async ({ browser }) => {
-    test.setTimeout(180_000);
-    const cup = await cloneReleaseCup('ht57', { withCoAdmin: false });
-    const a = await neuesGeraet(browser, 'owner');
-    const b = await neuesGeraet(browser, 'owner');
-    try {
-      await installiereTonSpion(b.context);
-      const abfragen = beobachteAbfragen(b.page);
-      await richteLautsprecherEin(b.page, cup.id, LAUTSPRECHER);
-      await oeffneVerwaltung(a.page, cup.id);
-      await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('bereit', { timeout: 30_000 });
+  test('@HT-057 Die Turnierleitung meldet B im laufenden Spiel ab: B zeigt „abgemeldet“ mit „Verstanden“ (nicht „übernommen“), beim Ende kein Ton und keine Abfrage mehr, die Verwaltung zeigt „kein Hallen-Lautsprecher“', async ({ browser }) => {
+    test.setTimeout(240_000);
+    await ablauf057(browser, true);
+  });
 
-      await a.page.getByTestId('lautsprecher-feld-1-abmelden').click();
-      await expect(a.page.getByRole('dialog')).toContainText('abgemeldet werden');
-      await a.page.getByTestId('confirm-dialog-confirm').click();
-      await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('kein Hallen-Lautsprecher', { timeout: 30_000 });
-
-      const hinweis = b.page.getByTestId('geraet-banner-abgemeldet');
-      await expect(hinweis).toContainText('Die Turnierleitung hat dieses Gerät als Hallen-Lautsprecher für Feld 1 abgemeldet.', { timeout: 30_000 });
-      await expect(b.page.getByTestId('geraet-verstanden')).toHaveText('Verstanden');
-      await expect(b.page.getByTestId('geraet-banner-uebernommen'), 'nicht „von einem anderen Gerät übernommen“').toHaveCount(0);
-
-      // kein Ton mehr für das Feld
-      await openCockpit(a.page, cup.id, cup.matchId);
-      await pfeifeAn(a.page);
-      await abpfiffHaltenBisRueckfrage(a.page);
-      await a.page.getByTestId('finish-confirm-beenden').click();
-      const ende = await warteAufEndeAmServer(cup.matchId);
-      await beobachteKeinenWeiterenTon(b.page, 0, 6000);
-      // B ist kein Lautsprecher mehr und fragt das Spiel nicht mehr ab (sonst gäbe es einen Ton): die Zahl der Abfragen im Fenster steht im Protokoll
-      process.stdout.write(`[H4-14] B-Abfragen von match_events in den 6 s nach dem Ende (abgemeldet): ${abfragen.anzahlSeit(ende)}\n`);
-
-      await b.page.getByTestId('geraet-verstanden').click();
-      await expect(b.page.getByTestId('geraet-banner-abgemeldet')).toHaveCount(0);
-    } finally {
-      await a.context.close();
-      await b.context.close();
-      await safeCleanup('HT57 Kopie löschen', () => deleteCup(cup.id));
-    }
+  test('@HT-057 Gegenprobe: ohne Abmelden tönt B im selben Ablauf (das Fenster würde einen weiterlaufenden Lautsprecher erkennen)', async ({ browser }) => {
+    test.setTimeout(240_000);
+    await ablauf057(browser, false);
   });
 
   test('@HT-022 Ein Helfer sieht den Unterpunkt „Hallenton“ nicht (Menü und direkte Adresse)', async ({ browser }) => {
