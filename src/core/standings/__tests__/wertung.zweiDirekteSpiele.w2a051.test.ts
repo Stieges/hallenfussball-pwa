@@ -1,10 +1,10 @@
 /**
  * @W2A-051 – Bei zwei direkten Spielen zählen beide für den direkten Vergleich (Record 2026-09-27_wizard-regelinhalte),
  * Zusammenspiel mit @TM-152 (mehrere Runden bei „Jeder gegen jeden“). Test aus dem Gherkin:
- * Hin- und Rückrunde, TSV Waging rot und DJK Kammer punktgleich, Waging rot gewinnt das Hinspiel 2:1, Kammer das
- * Rückspiel 3:0 → Kammer steht vor Waging rot.
- * Daten so gewählt, dass die Gegenbeispiele trennen: Waging rot hat die bessere Tordifferenz aller Spiele (+8 zu +4),
- * und nur mit dem Hinspiel stünde Waging rot vorn (Mutationsprobe im Bericht).
+ * Hin- und Rückrunde, TSV Waging 1 und DJK Kammer punktgleich, Waging 1 gewinnt das Hinspiel 2:1, Kammer das
+ * Rückspiel 3:0 → Kammer steht vor Waging 1.
+ * Daten so gewählt, dass die Gegenbeispiele trennen: Waging 1 hat die bessere Tordifferenz aller Spiele (+8 zu +4),
+ * und nur mit dem Hinspiel stünde Waging 1 vorn (Mutationsprobe im Bericht).
  */
 import { describe, expect, it } from 'vitest';
 import { rankGroup } from '../groupTable';
@@ -32,7 +32,7 @@ function table(results: string, placementLogic = BFV_ORDER) {
 }
 
 describe('@W2A-051 zwei direkte Spiele im direkten Vergleich', () => {
-  it('@W2A-051 Hin- und Rückrunde: Waging rot gewinnt das Hinspiel 2:1, Kammer das Rückspiel 3:0 → Kammer steht vor Waging rot', () => {
+  it('@W2A-051 Hin- und Rückrunde: Waging 1 gewinnt das Hinspiel 2:1, Kammer das Rückspiel 3:0 → Kammer steht vor Waging 1', () => {
     const { rows } = table(`${HINRUNDE}; ${RUECKRUNDE}`);
 
     const kammer = rows.find((r) => r.team.name === NAME.K);
@@ -40,13 +40,13 @@ describe('@W2A-051 zwei direkte Spiele im direkten Vergleich', () => {
     expect(kammer?.points).toBe(11);
     expect(waging?.points).toBe(11);
     expect(names(rows).slice(0, 2)).toEqual([NAME.K, NAME.R]);
-    // Gegenbeispiel in den Daten: nach der Tordifferenz aller Spiele läge Waging rot vorn
+    // Gegenbeispiel in den Daten: nach der Tordifferenz aller Spiele läge Waging 1 vorn
     expect(waging?.goalDifference).toBe(8);
     expect(kammer?.goalDifference).toBe(4);
     expect(rows.some((r) => r.decisionNeeded)).toBe(false);
   });
 
-  it('@W2A-051 Gegenbeispiel: mit „Tordifferenz vor direktem Vergleich“ steht Waging rot vorn', () => {
+  it('@W2A-051 Gegenbeispiel: mit „Tordifferenz vor direktem Vergleich“ steht Waging 1 vorn', () => {
     const { rows } = table(`${HINRUNDE}; ${RUECKRUNDE}`, GD_FIRST_ORDER);
 
     expect(names(rows).slice(0, 2)).toEqual([NAME.R, NAME.K]);

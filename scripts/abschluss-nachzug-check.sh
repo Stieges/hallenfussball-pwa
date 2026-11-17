@@ -331,10 +331,10 @@ run_wm_probes() {
   # kamen ueber append_match_events, eine Entscheidung dort laesst den Spielstand stehen.
   t="$(niko_ready)"
   t2="$(niko_ready)"
-  m="$(gm "$t" 'DJK Kammer' 'TSV Waging rot')"
+  m="$(gm "$t" 'DJK Kammer' 'TSV Waging 1')"
   e1="$(review_add "$t" "$m" "a4-verwerfen-$t")"
   review_add "$t" "$(gm "$t" 'TSV Petting' 'DJK Otting')" "a4-hinweis-$t" notice >/dev/null
-  review_add "$t2" "$(gm "$t2" 'DJK Kammer' 'TSV Waging rot')" "a4-fremd-$t2" >/dev/null
+  review_add "$t2" "$(gm "$t2" 'DJK Kammer' 'TSV Waging 1')" "a4-fremd-$t2" >/dev/null
   s="$(q "SELECT match_engine.tournament_state('$t')::text;")"
   out="$(decide olli "$m" "$e1" REVIEW_DISCARD)"
   check A "A4 Olli verwirft den Eintrag (Turnierleitung, Schreibweg) -> angenommen, Spielstand unveraendert" "accepted|t" \
@@ -344,7 +344,7 @@ run_wm_probes() {
   check A "A4 Gegenbeispiel: Abschluss gelingt; das andere Turnier bleibt mit seinem offenen Eintrag aufgehalten" \
     "ok|rejected:OPEN_ITEMS|review_open" "$(fin_niko olli "$t")|$(fin_niko olli "$t2")|$(items_kinds)"
   t="$(niko_ready)"
-  m="$(gm "$t" 'DJK Kammer' 'TSV Waging rot')"
+  m="$(gm "$t" 'DJK Kammer' 'TSV Waging 1')"
   e2="$(review_add "$t" "$m" "a4-uebernehmen-$t")"
   check A "A4b ein uebernommener Eintrag (gespeicherte Entscheidung REVIEW_ACCEPT) steht nicht mehr als offene Klaerung in der Liste" "1|0" \
     "$(q "SELECT lc.preflight('olli', '$t');" | grep -c review_open)|$(decide_row "$m" "$e2" REVIEW_ACCEPT NULL; q "SELECT lc.preflight('olli', '$t');" | grep -c review_open)"
@@ -390,11 +390,11 @@ run_wm_probes() {
      VALUES ('$t', translate(upper(substr(md5('$t'), 1, 10)), '01', 'GH'), harness.p('tom'), 'Tom', 'Handy Feld 1', 42, 'accepted', now(), harness.p('olli'));" >/dev/null
   fin_niko olli "$t" >/dev/null
   fa="$(q "SELECT (extract(epoch FROM finished_at) * 1000)::bigint FROM public.tournaments WHERE id = '$t';")"
-  m="$(gm "$t" 'DJK Kammer' 'TSV Waging rot')"
+  m="$(gm "$t" 'DJK Kammer' 'TSV Waging 1')"
   d="$(q "SELECT md5('wm-tom-handy-$t')::uuid;")"
   check L "L0 @LZ-039 Toms Handy (18:10, nach dem Abschluss) und Kai senden je ein Tor -> beide „nach dem Ende eingetroffen“" \
     "review:AFTER_FINISH|review:AFTER_FINISH" \
-    "$(q "SELECT lc.append('tom', '$m', jsonb_build_array(lc.ev('GOAL', 'wm-l-tom-$t', jsonb_build_object('at', $fa + 600000, 'clockMs', 140000, 'teamId', harness.team('$t', 'DJK Kammer')))), '$d');")|$(q "SELECT lc.append('kai', '$m', jsonb_build_array(lc.ev('GOAL', 'wm-l-kai-$t', jsonb_build_object('at', $fa + 660000, 'clockMs', 150000, 'teamId', harness.team('$t', 'TSV Waging rot')))));")"
+    "$(q "SELECT lc.append('tom', '$m', jsonb_build_array(lc.ev('GOAL', 'wm-l-tom-$t', jsonb_build_object('at', $fa + 600000, 'clockMs', 140000, 'teamId', harness.team('$t', 'DJK Kammer')))), '$d');")|$(q "SELECT lc.append('kai', '$m', jsonb_build_array(lc.ev('GOAL', 'wm-l-kai-$t', jsonb_build_object('at', $fa + 660000, 'clockMs', 150000, 'teamId', harness.team('$t', 'TSV Waging 1')))));")"
   tl="$(late_list olli "$t")"
   check L "L1 @LZ-039 Olli sieht beide Eintraege mit Namen: Tom (Geraet „Handy Feld 1“), dann Kai; Spiel, Spielnummer, Tor, Geraetezeit" \
     "2|Tom|Handy Feld 1|Kai|null|$m|$(q "SELECT match_number FROM public.matches WHERE id = '$m';")|GOAL|$((fa + 600000))|$(q "SELECT harness.u('lc-event:wm-l-tom-$t');")" \
@@ -406,7 +406,7 @@ run_wm_probes() {
   check L "L4 nie eine E-Mail in der Antwort" "0" "$(grep -c '@a21as.test' <<<"$tl")"
   t2="$(niko_ready)"
   fin_niko olli "$t2" >/dev/null
-  q "SELECT lc.append('kai', '$(gm "$t2" 'DJK Kammer' 'TSV Waging rot')', jsonb_build_array(lc.ev('GOAL', 'wm-l-fremd-$t2', '{}'::jsonb)));" >/dev/null
+  q "SELECT lc.append('kai', '$(gm "$t2" 'DJK Kammer' 'TSV Waging 1')', jsonb_build_array(lc.ev('GOAL', 'wm-l-fremd-$t2', '{}'::jsonb)));" >/dev/null
   check L "L5 Gegenbeispiel: Eintraege eines anderen Turniers erscheinen nicht (hier 2, dort 1)" "2|1" \
     "$(jlen "$(late_list olli "$t")")|$(jlen "$(late_list olli "$t2")")"
 

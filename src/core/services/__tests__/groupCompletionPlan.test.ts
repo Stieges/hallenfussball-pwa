@@ -107,7 +107,7 @@ describe('@TM-057 @W2A-063 Jeder gegen jeden: Gruppe \'\', Annahme ohne Grund', 
     const plan = planCompletion(t, '', [shared]);
     expect(plan.code).toBe('READY');
     expect(plan.code === 'READY' && plan.request.groupId).toBe('');
-    expect(plan.code === 'READY' && plan.request.ranking).toEqual([NK.kammer, NK.wagingRot, NK.petting, NK.otting, NK.fridolfing, NK.wagingBlau]);
+    expect(plan.code === 'READY' && plan.request.ranking).toEqual([NK.kammer, NK.waging1, NK.petting, NK.otting, NK.fridolfing, NK.waging2]);
     expect(plan.code === 'READY' && plan.request.expectedState).toHaveLength(15);
   });
 });
@@ -116,7 +116,7 @@ describe('@TM-149 Plan ohne entfernte Teams', () => {
   it('TSV Petting entfernt: die Anfrage enthält die übrigen 5 Teams', () => {
     const t = nikolaus([1, 2]);
     const plan = planCompletion({ ...t, teams: t.teams.map((team) => (team.id === NK.petting ? { ...team, isRemoved: true } : team)) }, '');
-    expect(plan.code === 'READY' && plan.request.ranking).toEqual([NK.kammer, NK.wagingRot, NK.otting, NK.fridolfing, NK.wagingBlau]);
+    expect(plan.code === 'READY' && plan.request.ranking).toEqual([NK.kammer, NK.waging1, NK.otting, NK.fridolfing, NK.waging2]);
   });
 });
 

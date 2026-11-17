@@ -27,7 +27,7 @@ describe('TB-4 Endstand: geteilter Gruppenplatz („Ergebnis so akzeptieren“)'
     expect(plaetze(endstand(jgj('MNUWOB', DATEN_029)), 'M', 'N', 'U', 'W')).toEqual([1, 2, 3, 4]);
   });
 
-  it('@W2A-063 Nikolaus, nur Platz 1 und 2: Petting und Otting akzeptieren das Ergebnis – beide auf Platz 3, Fridolfing 5, Waging blau 6 (Endstand)', async () => {
+  it('@W2A-063 Nikolaus, nur Platz 1 und 2: Petting und Otting akzeptieren das Ergebnis – beide auf Platz 3, Fridolfing 5, Waging 2 6 (Endstand)', async () => {
     const t = await mitAnnahme(nikolaus([1, 2]), ['P', 'D']);
     expect(plaetze(endstand(t), 'P', 'D', 'F', 'X')).toEqual([3, 3, 5, 6]);
     // Gegenbeispiel: das Strafstoßschießen (Normalweg) trennt die beiden.
@@ -59,11 +59,11 @@ describe('TB-4 Endstand: geteilter Platz neben fremden, völlig gleichen Teams',
 });
 
 describe('TB-4 Endstand: Reihenfolge aus der Tabelle je Gruppe', () => {
-  it('@ET-055 nach dem Strafstoßschießen 4:3 für Kammer steht Kammer im Endstand vor Waging rot', async () => {
+  it('@ET-055 nach dem Strafstoßschießen 4:3 für Kammer steht Kammer im Endstand vor Waging 1', async () => {
     const repo = new MemoryRepo(jgj('RKMUNO', DATA.ET_055));
     expect((await repo.service().decide(repo.tournament.id, shootout('K', 'R', 4, 3))).ok).toBe(true);
     expect(plaetze(endstand(repo.tournament), 'K', 'R')).toEqual([3, 4]);
-    // Gegenbeispiel: ohne Eintrag steht Waging rot in Eingabereihenfolge vorn (offener Block, nicht geteilt).
+    // Gegenbeispiel: ohne Eintrag steht Waging 1 in Eingabereihenfolge vorn (offener Block, nicht geteilt).
     expect(plaetze(endstand(jgj('RKMUNO', DATA.ET_055)), 'R', 'K')).toEqual([3, 4]);
   });
 
@@ -83,11 +83,11 @@ describe('TB-4 Endstand: Reihenfolge aus der Tabelle je Gruppe', () => {
     expect(plaetze(endstand(repo.tournament), 'M', 'N')).toEqual([1, 2]);
   });
 
-  it('@W2A-049 Endstand Jeder gegen jeden: Kammer vor Waging rot; Gegenbeispiel: nach Tordifferenz stünde Waging rot vorn', () => {
+  it('@W2A-049 Endstand Jeder gegen jeden: Kammer vor Waging 1; Gegenbeispiel: nach Tordifferenz stünde Waging 1 vorn', () => {
     expect(plaetze(endstand(jgj('RKMUNO', DATA.ET_056)), 'K', 'R')).toEqual([1, 2]);
   });
 
-  it('@W2A-049 Endstand mit zwei Gruppen: Gruppenplatz zuerst, bei gleichem Gruppenplatz die Gesamtwertung (Waging blau +3 vor Kammer +1)', () => {
+  it('@W2A-049 Endstand mit zwei Gruppen: Gruppenplatz zuerst, bei gleichem Gruppenplatz die Gesamtwertung (Waging 2 +3 vor Kammer +1)', () => {
     const ranks = endstand(zweiGruppenWaging(DATA.ET_056));
     expect(plaetze(ranks, 'X', 'K', 'R', 'P')).toEqual([1, 2, 3, 4]);
   });

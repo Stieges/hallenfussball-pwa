@@ -3,8 +3,8 @@
  * Server bestätigte Version der eigenen Kopie (`serverVersion`), nie gegen die lokal gestempelte Version der Ansicht.
  *
  * Anforderung @W2A-060 (Record `2026-09-27_wizard-regelinhalte`):
- *   Gegeben Olli und Maria (Co-Admin) sehen TSV Waging rot und DJK Kammer als „gleichauf – Entscheidung nötig“
- *   Wenn Olli 4:3 für TSV Waging rot und kurz danach Maria 5:4 für DJK Kammer einträgt
+ *   Gegeben Olli und Maria (Co-Admin) sehen TSV Waging 1 und DJK Kammer als „gleichauf – Entscheidung nötig“
+ *   Wenn Olli 4:3 für TSV Waging 1 und kurz danach Maria 5:4 für DJK Kammer einträgt
  *   Dann gilt Ollis Eintrag
  * Hier aus Marias Sicht: Ihr Gerät kennt Ollis Entscheidung noch nicht (eigene Änderung wartet, die ganze Cloud-Kopie wird
  * nicht übernommen), ihre Kopie trägt eine gestempelte Version, die zufällig der Server-Version nach Ollis Eintrag gleicht.

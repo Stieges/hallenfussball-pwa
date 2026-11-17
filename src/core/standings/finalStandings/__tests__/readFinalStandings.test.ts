@@ -34,7 +34,7 @@ describe('A-19a readFinalStandings (R-EA-9)', () => {
     const stored = gespeichert(t);
     const result = readFinalStandings(t, stored);
     expect(result).toEqual({ source: 'stored', snapshot: stored });
-    expect(result.source === 'stored' && result.snapshot.ranking.map((row) => row.teamName).slice(0, 2)).toEqual(['TSV Waging rot', 'DJK Kammer']);
+    expect(result.source === 'stored' && result.snapshot.ranking.map((row) => row.teamName).slice(0, 2)).toEqual(['TSV Waging 1', 'DJK Kammer']);
   });
 
   it('@ET-042 ohne gespeicherten Endstand (Turnier nicht abgeschlossen) zeigt die App den vorläufigen, auch bei abgeschlossener Gruppe', async () => {

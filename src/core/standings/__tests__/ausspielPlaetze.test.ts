@@ -30,7 +30,7 @@ const DATEN_3_BIS_5 = 'M–N 1:0; M–W 1:0; M–O 1:0; M–U 1:0; M–B 1:0; N�
 /** Gruppe A zu vier: Nord 9, Süd 6, West und Ost je 1 Punkt, −2, 1 Tor, direkt 1:1 (gleich auf 3 und 4, wie @ET-021). */
 const GRUPPE_A_3_4 = 'N–S 1:0; N–W 1:0; N–O 1:0; S–W 1:0; S–O 1:0; W–O 1:1';
 const GRUPPE_B = 'M–B 2:0; M–U 2:0; M–T 2:0; B–U 2:1; B–T 1:0; U–T 1:0';
-/** @ET-025 Zeile 4: Waging blau und Petting als einzige je 4 Punkte, gleich auf 5 und 6. */
+/** @ET-025 Zeile 4: Waging 2 und Petting als einzige je 4 Punkte, gleich auf 5 und 6. */
 const DATEN_5_6 = 'M–N 1:1; M–U 1:1; M–W 1:1; M–X 3:0; M–P 3:0; N–U 1:1; N–W 1:1; N–X 1:0; N–P 1:0; U–W 2:1; U–X 2:0; P–U 1:0; W–P 2:0; X–W 1:0; X–P 1:1';
 /** @ET-025 Zeile 3: Gruppe B des Hallencup Nord mit DJK Berg und VfB Ufer gleich auf 2 und 3 (je 4 Punkte, 0, 2 Tore, direkt 1:1). */
 const GRUPPE_B_2_3 = 'M–B 1:0; M–U 1:0; M–T 1:0; B–U 1:1; B–T 1:0; U–T 1:0';
@@ -98,7 +98,7 @@ describe("TB-3' Einstellung „Diese Plätze müssen bei Gleichstand ausgespielt
     expect(sharedPlaceAllowed(nikolaus([5]), '', { place: 3, size: 2 })).toBe(true);
   });
 
-  it('@W2A-063 Nikolaus, nur Platz 1 und 2: „Ergebnis so akzeptieren“ ohne Grund und ohne Rückfrage – Petting und Otting auf 3, Fridolfing 5, Waging blau 6, in Tabelle und Endstand', async () => {
+  it('@W2A-063 Nikolaus, nur Platz 1 und 2: „Ergebnis so akzeptieren“ ohne Grund und ohne Rückfrage – Petting und Otting auf 3, Fridolfing 5, Waging 2 6, in Tabelle und Endstand', async () => {
     const repo = new MemoryRepo(nikolaus([1, 2]));
     const result = await repo.service().decide(repo.tournament.id, shared(['P', 'D']));
     expect(result.ok).toBe(true);
@@ -130,7 +130,7 @@ describe("TB-3' Einstellung „Diese Plätze müssen bei Gleichstand ausgespielt
     { zeile: 'Platz 1 bis 3, West und Ost auf 3 und 4', bau: () => jgj('WOUMNB', 'W–O 1:1; W–U 0:1; W–M 0:1; W–N 1:0; W–B 1:0; O–U 0:1; O–M 0:1; O–N 1:0; O–B 1:0; U–M 1:0; U–N 1:0; U–B 1:0; M–N 1:0; M–B 1:0; N–B 1:0', [1, 2, 3]), gruppe: '', block: ['W', 'O'] as Key[], platz: 3, wahl: false },
     { zeile: 'Voreinstellung, SG Mitte und FC Nord auf 1 und 2', bau: () => jgj('MNWOUB', DATEN_PLATZ_1), gruppe: '', block: ['M', 'N'] as Key[], platz: 1, wahl: false },
     { zeile: 'Hallencup Nord, DJK Berg und VfB Ufer auf 2 und 3 von Gruppe B (Zweiter B in Halbfinale 1)', bau: () => hallencup(GRUPPE_A_3_4, GRUPPE_B_2_3, []), gruppe: 'B', block: ['B', 'U'] as Key[], platz: 2, wahl: false },
-    { zeile: 'Voreinstellung, Waging blau und Petting auf 5 und 6', bau: () => jgj('MNUWXP', DATEN_5_6), gruppe: '', block: ['X', 'P'] as Key[], platz: 5, wahl: true },
+    { zeile: 'Voreinstellung, Waging 2 und Petting auf 5 und 6', bau: () => jgj('MNUWXP', DATEN_5_6), gruppe: '', block: ['X', 'P'] as Key[], platz: 5, wahl: true },
   ])('@ET-025 Hinweisform je Platz: $zeile', ({ bau, gruppe, block, platz, wahl }) => {
     const t = bau();
     const { rows } = rankTournamentGroup(t, gruppe);

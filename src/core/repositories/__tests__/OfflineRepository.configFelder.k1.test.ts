@@ -27,7 +27,7 @@ function tournament(extra: Partial<Tournament>, version: number): Tournament {
     date: '2026-10-23',
     status: 'published',
     version,
-    teams: [{ id: ROT, name: 'TSV Waging rot', players: [] }, { id: BLAU, name: 'TSV Waging blau', players: [] }],
+    teams: [{ id: ROT, name: 'TSV Waging 1', players: [] }, { id: BLAU, name: 'TSV Waging 2', players: [] }],
     matches: [],
     groups: [],
     fields: [],

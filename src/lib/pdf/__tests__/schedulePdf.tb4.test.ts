@@ -36,14 +36,14 @@ async function gruppenPdf(tournament: Tournament): Promise<string[]> {
 }
 
 describe('TB-4 PDF Gruppentabellen', () => {
-  it('@W2A-049 @BM-009 PDF: Gruppe A zeigt DJK Kammer vor TSV Waging rot (direktes Spiel), nicht nach Tordifferenz', async () => {
+  it('@W2A-049 @BM-009 PDF: Gruppe A zeigt DJK Kammer vor TSV Waging 1 (direktes Spiel), nicht nach Tordifferenz', async () => {
     const abschnitt = tabelleGruppeA(await gruppenPdf(zweiGruppenWaging(DATA.ET_056)));
     expect(abschnitt.indexOf(NAME.K), 'Kammer steht in der Tabelle').toBeGreaterThan(-1);
     expect(abschnitt.indexOf(NAME.K)).toBeLessThan(abschnitt.indexOf(NAME.R));
     expect([ziffer(abschnitt, NAME.K), ziffer(abschnitt, NAME.R)]).toEqual(['1', '2']);
   });
 
-  it('@W2A-049 Gegenbeispiel PDF: bei „Punkte, Tordifferenz, Tore, direkter Vergleich“ steht Waging rot vor Kammer', async () => {
+  it('@W2A-049 Gegenbeispiel PDF: bei „Punkte, Tordifferenz, Tore, direkter Vergleich“ steht Waging 1 vor Kammer', async () => {
     const abschnitt = tabelleGruppeA(await gruppenPdf(zweiGruppenWaging(DATA.ET_056, { placementLogic: GD_FIRST_ORDER })));
     expect(abschnitt.indexOf(NAME.R)).toBeLessThan(abschnitt.indexOf(NAME.K));
   });
@@ -86,7 +86,7 @@ describe('TB-4 PDF Abschlusstabelle mit geteiltem Gruppenplatz („Ergebnis so a
     expect([NAME.M, NAME.N, NAME.U, NAME.W].map((n) => ziffer(mit, n))).toEqual(['1', '2', '2', '4']);
   });
 
-  it('@W2A-063 Nikolaus, nur Platz 1 und 2: Petting und Otting akzeptieren das Ergebnis – 3, 3, Fridolfing 5, Waging blau 6', async () => {
+  it('@W2A-063 Nikolaus, nur Platz 1 und 2: Petting und Otting akzeptieren das Ergebnis – 3, 3, Fridolfing 5, Waging 2 6', async () => {
     const mit = await abschlusstabelle(await mitAnnahme(nikolaus([1, 2]), ['P', 'D']));
     expect([NAME.P, NAME.D, NAME.F, NAME.X].map((n) => ziffer(mit, n))).toEqual(['3', '3', '5', '6']);
     const ohne = await abschlusstabelle(nikolaus([1, 2]));

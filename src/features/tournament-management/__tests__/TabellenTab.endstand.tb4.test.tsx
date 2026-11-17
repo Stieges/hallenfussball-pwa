@@ -34,7 +34,7 @@ function platzVon(teamName: string): string | null {
 }
 
 describe('TB-4 TabellenTab Gesamtplatzierung mit Finalrunde', () => {
-  it('@W2A-049 Endstand: bei gleichem Gruppenplatz entscheidet die Gesamtwertung – Waging blau (+3) vor Kammer (+1), nicht die Gruppenfolge A vor B', async () => {
+  it('@W2A-049 Endstand: bei gleichem Gruppenplatz entscheidet die Gesamtwertung – Waging 2 (+3) vor Kammer (+1), nicht die Gruppenfolge A vor B', async () => {
     const tournament = mitFinale();
     const Wrapper = await realI18nWrapper('de');
     render(

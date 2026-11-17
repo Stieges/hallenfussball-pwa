@@ -104,7 +104,7 @@ describe('@W2A-075 Jeder gegen jeden: Reiter Tabellen zeigt sofort die Tabelle',
 describe('@W2A-076 Offener Gleichstand: keine Medaille für den Platz', () => {
   const platzierung = '/t/1/tabellen?ansicht=platzierung';
 
-  it('Nikolaus offen: Petting und Otting (Platz 3) ohne Medaille, Kammer Gold, Waging rot Silber', async () => {
+  it('Nikolaus offen: Petting und Otting (Platz 3) ohne Medaille, Kammer Gold, Waging 1 Silber', async () => {
     await zeige(nikolaus(), platzierung);
     expect(medaille(NAME.P)).toBe('none');
     expect(medaille(NAME.D)).toBe('none');

@@ -1,7 +1,7 @@
 /**
  * N6 und N7: Tabelle nach BFV privat und Abschluss des Nikolaus-Turniers (Meilenstein M-T, Prüfschritte 2 bis 5). Alle 15 Spiele sind per
  * Turnierleitungs-RPC beendet (Vorbedingung; Ergebnisse in `NIKOLAUS_ERGEBNISSE`, auf die Szenarien zugeschnitten). Reihenfolge der Tabelle:
- * Kammer vor Waging rot (direktes Spiel zuerst, @ET-056), Petting und Otting gleichauf (@ET-055, @ET-025), Fridolfing, Waging blau.
+ * Kammer vor Waging 1 (direktes Spiel zuerst, @ET-056), Petting und Otting gleichauf (@ET-055, @ET-025), Fridolfing, Waging 2.
  * Szenarien mit anderen Mannschaftsnamen (@W2A-041 bis @W2A-045) prüfen dieselben Regeln; diese Fälle liegen als Vitest-Tests in Paket TB.
  */
 import { execFileSync } from 'node:child_process';
@@ -19,7 +19,7 @@ import type { StepContext, TurniertagStep } from './types';
 import { neuLaden } from '../../../helpers/neuLaden';
 
 const KAMMER = 'DJK Kammer';
-const ROT = 'TSV Waging rot';
+const WAGING1 = 'TSV Waging 1';
 
 /** Teamnamen der Gesamtplatzierung der Turnierleitung in Tabellenreihenfolge. */
 async function tabelleTurnierleitung(seite: Page): Promise<string[]> {
@@ -31,20 +31,20 @@ async function tabelleTurnierleitung(seite: Page): Promise<string[]> {
   return zeilen.evaluateAll((els) => els.map((tr) => (tr.querySelectorAll('td')[1] as HTMLElement).innerText.trim()));
 }
 
-/** N6a: bei Punktgleichheit entscheidet zuerst das direkte Spiel: Kammer (gewann 2:1) steht vor Waging rot (bessere Tordifferenz), ohne Strafstoßschießen (@ET-056). */
+/** N6a: bei Punktgleichheit entscheidet zuerst das direkte Spiel: Kammer (gewann 2:1) steht vor Waging 1 (bessere Tordifferenz), ohne Strafstoßschießen (@ET-056). */
 async function direktesSpielZuerst({ asRole }: StepContext): Promise<void> {
   await vorbedingung('alle 15 Spiele beenden', beendeAlleSpiele);
   const seite = await asRole('owner');
   const reihenfolge = await tabelleTurnierleitung(seite);
-  expect(reihenfolge.indexOf(KAMMER), `Reihenfolge: ${reihenfolge.join(', ')}`).toBeLessThan(reihenfolge.indexOf(ROT));
-  expect(reihenfolge.slice(0, 2), 'Kammer und Waging rot führen').toEqual([KAMMER, ROT]);
-  // zweite Dann-Zeile: ein Strafstoßschießen ist zwischen Kammer und Waging rot nicht nötig (nur Petting und Otting sind markiert, N6c)
+  expect(reihenfolge.indexOf(KAMMER), `Reihenfolge: ${reihenfolge.join(', ')}`).toBeLessThan(reihenfolge.indexOf(WAGING1));
+  expect(reihenfolge.slice(0, 2), 'Kammer und Waging 1 führen').toEqual([KAMMER, WAGING1]);
+  // zweite Dann-Zeile: ein Strafstoßschießen ist zwischen Kammer und Waging 1 nicht nötig (nur Petting und Otting sind markiert, N6c)
   const zeile = (name: string) => seite.locator('tbody tr', { hasText: name });
   await expect(zeile(KAMMER), 'Kammer: keine Markierung „Entscheidung nötig“').not.toContainText(/Entscheidung nötig|Strafstoß/);
-  await expect(zeile(ROT), 'Waging rot: keine Markierung „Entscheidung nötig“').not.toContainText(/Entscheidung nötig|Strafstoß/);
+  await expect(zeile(WAGING1), 'Waging 1: keine Markierung „Entscheidung nötig“').not.toContainText(/Entscheidung nötig|Strafstoß/);
 }
 
-/** N6b: alle Ansichten zeigen dieselbe Reihenfolge: auch die Zuschauer-Seite hat Kammer vor Waging rot (@W2A-049). */
+/** N6b: alle Ansichten zeigen dieselbe Reihenfolge: auch die Zuschauer-Seite hat Kammer vor Waging 1 (@W2A-049). */
 async function zuschauerReihenfolge({ anonPage }: StepContext): Promise<void> {
   await vorbedingung('alle 15 Spiele beenden', beendeAlleSpiele);
   await anonPage.goto(`/#/live/${NIKOLAUS.shareCode}`);
@@ -52,7 +52,7 @@ async function zuschauerReihenfolge({ anonPage }: StepContext): Promise<void> {
   await anonPage.getByText('Tabellen', { exact: true }).first().click();
   await expect(anonPage.locator('body')).toContainText(KAMMER, { timeout: 10000 });
   const text = await anonPage.locator('body').innerText();
-  expect(text.indexOf(KAMMER), 'Zuschauer-Seite: Kammer steht vor Waging rot').toBeLessThan(text.indexOf(ROT));
+  expect(text.indexOf(KAMMER), 'Zuschauer-Seite: Kammer steht vor Waging 1').toBeLessThan(text.indexOf(WAGING1));
 }
 
 /**
@@ -388,9 +388,9 @@ async function endstand({ anonPage }: StepContext): Promise<void> {
   expect(await zeilen.evaluateAll((els) => els.map((el) => el.getAttribute('data-place'))), 'kein Platz geteilt').toEqual(['1', '2', '3', '4', '5', '6']);
   const namen = await zeilen.evaluateAll((els) => els.map((el) => (el as HTMLElement).innerText.replace(/\s+/g, ' ').trim()));
   expect(namen[0], 'Platz 1').toContain(KAMMER);
-  expect(namen[1], 'Platz 2').toContain(ROT);
+  expect(namen[1], 'Platz 2').toContain(WAGING1);
   expect(namen[4], 'Platz 5').toContain('Fridolfing');
-  expect(namen[5], 'Platz 6').toContain('Waging blau');
+  expect(namen[5], 'Platz 6').toContain('Waging 2');
   await expect(anonPage.getByTestId('final-standings-header'), 'Spalten Sp, Diff, Pkt').toContainText('Pkt');
   for (const zelle of ['final-standing-games', 'final-standing-diff', 'final-standing-points']) {
     for (const text of await anonPage.getByTestId(zelle).allTextContents()) {
@@ -471,7 +471,7 @@ async function endstandMonitor({ anonPage }: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'N6a', title: 'Tabelle: bei Punktgleichheit zuerst das direkte Spiel (Kammer vor Waging rot), kein Strafstoßschießen nötig – unter der BFV-privat-Reihenfolge; Voreinstellung = N6e', scenarios: ['@ET-056'], owner: 'Reihenfolge der Kriterien aus dem Turnier (Punkte, direkter Vergleich, Tordifferenz, Tore)', expectedFail: false, run: direktesSpielZuerst },
+  { id: 'N6a', title: 'Tabelle: bei Punktgleichheit zuerst das direkte Spiel (Kammer vor Waging 1), kein Strafstoßschießen nötig – unter der BFV-privat-Reihenfolge; Voreinstellung = N6e', scenarios: ['@ET-056'], owner: 'Reihenfolge der Kriterien aus dem Turnier (Punkte, direkter Vergleich, Tordifferenz, Tore)', expectedFail: false, run: direktesSpielZuerst },
   { id: 'N6b', title: 'Tabelle: Zuschauer-Seite zeigt die Tabelle von Jeder gegen jeden in derselben Reihenfolge', scenarios: ['@W2A-049'], owner: 'Zuschauer-Tabelle ohne Gruppen (gebaut, #295)', expectedFail: false, run: zuschauerReihenfolge },
   { id: 'N6c', title: 'Tabelle: völliger Gleichstand (Petting/Otting) als „Gleichstand – Entscheidung nötig“ markiert, Taste „Gleichstand entscheiden“', scenarios: ['@ET-025', '@ET-055', '@W2A-047', '@W2A-067'], owner: 'Paket TB', expectedFail: false, run: gleichstandMarkiert },
   { id: 'N6c2', title: 'Turnier abschließen bei offener Gruppe: Liste „Gruppe noch nicht abgeschlossen“ mit Sprung zur Tabelle, kein Abschließen-Knopf, Turnier bleibt „Läuft“', scenarios: ['@LZ-010', '@LZ-013'], owner: 'R3-4 (B-33)', expectedFail: false, run: abschlussVerweigert },

@@ -16,7 +16,7 @@ import type { ITournamentRepository } from '../../repositories/ITournamentReposi
 function teams(n: number, groups: string[] = ['A']): Team[] {
   return Array.from({ length: n }, (_, i) => ({
     id: testUuid(i + 1),
-    name: i === 0 ? 'TSV Waging rot' : i === 1 ? 'TSV Waging blau' : `Gast ${i - 1}`,
+    name: i === 0 ? 'TSV Waging 1' : i === 1 ? 'TSV Waging 2' : `Gast ${i - 1}`,
     group: groups[i % groups.length],
     players: [],
   }));
@@ -127,7 +127,7 @@ describe('@W4-027/@W4-033 über den ganzen Spielplan (generateFullSchedule)', ()
     const schedule = generateFullSchedule(tournament({ hostTeamIds: [ROT, BLAU], openingMode: 'club-derby' }));
 
     expect([schedule.allMatches[0].originalTeamA, schedule.allMatches[0].originalTeamB]).toEqual([ROT, BLAU]);
-    expect(schedule.allMatches[0].homeTeam).toBe('TSV Waging rot');
+    expect(schedule.allMatches[0].homeTeam).toBe('TSV Waging 1');
   });
 
   it('ohne Wahl: eine Waging-Mannschaft eröffnet als Heim gegen einen Gast', () => {

@@ -20,11 +20,11 @@ function monitorZeilen(tournament: Tournament): Array<[string, string]> {
 const ziffer = (zeilen: Array<[string, string]>, name: string): string[] => zeilen.filter(([, n]) => n === name).map(([z]) => z);
 
 describe('TB-4 Monitor-Tabelle', () => {
-  it('@W2A-049 Monitor: Gruppe A zeigt DJK Kammer vor TSV Waging rot', () => {
+  it('@W2A-049 Monitor: Gruppe A zeigt DJK Kammer vor TSV Waging 1', () => {
     expect(monitorZeilen(zweiGruppenWaging(DATA.ET_056)).slice(0, 2).map(([, n]) => n)).toEqual([NAME.K, NAME.R]);
   });
 
-  it('@W2A-049 Gegenbeispiel Monitor: bei „Punkte, Tordifferenz, Tore, direkter Vergleich“ steht Waging rot vor Kammer', () => {
+  it('@W2A-049 Gegenbeispiel Monitor: bei „Punkte, Tordifferenz, Tore, direkter Vergleich“ steht Waging 1 vor Kammer', () => {
     expect(monitorZeilen(zweiGruppenWaging(DATA.ET_056, { placementLogic: GD_FIRST_ORDER })).slice(0, 2).map(([, n]) => n)).toEqual([NAME.R, NAME.K]);
   });
 

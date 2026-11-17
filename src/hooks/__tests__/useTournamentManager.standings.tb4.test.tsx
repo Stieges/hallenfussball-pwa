@@ -52,7 +52,7 @@ function tabellenzeilen(): Array<[string, string]> {
 describe('TB-4 App-Tabellen je Gruppe (useTournamentManager)', () => {
   beforeEach(() => { mockLoadTournament.mockReset(); });
 
-  it('@W2A-049 C-TABELLE-GRUPPENUEBERGREIFEND App-Tabelle: Gruppe A zeigt DJK Kammer vor TSV Waging rot (direktes Spiel 2:1), nicht Waging rot (bessere Tordifferenz) zuerst', async () => {
+  it('@W2A-049 C-TABELLE-GRUPPENUEBERGREIFEND App-Tabelle: Gruppe A zeigt DJK Kammer vor TSV Waging 1 (direktes Spiel 2:1), nicht Waging 1 (bessere Tordifferenz) zuerst', async () => {
     const tournament = zweiGruppenWaging(DATA.ET_056);
     const { currentStandings, overallStandings } = await manager(tournament);
 
@@ -61,13 +61,13 @@ describe('TB-4 App-Tabellen je Gruppe (useTournamentManager)', () => {
     expect(gruppeA.slice(0, 2)).toEqual([NAME.K, NAME.R]);
 
     // Gegenbeispiel (Gruppenblock): die Gesamtwertung über beide Gruppen kennt keinen direkten Vergleich –
-    // Waging rot (+6), Waging blau (+3), Kammer (+1) – und gehört nicht in die Gruppentabellen.
+    // Waging 1 (+6), Waging 2 (+3), Kammer (+1) – und gehört nicht in die Gruppentabellen.
     expect(overallStandings.slice(0, 3).map((s) => s.team.name)).toEqual([NAME.R, NAME.X, NAME.K]);
     expect(currentStandings.slice(0, 6).every((s) => s.team.group === 'A')).toBe(true);
     expect(currentStandings.slice(6).every((s) => s.team.group === 'B')).toBe(true);
   });
 
-  it('@W2A-049 App-Tabelle folgt der eingestellten Reihenfolge: bei „Punkte, Tordifferenz, Tore, direkter Vergleich“ steht Waging rot vor Kammer', async () => {
+  it('@W2A-049 App-Tabelle folgt der eingestellten Reihenfolge: bei „Punkte, Tordifferenz, Tore, direkter Vergleich“ steht Waging 1 vor Kammer', async () => {
     const { currentStandings } = await manager(zweiGruppenWaging(DATA.ET_056, { placementLogic: GD_FIRST_ORDER }));
     expect(currentStandings.slice(0, 2).map((s) => s.team.name)).toEqual([NAME.R, NAME.K]);
   });

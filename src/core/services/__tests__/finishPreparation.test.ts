@@ -21,9 +21,9 @@ async function input(over: Partial<FinishPreparationInput> = {}): Promise<Finish
   return { tournament, preflight: preflightFor(tournament), reviews: [], ownPending: 0, appVersion: 'build-abc', computedAt: NOW, ...over };
 }
 
-/** Ein Tor mehr im Spiel Kammer – Waging rot, nur auf dem Gerät (optimistisch, noch nicht beim Server). */
+/** Ein Tor mehr im Spiel Kammer – Waging 1, nur auf dem Gerät (optimistisch, noch nicht beim Server). */
 function torLokal(t: Tournament): Tournament {
-  const m = matchOf(t, NK.kammer, NK.wagingRot);
+  const m = matchOf(t, NK.kammer, NK.waging1);
   return withMatch(t, m.id, { scoreA: (m.scoreA ?? 0) + 1 });
 }
 

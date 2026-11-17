@@ -17,7 +17,7 @@ const ohneTeam = (t: Tournament, teamId: string): Tournament => ({
   ...t, teams: t.teams.map((team) => (team.id === teamId ? { ...team, isRemoved: true } : team)),
 });
 
-const ALLE = [NK.kammer, NK.wagingRot, NK.petting, NK.otting, NK.fridolfing, NK.wagingBlau];
+const ALLE = [NK.kammer, NK.waging1, NK.petting, NK.otting, NK.fridolfing, NK.waging2];
 
 describe('@TM-149 Beim Abschluss einer Gruppe zählt die Rangfolge ohne entfernte Teams', () => {
   it('TSV Petting entfernt: die übrigen 5 Teams stehen auf Platz 1 bis 5, Petting steht nicht darin', () => {
@@ -25,7 +25,7 @@ describe('@TM-149 Beim Abschluss einer Gruppe zählt die Rangfolge ohne entfernt
     const result = prepareGroupCompletion(t, '');
     // Gleichstand Petting/Otting um Platz 3 und 4 ist mit dem entfernten Team kein Paar mehr
     expect(result).toMatchObject({ code: 'READY', openRanks: [] });
-    expect(result.code === 'READY' && result.ranking).toEqual([NK.kammer, NK.wagingRot, NK.otting, NK.fridolfing, NK.wagingBlau]);
+    expect(result.code === 'READY' && result.ranking).toEqual([NK.kammer, NK.waging1, NK.otting, NK.fridolfing, NK.waging2]);
     expect(result.code === 'READY' && result.ranking).not.toContain(NK.petting);
     expect(activeRanking(t, '')).toHaveLength(5);
   });

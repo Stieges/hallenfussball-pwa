@@ -51,11 +51,11 @@ export const E2E_NIKOLAUS_SHARE_CODE = 'NIKOLS';
 export const E2E_NIKOLAUS_MONITOR_ID = e2eUuid('monitor:nikolaus-cup:1');
 
 /** Die beiden Mannschaften des Veranstalters. */
-export const E2E_NIKOLAUS_HOST_TEAM_NAMES = ['TSV Waging rot', 'TSV Waging blau'] as const;
+export const E2E_NIKOLAUS_HOST_TEAM_NAMES = ['TSV Waging 1', 'TSV Waging 2'] as const;
 /** Reihenfolge = Teamliste (@W4-044): die beiden Waging-Mannschaften zuerst. */
 export const E2E_NIKOLAUS_TEAM_NAMES = [
-  'TSV Waging rot',
-  'TSV Waging blau',
+  'TSV Waging 1',
+  'TSV Waging 2',
   'DJK Kammer',
   'TSV Petting',
   'DJK Otting',

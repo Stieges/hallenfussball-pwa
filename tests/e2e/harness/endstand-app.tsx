@@ -27,15 +27,15 @@ const szene = query.get('szene') ?? 'klar';
 void i18n.changeLanguage(query.get('sprache') === 'en' ? 'en' : 'de');
 
 const NAMEN: Record<string, string> = {
-  [NK.kammer]: 'FC Nord', [NK.wagingRot]: 'SV Süd', [NK.otting]: 'TSV West', [NK.petting]: 'SG Mitte', [NK.fridolfing]: 'SC Ost', [NK.wagingBlau]: 'FC Berg',
+  [NK.kammer]: 'FC Nord', [NK.waging1]: 'SV Süd', [NK.otting]: 'TSV West', [NK.petting]: 'SG Mitte', [NK.fridolfing]: 'SC Ost', [NK.waging2]: 'FC Berg',
 };
 const LANG: Record<string, string> = {
   [NK.kammer]: 'Sportgemeinschaft Rot-Weiß Musterstadt Nord 1904 I',
-  [NK.wagingRot]: 'Spielvereinigung Grün-Gelb Kleinstadt-Neudorf 1921',
+  [NK.waging1]: 'Spielvereinigung Grün-Gelb Kleinstadt-Neudorf 1921',
 };
 const lang = szene === 'lang';
 const shootout = szene === 'ps' || szene === 'lang';
-// Strafstoßschießen um Platz 1 gibt es nur bei echtem Gleichstand (Review #397 m-7): eigenes Turnier mit Kammer = Waging rot
+// Strafstoßschießen um Platz 1 gibt es nur bei echtem Gleichstand (Review #397 m-7): eigenes Turnier mit Kammer = Waging 1
 const basis = shootout ? { ...gleichstandUmPlatz1(false), status: 'published' as const, lifecycleStatus: 'fixed' as const } : await nikolausFertig();
 const turnier: Tournament = {
   ...basis,
@@ -44,8 +44,8 @@ const turnier: Tournament = {
 const anzeige: Tournament = shootout ? completeGroup({
   ...turnier,
   standingDecisions: [...(turnier.standingDecisions ?? []), {
-    id: 'ps1', groupId: '', teamIds: [NK.kammer, NK.wagingRot].sort(), order: [NK.kammer, NK.wagingRot], kind: 'shootout', shootout: { winner: 4, loser: 3 },
-    basis: decisionBasis(tableInput(turnier.teams, turnier.matches, turnier, ''), [NK.kammer, NK.wagingRot]),
+    id: 'ps1', groupId: '', teamIds: [NK.kammer, NK.waging1].sort(), order: [NK.kammer, NK.waging1], kind: 'shootout', shootout: { winner: 4, loser: 3 },
+    basis: decisionBasis(tableInput(turnier.teams, turnier.matches, turnier, ''), [NK.kammer, NK.waging1]),
   }],
 }) : turnier;
 
@@ -56,18 +56,18 @@ const ohneNummer: ScorerRow[] = [
   { kind: 'ownGoals', rank: null, teamId: NK.otting as never, teamName: name(NK.otting), goals: 1 },
 ];
 const scorers: ScorerRow[] = [
-  scorer(1, NK.kammer, 9, 5), scorer(2, NK.wagingRot, 7, 4), scorer(3, NK.kammer, 10, 3), scorer(3, NK.wagingRot, 4, 3), scorer(3, NK.otting, 11, 3),
+  scorer(1, NK.kammer, 9, 5), scorer(2, NK.waging1, 7, 4), scorer(3, NK.kammer, 10, 3), scorer(3, NK.waging1, 4, 3), scorer(3, NK.otting, 11, 3),
   scorer(6, NK.petting, 2, 2), { kind: 'noNumber', rank: null, teamId: NK.kammer as never, teamName: name(NK.kammer), goals: 2 },
 ];
 
 const ranking: FinalStandingRow[] = szene === 'ko'
   ? [
     { place: 1, teamId: NK.kammer as never, teamName: name(NK.kammer), origin: { kind: 'placementGame', finalType: 'final', role: 'winner' } },
-    { place: 2, teamId: NK.wagingRot as never, teamName: name(NK.wagingRot), origin: { kind: 'placementGame', finalType: 'final', role: 'loser' } },
+    { place: 2, teamId: NK.waging1 as never, teamName: name(NK.waging1), origin: { kind: 'placementGame', finalType: 'final', role: 'loser' } },
     { place: 3, teamId: NK.otting as never, teamName: name(NK.otting), origin: { kind: 'placementGame', finalType: 'thirdPlace', role: 'winner' } },
     { place: 4, teamId: NK.petting as never, teamName: name(NK.petting), origin: { kind: 'placementGame', finalType: 'thirdPlace', role: 'loser' } },
     { place: 5, teamId: NK.fridolfing as never, teamName: name(NK.fridolfing), origin: { kind: 'groupPlace', group: 'A', place: 3 }, tableValues: { games: 3, goalsFor: 5, goalsAgainst: 4, goalDiff: 1, points: 4 } },
-    { place: 5, teamId: NK.wagingBlau as never, teamName: name(NK.wagingBlau), origin: { kind: 'groupPlace', group: 'B', place: 3 }, tableValues: { games: 3, goalsFor: 2, goalsAgainst: 5, goalDiff: -3, points: 3 } },
+    { place: 5, teamId: NK.waging2 as never, teamName: name(NK.waging2), origin: { kind: 'groupPlace', group: 'B', place: 3 }, tableValues: { games: 3, goalsFor: 2, goalsAgainst: 5, goalDiff: -3, points: 3 } },
   ]
   : computeFinalStandings(anzeige).ranking;
 
