@@ -21,6 +21,27 @@ import { generateShareCode } from '../models/shareCode';
 import { checkedVersion, ownChainBase } from './confirmedVersion';
 
 /**
+ * @RE-006: Fehler, die beim Laden der Liste bei JEDEM Laden wieder auftreten wuerden (z. B. ein altes lokales
+ * Turnier, das die Pruefung nicht besteht), werden je Art und Turnier nur einmal je Sitzung gemeldet.
+ * Bewusst Modul-Ebene (nicht Instanz): mehrere Repository-Instanzen in einer Sitzung teilen sich den Merker.
+ * Nur im Arbeitsspeicher – nichts wird auf dem Geraet gespeichert; nach dem Neuladen der Seite ist er leer.
+ */
+const reportedLoadErrors = new Set<string>();
+
+/** true, wenn diese Art/Kennung in dieser Sitzung noch nicht gemeldet wurde (und merkt sie sich). */
+function markReportedOnce(kind: string, id: unknown): boolean {
+    const key = `${kind}:${String(id)}`;
+    if (reportedLoadErrors.has(key)) { return false; }
+    reportedLoadErrors.add(key);
+    return true;
+}
+
+/** Nur fuer Tests: bildet das Neuladen der Seite nach. */
+export function resetReportedLoadErrorsForTest(): void {
+    reportedLoadErrors.clear();
+}
+
+/**
  * A2 Fixrunde 3 (N2, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-rereview.md`):
  * merges a `MatchUpdate` into a local `Match`, translating `null` (the wire-safe "explicitly
  * clear this field" sentinel used for the offline mutation queue, see `core/models/types.ts`)
@@ -492,13 +513,16 @@ export class LocalStorageRepository implements ITournamentRepository {
                 }
                 // If validation fails, log + report to Sentry, but return raw item to avoid data loss
                 // Still hydrate to ensure date fields are proper Date objects
-                captureFeatureError(
-                    new Error(`Tournament ${String(itemData.id)} validation failed: ${result.error.message}`),
-                    'repository', 'loadList:validation',
-                    { tournamentId: String(itemData.id) }
-                );
-                if (import.meta.env.DEV) {
-                    console.warn(`Tournament ${String(itemData.id)} validation failed:`, result.error);
+                // @RE-006: je Turnier nur einmal je Sitzung melden (die Liste wird sehr oft geladen).
+                if (markReportedOnce('validation', itemData.id)) {
+                    captureFeatureError(
+                        new Error(`Tournament ${String(itemData.id)} validation failed: ${result.error.message}`),
+                        'repository', 'loadList:validation',
+                        { tournamentId: String(itemData.id) }
+                    );
+                    if (import.meta.env.DEV) {
+                        console.warn(`Tournament ${String(itemData.id)} validation failed:`, result.error);
+                    }
                 }
                 return this.backfillPublishedAt(hydrateTournament(itemData));
             });
@@ -521,6 +545,7 @@ export class LocalStorageRepository implements ITournamentRepository {
         const current = raw.filter((item) => !isLegacyTournamentShape(item));
         for (const item of legacy) {
             const id = (item as { id?: unknown }).id;
+            if (!markReportedOnce('legacyFormat', id)) { continue; }
             captureFeatureError(
                 new Error(`Tournament ${String(id)} hat das Altformat (Spiel ohne slotA/slotB) und wurde beiseitegelegt`),
                 'repository', 'loadList:legacyFormat',
@@ -534,7 +559,9 @@ export class LocalStorageRepository implements ITournamentRepository {
                 window.dispatchEvent(new CustomEvent(LEGACY_TOURNAMENTS_NOTICE_EVENT, { detail: { count: legacy.length } }));
             }
         } catch (e) {
-            captureFeatureError(e instanceof Error ? e : new Error(String(e)), 'repository', 'loadList:legacyQuarantine');
+            if (markReportedOnce('legacyQuarantine', 'all')) {
+                captureFeatureError(e instanceof Error ? e : new Error(String(e)), 'repository', 'loadList:legacyQuarantine');
+            }
         }
         return current;
     }
