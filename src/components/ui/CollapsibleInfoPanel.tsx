@@ -68,14 +68,14 @@ export const CollapsibleInfoPanel: React.FC<CollapsibleInfoPanelProps> = ({
       case 'tip':
         return {
           border: cssVars.colors.success,
-          bg: `${cssVars.colors.success}10`,
-          iconBg: `${cssVars.colors.success}20`,
+          bg: cssVars.colors.successLight,
+          iconBg: cssVars.colors.successLight,
         };
       case 'warning':
         return {
           border: cssVars.colors.warning,
-          bg: `${cssVars.colors.warning}10`,
-          iconBg: `${cssVars.colors.warning}20`,
+          bg: cssVars.colors.warningMedium,
+          iconBg: cssVars.colors.warningSelected,
         };
       default: // info
         return {

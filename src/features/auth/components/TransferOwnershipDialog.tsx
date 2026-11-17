@@ -279,7 +279,7 @@ const styles: Record<string, CSSProperties> = {
     width: '100%',
   },
   coAdminOptionSelected: {
-    background: `${cssVars.colors.primary}10`,
+    background: cssVars.colors.primaryMedium,
     borderColor: cssVars.colors.primary,
   },
   avatar: {
@@ -337,7 +337,7 @@ const styles: Record<string, CSSProperties> = {
   },
   warningBox: {
     padding: cssVars.spacing.md,
-    background: `${cssVars.colors.warning}15`,
+    background: cssVars.colors.warningLight,
     borderRadius: cssVars.borderRadius.md,
     border: `1px solid ${cssVars.colors.warning}`,
   },
@@ -346,12 +346,12 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: cssVars.spacing.xs,
     fontSize: cssVars.fontSizes.md,
     fontWeight: cssVars.fontWeights.semibold,
-    color: cssVars.colors.warning,
+    color: cssVars.colors.textPrimary,
   },
   warningText: {
     margin: 0,
     fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.warning,
+    color: cssVars.colors.textPrimary,
   },
   hintText: {
     margin: 0,
