@@ -9,6 +9,7 @@ import type { Json } from '../../types/supabase';
 import { matchOrigins, type MatchOrigins } from '../models/matchOrigin';
 import { SlotSourceSchema, type SlotSource } from '../models/schemas/MatchSlotSchema';
 import { captureFeatureError } from '../../lib/sentry';
+import { markReportedOnce } from './reportOnce';
 
 /**
  * Von Hand ergänzt: `src/types/supabase.ts` wird erst nach dem Einspielen der Migration neu erzeugt
@@ -42,6 +43,10 @@ function parseOrigin(matchId: string, side: 'A' | 'B', raw: Json | null | undefi
   const parsed = SlotSourceSchema.safeParse(raw);
   if (parsed.success) {
     return parsed.data;
+  }
+  // @RE-007: derselbe Datenfehler kehrt bei jedem Cloud-Lesen wieder – einmal je Sitzung, Spiel und Seite
+  if (!markReportedOnce('matchOrigin', `${matchId}:${side}`)) {
+    return undefined;
   }
   captureFeatureError(new Error(`Spiel ${matchId}, Seite ${side}: Herkunft des Platzes ungültig`), 'sync', 'mapMatchOrigin', {
     matchId,

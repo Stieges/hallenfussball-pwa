@@ -22,7 +22,8 @@ vi.mock('../../../lib/sentry', () => ({
   captureFeatureError: (...args: unknown[]) => captureFeatureError(...args),
 }));
 
-import { LocalStorageRepository, resetReportedLoadErrorsForTest } from '../LocalStorageRepository';
+import { LocalStorageRepository } from '../LocalStorageRepository';
+import { resetReportedOnceForTest } from '../reportOnce';
 
 const base = {
   title: 'Gueltig',
@@ -49,7 +50,7 @@ describe('LocalStorageRepository – Fehlerbericht nur einmal je Turnier (@RE-00
   beforeEach(() => {
     data.clear();
     vi.clearAllMocks();
-    resetReportedLoadErrorsForTest();
+    resetReportedOnceForTest();
   });
 
   it('@RE-006 hundertmal geladen: genau ein Bericht, Turnier jedes Mal in der Liste', async () => {
@@ -77,7 +78,7 @@ describe('LocalStorageRepository – Fehlerbericht nur einmal je Turnier (@RE-00
     const repo = new LocalStorageRepository();
     await repo.listForCurrentUser(); await repo.listForCurrentUser();
     expect(captureFeatureError).toHaveBeenCalledTimes(2);
-    resetReportedLoadErrorsForTest(); // Seite neu geladen: Modulzustand ist leer
+    resetReportedOnceForTest(); // Seite neu geladen: Modulzustand ist leer
     await repo.listForCurrentUser(); await repo.listForCurrentUser();
     expect(captureFeatureError).toHaveBeenCalledTimes(4);
     expect(berichteFuer('kaputt')).toHaveLength(2);

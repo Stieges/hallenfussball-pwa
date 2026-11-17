@@ -8,6 +8,7 @@
  */
 import { MatchKitSchema, parseKitDecision, type KitDecision, type MatchKit } from '../models/kit';
 import { captureFeatureError } from '../../lib/sentry';
+import { markReportedOnce } from './reportOnce';
 
 /**
  * Von Hand ergänzt: `src/types/supabase.ts` wird erst nach dem Einspielen der Migration neu erzeugt
@@ -42,7 +43,8 @@ export function kitFromRow(row: { id: string } & MatchKitColumns): { kit?: Match
       invalid = true;
     }
   }
-  if (invalid) {
+  // @RE-007: einmal je Sitzung und Spiel (die Zeile wird bei jedem Cloud-Lesen wieder gelesen)
+  if (invalid && markReportedOnce('matchKit', row.id)) {
     captureFeatureError(new Error(`Spiel ${row.id}: getragene Farbe aus der Cloud ungültig`), 'sync', 'mapMatchKit', {
       matchId: row.id,
     });
@@ -62,7 +64,10 @@ export function kitDecisionFromRow(row: { id: string } & MatchKitColumns): { kit
   }
   const decision = parseKitDecision(raw);
   if (decision === undefined) {
-    captureFeatureError(new Error(`Spiel ${row.id}: kit_decision aus der Cloud ungültig`), 'sync', 'mapMatchKitDecision', { matchId: row.id });
+    // @RE-007: einmal je Sitzung und Spiel
+    if (markReportedOnce('matchKitDecision', row.id)) {
+      captureFeatureError(new Error(`Spiel ${row.id}: kit_decision aus der Cloud ungültig`), 'sync', 'mapMatchKitDecision', { matchId: row.id });
+    }
     return {};
   }
   return { kitDecision: decision };
