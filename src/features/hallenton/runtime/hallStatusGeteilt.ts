@@ -35,7 +35,7 @@ export interface GeteilteHallStatusAbfragen {
   lautsprecherBekannt(turnierId: string): boolean;
   /** Die Lautsprecher aus der letzten vollen Antwort dieser Sitzung (bleiben ohne Netz stehen; @HT-041); leer, solange keine kam. */
   letzteSprecher(turnierId: string): HallStatusVoll['speakers'];
-  /** Nur für Tests: alles beenden und vergessen. */
+  /** Alles beenden und vergessen: Tests und Kontowechsel (@HT-060, gemerkte Gerätenamen gehören dem Konto davor). */
   zuruecksetzen(): void;
 }
 

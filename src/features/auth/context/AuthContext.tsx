@@ -32,6 +32,7 @@ import { ServerSlowNotice } from '../components/ServerSlowNotice';
 import { fetchProfile } from './fetchProfile';
 import { useAuthInit } from './useAuthInit';
 import { useAutoReconnect } from './useAutoReconnect';
+import { useKontoWechselMeldung } from './useKontoWechselMeldung';
 import { useCrossTabAuthSync } from './useCrossTabAuthSync';
 
 // Re-export the context for consumers
@@ -156,6 +157,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // ============================================
   // AUTH ACTION DEPENDENCIES
   // ============================================
+
+  useKontoWechselMeldung(user?.id ?? null); // Abmelden/anderes Konto: gemerkter Stand im Tab wird geleert (@HT-060)
 
   /**
    * Ref to hold current state, avoiding stale closures in action callbacks.

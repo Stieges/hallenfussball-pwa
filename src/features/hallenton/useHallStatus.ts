@@ -18,6 +18,7 @@ import {
 } from '../../core/repositories/hallentonRpc';
 import { supabase } from '../../lib/supabase';
 import { erzeugeHallStatusAbfrage, type HallStatusSchnappschuss } from './runtime/hallStatusAbfrage';
+import { beiKontoWechsel } from '../../core/auth/kontoWechsel';
 import { erzeugeGeteilteAbfragen } from './runtime/hallStatusGeteilt';
 import { echterZeitgeber } from './runtime/zeitgeber';
 
@@ -53,12 +54,15 @@ const geteilt = erzeugeGeteilteAbfragen((turnierId) => erzeugeHallStatusAbfrage(
   zeitgeber: echterZeitgeber,
 }), () => (typeof window === 'undefined' ? null : window), echterZeitgeber);
 
+// Abmelden oder anderes Konto im selben Fenster: der gemerkte Stand (Gerätenamen der letzten vollen Antwort) gehört dem Konto davor (@HT-060)
+beiKontoWechsel(() => geteilt.zuruecksetzen());
+
 /** Den Stand des Turniers sofort neu lesen (nach dem Abmelden eines Lautsprechers, H4-11b); ohne laufende Abfrage nichts. */
 export function hallStatusNeuLesen(turnierId: string): void {
   geteilt.abfragen(turnierId);
 }
 
-/** Nur für Tests: die geteilten Abfragen beenden und vergessen (der Nachlauf überlebt sonst den Test). */
+/** Die geteilten Abfragen beenden und vergessen (Tests: der Nachlauf überlebt sonst den Test; Kontowechsel: @HT-060). */
 export function __setzeHallStatusFuerTests(): void {
   geteilt.zuruecksetzen();
 }
