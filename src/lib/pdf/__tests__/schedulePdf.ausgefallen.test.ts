@@ -23,7 +23,7 @@ import type { PdfLocale } from '../translations';
 const AUSGEFALLEN = { de: 'ausgefallen', en: 'cancelled' } as const;
 
 const TOL = 0.05;
-/** Spiel 6 des Nikolaus-Turniers: TSV Waging blau – DJK Kammer, 17:20. */
+/** Spiel 6 des Nikolaus-Turniers: TSV Waging 2 – DJK Kammer, 17:20. */
 const NR = 6;
 
 /** Beide Teams nicht angetreten (Wertung, Stand 0:0 nach der Engine); Spiel 1 normal beendet 2:1 als Vergleich. */
@@ -89,7 +89,7 @@ describe('@DR-045 ausgefallen im Spielplan mit Ergebnissen', () => {
     const { pages } = await pdfVon(FALL_A, doppelt(FALL_A, NR));
     const tabelle = pages.find(p => p.texts.some(t => t.str.trim() === 'Pkt.'))!;
     // DJK Kammer hat zusätzlich Spiel 1 mit 2:1 gewonnen
-    for (const [team, erwartet] of [['TSV Waging blau', ['1', '0', '0', '1', '0:2', '-2', '0']], ['DJK Kammer', ['2', '1', '0', '1', '2:3', '-1', '3']]] as const) {
+    for (const [team, erwartet] of [['TSV Waging 2', ['1', '0', '0', '1', '0:2', '-2', '0']], ['DJK Kammer', ['2', '1', '0', '1', '2:3', '-1', '3']]] as const) {
       const name = tabelle.texts.find(t => t.str.trim() === team)!;
       const werte = tabelle.texts.filter(t => Math.abs(t.y - name.y) < 1 && t.x > name.x + name.w).map(t => t.str.trim()).filter(s => s !== '');
       expect(werte, team).toEqual(erwartet);

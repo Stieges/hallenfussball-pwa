@@ -98,32 +98,32 @@ describe('@ET-044 Platz 1 per Strafstoßschießen entschieden', () => {
   const row = (place: number, teamId: string, teamName: string, origin: FinalStandingRow['origin'] = { kind: 'groupPlace', group: '', place }): FinalStandingRow => ({
     place, teamId: teamId as FinalStandingRow['teamId'], teamName, origin,
   });
-  const ranking = [row(1, NK.kammer, 'DJK Kammer'), row(2, NK.wagingRot, 'TSV Waging rot'), row(3, NK.otting, 'DJK Otting')];
+  const ranking = [row(1, NK.kammer, 'DJK Kammer'), row(2, NK.waging1, 'TSV Waging 1'), row(3, NK.otting, 'DJK Otting')];
   /** Entscheidung mit der echten Grundlage des Turniers `t` (wie `StandingDecisionService` sie speichert). */
   const decisionOf = (t: Tournament, order: [string, string], groupId = '', kind: 'shootout' | 'shared' = 'shootout'): StandingDecision => ({
     id: 'd1', groupId, teamIds: [...order].sort(), order, kind, ...(kind === 'shootout' ? { shootout: { winner: 4, loser: 3 } } : {}),
     basis: decisionBasis(tableInput(t.teams, t.matches, t, groupId), order),
   });
-  /** Echter Gleichstand um Platz 1, Strafstoßschießen Kammer vor Waging rot, von der Tabelle angewendet. */
+  /** Echter Gleichstand um Platz 1, Strafstoßschießen Kammer vor Waging 1, von der Tabelle angewendet. */
   const lage = (): Promise<Tournament> => decide(gleichstandUmPlatz1(false),
-    { groupId: '', teamIds: [NK.kammer, NK.wagingRot], order: [NK.kammer, NK.wagingRot], kind: 'shootout', shootout: { winner: 4, loser: 3 } });
+    { groupId: '', teamIds: [NK.kammer, NK.waging1], order: [NK.kammer, NK.waging1], kind: 'shootout', shootout: { winner: 4, loser: 3 } });
   const withDecisions = (t: Tournament, ...decisions: StandingDecision[]): Tournament => ({ ...t, standingDecisions: decisions });
 
   it('Positivfall (echter Gleichstand um Platz 1): Strafstoßschießen 4:3, von der Tabelle angewendet → Hinweis mit Gegner', async () => {
     const t = completeGroup(await decide(gleichstandUmPlatz1(false),
-      { groupId: '', teamIds: [NK.kammer, NK.wagingRot], order: [NK.kammer, NK.wagingRot], kind: 'shootout', shootout: { winner: 4, loser: 3 } }));
+      { groupId: '', teamIds: [NK.kammer, NK.waging1], order: [NK.kammer, NK.waging1], kind: 'shootout', shootout: { winner: 4, loser: 3 } }));
     expect(rankTournamentGroup(t, '').rows[0].decision?.kind).toBe('shootout');
     const endstand = computeFinalStandings(t);
     expect(endstand.state).toBe('complete');
-    expect(shootoutNote(t, endstand.ranking)).toEqual({ winner: 4, loser: 3, otherName: 'TSV Waging rot' });
+    expect(shootoutNote(t, endstand.ranking)).toEqual({ winner: 4, loser: 3, otherName: 'TSV Waging 1' });
   });
 
   it('Gegenbeispiel Block hat sich geändert (Review #397 m-7): Korrektur außerhalb der Grundlage macht aus {A,B} den Block {A,B,C}, die Reihenfolge der drei gilt → kein Hinweis', async () => {
-    const { kammer: A, wagingRot: B, otting: C } = NK;
+    const { kammer: A, waging1: B, otting: C } = NK;
     let t = await decide(gleichstandUmPlatz1(false), { groupId: '', teamIds: [A, B], order: [A, B], kind: 'shootout', shootout: { winner: 4, loser: 3 } });
     // das Testkit vergibt je Aufruf dieselbe Kennung; die alte Entscheidung bleibt am Server stehen, bis jemand sie zurücknimmt
     t = { ...t, standingDecisions: (t.standingDecisions ?? []).map((d) => ({ ...d, id: 'alt-1' })) };
-    t = ergebnis(t, C, NK.wagingBlau, 1, 0);
+    t = ergebnis(t, C, NK.waging2, 1, 0);
     expect(rankTournamentGroup(t, '').openTies[0]?.slice().sort()).toEqual([A, B, C].sort());
     t = completeGroup(await decide(t, { groupId: '', teamIds: [A, B, C], order: [A, B, C], kind: 'order', reason: 'Los' }));
     expect(rankTournamentGroup(t, '').rows[0].decision?.kind).toBe('order');
@@ -136,13 +136,13 @@ describe('@ET-044 Platz 1 per Strafstoßschießen entschieden', () => {
   it('Gegenbeispiele: Entscheidung um andere Plätze, „Ergebnis so akzeptieren“ oder keine Entscheidung → kein Hinweis', () => {
     expect(shootoutNote(fertig, ranking)).toBeNull(); // Nikolaus: das Strafstoßschießen betraf Platz 3/4
     expect(shootoutNote(withDecisions(fertig), ranking)).toBeNull();
-    expect(shootoutNote(withDecisions(fertig, decisionOf(fertig, [NK.kammer, NK.wagingRot], '', 'shared')), ranking)).toBeNull();
+    expect(shootoutNote(withDecisions(fertig, decisionOf(fertig, [NK.kammer, NK.waging1], '', 'shared')), ranking)).toBeNull();
   });
 
   it('Gegenbeispiel verfallen (Review #397 M-1): ein Ergebnis hat sich geändert, die Grundlage gilt nicht mehr → kein Hinweis', async () => {
     const t = await lage();
-    expect(shootoutNote(t, ranking)).toEqual({ winner: 4, loser: 3, otherName: 'TSV Waging rot' }); // Kontrolle: unverändert gilt der Hinweis
-    const spiel = matchOf(t, NK.kammer, NK.wagingRot);
+    expect(shootoutNote(t, ranking)).toEqual({ winner: 4, loser: 3, otherName: 'TSV Waging 1' }); // Kontrolle: unverändert gilt der Hinweis
+    const spiel = matchOf(t, NK.kammer, NK.waging1);
     const geaendert = withMatch(t, spiel.id, { scoreA: (spiel.scoreA ?? 0) + 3 });
     expect(shootoutNote(geaendert, ranking)).toBeNull();
     expect(shootoutNote({ ...t, standingDecisions: (t.standingDecisions ?? []).map((d) => ({ ...d, basis: 'x' })) }, ranking)).toBeNull();
@@ -150,17 +150,17 @@ describe('@ET-044 Platz 1 per Strafstoßschießen entschieden', () => {
 
   it('Gegenbeispiel Turnier mit Finale: Platz 1 stammt aus dem Finale („Sieger Finale“), eine gültige Entscheidung derselben Teams ändert das nicht', async () => {
     const finale = [row(1, NK.kammer, 'DJK Kammer', { kind: 'placementGame', finalType: 'final', role: 'winner' }),
-      row(2, NK.wagingRot, 'TSV Waging rot', { kind: 'placementGame', finalType: 'final', role: 'loser' })];
+      row(2, NK.waging1, 'TSV Waging 1', { kind: 'placementGame', finalType: 'final', role: 'loser' })];
     expect(shootoutNote(await lage(), finale)).toBeNull();
   });
 
   it('Gegenbeispiel andere Gruppe: Platz 1 ist Erster Gruppe A, die Entscheidung gehört zu einer anderen Gruppe → kein Hinweis', async () => {
-    const gruppeA = [row(1, NK.kammer, 'DJK Kammer', { kind: 'groupPlace', group: 'A', place: 1 }), row(2, NK.wagingRot, 'TSV Waging rot', { kind: 'groupPlace', group: 'A', place: 2 })];
+    const gruppeA = [row(1, NK.kammer, 'DJK Kammer', { kind: 'groupPlace', group: 'A', place: 1 }), row(2, NK.waging1, 'TSV Waging 1', { kind: 'groupPlace', group: 'A', place: 2 })];
     expect(shootoutNote(await lage(), gruppeA)).toBeNull();
   });
 
   it('Gegenbeispiel Platz 1 nicht aus Gruppenplatz 1 (Platz 3 der Tabelle auf Platz 1 gesetzt) → kein Hinweis', async () => {
-    const dritter = [row(1, NK.kammer, 'DJK Kammer', { kind: 'groupPlace', group: '', place: 3 }), row(2, NK.wagingRot, 'TSV Waging rot')];
+    const dritter = [row(1, NK.kammer, 'DJK Kammer', { kind: 'groupPlace', group: '', place: 3 }), row(2, NK.waging1, 'TSV Waging 1')];
     expect(shootoutNote(await lage(), dritter)).toBeNull();
   });
 

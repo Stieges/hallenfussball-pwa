@@ -96,14 +96,14 @@ async function frueherAnpfiff({ browser }: StepContext): Promise<void> {
   expect(Math.abs(start - vorher), 'das Spiel läuft ab dem Anpfiff, nicht ab 16:30').toBeLessThan(15000);
   await expect(handy.getByTestId('scoreboard-clock-rest'), 'Spielzeit 9 Minuten in einem Abschnitt').toHaveText(/^8:\d\d$/);
   // @ZP-092: der Monitor, schon vorher offen, zeigt Spiel 1 ohne Neuladen innerhalb von 10 Sekunden als live mit laufender Uhr
-  await expect(monitor.locator('body'), 'Hallenmonitor: Spiel 1 ist live').toContainText(/Live\s*Feld 1\s*—\s*Spiel 1[\s\S]*TSV Waging rot/, { timeout: Math.max(1000, 10000 - (Date.now() - klick)) });
+  await expect(monitor.locator('body'), 'Hallenmonitor: Spiel 1 ist live').toContainText(/Live\s*Feld 1\s*—\s*Spiel 1[\s\S]*TSV Waging 1/, { timeout: Math.max(1000, 10000 - (Date.now() - klick)) });
   test.info().annotations.push({ type: 'Monitor live nach (ms)', description: String(Date.now() - klick) });
   await expect(monitor.locator('body'), 'Hallenmonitor: die Uhr läuft').toContainText(/(?<!\d)[0-8]:\d\d(?!\d)/);
   expect((await fetchNikolausSpiele())[1].scheduled_start, 'Spiel 2 steht weiter um 16:40').toBe('16:40:00');
 }
 
 /** Zeile von Spiel 1 auf der Zuschauer-Seite: Beschriftung „Spiel 1: …“ (@ZM-007, @SL-049). */
-const zeileSpiel1 = (seite: Page) => seite.locator('[aria-label="Spiel 1: TSV Waging rot gegen TSV 1921 Fridolfing"]:visible');
+const zeileSpiel1 = (seite: Page) => seite.locator('[aria-label="Spiel 1: TSV Waging 1 gegen TSV 1921 Fridolfing"]:visible');
 /** Zeile von Spiel 2: „Spiel 2: …“. */
 const zeileSpiel2 = (seite: Page) => seite.locator('[aria-label="Spiel 2: DJK Otting gegen TSV Petting"]:visible');
 

@@ -56,7 +56,7 @@ describe('@OB-079 aria-label der Karte', () => {
   });
 
   it('externes Turnier: die Quelle steht am Ende', () => {
-    render(<TournamentCard tournament={turnier({ externalSource: 'Datei' })} categoryLabel="upcoming" onClick={vi.fn()} />);
+    render(<TournamentCard tournament={turnier({ isExternal: true, externalSource: 'Datei' })} categoryLabel="upcoming" onClick={vi.fn()} />);
     expect(labelOf()).toBe('Turnier: Nikolausturnier, F-Junioren, Sa 28.11. · 08:30, Bergader SportARENA, Datei');
   });
 

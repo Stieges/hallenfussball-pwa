@@ -48,7 +48,7 @@
     {
      "id": "00000000-0000-4000-8000-00000000e002",
      "tournament_id": "endstand-messlauf",
-     "name": "TSV Waging rot",
+     "name": "TSV Waging 1",
      "sort_order": 2,
      "version": 1
     },
@@ -76,7 +76,7 @@
     {
      "id": "00000000-0000-4000-8000-00000000e006",
      "tournament_id": "endstand-messlauf",
-     "name": "TSV Waging blau",
+     "name": "TSV Waging 2",
      "sort_order": 6,
      "version": 1
     }
@@ -106,7 +106,7 @@
        {
         "place": 2,
         "teamId": "00000000-0000-4000-8000-00000000e002",
-        "teamName": "TSV Waging rot",
+        "teamName": "TSV Waging 1",
         "origin": {
          "kind": "groupPlace",
          "group": "",
@@ -174,7 +174,7 @@
        {
         "place": 6,
         "teamId": "00000000-0000-4000-8000-00000000e006",
-        "teamName": "TSV Waging blau",
+        "teamName": "TSV Waging 2",
         "origin": {
          "kind": "groupPlace",
          "group": "",

@@ -7,7 +7,7 @@ import type { Match, Team, Tournament } from '../../../types/tournament';
 import { testUuid, vs } from '../../../test/matchSlotFixtures';
 import { buildTournament, FIXTURE_FIELDS } from './monitorFixture';
 
-export const KURZE_NAMEN = ['Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921', 'TSV Waging rot', 'TSV Petting', 'DJK Otting', 'TSV 1921 Fridolfing', 'TSV Waging blau'] as const;
+export const KURZE_NAMEN = ['Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921', 'TSV Waging 1', 'TSV Petting', 'DJK Otting', 'TSV 1921 Fridolfing', 'TSV Waging 2'] as const;
 /** 45 bis 50 Zeichen, kein Wort aus der Kürzungsliste, kein Kurzname (@ZM-150). */
 export const LANGE_NAMEN = [
   'Mannschaftsgemeinschaft Oberweiler Unterweiler Nord',

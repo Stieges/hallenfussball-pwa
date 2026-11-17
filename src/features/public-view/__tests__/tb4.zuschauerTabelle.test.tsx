@@ -33,12 +33,12 @@ function zeilen(): Array<[string, string]> {
 const ziffer = (name: string): string[] => zeilen().filter(([, n]) => n === name).map(([z]) => z);
 
 describe('TB-4 Zuschauer-Tabelle', () => {
-  it('@W2A-049 Zuschauer: Gruppe A zeigt DJK Kammer vor TSV Waging rot; bei umgestellter Reihenfolge Waging rot zuerst', async () => {
+  it('@W2A-049 Zuschauer: Gruppe A zeigt DJK Kammer vor TSV Waging 1; bei umgestellter Reihenfolge Waging 1 zuerst', async () => {
     await zuschauerTabelle(zweiGruppenWaging(DATA.ET_056));
     expect(zeilen().slice(0, 2).map(([, name]) => name)).toEqual([NAME.K, NAME.R]);
   });
 
-  it('@W2A-049 Gegenbeispiel Zuschauer: bei „Punkte, Tordifferenz, Tore, direkter Vergleich“ steht Waging rot vor Kammer', async () => {
+  it('@W2A-049 Gegenbeispiel Zuschauer: bei „Punkte, Tordifferenz, Tore, direkter Vergleich“ steht Waging 1 vor Kammer', async () => {
     await zuschauerTabelle(zweiGruppenWaging(DATA.ET_056, { placementLogic: GD_FIRST_ORDER }));
     expect(zeilen().slice(0, 2).map(([, name]) => name)).toEqual([NAME.R, NAME.K]);
   });
@@ -61,10 +61,10 @@ describe('TB-4 Zuschauer-Tabelle', () => {
         .map((cells) => (cells[0].textContent ?? '').trim());
     };
     const fertig = await zuschauerTabelle(zweiGruppenWaging(DATA.ET_055));
-    expect([handyZiffer(fertig.container, 'Waging rot'), handyZiffer(fertig.container, 'Kammer'), handyZiffer(fertig.container, 'Nord')]).toEqual([['3'], ['3'], ['5']]);
+    expect([handyZiffer(fertig.container, 'Waging 1'), handyZiffer(fertig.container, 'Kammer'), handyZiffer(fertig.container, 'Nord')]).toEqual([['3'], ['3'], ['5']]);
     fertig.unmount();
     const offen = await zuschauerTabelle(zweiGruppenWaging(DATA.ET_055, { open: ['M–U', 'U–N', 'N–O'] }));
-    expect([handyZiffer(offen.container, 'Waging rot'), handyZiffer(offen.container, 'Kammer'), handyZiffer(offen.container, 'Ufer')]).toEqual([['2'], ['2'], ['4']]);
+    expect([handyZiffer(offen.container, 'Waging 1'), handyZiffer(offen.container, 'Kammer'), handyZiffer(offen.container, 'Ufer')]).toEqual([['2'], ['2'], ['4']]);
   });
 
   it('@W2A-047 Gegenbeispiel Zuschauer: mitten in der Gruppe 2, 2, 4', async () => {

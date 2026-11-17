@@ -30,10 +30,10 @@ void i18n.changeLanguage(query.get('sprache') === 'en' ? 'en' : 'de');
 
 const LANG = {
   [NK.kammer]: 'Sportgemeinschaft Rot-Weiß Musterstadt Nord 1904 I',
-  [NK.wagingRot]: 'Spielvereinigung Grün-Gelb Kleinstadt-Neudorf 1921',
+  [NK.waging1]: 'Spielvereinigung Grün-Gelb Kleinstadt-Neudorf 1921',
 };
 const NAMEN: Record<string, string> = {
-  [NK.kammer]: 'FC Nord', [NK.wagingRot]: 'SV Süd', [NK.otting]: 'TSV West', [NK.petting]: 'SG Mitte', [NK.fridolfing]: 'SC Ost', [NK.wagingBlau]: 'FC Berg',
+  [NK.kammer]: 'FC Nord', [NK.waging1]: 'SV Süd', [NK.otting]: 'TSV West', [NK.petting]: 'SG Mitte', [NK.fridolfing]: 'SC Ost', [NK.waging2]: 'FC Berg',
 };
 
 const lang = szene.endsWith('lang');
@@ -51,7 +51,7 @@ const turnier: Tournament = {
 const anzeige: Tournament = {
   ...turnier,
   standingDecisions: [...(turnier.standingDecisions ?? []), {
-    id: 'ps1', groupId: '', teamIds: [NK.kammer, NK.wagingRot].sort(), order: [NK.kammer, NK.wagingRot], kind: 'shootout', shootout: { winner: 4, loser: 3 }, basis: 'x',
+    id: 'ps1', groupId: '', teamIds: [NK.kammer, NK.waging1].sort(), order: [NK.kammer, NK.waging1], kind: 'shootout', shootout: { winner: 4, loser: 3 }, basis: 'x',
   }],
 };
 
@@ -68,7 +68,7 @@ const ready = prepared.ready;
 
 const offene = [
   { kind: 'match_undecided' as const, matchId: turnier.matches[13].id, matchNumber: 14, field: 1 },
-  { kind: 'tie_open' as const, groupId: '', places: [1], teamIds: [NK.kammer, NK.wagingRot] },
+  { kind: 'tie_open' as const, groupId: '', places: [1], teamIds: [NK.kammer, NK.waging1] },
   { kind: 'review_open' as const, eventId: 'e1', matchId: turnier.matches[2].id, matchNumber: 3, field: 1 },
 ];
 

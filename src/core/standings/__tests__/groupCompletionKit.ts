@@ -52,8 +52,8 @@ export const HC = {
 } as const;
 
 export const NK = {
-  kammer: testUuid(910), wagingRot: testUuid(911), petting: testUuid(912), otting: testUuid(913),
-  fridolfing: testUuid(914), wagingBlau: testUuid(915),
+  kammer: testUuid(910), waging1: testUuid(911), petting: testUuid(912), otting: testUuid(913),
+  fridolfing: testUuid(914), waging2: testUuid(915),
 } as const;
 
 /** Spiel zweier Teams (Heim, Gast in beliebiger Reihenfolge) – die Spiel-IDs vergibt der Generator. */

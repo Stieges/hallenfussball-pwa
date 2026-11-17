@@ -384,7 +384,7 @@ describe('@TM-057 @TM-058 @W2A-067 Jeder gegen jeden (Nikolaus)', () => {
 
   it('@TM-058 Gegenbeispiel: 14 von 15 → kein Vorschlag', async () => {
     const t = nikolaus([1, 2]);
-    const letztes = matchOf(t, NK.kammer, NK.wagingRot);
+    const letztes = matchOf(t, NK.kammer, NK.waging1);
     await zeigeNikolaus(withMatch(t, letztes.id, { matchStatus: 'running' }));
     expect(screen.queryByTestId('group-close-suggestion')).toBeNull();
   });
@@ -396,7 +396,7 @@ describe('@TM-057 @TM-058 @W2A-067 Jeder gegen jeden (Nikolaus)', () => {
     await waitFor(() => { expect(repo.completeGroup).toHaveBeenCalledTimes(1); });
     const request = repo.completeGroup.mock.calls[0][1];
     expect(request.groupId).toBe('');
-    expect(request.ranking).toEqual([NK.kammer, NK.wagingRot, NK.petting, NK.otting, NK.fridolfing, NK.wagingBlau]);
+    expect(request.ranking).toEqual([NK.kammer, NK.waging1, NK.petting, NK.otting, NK.fridolfing, NK.waging2]);
     expect(request.expectedState).toHaveLength(15);
   });
 
@@ -412,11 +412,11 @@ describe('@TM-057 @TM-058 @W2A-067 Jeder gegen jeden (Nikolaus)', () => {
     expect(zeilen.join('|')).not.toContain('TSV Petting');
     await userEvent.click(within(dialog).getByTestId('group-close-confirm'));
     await waitFor(() => { expect(repo.completeGroup).toHaveBeenCalledTimes(1); });
-    expect(repo.completeGroup.mock.calls[0][1].ranking).toEqual([NK.kammer, NK.wagingRot, NK.otting, NK.fridolfing, NK.wagingBlau]);
+    expect(repo.completeGroup.mock.calls[0][1].ranking).toEqual([NK.kammer, NK.waging1, NK.otting, NK.fridolfing, NK.waging2]);
   });
 
   it('@TM-057 abgeschlossen: Zustand „abgeschlossen“, Hinweis mit Übergabe an den Endstand, Taste „Gruppe wieder öffnen“ (Test-ID group-reopen-all)', async () => {
-    await zeigeNikolaus({ ...nikolaus([1, 2]), groupCompletions: [completion('', [NK.kammer, NK.wagingRot, NK.petting, NK.otting, NK.fridolfing, NK.wagingBlau])] });
+    await zeigeNikolaus({ ...nikolaus([1, 2]), groupCompletions: [completion('', [NK.kammer, NK.waging1, NK.petting, NK.otting, NK.fridolfing, NK.waging2])] });
     expect(marke('')).toBe('abgeschlossen');
     expect(screen.getByTestId('group-done-all')).toHaveTextContent('an den Endstand übergeben');
     expect(screen.getByTestId('group-reopen-all')).toBeInTheDocument();
@@ -577,7 +577,7 @@ describe('@TM-072 @TM-099 Gruppe wieder öffnen', () => {
 });
 
 describe('@TM-145 @TM-150 Besetzung prüfen nach einer Korrektur', () => {
-  const veraltet = (t: Tournament): Tournament => ({ ...t, groupCompletions: [completion('', [NK.kammer, NK.wagingRot, NK.petting, NK.otting, NK.fridolfing, NK.wagingBlau], { stale: true })] });
+  const veraltet = (t: Tournament): Tournament => ({ ...t, groupCompletions: [completion('', [NK.kammer, NK.waging1, NK.petting, NK.otting, NK.fridolfing, NK.waging2], { stale: true })] });
 
   it('@TM-150 Zeile 2 (Review #384 M3): erledigt der Auslöser die Gruppe gleich, erscheint „Besetzung prüfen“ nicht', async () => {
     await zeige(veraltet(nikolaus([1, 2])));
@@ -791,7 +791,7 @@ describe('@TM-151 „Erneut abschließen“ verlangt bei offenem Gleichstand mit
 
 /**
  * R2 PR 1 – @W2A-060 (Befund C-GLEICHSTAND-KOLLISION-OHNE-NAME), Fixrunde Review #382 M2/M3:
- *   Wenn Olli 4:3 für TSV Waging rot und kurz danach Maria 5:4 für DJK Kammer einträgt
+ *   Wenn Olli 4:3 für TSV Waging 1 und kurz danach Maria 5:4 für DJK Kammer einträgt
  *   Dann gilt Ollis Eintrag
  *   Und Maria sieht, dass und von wem schon entschieden wurde
  * Maria trägt im Kasten ein; der Server lehnt ab (Olli war schneller). Genannt wird nur eine Person aus einem Verlaufseintrag,

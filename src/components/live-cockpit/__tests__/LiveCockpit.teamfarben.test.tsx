@@ -79,10 +79,10 @@ describe('@SL-176 Kästen und Team-Kopf in der getragenen Farbe', () => {
 });
 
 describe('@SL-177 Die Bedientasten behalten ihre Funktionsfarben', () => {
-  const rotesTeam = () => makeLiveMatch({ homeTeam: { id: 'waging', name: 'TSV Waging rot' }, awayTeam: { id: 'otting', name: 'DJK Otting' } });
+  const rotesTeam = () => makeLiveMatch({ homeTeam: { id: 'waging', name: 'TSV Waging 1' }, awayTeam: { id: 'otting', name: 'DJK Otting' } });
   const kasten: CockpitKasten = { home: solid(ROT), away: solid(GRUEN) };
 
-  it('„Tor“, „Foul“, „Zeitstrafe“ und „Karte“ von TSV Waging rot tragen keine Teamfarbe und kein Rot', () => {
+  it('„Tor“, „Foul“, „Zeitstrafe“ und „Karte“ von TSV Waging 1 tragen keine Teamfarbe und kein Rot', () => {
     render(<LiveCockpit {...makeProps(rotesTeam(), { kasten })} />);
     const tasten = ['goal-button-home', 'foul-button-home', 'penalty-button-home', 'card-button-home'].map((id) => screen.getByTestId(id));
     for (const taste of tasten) {

@@ -39,13 +39,13 @@ function platzVon(teamName: string): string | null {
 }
 
 describe('Auflage 3 TabellenTab Gesamtplatzierung Jeder gegen jeden', () => {
-  it('@W2A-047 offener Gleichstand Waging rot/Kammer: Platzziffer 3, 3, danach 5 – nicht 3, 4, 5', async () => {
+  it('@W2A-047 offener Gleichstand Waging 1/Kammer: Platzziffer 3, 3, danach 5 – nicht 3, 4, 5', async () => {
     await zeigeGesamtplatzierung(jgj('RKMUNO', DATA.ET_055));
     expect([platzVon(NAME.M), platzVon(NAME.U)]).toEqual(['1', '2']);
     expect([platzVon(NAME.R), platzVon(NAME.K), platzVon(NAME.N)]).toEqual(['3', '3', '5']);
   });
 
-  it('@W2A-063 Nikolaus, nur Platz 1 und 2: nach „Ergebnis so akzeptieren“ stehen Petting und Otting beide auf Platz 3, Fridolfing 5, Waging blau 6', async () => {
+  it('@W2A-063 Nikolaus, nur Platz 1 und 2: nach „Ergebnis so akzeptieren“ stehen Petting und Otting beide auf Platz 3, Fridolfing 5, Waging 2 6', async () => {
     const repo = new MemoryRepo(nikolaus([1, 2]));
     expect((await repo.service().decide(repo.tournament.id, shared(['P', 'D']))).ok).toBe(true);
     await zeigeGesamtplatzierung(repo.tournament);

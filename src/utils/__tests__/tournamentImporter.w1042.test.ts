@@ -13,7 +13,7 @@ const vollstaendig = {
   title: 'Nikolaus-Turnier F2',
   date: '2026-11-28',
   startTime: '09:30',
-  teams: [{ id: 't1', name: 'TSV Waging rot' }, { id: 't2', name: 'DJK Kammer' }],
+  teams: [{ id: 't1', name: 'TSV Waging 1' }, { id: 't2', name: 'DJK Kammer' }],
 };
 
 const ohne = (...felder: string[]): string =>

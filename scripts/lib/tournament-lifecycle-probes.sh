@@ -4,12 +4,12 @@
 # eingebunden; nutzt q, psql_stdin, check, CURRENT_CONTAINER, REPO_ROOT, FIX_DIR, WORK_DIR des Hauptskripts.
 # Erwartungen aus dem Gherkin der genannten Kennungen bzw. dem Plan (P-0 … P-13), nie aus dem Code abgelesen.
 
-NIKO="DJK Kammer|TSV Waging rot|2|1;DJK Kammer|TSV Petting|2|2;DJK Otting|DJK Kammer|2|1;DJK Kammer|TSV 1921 Fridolfing|2|0"
-NIKO="$NIKO;DJK Kammer|TSV Waging blau|3|0;TSV Waging rot|DJK Otting|2|2;TSV Waging rot|TSV Petting|4|0"
-NIKO="$NIKO;TSV Waging rot|TSV 1921 Fridolfing|3|0;TSV Waging rot|TSV Waging blau|3|0;TSV Petting|DJK Otting|1|1"
-NIKO="$NIKO;TSV Petting|TSV 1921 Fridolfing|3|1;TSV Petting|TSV Waging blau|3|1;DJK Otting|TSV Waging blau|3|1"
-NIKO="$NIKO;TSV 1921 Fridolfing|DJK Otting|4|1;TSV 1921 Fridolfing|TSV Waging blau|1|1"
-R_NIKO="DJK Kammer,TSV Waging rot,TSV Petting,DJK Otting,TSV 1921 Fridolfing,TSV Waging blau"
+NIKO="DJK Kammer|TSV Waging 1|2|1;DJK Kammer|TSV Petting|2|2;DJK Otting|DJK Kammer|2|1;DJK Kammer|TSV 1921 Fridolfing|2|0"
+NIKO="$NIKO;DJK Kammer|TSV Waging 2|3|0;TSV Waging 1|DJK Otting|2|2;TSV Waging 1|TSV Petting|4|0"
+NIKO="$NIKO;TSV Waging 1|TSV 1921 Fridolfing|3|0;TSV Waging 1|TSV Waging 2|3|0;TSV Petting|DJK Otting|1|1"
+NIKO="$NIKO;TSV Petting|TSV 1921 Fridolfing|3|1;TSV Petting|TSV Waging 2|3|1;DJK Otting|TSV Waging 2|3|1"
+NIKO="$NIKO;TSV 1921 Fridolfing|DJK Otting|4|1;TSV 1921 Fridolfing|TSV Waging 2|1|1"
+R_NIKO="DJK Kammer,TSV Waging 1,TSV Petting,DJK Otting,TSV 1921 Fridolfing,TSV Waging 2"
 P_NIKO="{1,2,3,3,5,6}"   # Petting und Otting „Ergebnis so akzeptieren“ (final-standings-roundrobin.json, 2. Fall)
 A_CLEAN="FC Nord|SV Süd|2|1;FC Nord|TSV West|2|1;FC Nord|SC Ost|0|0;SV Süd|TSV West|2|1;SV Süd|SC Ost|2|0;TSV West|SC Ost|2|0"
 B_CLEAN="SG Mitte|DJK Berg|2|1;SG Mitte|VfB Ufer|2|1;SG Mitte|TuS Tal|3|0;DJK Berg|VfB Ufer|2|1;DJK Berg|TuS Tal|2|0;VfB Ufer|TuS Tal|2|0"
@@ -232,7 +232,7 @@ run_probes() {
 
   # --- P-2 @LZ-029 @LZ-030 ------------------------------------------------------------------------------------
   t="$(niko_ready)"; s="$(q "SELECT match_engine.tournament_state('$t')::text;")"
-  q "SELECT harness.correction('maria', '$t', 'TSV 1921 Fridolfing', 'TSV Waging blau', 2, 1);" >/dev/null
+  q "SELECT harness.correction('maria', '$t', 'TSV 1921 Fridolfing', 'TSV Waging 2', 2, 1);" >/dev/null
   check R "P-2 @LZ-029 Marias Korrektur kommt vor dem Abschluss an -> OPEN_ITEMS (Gruppe 'Besetzung pruefen'), Turnier laeuft" \
     "rejected:OPEN_ITEMS|group_stale|running" \
     "$(q "SELECT lc.finish('olli', '$t', lc.snap('$t', '$R_NIKO', '$P_NIKO'), gen_random_uuid(), \$J\$$s\$J\$::jsonb);")|$(q "SELECT string_agg(i ->> 'kind', ',') FROM jsonb_array_elements(harness.last() -> 'items') i;")|$(life "$t")"
@@ -242,11 +242,11 @@ run_probes() {
     "rejected:STALE_STATE|running|kein" \
     "$(q "SELECT lc.finish('olli', '$t', lc.snap('$t', '$R_HC', '$P_HC', 'hc'), gen_random_uuid(), \$J\$$s\$J\$::jsonb);")|$(life "$t")|$(fs_md5 "$t")"
   check R "P-2 Gegenbeispiel: mit aktuellem Stand -> ok" "ok" "$(fin_hc olli "$t")"
-  m="$(gm "$T_FIN" 'TSV 1921 Fridolfing' 'TSV Waging blau')"
+  m="$(gm "$T_FIN" 'TSV 1921 Fridolfing' 'TSV Waging 2')"
   before="$(q "SELECT score_a || ':' || score_b FROM public.matches WHERE id = '$m';")"
   check R "P-2 @LZ-030 Marias Korrektur kommt nach dem Abschluss an -> review AFTER_FINISH, Ergebnis und Endstand unveraendert, 1 spaeter Eintrag" \
     "review:AFTER_FINISH|$before|$FS_FIN|1" \
-    "$(q "SELECT harness.correction('maria', '$T_FIN', 'TSV 1921 Fridolfing', 'TSV Waging blau', 2, 1);")|$(q "SELECT score_a || ':' || score_b FROM public.matches WHERE id = '$m';")|$(fs_md5 "$T_FIN")|$(nlate "$T_FIN")"
+    "$(q "SELECT harness.correction('maria', '$T_FIN', 'TSV 1921 Fridolfing', 'TSV Waging 2', 2, 1);")|$(q "SELECT score_a || ':' || score_b FROM public.matches WHERE id = '$m';")|$(fs_md5 "$T_FIN")|$(nlate "$T_FIN")"
 
   # --- P-3 @LZ-024 ganz oder gar nicht -------------------------------------------------------------------------
   t="$(niko_ready)"
@@ -256,7 +256,7 @@ run_probes() {
   q "DROP TRIGGER IF EXISTS wegwerf ON public.tournament_lifecycle_log; DROP FUNCTION IF EXISTS lc.wegwerf();" >/dev/null
   check R "P-3 @LZ-024 Abbruch beim Verlauf -> Fehler, Turnier laeuft, kein Endstand, kein Verlauf; Eintraege gehen weiter (Maria korrigiert)" \
     "error:P0001|running|kein|0|accepted" \
-    "$r|$(life "$t")|$(fs_md5 "$t")|$(nlog "$t")|$(q "SELECT harness.correction('maria', '$t', 'TSV 1921 Fridolfing', 'TSV Waging blau', 2, 1);")"
+    "$r|$(life "$t")|$(fs_md5 "$t")|$(nlog "$t")|$(q "SELECT harness.correction('maria', '$t', 'TSV 1921 Fridolfing', 'TSV Waging 2', 2, 1);")"
 
   # --- P-4 @LZ-021 nicht doppelt -------------------------------------------------------------------------------
   t="$(niko_ready)"; rid1="$(rid)"
@@ -286,7 +286,7 @@ run_probes() {
     "$(as_val olli "SELECT count(*)::text FROM public.tournament_lifecycle_log WHERE tournament_id = '$T_FIN'")|$(as_val maria "SELECT count(*)::text FROM public.tournament_lifecycle_log WHERE tournament_id = '$T_FIN'")|$(as_val tom "SELECT count(*)::text FROM public.tournament_lifecycle_log WHERE tournament_id = '$T_FIN'")|$(as_val bildschirm "SELECT count(*)::text FROM public.tournament_lifecycle_log WHERE tournament_id = '$T_FIN'")|$(anon_val "SELECT count(*)::text FROM public.late_entries")|$(as_val olli "SELECT count(*)::text FROM public.late_entries WHERE tournament_id = '$T_FIN'")|$(as_val tom "SELECT count(*)::text FROM public.late_entries WHERE tournament_id = '$T_FIN'")"
 
   # --- P-5 @LZ-036 @LZ-037 @LZ-038 @ZP-087 @SA-005: Sperre nach dem Abschluss ---------------------------------
-  m="$(gm "$T_FIN" 'DJK Kammer' 'TSV Waging rot')"
+  m="$(gm "$T_FIN" 'DJK Kammer' 'TSV Waging 1')"
   check R "P-5 @ZP-087 Olli verschiebt Spiele (PATCH matches) -> 55000" "error:55000" \
     "$(as_exec olli "UPDATE public.matches SET scheduled_start = scheduled_start + interval '10 minutes' WHERE tournament_id = '$T_FIN'")"
   check R "P-5 @LZ-037 Turniername / @LZ-036 Punkteschema 2/1/0 / @LZ-037 Kindermodus / Sponsor entfernen (config) -> je 55000" \
@@ -295,7 +295,7 @@ run_probes() {
   check R "P-5 Maria benennt ein Team um / traegt einen Spieler ein / Olli loescht ein Spiel -> je 55000" "error:55000|error:55000|error:55000" \
     "$(as_exec maria "UPDATE public.teams SET name = name || ' II' WHERE tournament_id = '$T_FIN' AND name = 'DJK Kammer'")|$(as_exec maria "INSERT INTO public.team_players (team_id, number, name) VALUES (harness.team('$T_FIN', 'DJK Kammer'), 9, 'Neu')")|$(as_exec olli "DELETE FROM public.matches WHERE id = '$m'")"
   check R "P-5 @LZ-036 Maria oeffnet die Gruppe wieder / traegt eine Gleichstands-Entscheidung ein -> 55000" "error:55000|error:55000" \
-    "$(q "SELECT harness.reopen('maria', '$T_FIN', '', 'Pruefen');")|$(q "SELECT harness.decide('maria', '$T_FIN', 'decide', harness.dec('neu', '$T_FIN', '', 'shared', 'TSV 1921 Fridolfing,TSV Waging blau', 'TSV 1921 Fridolfing,TSV Waging blau'), NULL, harness.tversion('$T_FIN'));")"
+    "$(q "SELECT harness.reopen('maria', '$T_FIN', '', 'Pruefen');")|$(q "SELECT harness.decide('maria', '$T_FIN', 'decide', harness.dec('neu', '$T_FIN', '', 'shared', 'TSV 1921 Fridolfing,TSV Waging 2', 'TSV 1921 Fridolfing,TSV Waging 2'), NULL, harness.tversion('$T_FIN'));")"
   check R "P-5 complete_group nach dem Abschluss schreibt nichts (gleich -> ALREADY_COMPLETED; Klaerung/Hinweis direkt anlegen -> 55000)" \
     "ok:ALREADY_COMPLETED|error:55000|error:55000" \
     "$(q "SELECT lc.complete_niko('$T_FIN');")|$(q "DO \$x\$ BEGIN INSERT INTO public.clarifications (tournament_id, kind, requested, conflict_code, requested_by) VALUES ('$T_FIN', 'complete_group', '{}', 'STALE_VERSION', harness.p('olli')); EXCEPTION WHEN OTHERS THEN RAISE WARNING 'sqlstate=%', SQLSTATE; END \$x\$;" 2>&1 | grep -o 'sqlstate=[0-9A-Z]*' | sed 's/sqlstate=/error:/')|$(q "DO \$x\$ BEGIN INSERT INTO public.bracket_notices (tournament_id, match_id, side, kind) VALUES ('$T_FIN', '$m', 'A', 'released'); EXCEPTION WHEN OTHERS THEN RAISE WARNING 'sqlstate=%', SQLSTATE; END \$x\$;" 2>&1 | grep -o 'sqlstate=[0-9A-Z]*' | sed 's/sqlstate=/error:/')"
@@ -344,24 +344,24 @@ run_probes() {
   q "INSERT INTO public.tournament_collaborators (tournament_id, user_id, role, accepted_at, label) SELECT '$t', harness.p('kai'), 'collaborator', now(), 'Kai' WHERE NOT EXISTS (SELECT 1 FROM public.tournament_collaborators WHERE tournament_id = '$t' AND user_id = harness.p('kai'));" >/dev/null
   fin_niko olli "$t" >/dev/null
   fa="$(q "SELECT (extract(epoch FROM finished_at) * 1000)::bigint FROM public.tournaments WHERE id = '$t';")"
-  m="$(gm "$t" 'DJK Kammer' 'TSV Waging rot')"
+  m="$(gm "$t" 'DJK Kammer' 'TSV Waging 1')"
   d="$(q "SELECT md5('tom-handy-$t')::uuid;")"
   before="$(q "SELECT count(*) FROM public.field_control WHERE tournament_id = '$t';")|$(fs_md5 "$t")|$(q "SELECT score_a || ':' || score_b FROM public.matches WHERE id = '$m';")"
   check R "P-6 @LZ-039 @FU-018 Toms Geraet (anonyme Sitzung, Geraete-ID) sendet zwei Tore (17:55 vor, 18:10 nach dem Abschluss gestempelt) -> review AFTER_FINISH" \
     "review:AFTER_FINISH,review:AFTER_FINISH" \
     "$(q "SELECT lc.append('tom', '$m', jsonb_build_array(lc.ev('GOAL', 'p6-tor-vor-$t', jsonb_build_object('at', $fa - 900000, 'clockMs', 130000, 'teamId', harness.team('$t', 'DJK Kammer'))), lc.ev('GOAL', 'p6-tor-nach-$t', jsonb_build_object('at', $fa + 600000, 'clockMs', 140000, 'teamId', harness.team('$t', 'DJK Kammer')))), '$d');")"
   check R "P-6 @LZ-040 Konto-Helfer Kai sendet ein Tor -> review AFTER_FINISH" "review:AFTER_FINISH" \
-    "$(q "SELECT lc.append('kai', '$m', jsonb_build_array(lc.ev('GOAL', 'p6-kai-$t', jsonb_build_object('at', $fa + 60000, 'clockMs', 150000, 'teamId', harness.team('$t', 'TSV Waging rot')))));")"
+    "$(q "SELECT lc.append('kai', '$m', jsonb_build_array(lc.ev('GOAL', 'p6-kai-$t', jsonb_build_object('at', $fa + 60000, 'clockMs', 150000, 'teamId', harness.team('$t', 'TSV Waging 1')))));")"
   check R "_009 Spiel beenden nach dem Abschluss: Ollis RESULT_ENTRY (mit basedOn, Leitung ohne Feldsteuerung) -> review AFTER_FINISH, Ergebnis gleich" \
     "review:AFTER_FINISH|$(q "SELECT score_a || ':' || score_b FROM public.matches WHERE id = '$m';")" \
-    "$(q "SELECT lc.append('olli', '$m', jsonb_build_array(lc.ev('RESULT_ENTRY', 'p6-ende-$t', jsonb_build_object('at', $fa + 120000, 'section', NULL, 'clockMs', NULL, 'payload', jsonb_build_object('scores', jsonb_build_object(harness.team('$t', 'DJK Kammer'), 5, harness.team('$t', 'TSV Waging rot'), 0), 'basedOn', NULL)))));")|$(q "SELECT score_a || ':' || score_b FROM public.matches WHERE id = '$m';")"
+    "$(q "SELECT lc.append('olli', '$m', jsonb_build_array(lc.ev('RESULT_ENTRY', 'p6-ende-$t', jsonb_build_object('at', $fa + 120000, 'section', NULL, 'clockMs', NULL, 'payload', jsonb_build_object('scores', jsonb_build_object(harness.team('$t', 'DJK Kammer'), 5, harness.team('$t', 'TSV Waging 1'), 0), 'basedOn', NULL)))));")|$(q "SELECT score_a || ':' || score_b FROM public.matches WHERE id = '$m';")"
   q "DELETE FROM public.late_entries WHERE tournament_id = '$t' AND event_id = harness.u('lc-event:p6-ende-$t');" >/dev/null
   check R "P-6 danach: keine neue field_control-Zeile, Endstand und Ergebnis gleich, 3 Zeilen 'nach dem Ende eingetroffen'" "$before|3" \
     "$(q "SELECT count(*) FROM public.field_control WHERE tournament_id = '$t';")|$(fs_md5 "$t")|$(q "SELECT score_a || ':' || score_b FROM public.matches WHERE id = '$m';")|$(nlate "$t")"
   check R "P-6 @LZ-039 Olli und Maria sehen die drei Eintraege, Tom und Kai nicht" "3|3|0|0" \
     "$(as_val olli "SELECT count(*)::text FROM public.late_entries WHERE tournament_id = '$t'")|$(as_val maria "SELECT count(*)::text FROM public.late_entries WHERE tournament_id = '$t'")|$(as_val tom "SELECT count(*)::text FROM public.late_entries WHERE tournament_id = '$t'")|$(as_val kai "SELECT count(*)::text FROM public.late_entries WHERE tournament_id = '$t'")"
   check R "P-6b dieselbe spaete Meldung noch einmal -> review, weiter eine Zeile (UNIQUE match_id, event_id)" "review:AFTER_FINISH|3" \
-    "$(q "SELECT lc.append('kai', '$m', jsonb_build_array(lc.ev('GOAL', 'p6-kai-$t', jsonb_build_object('at', $fa + 60000, 'clockMs', 150000, 'teamId', harness.team('$t', 'TSV Waging rot')))));")|$(nlate "$t")"
+    "$(q "SELECT lc.append('kai', '$m', jsonb_build_array(lc.ev('GOAL', 'p6-kai-$t', jsonb_build_object('at', $fa + 60000, 'clockMs', 150000, 'teamId', harness.team('$t', 'TSV Waging 1')))));")|$(nlate "$t")"
   check R "P-6b B3 ein vor dem Abschluss angenommenes Ereignis kommt nach dem Abschluss erneut -> duplicate, keine Zeile" "duplicate|3" \
     "$(q "SELECT lc.append('olli', '$m', jsonb_build_array(lc.stored_event('$m')));")|$(nlate "$t")"
   check R "H-10 MX3: Ereignis-ID aus einem anderen Spiel nach dem Abschluss -> ID_CONFLICT, keine Zeile" "rejected:ID_CONFLICT|3" \
@@ -383,11 +383,11 @@ run_probes() {
   t="$(niko_ready)"
   for zeile in fehlt doppelt ohne-sprung falsche-ziffer reihenfolge; do
     case "$zeile" in
-      fehlt) r="$(fin_niko olli "$t" "{1,2,3,3,5}" "DJK Kammer,TSV Waging rot,TSV Petting,DJK Otting,TSV 1921 Fridolfing")"; exp="TEAM_SET" ;;
+      fehlt) r="$(fin_niko olli "$t" "{1,2,3,3,5}" "DJK Kammer,TSV Waging 1,TSV Petting,DJK Otting,TSV 1921 Fridolfing")"; exp="TEAM_SET" ;;
       doppelt) r="$(fin_niko olli "$t" "{1,2,3,3,5,6,7}" "$R_NIKO,DJK Kammer")"; exp="SHAPE" ;;
       ohne-sprung) r="$(fin_niko olli "$t" "{1,2,3,3,4,5}")"; exp="PLACE_NUMBERS" ;;
       falsche-ziffer) r="$(fin_niko olli "$t" "{1,2,3,4,5,6}")"; exp="GROUP_PLACES" ;;
-      reihenfolge) r="$(fin_niko olli "$t" "$P_NIKO" "TSV Waging rot,DJK Kammer,TSV Petting,DJK Otting,TSV 1921 Fridolfing,TSV Waging blau")"; exp="GROUP_ORDER" ;;
+      reihenfolge) r="$(fin_niko olli "$t" "$P_NIKO" "TSV Waging 1,DJK Kammer,TSV Petting,DJK Otting,TSV 1921 Fridolfing,TSV Waging 2")"; exp="GROUP_ORDER" ;;
     esac
     check R "P-8 R-EA-4 $zeile -> INVALID_STANDINGS $exp, Turnier laeuft" "rejected:INVALID_STANDINGS|$exp|running" "$r|$(reason)|$(life "$t")"
   done
@@ -400,11 +400,11 @@ run_probes() {
   check R "P-8 Review A1 Gegenbeispiel: derselbe Endstand mit echten Herkuenften (Finale, Spiel um Platz 3, Gruppenplaetze) -> ok" "ok" \
     "$(fin_hc olli "$t")"
   t="$(clone "$TPL_NIKO")"
-  q "UPDATE public.teams SET is_removed = true, removed_at = now() WHERE tournament_id = '$t' AND name = 'TSV Waging blau';" >/dev/null
-  complete_group_as "$t" '' "$(sed 's/,TSV Waging blau//' <<<"$R_NIKO")" >/dev/null
+  q "UPDATE public.teams SET is_removed = true, removed_at = now() WHERE tournament_id = '$t' AND name = 'TSV Waging 2';" >/dev/null
+  complete_group_as "$t" '' "$(sed 's/,TSV Waging 2//' <<<"$R_NIKO")" >/dev/null
   q "UPDATE public.group_completions SET tie_orders = jsonb_build_array(harness.dec('annahme', '$t', '', 'shared', 'TSV Petting,DJK Otting', 'TSV Petting,DJK Otting') - 'basis') WHERE tournament_id = '$t';" >/dev/null
   r="$(fin_niko olli "$t")|$(reason)"
-  s="$(sed 's/,TSV Waging blau//' <<<"$R_NIKO")"; u='{1,2,3,3,5}'
+  s="$(sed 's/,TSV Waging 2//' <<<"$R_NIKO")"; u='{1,2,3,3,5}'
   check R "P-8 @ET-058 entferntes Team mitgeschickt -> TEAM_SET; ohne das entfernte Team (Plaetze 1, 2, 3, 3, 5) -> ok" "rejected:INVALID_STANDINGS|TEAM_SET|ok" \
     "$r|$(fin_niko olli "$t" "$u" "$s")"
 
@@ -452,7 +452,7 @@ run_probes() {
     "$(q "SELECT lc.reopen('olli', '$(niko_ready)', 'Grund', gen_random_uuid());")"
   t2="$(niko_ready)"; fin_niko olli "$t2" >/dev/null; q "SELECT lc.reopen('maria', '$t2', 'Strafstossschiessen im Finale falsch erfasst', gen_random_uuid());" >/dev/null
   check R "P-11 @LZ-091 nach dem Wiederoeffnen traegt Maria wieder ein (accepted, kein AFTER_FINISH)" "accepted" \
-    "$(q "SELECT harness.correction('maria', '$t2', 'TSV 1921 Fridolfing', 'TSV Waging blau', 2, 1);")"
+    "$(q "SELECT harness.correction('maria', '$t2', 'TSV 1921 Fridolfing', 'TSV Waging 2', 2, 1);")"
 
   # @LZ-091 Notweg: Block 1 der Betriebs-Vorlage scripts/betrieb/turnier-wieder-oeffnen.sql woertlich (Platzhalter ersetzt)
   t="$(niko_ready)"; fin_niko olli "$t" >/dev/null

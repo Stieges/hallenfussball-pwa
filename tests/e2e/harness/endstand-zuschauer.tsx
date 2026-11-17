@@ -30,11 +30,11 @@ import { PublicEndedBadge, PublicFinalStandingsBlock } from '../../../src/featur
 const szene = new URLSearchParams(window.location.search).get('szene') ?? 'klar';
 
 const NAMEN: Record<string, string> = {
-  [NK.kammer]: 'FC Nord', [NK.wagingRot]: 'SV Süd', [NK.otting]: 'TSV West', [NK.petting]: 'SG Mitte', [NK.fridolfing]: 'SC Ost', [NK.wagingBlau]: 'FC Berg',
+  [NK.kammer]: 'FC Nord', [NK.waging1]: 'SV Süd', [NK.otting]: 'TSV West', [NK.petting]: 'SG Mitte', [NK.fridolfing]: 'SC Ost', [NK.waging2]: 'FC Berg',
 };
 const LANG: Record<string, string> = {
   [NK.kammer]: 'Sportgemeinschaft Rot-Weiß Musterstadt Nord 1904 I',
-  [NK.wagingRot]: 'Spielvereinigung Grün-Gelb Kleinstadt-Neudorf 1921',
+  [NK.waging1]: 'Spielvereinigung Grün-Gelb Kleinstadt-Neudorf 1921',
 };
 const lang = szene === 'lang';
 const shootout = szene === 'ps' || lang;
@@ -48,15 +48,15 @@ const turnier: Tournament = {
 const anzeige: Tournament = shootout ? completeGroup({
   ...turnier,
   standingDecisions: [...(turnier.standingDecisions ?? []), {
-    id: 'ps1', groupId: '', teamIds: [NK.kammer, NK.wagingRot].sort(), order: [NK.kammer, NK.wagingRot], kind: 'shootout', shootout: { winner: 4, loser: 3 },
-    basis: decisionBasis(tableInput(turnier.teams, turnier.matches, turnier, ''), [NK.kammer, NK.wagingRot]),
+    id: 'ps1', groupId: '', teamIds: [NK.kammer, NK.waging1].sort(), order: [NK.kammer, NK.waging1], kind: 'shootout', shootout: { winner: 4, loser: 3 },
+    basis: decisionBasis(tableInput(turnier.teams, turnier.matches, turnier, ''), [NK.kammer, NK.waging1]),
   }],
 }) : turnier;
 
 const name = (id: string): string => turnier.teams.find((team) => team.id === id)?.name ?? id;
 const scorer = (rank: number, id: string, number: number, goals: number): ScorerRow => ({ kind: 'player', rank, teamId: id as never, teamName: name(id), number, goals });
 const scorers: ScorerRow[] = [
-  scorer(1, NK.kammer, 9, 5), scorer(2, NK.wagingRot, 7, 4), scorer(3, NK.kammer, 10, 3), scorer(3, NK.wagingRot, 4, 3), scorer(3, NK.otting, 11, 3),
+  scorer(1, NK.kammer, 9, 5), scorer(2, NK.waging1, 7, 4), scorer(3, NK.kammer, 10, 3), scorer(3, NK.waging1, 4, 3), scorer(3, NK.otting, 11, 3),
   scorer(6, NK.petting, 2, 2), { kind: 'noNumber', rank: null, teamId: NK.kammer as never, teamName: name(NK.kammer), goals: 2 },
 ];
 

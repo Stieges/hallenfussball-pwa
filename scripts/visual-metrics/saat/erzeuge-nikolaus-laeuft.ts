@@ -19,13 +19,13 @@ const HIER = dirname(fileURLToPath(import.meta.url))
 const ZEIT = '2026-12-06T08:00:00.000Z'
 
 /** Teams in der Reihenfolge der Erzeugung (Index = Position in `teams`) */
-const NAMEN = ['DJK Kammer', 'TSV Waging rot', 'TSV Petting', 'DJK Otting', 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921 e. V.', 'TSV Waging blau']
-const [KAMMER, ROT, PETTING, OTTING, SG, BLAU] = [0, 1, 2, 3, 4, 5]
+const NAMEN = ['DJK Kammer', 'TSV Waging 1', 'TSV Petting', 'DJK Otting', 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921 e. V.', 'TSV Waging 2']
+const [KAMMER, WAGING1, PETTING, OTTING, SG, WAGING2] = [0, 1, 2, 3, 4, 5]
 
 /** Spiel 1–15: Heim, Gast (jedes Paar genau einmal; 1, 2, 5, 6, 15 wie im Mockup) */
 const PAARUNGEN: [number, number][] = [
-  [KAMMER, SG], [PETTING, OTTING], [BLAU, ROT], [KAMMER, OTTING], [SG, PETTING], [BLAU, KAMMER], [KAMMER, ROT], [PETTING, BLAU],
-  [OTTING, SG], [PETTING, ROT], [KAMMER, PETTING], [OTTING, BLAU], [SG, ROT], [OTTING, ROT], [SG, BLAU],
+  [KAMMER, SG], [PETTING, OTTING], [WAGING2, WAGING1], [KAMMER, OTTING], [SG, PETTING], [WAGING2, KAMMER], [KAMMER, WAGING1], [PETTING, WAGING2],
+  [OTTING, SG], [PETTING, WAGING1], [KAMMER, PETTING], [OTTING, WAGING2], [SG, WAGING1], [OTTING, WAGING1], [SG, WAGING2],
 ]
 /** Ergebnisse der Spiele 1–4 (Spiel 1 und 2 wie im Mockup) */
 const ENDSTAENDE: [number, number][] = [[2, 1], [0, 0], [3, 1], [2, 0]]

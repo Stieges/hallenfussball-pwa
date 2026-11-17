@@ -24,7 +24,7 @@ function tournament(extra: Partial<Tournament>, version: number): Tournament {
     date: '2026-10-23',
     status: 'published',
     version,
-    teams: [{ id: ROT, name: 'TSV Waging rot', players: [] }, { id: BLAU, name: 'TSV Waging blau', players: [] }],
+    teams: [{ id: ROT, name: 'TSV Waging 1', players: [] }, { id: BLAU, name: 'TSV Waging 2', players: [] }],
     matches: [],
     groups: [],
     fields: [],
@@ -83,7 +83,7 @@ describe('@W4-034 OfflineRepository.syncUp: Markierung und Eröffnung im Delta-S
   });
 
   it('@W4-044 Gegenbeispiel: eine verwaiste ID lokal (Team gelöscht) erzwingt kein Voll-Speichern', async () => {
-    const teams = [{ id: ROT, name: 'TSV Waging rot', players: [] }];
+    const teams = [{ id: ROT, name: 'TSV Waging 1', players: [] }];
     mockLocal.listForCurrentUser.mockResolvedValue([tournament({ teams, hostTeamIds: [ROT, BLAU] }, 2)]);
     mockSupabase.get.mockResolvedValue(tournament({ teams, hostTeamIds: [ROT] }, 1));
 

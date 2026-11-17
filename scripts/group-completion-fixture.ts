@@ -31,7 +31,7 @@ interface ResultSpec {
 }
 
 const NIKOLAUS: Record<string, string> = {
-  K: 'DJK Kammer', R: 'TSV Waging rot', P: 'TSV Petting', D: 'DJK Otting', F: 'TSV 1921 Fridolfing', X: 'TSV Waging blau',
+  K: 'DJK Kammer', R: 'TSV Waging 1', P: 'TSV Petting', D: 'DJK Otting', F: 'TSV 1921 Fridolfing', X: 'TSV Waging 2',
 };
 /** @W2A-067 (Nikolaus-Lage, wie src/core/standings/__tests__/fixtures.ts DATA.NIKOLAUS). */
 const NIKOLAUS_RESULTS = 'K–R 2:1; K–P 2:2; D–K 2:1; K–F 2:0; K–X 3:0; R–D 2:2; R–P 4:0; R–F 3:0; R–X 3:0; P–D 1:1; P–F 3:1; P–X 3:1; D–X 3:1; F–D 4:1; F–X 1:1';

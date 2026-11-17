@@ -17,7 +17,7 @@ import type { Team, Tournament } from '../../../types/tournament';
 import { matchesOfFieldInPlayOrder } from '../utils/fieldMatchOrder';
 
 const uuid = (n: number): string => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
-const TEAMS: Team[] = ['TSV Waging rot', 'TSV Waging blau', 'DJK Otting', 'TSV 1921 Fridolfing', 'SV Kirchanschöring', 'TSV Petting']
+const TEAMS: Team[] = ['TSV Waging 1', 'TSV Waging 2', 'DJK Otting', 'TSV 1921 Fridolfing', 'SV Kirchanschöring', 'TSV Petting']
   .map((name, i) => ({ id: uuid(i + 1), name }));
 
 const repository = { save: () => Promise.resolve() } as unknown as ITournamentRepository;

@@ -8,7 +8,7 @@ import { calculateStandings, getMergedFinalRanking } from '../../../utils/calcul
 import { BFV_ORDER, league, NAME, type Key } from './fixtures';
 import { MemoryRepo, shared } from './decisionTestKit';
 
-/** Gruppe B: TSV Waging blau 9 Punkte (+3), TSV Petting 6, SV Süd 3, TuS Tal 0 – gegengerechnet (wie TB-1). */
+/** Gruppe B: TSV Waging 2 9 Punkte (+3), TSV Petting 6, SV Süd 3, TuS Tal 0 – gegengerechnet (wie TB-1). */
 export const GRUPPE_B = 'X–P 1:0; X–S 1:0; X–T 1:0; P–S 1:0; P–T 1:0; S–T 1:0';
 
 /** @ET-029: Mitte allein auf 1, Nord und Ufer gleich auf 2 und 3. */
@@ -43,7 +43,7 @@ export function zweiGruppen(keysA: string, gruppeA: string, keysB: string, grupp
   };
 }
 
-/** Das Zwei-Gruppen-Turnier der Leser-Tests: Gruppe A „Jeder gegen jeden“ aus `gruppeA` (Kammer/Waging rot …), B wie TB-1. */
+/** Das Zwei-Gruppen-Turnier der Leser-Tests: Gruppe A „Jeder gegen jeden“ aus `gruppeA` (Kammer/Waging 1 …), B wie TB-1. */
 export const zweiGruppenWaging = (gruppeA: string, opts: ZweiGruppenOptions = {}): Tournament =>
   zweiGruppen('KRMUNO', gruppeA, 'XPST', GRUPPE_B, opts);
 
