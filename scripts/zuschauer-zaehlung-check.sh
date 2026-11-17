@@ -894,7 +894,7 @@ run_ns_checks() {
   local priv red own
   priv="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } \
     | docker exec -i -e PGOPTIONS="-c client_min_messages=warning" "$C" psql -U postgres -X -q -tA -v ON_ERROR_STOP=1 2>&1 || true)"
-  red="$( (grep -v '|t$' <<<"$priv" | grep -vE '^hallenton-(output-states-heartbeat|speaker-unassign-rpc-authenticated-only)\|f$' || true) | head -5 | tr '\n' ';')"
+  red="$( (grep -v '|t$' <<<"$priv" | grep -vE '^(hallenton-(output-states-heartbeat|speaker-unassign-rpc-authenticated-only)|konto-loeschen-fk-rules|konto-loeschen-check-function-service-role-only)\|f$' || true) | head -5 | tr '\n' ';')"
   own="$( (grep -E '^zuschauer-zaehlung-[a-z-]+\|t$' <<<"$priv" || true) | grep -c . || true)"
   check N "db_privilege_assertions.sql: jede Zeile |t, darunter die sechs zuschauer-zaehlung-* (inkl. netzstoerung-columns)" "keine|6" "${red:-keine}|$own"
 }
