@@ -12,8 +12,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { displayList, displayMonitor } from '../../../design-tokens';
 import { resolveCss } from '../../../components/monitor/__tests__/cssResolve';
 import { standingsFont, standingsHeight, standingsFontSize } from '../standingsFit';
-import { listColumns, listPages, listScale, nameCharsPerLine, nameLines, rowHeight, scaledList } from '../listRows';
-import { monitorSideLabel } from '../matchSides';
+import { listScale, rowHeight, scaledList } from '../listRows';
 import { nextMatchesLayout, scheduleFieldLayout } from '../slideContent';
 import { AllStandingsSlide } from '../slides/AllStandingsSlide';
 import { QrSlide } from '../slides/QrSlide';
@@ -22,8 +21,8 @@ import { LANGE_NAMEN, listenTurnier } from './listFolienKit';
 import { withView } from './monitorViewHelper';
 
 vi.mock('qrcode.react', () => ({
-  QRCodeSVG: (props: { value: string; marginSize?: number; size: number; style?: { width?: string } }) => (
-    <div data-testid="qr-code" data-margin={props.marginSize} data-width={props.style?.width} />
+  QRCodeSVG: (props: { value: string; marginSize?: number; size: number; style?: { height?: string; minHeight?: string; flex?: string } }) => (
+    <div data-testid="qr-code" data-margin={props.marginSize} data-height={props.style?.height} data-min={props.style?.minHeight} data-flex={props.style?.flex} />
   ),
 }));
 vi.unmock('i18next'); vi.unmock('react-i18next');
@@ -77,56 +76,25 @@ describe('@ZM-125 Tabelle: Schrift wächst mit der freien Höhe, nie unter 3 % d
   });
 });
 
-describe('@ZM-125 @ZM-129 Listen: Maßstab nur, solange jede Seite in die Höhe passt', () => {
-  const rahmen = { overscan: 5, notice: false } as const;
-
-  it('Nächste Spiele (5 Zeilen, kurze Namen): Maßstab über 1, die Seitenzahl bleibt die des Maßstabs 1', () => {
-    const t = listenTurnier({ namen: 'kurz', beendet: 5 });
-    const { view } = withView(t);
-    const layout = nextMatchesLayout(view, 5, rahmen);
-    expect(layout.frame.scale).toBeGreaterThan(1);
-    expect(layout.pages.length).toBe(1);
-    const spalten = listColumns(false, true, view.matches);
-    expect(listPages(layout.pages.flat(), spalten, undefined, rahmen).length).toBe(layout.pages.length);
-  });
-
-  it.each(RAENDER)('Spielplan Feld 1 bei %s %% Rand: jede Seite passt im vergrößerten Maßstab in die Bildhöhe, Maßstab nie unter 1', (rand) => {
-    for (const namen of ['kurz', 'lang'] as const) {
-      const { view } = withView(listenTurnier({ namen, beendet: 5 }));
-      const layout = scheduleFieldLayout(view, 1, { overscan: rand, notice: false });
-      expect(layout.frame.scale, namen).toBeGreaterThanOrEqual(1);
-      const gap = parseFloat(displayList.rowGap) * (layout.frame.scale ?? 1);
-      for (const seite of layout.pages) {
-        const hoehe = seite.reduce((summe, m, i) => summe + rowHeight(m, layout.columns, layout.frame) + (i === 0 ? 0 : gap), 0);
-        expect(hoehe, `${namen}, Rand ${String(rand)} %`).toBeLessThanOrEqual(100 - 2 * rand);
-      }
-    }
-  });
-
-  it.each(RAENDER)('kein Name bricht erst durch die Vergrößerung um (kein „FC / Nordstadt“), Rand %s %%', (rand) => {
-    for (const namen of ['kurz', 'lang'] as const) {
-      const { view } = withView(listenTurnier({ namen, beendet: 5 }));
-      for (const layout of [nextMatchesLayout(view, 5, { overscan: rand, notice: false }), scheduleFieldLayout(view, 1, { overscan: rand, notice: false })]) {
-        const basis = { ...layout.frame, scale: 1 };
-        for (const m of layout.pages.flat()) {
-          for (const seite of [m.home, m.away]) {
-            const name = monitorSideLabel(seite);
-            expect(nameLines(name, nameCharsPerLine(layout.frame)), `${namen}: ${name}`).toBeLessThanOrEqual(nameLines(name, nameCharsPerLine(basis)));
-          }
+describe('@ZM-125 @ZM-129 Listen: unverändert (Maßstab 1), der Mechanismus für die schmalere Uhrzeitspalte bleibt', () => {
+  it('maxScale ist 1: Nächste Spiele und Spielplan haben bei jedem Bildrand den Maßstab 1 und die Zeilen die Stufen der Tokens', () => {
+    expect(displayList.fit.maxScale).toBe(1);
+    for (const rand of RAENDER) {
+      for (const namen of ['kurz', 'lang'] as const) {
+        const { view } = withView(listenTurnier({ namen, beendet: 5 }));
+        expect(nextMatchesLayout(view, 5, { overscan: rand, notice: false }).frame.scale, `Nächste Spiele ${namen} ${String(rand)} %`).toBe(1);
+        const plan = scheduleFieldLayout(view, 1, { overscan: rand, notice: false });
+        expect(plan.frame.scale, `Spielplan ${namen} ${String(rand)} %`).toBe(1);
+        const gap = parseFloat(displayList.rowGap);
+        for (const seite of plan.pages) {
+          const hoehe = seite.reduce((summe, m, i) => summe + rowHeight(m, plan.columns, plan.frame) + (i === 0 ? 0 : gap), 0);
+          expect(hoehe).toBeLessThanOrEqual(100 - 2 * rand);
         }
       }
     }
   });
 
-  it('Gegenbeispiel: eine Seite, die schon im Maßstab 1 die Höhe füllt, bleibt bei Maßstab 1', () => {
-    const { view } = withView(listenTurnier({ namen: 'lang', beendet: 0 }));
-    const layout = nextMatchesLayout(view, 15, { overscan: 10, notice: false });
-    const vollste = layout.pages.map((seite) => seite.length);
-    expect(Math.max(...vollste)).toBeGreaterThan(0);
-    expect(listScale([[...layout.pages.flat()]], layout.columns, { overscan: 10, notice: false })).toBe(1);
-  });
-
-  it('scaledList(1) liefert die Tokens unverändert; größere Maßstäbe vergrößern Schrift und Abstände in vh, nie die Überschrift', () => {
+  it('scaledList(1) liefert die Tokens unverändert; größere Maßstäbe vergrößern Schrift und Abstände in vh, nie Überschrift und Tabellenkopf', () => {
     expect(scaledList(1)).toBe(displayList);
     const gross = scaledList(1.5);
     expect(parseFloat(gross.fontSizes.team)).toBeCloseTo(parseFloat(displayList.fontSizes.team) * 1.5, 5);
@@ -134,14 +102,20 @@ describe('@ZM-125 @ZM-129 Listen: Maßstab nur, solange jede Seite in die Höhe 
     expect(gross.fontSizes.head).toBe(displayList.fontSizes.head);
   });
 
-  it('die Zeilen der Folie tragen den Maßstab (Schrift größer als die Stufe, mindestens 3,6 % der Bildhöhe)', async () => {
+  it('die Zeilen der Folie tragen die Stufe der Tokens (Teamname 3,6 % der Bildhöhe, wie auf main)', async () => {
     const { NextMatchesSlide } = await import('../slides/NextMatchesSlide');
     const t = listenTurnier({ namen: 'kurz', beendet: 5 });
     const slide = { id: 's', type: 'next-matches' as const, config: { matchCount: 5 }, duration: null, order: 0 };
     render(<NextMatchesSlide slide={slide} {...withView(t)} theme="dark" style={{}} />);
     const name = screen.getAllByTestId('monitor-match-row')[0].querySelector<HTMLElement>('[data-teamname]')!;
-    expect(resolveCss(name.style.fontSize, { vw: 1920, vh: 1080 }) / 1080).toBeGreaterThan(0.036);
+    expect(name.style.fontSize).toBe(displayList.fontSizes.team);
     cleanup();
+  });
+
+  it('Gegenbeispiel: eine Seite, die schon im Maßstab 1 die Höhe füllt, bleibt bei Maßstab 1', () => {
+    const { view } = withView(listenTurnier({ namen: 'lang', beendet: 0 }));
+    const layout = nextMatchesLayout(view, 15, { overscan: 10, notice: false });
+    expect(listScale([[...layout.pages.flat()]], layout.columns, { overscan: 10, notice: false })).toBe(1);
   });
 });
 
@@ -158,9 +132,12 @@ describe('@ZM-071 @ZM-125 Zuschauer-QR-Folie: großer QR-Code mit Ruhezone', () 
     render(<QrSlide tournament={createMockTournament({ isPublic: true, shareCode: 'ABC123', title: 'Nikolaus-Turnier' })} style={{}} />);
     const qr = screen.getByTestId('qr-code');
     expect(Number(qr.getAttribute('data-margin'))).toBeGreaterThanOrEqual(4);
-    const breite = qr.getAttribute('data-width')!;
-    expect(resolveCss(breite, { vw: 1920, vh: 1080 })).toBeGreaterThanOrEqual(0.45 * 1080);
-    expect(resolveCss(breite, { vw: 1280, vh: 720 })).toBeGreaterThanOrEqual(0.45 * 720);
+    const kante = qr.getAttribute('data-height')!;
+    expect(resolveCss(kante, { vw: 1920, vh: 1080 })).toBeGreaterThanOrEqual(0.45 * 1080);
+    expect(resolveCss(kante, { vw: 1280, vh: 720 })).toBeGreaterThanOrEqual(0.45 * 720);
+    // schrumpft bei knapper Höhe (zweizeiliger Titel, Rand 10 %, Hinweis), damit die Adresse im Bild bleibt (@ZM-208), aber nicht unter die Mindestkante
+    expect(qr.getAttribute('data-flex')).toBe(`0 1 ${displayMonitor.qr.slide.size}`);
+    expect(resolveCss(qr.getAttribute('data-min')!, { vw: 1920, vh: 1080 })).toBeGreaterThanOrEqual(0.3 * 1080);
     cleanup();
   });
 

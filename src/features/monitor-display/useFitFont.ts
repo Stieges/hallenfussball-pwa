@@ -43,6 +43,15 @@ export function useFitFont(startVh: number, minVh: number, overscanPercent: numb
   // nach jedem Zeichnen prüfen (die Schleife endet, sobald die Tabelle passt oder die Untergrenze erreicht ist)
   useLayoutEffect(() => { check(false); });
 
+  // Ersatzschrift beim ersten Zeichnen (Schriften noch nicht geladen) darf die Schrift nicht dauerhaft klein halten: mit den geladenen Schriften von vorn
+  useEffect(() => {
+    const fonts = typeof document === 'undefined' ? undefined : (document.fonts as FontFaceSet | undefined);
+    if (fonts === undefined) { return undefined; }
+    let aktiv = true;
+    void fonts.ready.then(() => { if (aktiv) { setFitted({ start: startVh, font: startVh }); } });
+    return () => { aktiv = false; };
+  }, [startVh]);
+
   // auch wenn sich die Größe später ändert (Schrift geladen, Inhalt geändert)
   useEffect(() => {
     const element = ref.current;

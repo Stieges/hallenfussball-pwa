@@ -33,7 +33,8 @@ export function QrSlide({ tournament, style }: QrSlideProps) {
             value={withViewChannel(qrUrl, 'q')}
             size={qr.viewSize}
             marginSize={qr.quietModules}
-            style={{ width: qr.size, height: qr.size, flex: 'none' }}
+            // Kante höchstens `size`, schrumpft aber mit der freien Höhe (Rand 10 %, zweizeiliger Titel, Hinweis), damit die Adresse im Bild bleibt (@ZM-208)
+            style={{ width: 'auto', height: qr.size, flex: `0 1 ${qr.size}`, minHeight: qr.minSize, aspectRatio: '1 / 1' }}
             bgColor={displayMonitor.qr.background}
             fgColor={displayMonitor.qr.foreground}
             level="M"

@@ -57,6 +57,8 @@ export function AllStandingsSlide({ tournament, view, theme, style, page = 0, ov
       <div style={style}>
         <SlideHeading icon="standings" color={colors.text}>{name}</SlideHeading>
         <StandingsTable
+          // je Abschnitt neu aufbauen: Gruppe B erbt nie die verkleinerte Schrift von Gruppe A
+          key={index}
           rows={standings}
           themeColors={colors}
           tie={groupTieView(tournament, section.kind === 'group' ? section.groupId : '')}

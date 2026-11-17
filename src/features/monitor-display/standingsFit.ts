@@ -24,9 +24,11 @@ const BORDER_VH = 0.2;
 const RESERVE_VH = 1.5;
 /** Feinheit der Suche in vh. */
 const STEP_VH = 0.05;
-/** Spalten der Tabelle in em der Zeilenschrift ohne den Namen: Platz, S, U, N, Diff, Pkt (`displayList.standingsColumns`). */
-const FIXED_EM = [1.6, 1.6, 1.6, 1.6, 2.6, 2.2].reduce((a, b) => a + b, 0);
-const COLUMN_GAPS = 6;
+/** Spalten der Tabelle: Platz | Name | S | U | N | Diff | Pkt (`displayList.standingsColumns`, in em der Zeilenschrift). */
+const COLUMNS = displayList.standingsColumns.replace(/minmax\([^)]*\)/, 'fr').split(' ');
+/** Breite aller Spalten außer dem Namen in em (die Namensspalte ist `minmax(0, 1fr)`). */
+const FIXED_EM = COLUMNS.filter(c => c.endsWith('em')).reduce((sum, c) => sum + num(c), 0);
+const COLUMN_GAPS = COLUMNS.length - 1;
 
 const { standings: tokens } = displayList;
 const padY = num(tokens.rowPaddingY);

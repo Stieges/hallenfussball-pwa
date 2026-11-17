@@ -396,6 +396,8 @@ export const displayMonitor = {
      */
     slide: {
       size: '50vh',
+      /** Kleinste Kante, auf die der Code bei knappem Platz schrumpft (Mindestgröße für das Scannen aus der Halle) */
+      minSize: '30vh',
       quietModules: 4,
       /** Zeichenfläche des SVG (nur Seitenverhältnis; die Kante setzt `size` per CSS) */
       viewSize: 296,

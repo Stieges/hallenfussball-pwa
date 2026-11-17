@@ -48,8 +48,8 @@ export const displayList = {
    * wachsen Zeilen und Schrift gemeinsam um einen Maßstab bis `maxScale`; bei vielen Zeilen bleibt es bei der Untergrenze.
    */
   fit: {
-    /** Größter Maßstab der Spiellisten (Nächste Spiele, Spielplan) gegenüber den Stufen oben */
-    maxScale: 1.6,
+    /** Größter Maßstab der Spiellisten (Nächste Spiele, Spielplan) gegenüber den Stufen oben. 1 = Listen unverändert; Paket „schmalere Uhrzeitspalte“ hebt ihn an (`listScale`). */
+    maxScale: 1,
     /** Schrittweite der Suche nach dem größten passenden Maßstab */
     scaleStep: 0.02,
   },
