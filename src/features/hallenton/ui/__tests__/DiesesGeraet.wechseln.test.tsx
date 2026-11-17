@@ -55,7 +55,7 @@ function voll(felder: ReadonlyArray<{ feld: number; name: string; state: string 
 const lageAus = (antwort: HallStatusAntwort): Record<number, LautsprecherLage> =>
   Object.fromEntries(antwort.speakers.map((s) => [s.field, lautsprecherLage({ state: s.state, ageMs: s.ageMs, outputHint: s.outputHint }, antwort.serverNow)]));
 const setzeServer = (antwort: HallStatusVoll): void => {
-  doppel.status = { stand: 'aktuell', antwort, felder: lageAus(antwort), lautsprecherBekannt: antwort.speakers.length > 0, testtonAnfordern: vi.fn(), gehoert: vi.fn() } as unknown as HallStatus;
+  doppel.status = { stand: 'aktuell', antwort, felder: lageAus(antwort), lautsprecherBekannt: antwort.speakers.length > 0, letzteSprecher: antwort.speakers, testtonAnfordern: vi.fn(), gehoert: vi.fn() } as unknown as HallStatus;
 };
 
 const zugeordnet = (felder: number[]) => Promise.resolve({ ok: true as const, status: 'assigned' as const, fields: felder, replaced: [] });

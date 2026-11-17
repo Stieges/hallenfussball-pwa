@@ -4,7 +4,7 @@
  * Den Gerätenamen und die Lautsprecher kennt nur die volle Sicht; die zuletzt bekannten bleiben stehen, wenn die Verwaltung kein Netz
  * hat (@HT-041: „Status unbekannt“ bei Feld 1, mit dem Gerät dahinter), ohne dass daraus je ein „bereit“ wird.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { hallAnzeige, type HallAnzeige } from './hallAnzeige';
 import { useLaufendeSpiele } from './useLaufendeSpiele';
@@ -38,12 +38,12 @@ export function useHallentonDaten(tournamentId: string, felderAnzahl: number): H
   const laufendeSpiele = useLaufendeSpiele(tournamentId, status.antwort);
   const angepfiffen = useMemo(() => new Set(laufendeSpiele.keys()), [laufendeSpiele]);
 
-  const [sprecher, setSprecher] = useState<readonly SprecherInfo[]>([]);
-  useEffect(() => {
-    if (status.antwort?.sicht === 'voll') {
-      setSprecher(status.antwort.speakers.map((s) => ({ field: s.field, deviceName: s.deviceName, assignedAt: s.assignedAt })));
-    }
-  }, [status.antwort]);
+  // Die zuletzt bekannten Lautsprecher liegen in der geteilten Abfrage (je Turnier, ganze Sitzung): eine Seite, die ohne Netz neu
+  // aufgebaut wird, kennt sie sonst nicht mehr (@HT-041)
+  const sprecher = useMemo<readonly SprecherInfo[]>(
+    () => status.letzteSprecher.map((s) => ({ field: s.field, deviceName: s.deviceName, assignedAt: s.assignedAt })),
+    [status.letzteSprecher],
+  );
 
   const anzeige = useMemo(
     () => hallAnzeige({

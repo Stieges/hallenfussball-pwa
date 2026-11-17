@@ -57,10 +57,13 @@ function voll(felder: ReadonlyArray<{ feld: number; name: string; state?: string
 }
 const lageAus = (antwort: HallStatusAntwort): Record<number, LautsprecherLage> =>
   Object.fromEntries(antwort.speakers.map((s) => [s.field, lautsprecherLage({ state: s.state, ageMs: s.ageMs, outputHint: s.outputHint }, antwort.serverNow)]));
+// Wie die geteilte Abfrage: die letzten Lautsprecher bleiben ohne Netz stehen (@HT-041)
+let zuletztSprecher: HallStatusVoll['speakers'] = [];
+const merkeSprecher = (antwort: HallStatusVoll | null): HallStatusVoll['speakers'] => { if (antwort !== null) { zuletztSprecher = antwort.speakers; } return zuletztSprecher; };
 const setzeServer = (antwort: HallStatusVoll | null, stand: HallStatus['stand'] = 'aktuell'): void => {
   doppel.status = {
     stand, antwort: stand === 'aktuell' ? antwort : null, felder: stand === 'aktuell' && antwort ? lageAus(antwort) : {},
-    lautsprecherBekannt: stand === 'unbekannt' || (antwort !== null && antwort.speakers.length > 0), testtonAnfordern: vi.fn(), gehoert: vi.fn(),
+    lautsprecherBekannt: stand === 'unbekannt' || (antwort !== null && antwort.speakers.length > 0), letzteSprecher: merkeSprecher(antwort), testtonAnfordern: vi.fn(), gehoert: vi.fn(),
   };
 };
 function lautsprecherDoppel(teil: Partial<HallLautsprecher> = {}): HallLautsprecher {

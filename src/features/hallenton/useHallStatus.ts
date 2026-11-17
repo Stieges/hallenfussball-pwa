@@ -14,7 +14,7 @@ import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { getDeviceId } from '../../core/device/deviceId';
 import {
   hallOutputHeard, hallSoundStatus, hallTestToneRequest,
-  type HallArgs, type HallErgebnis, type HallHeardAntwort, type HallStatusAntwort, type HallTestRequestAntwort,
+  type HallArgs, type HallErgebnis, type HallHeardAntwort, type HallStatusAntwort, type HallStatusVoll, type HallTestRequestAntwort,
 } from '../../core/repositories/hallentonRpc';
 import { supabase } from '../../lib/supabase';
 import { erzeugeHallStatusAbfrage, type HallStatusSchnappschuss } from './runtime/hallStatusAbfrage';
@@ -24,6 +24,8 @@ import { echterZeitgeber } from './runtime/zeitgeber';
 export interface HallStatus extends HallStatusSchnappschuss {
   /** In dieser Sitzung war für das Turnier schon ein Lautsprecher bekannt (für „Status unbekannt“, @HT-041; je Turnier, nicht je Einbindung). */
   lautsprecherBekannt: boolean;
+  /** Die Lautsprecher der letzten vollen Antwort dieser Sitzung; bleiben ohne Netz und über Seitenwechsel stehen (@HT-041). */
+  letzteSprecher: HallStatusVoll['speakers'];
   testtonAnfordern(feld: number): Promise<HallErgebnis<HallTestRequestAntwort>>;
   gehoert(feld: number): Promise<HallErgebnis<HallHeardAntwort>>;
 }
@@ -66,6 +68,7 @@ export function useHallStatus(tid: string): HallStatus {
   const holeStand = useCallback(() => geteilt.schnappschuss(tid), [tid]);
   const stand = useSyncExternalStore(abonniere, holeStand, holeStand);
   const lautsprecherBekannt = geteilt.lautsprecherBekannt(tid);
+  const letzteSprecher = geteilt.letzteSprecher(tid);
 
   const testtonAnfordern = useCallback(async (feld: number): Promise<HallErgebnis<HallTestRequestAntwort>> => {
     if (geteilt.schnappschuss(tid).stand !== 'aktuell') {
@@ -82,5 +85,5 @@ export function useHallStatus(tid: string): HallStatus {
     return ergebnis;
   }, [tid]);
 
-  return useMemo(() => ({ ...stand, lautsprecherBekannt, testtonAnfordern, gehoert }), [stand, lautsprecherBekannt, testtonAnfordern, gehoert]);
+  return useMemo(() => ({ ...stand, lautsprecherBekannt, letzteSprecher, testtonAnfordern, gehoert }), [stand, lautsprecherBekannt, letzteSprecher, testtonAnfordern, gehoert]);
 }

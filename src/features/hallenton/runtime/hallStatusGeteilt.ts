@@ -7,10 +7,12 @@
  * unbekannt“ auch nach dem Seitenwechsel; @HT-038: ohne je einen Lautsprecher gibt es keine Warnung). Dazu hängt der erste Abonnent
  * die Ereignisse `online`/`offline` ein (sofort neu lesen). Rein bis auf den Fenster-Zugang; `bau` erzeugt die eigentliche Abfrage.
  */
+import type { HallStatusVoll } from '../../../core/repositories/hallentonRpc';
 import type { HallStatusAbfrage, HallStatusSchnappschuss } from './hallStatusAbfrage';
 import type { Zeitgeber } from './zeitgeber';
 
 const LAEDT: HallStatusSchnappschuss = { stand: 'laedt', antwort: null, felder: {} };
+const KEINE: HallStatusVoll['speakers'] = [];
 /** So lange läuft die Abfrage nach dem letzten Abmelden weiter (zwei Takte), damit ein Seitenwechsel nichts verliert. */
 export const NACHLAUF_MS = 10_000;
 
@@ -31,6 +33,8 @@ export interface GeteilteHallStatusAbfragen {
   abfragen(turnierId: string): void;
   /** In dieser Sitzung wurde für das Turnier schon ein Lautsprecher gemeldet. */
   lautsprecherBekannt(turnierId: string): boolean;
+  /** Die Lautsprecher aus der letzten vollen Antwort dieser Sitzung (bleiben ohne Netz stehen; @HT-041); leer, solange keine kam. */
+  letzteSprecher(turnierId: string): HallStatusVoll['speakers'];
   /** Nur für Tests: alles beenden und vergessen. */
   zuruecksetzen(): void;
 }
@@ -42,10 +46,16 @@ export function erzeugeGeteilteAbfragen(
 ): GeteilteHallStatusAbfragen {
   const eintraege = new Map<string, Eintrag>();
   const bekannt = new Set<string>();
+  // Je Turnier für die ganze Sitzung, nicht je Einbindung: eine Seite, die ohne Netz neu aufgebaut wird, kennt sonst die Geräte nicht (@HT-041)
+  const sprecher = new Map<string, HallStatusVoll['speakers']>();
 
   const merke = (turnierId: string, abfrage: HallStatusAbfrage): void => {
     if (Object.keys(abfrage.getSnapshot().felder).length > 0) {
       bekannt.add(turnierId);
+    }
+    const antwort = abfrage.getSnapshot().antwort;
+    if (antwort?.sicht === 'voll') {
+      sprecher.set(turnierId, antwort.speakers);
     }
   };
 
@@ -102,6 +112,7 @@ export function erzeugeGeteilteAbfragen(
       eintraege.get(turnierId)?.abfrage.abfragen();
     },
     lautsprecherBekannt: (turnierId) => bekannt.has(turnierId),
+    letzteSprecher: (turnierId) => sprecher.get(turnierId) ?? KEINE,
     zuruecksetzen() {
       for (const e of eintraege.values()) {
         e.nachlaufAbbrechen?.();
@@ -110,6 +121,7 @@ export function erzeugeGeteilteAbfragen(
       }
       eintraege.clear();
       bekannt.clear();
+      sprecher.clear();
     },
   };
 }
