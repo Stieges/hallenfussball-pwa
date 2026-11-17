@@ -123,6 +123,15 @@ describe('@RE-004 Datenschutzerklärung sagt, was die App wirklich tut (Prüfung
     expect(text).toContain('Die Summen werden gelöscht, wenn ich das Turnier endgültig lösche (spätestens nach 6 Monaten, Abschnitt 11)');
   });
 
+  it('Zuschauer-Zählung (Abschnitt 4): überstandene Verbindungsstörungen werden offen genannt (@RZ-033 bis @RZ-036)', () => {
+    const text = abschnitt(4);
+    expect(text).toContain('ob die Verbindung zwischendurch gestört war');
+    expect(text).toContain('Verbindungsstörungen: Die Seite zählt auch mit, wenn die Verbindung zwischendurch gestört war und wieder da ist');
+    expect(text).toContain('„kurz“, wenn seit dem letzten gelungenen Abruf weniger als 20 Sekunden vergangen sind, sonst als „lang“');
+    expect(text).toContain('Gespeichert wird auch hier nur eine Summe je Turnier und 5-Minuten-Zeitraum');
+    expect(text).toContain('merkt sich die Seite die Störung nur, solange sie geöffnet ist, im Arbeitsspeicher; auf deinem Gerät wird dafür nichts gespeichert');
+  });
+
   it('Gegenbeispiel: „keine Reichweitenmessung“ steht nicht mehr da, und „keine Kennung“ wird nicht mehr pauschal versprochen', () => {
     const { container } = mitRouter(<DatenschutzScreen onBack={vi.fn()} />);
     const text = container.textContent ?? '';
