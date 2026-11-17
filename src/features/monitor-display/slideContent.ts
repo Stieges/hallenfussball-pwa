@@ -13,7 +13,8 @@ import { SPIELPLAN_FALLBACK_SLIDE, type ProgramSlide } from './slideProgramme';
 import { fieldIdToNumber } from './monitorDisplayHelpers';
 import { rankingPages, scorerPages } from './finalPages';
 import type { MonitorEnd } from './monitorEnd';
-import { DEFAULT_FRAME, listColumns, listPages, listPagesBalanced, listScale, SCHEDULE_MAX_ROWS, type ListColumns, type ListFrame } from './listRows';
+import { compactFrame } from './listCompact';
+import { DEFAULT_FRAME, listColumns, listPages, listPagesBalanced, SCHEDULE_MAX_ROWS, type ListColumns, type ListFrame } from './listRows';
 
 function compareNumbers(x: number, y: number): number {
   if (x === y) { return 0; }
@@ -120,20 +121,25 @@ export function listFrame(slide: ProgramSlide, overscan: number): ListFrame {
   return { overscan, notice: slide === SPIELPLAN_FALLBACK_SLIDE };
 }
 
+/** Der Rahmen für die Seitenaufteilung: Rand und Hinweis, nie das Bildschirmverhältnis (Seitenaufteilung und Seitenzahl bleiben wie bisher, @ZM-211). */
+function seitenRahmen(frame: ListFrame): ListFrame {
+  return { overscan: frame.overscan, notice: frame.notice };
+}
+
 /** Spielplan eines Felds: alle Spiele des Felds, nach Höhe auf Seiten verteilt, höchstens `SCHEDULE_MAX_ROWS` je Seite (@ZM-185, @ZM-188). */
 export function scheduleFieldLayout(view: TournamentView, field: number, frame: ListFrame = DEFAULT_FRAME): ListLayout {
   const schedule = fieldSchedule(view, field);
   const columns = listColumns(true, false, schedule);
-  const pages = listPages(schedule, columns, SCHEDULE_MAX_ROWS, frame);
-  return { pages, columns, frame: { ...frame, scale: listScale(pages, columns, frame) } };
+  const pages = listPages(schedule, columns, SCHEDULE_MAX_ROWS, seitenRahmen(frame));
+  return { pages, columns, frame: compactFrame(pages, columns, frame) };
 }
 
 /** „Nächste Spiele“: die nächsten offenen Spiele, nach Höhe auf Seiten verteilt; jede Paarung auf genau einer Seite (@ZM-150, @ZM-188); bei mehreren Feldern mit dem Feld in jeder Zeile (@ZM-189). */
 export function nextMatchesLayout(view: TournamentView, matchCount: number | undefined, frame: ListFrame = DEFAULT_FRAME): ListLayout {
   const list = nextMatchList(view, matchCount);
   const columns = listColumns(false, true, view.matches);
-  const pages = listPages(list, columns, undefined, frame);
-  return { pages, columns, frame: { ...frame, scale: listScale(pages, columns, frame) } };
+  const pages = listPages(list, columns, undefined, seitenRahmen(frame));
+  return { pages, columns, frame: compactFrame(pages, columns, frame) };
 }
 
 /**

@@ -2,7 +2,7 @@
  * Prüfstand Monitor-Listen-Folien „Spielplan Feld 1“ und „Nächste Spiele“ (Regel T2-UI; @ZM-187, @ZM-188, @ZM-185): ECHTE Folien-Komponente
  * (`SlideRenderer`), Design-Tokens, feste Anzeigesprache, Rahmen wie die Monitor-Seite. Turnier aus dem Kit `listFolienKit` (6 Teams,
  * 15 Spiele auf Feld 1). Nur Testumgebung, nicht Teil des Builds.
- * Adresse: `?szene=plan|naechste|finale&seite=<n>&namen=kurz|lang|bindestrich&verschoben=1&gewertet=1&strafstoss=1&rand=<Prozent>&anzahl=<Spiele>`.
+ * Adresse: `?szene=plan|naechste|finale&seite=<n>&namen=kurz|lang|bindestrich&verschoben=1&gewertet=1&strafstoss=1&rand=<Prozent>&anzahl=<Spiele>&namenliste=a|b|c`.
  */
 import ReactDOM from 'react-dom/client';
 import '../../../src/i18n';
@@ -25,9 +25,12 @@ const seite = Number(q.get('seite') ?? '0');
 const rand = Number(q.get('rand') ?? '5');
 const anzahl = Number(q.get('anzahl') ?? '15');
 
-const turnier = listenTurnier({
+const basis = listenTurnier({
   namen: q.get('namen') === 'lang' ? 'lang' : q.get('namen') === 'bindestrich' ? 'bindestrich' : 'kurz', verschoben: q.get('verschoben') === '1', gewertet: q.get('gewertet') === '1', strafstoss: q.get('strafstoss') === '1', finale: Number(q.get('finale') ?? '0'), felder: q.get('felder') === '2' ? 2 : 1,
 });
+// `namenliste=a|b|c|d|e|f`: eigene Teamnamen (reihum auf die sechs Teams), z. B. für die Namensbreite (@ZM-211)
+const namenliste = (q.get('namenliste') ?? '').split('|').filter(n => n !== '');
+const turnier = namenliste.length === 0 ? basis : { ...basis, teams: basis.teams.map((t, i) => ({ ...t, name: namenliste[i % namenliste.length] })) };
 const view = buildMonitorView(turnier);
 const folie = (szene === 'finale'
   ? { id: 'finale', type: 'all-standings', config: {}, duration: null, order: 0 }

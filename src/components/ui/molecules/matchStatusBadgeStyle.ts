@@ -4,7 +4,7 @@
  * Rahmen, Ende und ausgefallen gedämpft. Das Wort trägt die Bedeutung, nie die Farbe allein.
  */
 import type { CSSProperties } from 'react';
-import { cssVars, displayFontSizes, displayLayout, displayList, type MonitorThemeColors } from '../../../design-tokens';
+import { cssVars, displayFontSizes, displayLayout, type MonitorThemeColors } from '../../../design-tokens';
 import type { MatchBadgeState } from '../../../core/view/badge';
 
 /** `tafel`: Kopfzeile der Laptop-Tafel (@SL-180), größer als die Spielkarte (`card`), damit „Live“ aus 1 bis 2 m zu lesen ist. */
@@ -97,7 +97,8 @@ export function badgeStyle(state: MatchBadgeState, size: MatchStatusBadgeSize, t
       gap: '0.3em',
       padding: '0 0.4em',
       borderRadius: cssVars.borderRadius.sm,
-      fontSize: displayList.fontSizes.note,
+      // Schrift der Zeile erben (Zusatzzeilen der Zeitzelle, `note`; im Maßstab der schmalen Aufteilung größer, @ZM-211)
+      fontSize: 'inherit',
       lineHeight: 1.2,
     };
   }

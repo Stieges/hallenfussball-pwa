@@ -44,15 +44,22 @@ export const displayList = {
   /** Tabelle: Platz | Team | S | U | N | Diff | Pkt (in em der Zeilenschrift) */
   standingsColumns: '1.6em minmax(0, 1fr) 1.6em 1.6em 1.6em 2.6em 2.2em',
   /**
-   * Anpassung an die freie Bildhöhe (@ZM-125, @ZM-129): Die Schriftstufen oben sind die Untergrenze. Hat die Folie Platz (wenige Zeilen),
-   * wachsen Zeilen und Schrift gemeinsam um einen Maßstab bis `maxScale`; bei vielen Zeilen bleibt es bei der Untergrenze.
+   * Listen mit schmaler Zeitspalte (@ZM-211): Uhrzeit, „(war hh:mm)“ und Zustand stehen übereinander in einer schmalen Spalte, der Platz geht an die
+   * Teamnamen. Die Schrift wächst um einen Maßstab, solange jede Seite in die Höhe passt und kein Name neu umbricht (`listCompact.ts`); sie ist
+   * nie kleiner als die Stufen oben. Abstände und Polster wachsen nicht mit.
    */
   fit: {
-    /** Größter Maßstab der Spiellisten (Nächste Spiele, Spielplan) gegenüber den Stufen oben. 1 = Listen unverändert; Paket „schmalere Uhrzeitspalte“ hebt ihn an (`listScale`). */
-    maxScale: 1,
+    /** Größter Maßstab der Schrift gegenüber den Stufen oben */
+    maxScale: 1.5,
     /** Schrittweite der Suche nach dem größten passenden Maßstab */
-    scaleStep: 0.02,
+    scaleStep: 0.01,
+    /** Zeilenhöhe der Uhrzeit und des Zusatzes unter ihr (Ziffern und Klammern, keine Unterlängen) */
+    stackLineHeight: 1.1,
   },
+  /** Zeitspalte der schmalen Aufteilung in em der Zeilenschrift: breit genug für „(war 10:40)“ (5,6 em) */
+  timeColumnWidth: '5.9em',
+  /** Zeitspalte, wenn die Zeile ein Zustandsabzeichen tragen kann (Spielplan): breit genug für „Strafstoßschießen“ (8,2 em) */
+  timeColumnStateWidth: '8.5em',
   /**
    * Tabelle (Gesamttabelle, Gruppentabelle): Die Zeilenschrift richtet sich nach der freien Höhe und der Zahl der Zeilen (`standingsFit.ts`);
    * alle Abstände stehen in em dieser Schrift, damit sie mitwachsen. Die Zeilenschrift liegt zwischen `fontMin` (HART 3 % der Bildhöhe,
