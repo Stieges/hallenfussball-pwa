@@ -131,7 +131,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({
     top: 'calc(100% + 4px)',
     right: 0,
     minWidth: '180px',
-    background: cssVars.colors.surface,
+    background: cssVars.colors.surfaceSolid, // @AN-058: schwebende Fläche deckend
     border: `1px solid ${cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.md,
     boxShadow: cssVars.shadows.lg,
