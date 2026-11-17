@@ -64,7 +64,8 @@ describe('@ZM-087 Monitor-Folien zeigen das Vereinskürzel nach Liste', () => {
 
   it('Tabelle Gruppe B: „SG FF Nordheim-Süd 1921“ in der Namenszelle', () => {
     const { container } = render(<StandingsSlide slide={slide('standings', { groupId: 'B' })} tournament={mitName(VOLL)} theme="dark" style={{}} />);
-    expect(screen.getByText(KUERZEL)).toBeInTheDocument();
+    // der Bindestrich-Teil steht in einem eigenen Element, damit „Nordheim-Süd“ zusammenbleibt (@ZM-188)
+    expect(screen.getAllByText((_, el) => el?.hasAttribute('data-teamname') === true && el.textContent === KUERZEL).length).toBeGreaterThan(0);
     expect(container.textContent).not.toContain('…');
   });
 

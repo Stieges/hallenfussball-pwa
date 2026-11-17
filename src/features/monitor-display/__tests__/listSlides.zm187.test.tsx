@@ -158,7 +158,10 @@ describe('@ZM-189 Zustand und Feld stehen unter der Uhrzeit, es gibt keine eigen
       const feld = z.zeile.querySelector<HTMLElement>('[data-testid="monitor-match-field"]');
       expect(feld, z.id).not.toBeNull();
       expect(feld!.textContent).toMatch(/^Feld [12]$/);
-      expect(feld!.style.fontSize, 'eine Stufe mit den übrigen Zusatzzeilen').toBe(displayList.fontSizes.note);
+      // eine Stufe mit den übrigen Zusatzzeilen: wie die Zeilenschrift im Maßstab der Folie (@ZM-125), nie unter der Stufe `note`
+      const name = z.zeile.querySelector<HTMLElement>('[data-teamname]')!;
+      expect(parseFloat(feld!.style.fontSize) / parseFloat(name.style.fontSize), 'eine Stufe mit den übrigen Zusatzzeilen').toBeCloseTo(parseFloat(displayList.fontSizes.note) / parseFloat(displayList.fontSizes.team), 1);
+      expect(parseFloat(feld!.style.fontSize)).toBeGreaterThanOrEqual(parseFloat(displayList.fontSizes.note));
     }
     for (const z of zeigen(t, 'plan', 0)) { expect(z.zeile.querySelector('[data-testid="monitor-match-field"]'), z.id).toBeNull(); }
   });
@@ -346,13 +349,15 @@ describe('@ZM-188 Jede Zeile einer Listen-Folie liegt ganz im Bild', () => {
     const lang = scheduleFieldLayout(withView(listenTurnier({ namen: 'lang' })).view, 1).pages;
     expect(lang.length).toBeGreaterThanOrEqual(kurz.length);
     expect(Math.max(...lang.map(p => p.length))).toBeLessThanOrEqual(Math.max(...kurz.map(p => p.length)));
-    const sizes = new Set<string>();
+    // @ZM-125/@ZM-129: die Schrift schrumpft nie unter die Stufe der Tokens (3,6 % der Bildhöhe); lange Namen bremsen höchstens das Wachsen mit der freien Höhe
     for (const namen of ['kurz', 'lang'] as const) {
+      const sizes = new Set<string>();
       render(<NextMatchesSlide slide={naechste} {...withView(listenTurnier({ namen }))} theme="dark" style={{}} />);
       screen.getAllByTestId('monitor-match-row').forEach(r => { sizes.add(r.querySelector<HTMLElement>('[data-teamname]')!.style.fontSize); });
       cleanup();
+      expect(sizes.size, `${namen}: eine Schrift in allen Zeilen`).toBe(1);
+      expect(parseFloat([...sizes][0]), namen).toBeGreaterThanOrEqual(parseFloat(displayList.fontSizes.team));
     }
-    expect(sizes.size).toBe(1);
   });
 
   it('„Nächste Spiele“ blättert wie der Spielplan: acht Spiele mit langen Namen ergeben mehrere Seiten, jede Paarung auf genau einer', () => {

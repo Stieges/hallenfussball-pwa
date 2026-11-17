@@ -10,6 +10,8 @@ import { getGroupDisplayName, resolveTheme } from '../monitorDisplayHelpers';
 import { finalColumns, standingsSections, type StandingsSection } from '../slideContent';
 import { wirksamerRand } from '../overscan';
 import { MonitorMatchRow } from '../components/MonitorMatchRow';
+import { standingsFontSize } from '../standingsFit';
+import { monitorTeamName } from '../../../core/models/teamNameAbbrev';
 import { StandingsTable } from '../components/StandingsTable';
 import { SlidePageHint } from '../components/SlidePageHint';
 import { SlideHeading } from '../components/SlideHeading';
@@ -54,8 +56,14 @@ export function AllStandingsSlide({ tournament, view, theme, style, page = 0, ov
     return (
       <div style={style}>
         <SlideHeading icon="standings" color={colors.text}>{name}</SlideHeading>
-        <StandingsTable rows={standings} themeColors={colors} tie={groupTieView(tournament, section.kind === 'group' ? section.groupId : '')} />
-        <SlidePageHint page={index} pages={sections.length} color={colors.textMuted} />
+        <StandingsTable
+          rows={standings}
+          themeColors={colors}
+          tie={groupTieView(tournament, section.kind === 'group' ? section.groupId : '')}
+          fontSize={standingsFontSize(standings.map(row => monitorTeamName(row.team.name)), frame.overscan)}
+          overscanPercent={frame.overscan}
+        />
+        <SlidePageHint page={index} pages={sections.length} color={colors.textSecondary} />
       </div>
     );
   }
@@ -82,7 +90,7 @@ export function AllStandingsSlide({ tournament, view, theme, style, page = 0, ov
           />
         ))}
       </div>
-      <SlidePageHint page={index} pages={sections.length} color={colors.textMuted} />
+      <SlidePageHint page={index} pages={sections.length} color={colors.textSecondary} />
     </div>
   );
 }

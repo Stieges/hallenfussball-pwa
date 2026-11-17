@@ -57,12 +57,12 @@ export const displayFontSizes = {
   // B-44a2: Namen im Kindermodus stehen in der Kastenreihe und sind größer (kein Stand)
   teamNameKids: '11cqh',
   // B-44a3 (B2): Kopfzeile (Feld/Spiel, Gruppe), Statusmarke und Doppelpunkt, je mindestens 3 % der Bildhöhe
-  liveInfo: 'max(3.4cqh, 3vh)',
-  liveBadge: 'max(3.2cqh, 3vh)',
+  liveInfo: 'max(4.2cqh, 3vh)',
+  liveBadge: 'max(4cqh, 3vh)',
   liveSeparator: '14cqh',
 
-  // @ZM-208: Adresse unter dem QR-Code der Zuschauer-Folie, aus der Halle lesbar: mindestens 3 % der Bildhöhe (HART), hier 3,4 %
-  qrAddress: '3.4vh',
+  // @ZM-208: Adresse unter dem QR-Code der Zuschauer-Folie, aus der Halle lesbar: mindestens 3 % der Bildhöhe (HART), hier 4,2 %
+  qrAddress: '4.2vh',
 
   // B-48a: Hinweis oben rechts, nie unter 3 % der Bildhöhe (@ZM-125, HART)
   notice: '3vh',
@@ -390,6 +390,19 @@ export const displayMonitor = {
     background: '#ffffff',
     sizeLarge: 220,
     sizeSmall: 150,
+    /**
+     * Zuschauer-QR-Folie (@ZM-071, „großer QR-Code“): Kante samt weißer Ruhezone in Bruchteilen der Bildhöhe (50 %: auf 55 Zoll rund 34 cm,
+     * lesbar aus mehreren Metern), Ruhezone 4 Module wie in der Norm, Überschriften und Abstände ebenfalls an der Bildhöhe.
+     */
+    slide: {
+      size: '50vh',
+      quietModules: 4,
+      /** Zeichenfläche des SVG (nur Seitenverhältnis; die Kante setzt `size` per CSS) */
+      viewSize: 296,
+      titleFont: '5.5vh',
+      headlineFont: '4.4vh',
+      gap: '2vh',
+    },
   },
 
   /** Text */

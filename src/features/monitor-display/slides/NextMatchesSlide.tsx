@@ -29,7 +29,7 @@ export function NextMatchesSlide({ slide, tournament, view, theme, style, page =
   const { t } = useTranslation('monitor');
   const frame = listFrame(slide, wirksamerRand(overscanPercent, null));
   const colors = monitorThemes[resolveTheme(theme)];
-  const { pages: allPages, columns } = nextMatchesLayout(view, slide.config.matchCount, frame);
+  const { pages: allPages, columns, frame: rowFrame } = nextMatchesLayout(view, slide.config.matchCount, frame);
   const pages = allPages.length;
   const rows = allPages[Math.min(Math.max(page, 0), pages - 1)];
 
@@ -55,13 +55,13 @@ export function NextMatchesSlide({ slide, tournament, view, theme, style, page =
               tournament={tournament}
               theme={theme}
               columns={columns}
-            frame={frame}
+            frame={rowFrame}
             />
           ))}
         </div>
       )}
 
-      <SlidePageHint page={page} pages={pages} color={colors.textMuted} />
+      <SlidePageHint page={page} pages={pages} color={colors.textSecondary} />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { cssVars, displayList } from '../../../design-tokens';
 import type { MatchView } from '../../../core/view';
 import { MatchStatusBadge } from '../../../components/ui/molecules/MatchStatusBadge';
+import type { ListTokens } from '../listRows';
 import type { MatchStatusBadgeTone } from '../../../components/ui/molecules/matchStatusBadgeStyle';
 
 interface MonitorTimeNotesProps {
@@ -35,6 +36,8 @@ interface MonitorTimeCellProps {
   color: string;
   tone?: MatchStatusBadgeTone;
   style: CSSProperties;
+  /** Tokens der Zeile mit dem Maßstab der Folie (@ZM-125); ohne Angabe die Stufen der Tokens. */
+  list?: ListTokens;
 }
 
 /**
@@ -42,20 +45,20 @@ interface MonitorTimeCellProps {
  * darunter nach Bedarf das Feld (nur bei mehreren Feldern), der Zustand („Live“, „Ende“, „ausgefallen“ …). Keine eigenen Spalten (@ZM-189). Uhrzeit und „(war …)“ brechen nie um; die Namensspalten ändern sich nie
  * durch einen Hinweis (@ZM-087, @ZM-187).
  */
-export function MonitorTimeCell({ match, fieldName, reserveState, color, tone, style }: MonitorTimeCellProps) {
+export function MonitorTimeCell({ match, fieldName, reserveState, color, tone, style, list = displayList }: MonitorTimeCellProps) {
   const { t } = useTranslation('tournament');
   // Eine Stufe für alle Zusatzzeilen unter der Uhrzeit: Feld und Zustand (Token `note`); die Spielbezeichnung steht als Überschrift der Zeile (MonitorMatchRow)
-  const small: CSSProperties = { fontSize: displayList.fontSizes.note, fontWeight: cssVars.fontWeights.normal, color, whiteSpace: 'nowrap' };
+  const small: CSSProperties = { fontSize: list.fontSizes.note, fontWeight: cssVars.fontWeights.normal, color, whiteSpace: 'nowrap' };
   // Das Feld darf umbrechen (lange Texte laufen sonst aus der Spalte); nur Uhrzeit und Zustand nicht
   const note: CSSProperties = { ...small, whiteSpace: 'normal', overflowWrap: 'break-word' };
   // „(war hh:mm)“ steht in der Uhrzeit-Zeile und hat die Stufe `timeNote`
-  const war: CSSProperties = { ...small, fontSize: displayList.fontSizes.timeNote };
+  const war: CSSProperties = { ...small, fontSize: list.fontSizes.timeNote };
   const hasState = match.badge.kind === 'badge';
   return (
     // Die Zelle ist nur so hoch wie die Uhrzeit-Zeile: sie steht senkrecht mittig in der Zeile, die Zusätze hängen darunter (außerhalb des Flusses)
-    <div data-testid="monitor-match-time" style={{ ...style, color, flex: `0 0 ${displayList.timeFieldWidth}`, minWidth: 0, position: 'relative', height: `calc(${displayList.fontSizes.time} * 1.2)` }}>
-      <div data-testid="monitor-match-clockline" style={{ display: 'flex', alignItems: 'baseline', gap: displayList.timeNoteGap, whiteSpace: 'nowrap', lineHeight: 1.2 }}>
-        <span data-testid="monitor-match-clock" style={{ fontSize: displayList.fontSizes.time }}>{match.kickoff?.time ?? '–'}</span>
+    <div data-testid="monitor-match-time" style={{ ...style, color, flex: `0 0 ${list.timeFieldWidth}`, minWidth: 0, position: 'relative', height: `calc(${list.fontSizes.time} * 1.2)` }}>
+      <div data-testid="monitor-match-clockline" style={{ display: 'flex', alignItems: 'baseline', gap: list.timeNoteGap, whiteSpace: 'nowrap', lineHeight: 1.2 }}>
+        <span data-testid="monitor-match-clock" style={{ fontSize: list.fontSizes.time }}>{match.kickoff?.time ?? '–'}</span>
         {match.originalKickoff && (
           <span data-testid="monitor-match-original" style={war}>{t('timeShift.original', { time: match.originalKickoff.time })}</span>
         )}
@@ -63,7 +66,7 @@ export function MonitorTimeCell({ match, fieldName, reserveState, color, tone, s
       <div data-testid="monitor-match-zusatz" style={{ position: 'absolute', top: '100%', left: 0, right: 0, lineHeight: 1.2 }}>
       {fieldName !== undefined && <div data-testid="monitor-match-field" style={{ ...note, fontWeight: cssVars.fontWeights.semibold }}>{fieldName}</div>}
       {(reserveState || hasState) && (
-        <div data-testid="monitor-match-status" style={{ ...small, display: 'flex', alignItems: 'center', gap: displayList.timeNoteGap, minHeight: '1.2em' }}>
+        <div data-testid="monitor-match-status" style={{ ...small, display: 'flex', alignItems: 'center', gap: list.timeNoteGap, minHeight: '1.2em' }}>
           {hasState && <MatchStatusBadge model={match.badge} size="zeile" tone={tone} />}
         </div>
       )}

@@ -13,7 +13,7 @@ import { SPIELPLAN_FALLBACK_SLIDE, type ProgramSlide } from './slideProgramme';
 import { fieldIdToNumber } from './monitorDisplayHelpers';
 import { rankingPages, scorerPages } from './finalPages';
 import type { MonitorEnd } from './monitorEnd';
-import { DEFAULT_FRAME, listColumns, listPages, listPagesBalanced, SCHEDULE_MAX_ROWS, type ListColumns, type ListFrame } from './listRows';
+import { DEFAULT_FRAME, listColumns, listPages, listPagesBalanced, listScale, SCHEDULE_MAX_ROWS, type ListColumns, type ListFrame } from './listRows';
 
 function compareNumbers(x: number, y: number): number {
   if (x === y) { return 0; }
@@ -100,6 +100,8 @@ export function finalColumns(view: TournamentView): ListColumns {
 export interface ListLayout {
   pages: MatchView[][];
   columns: ListColumns;
+  /** Rahmen der Zeilen mit dem Maßstab, der die freie Bildhöhe nutzt (@ZM-125): die Folie reicht ihn an jede Zeile weiter. */
+  frame: ListFrame;
 }
 
 /**
@@ -122,14 +124,16 @@ export function listFrame(slide: ProgramSlide, overscan: number): ListFrame {
 export function scheduleFieldLayout(view: TournamentView, field: number, frame: ListFrame = DEFAULT_FRAME): ListLayout {
   const schedule = fieldSchedule(view, field);
   const columns = listColumns(true, false, schedule);
-  return { pages: listPages(schedule, columns, SCHEDULE_MAX_ROWS, frame), columns };
+  const pages = listPages(schedule, columns, SCHEDULE_MAX_ROWS, frame);
+  return { pages, columns, frame: { ...frame, scale: listScale(pages, columns, frame) } };
 }
 
 /** „Nächste Spiele“: die nächsten offenen Spiele, nach Höhe auf Seiten verteilt; jede Paarung auf genau einer Seite (@ZM-150, @ZM-188); bei mehreren Feldern mit dem Feld in jeder Zeile (@ZM-189). */
 export function nextMatchesLayout(view: TournamentView, matchCount: number | undefined, frame: ListFrame = DEFAULT_FRAME): ListLayout {
   const list = nextMatchList(view, matchCount);
   const columns = listColumns(false, true, view.matches);
-  return { pages: listPages(list, columns, undefined, frame), columns };
+  const pages = listPages(list, columns, undefined, frame);
+  return { pages, columns, frame: { ...frame, scale: listScale(pages, columns, frame) } };
 }
 
 /**

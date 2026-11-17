@@ -70,7 +70,7 @@ export function SlideRenderer({ slide, tournament, view, performanceSettings, th
       return <LiveSlide slide={slide} tournament={tournament} view={view} performanceSettings={performanceSettings} theme={theme} style={slideStyle} pinnedMatchId={pinnedMatchId} />;
 
     case 'standings':
-      return <StandingsSlide slide={slide} tournament={tournament} theme={theme} style={slideStyle} />;
+      return <StandingsSlide slide={slide} tournament={tournament} theme={theme} style={slideStyle} overscanPercent={overscanPercent} />;
 
     case 'schedule-field':
       return <ScheduleFieldSlide slide={slide} tournament={tournament} view={view} theme={theme} style={slideStyle} page={page} pageStart={pageStart} overscanPercent={overscanPercent} />;

@@ -36,7 +36,7 @@ export function ScheduleFieldSlide({ slide, tournament, view, theme, style, page
   const field = tournament.fields?.find(f => f.id === slide.config.fieldId);
   const fieldName = field?.customName ?? field?.defaultName ?? t('fieldSelector.field', { field: fieldNumber });
 
-  const { pages: allPages, columns } = scheduleFieldLayout(view, fieldNumber, frame);
+  const { pages: allPages, columns, frame: rowFrame } = scheduleFieldLayout(view, fieldNumber, frame);
   const pages = allPages.length;
   // Seite im Durchlauf (0 = Startseite) → Seite in Anpfiff-Reihenfolge; die beendeten Seiten folgen zuletzt (@ZM-190)
   const rows = allPages[(Math.min(Math.max(page, 0), pages - 1) + pageStart) % pages];
@@ -63,12 +63,12 @@ export function ScheduleFieldSlide({ slide, tournament, view, theme, style, page
             theme={theme}
             showScore={!ergebnisseAusgeblendet}
             columns={columns}
-            frame={frame}
+            frame={rowFrame}
           />
         ))}
       </div>
 
-      <SlidePageHint page={page} pages={pages} color={themeColors.textMuted} />
+      <SlidePageHint page={page} pages={pages} color={themeColors.textSecondary} />
     </div>
   );
 }

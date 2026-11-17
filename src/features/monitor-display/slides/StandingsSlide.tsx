@@ -7,6 +7,9 @@ import { groupKeyOf, OVERALL_GROUP } from '../../../core/models/standingsGroups'
 import { groupTieView } from '../../../core/standings/tieViews';
 import { calculateStandings } from '../../../utils/calculations';
 import { getGroupDisplayName, resolveTheme } from '../monitorDisplayHelpers';
+import { standingsFontSize } from '../standingsFit';
+import { monitorTeamName } from '../../../core/models/teamNameAbbrev';
+import { wirksamerRand } from '../overscan';
 import { StandingsTable } from '../components/StandingsTable';
 import { SlideHeading } from '../components/SlideHeading';
 
@@ -15,9 +18,11 @@ interface StandingsSlideProps {
   tournament: Tournament;
   theme: MonitorTheme;
   style: CSSProperties;
+  /** Wirksamer Bildrand in Prozent (@ME-067): bestimmt die freie Höhe und damit die Zeilenschrift. */
+  overscanPercent?: number;
 }
 
-export function StandingsSlide({ slide, tournament, theme, style }: StandingsSlideProps) {
+export function StandingsSlide({ slide, tournament, theme, style, overscanPercent }: StandingsSlideProps) {
   const { t } = useTranslation('monitor');
   const resolvedTheme = resolveTheme(theme);
   const themeColors = monitorThemes[resolvedTheme];
@@ -36,7 +41,13 @@ export function StandingsSlide({ slide, tournament, theme, style }: StandingsSli
     <div style={style}>
       <SlideHeading icon="standings" color={themeColors.text}>{groupName}</SlideHeading>
 
-      <StandingsTable rows={standings} themeColors={themeColors} tie={groupTieView(tournament, groupKeyOf(groupId))} />
+      <StandingsTable
+        rows={standings}
+        themeColors={themeColors}
+        tie={groupTieView(tournament, groupKeyOf(groupId))}
+        fontSize={standingsFontSize(standings.map(row => monitorTeamName(row.team.name)), wirksamerRand(overscanPercent, null))}
+        overscanPercent={wirksamerRand(overscanPercent, null)}
+      />
     </div>
   );
 }
