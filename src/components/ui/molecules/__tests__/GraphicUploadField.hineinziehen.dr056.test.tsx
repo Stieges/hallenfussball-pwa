@@ -49,6 +49,13 @@ describe('@DR-056 Hineinziehen ins Feld', () => {
     expect(screen.queryByTestId('turnierlogo-ablegen')).toBeNull();
   });
 
+  it('Ruhezustand: das Feld trägt weder Rand noch Innenabstand (das Layout bleibt wie vor dem Hineinziehen)', () => {
+    const { feld } = zeige();
+    expect(feld.style.padding).toBe('');
+    expect(feld.style.border).toBe('');
+    expect(feld.style.outline).toBe('');
+  });
+
   it('Gegenbeispiel: Ziehen über ein Kindelement (Enter innen, Leave außen) lässt den Zustand stehen', () => {
     const { feld } = zeige();
     const taste = screen.getByTestId('turnierlogo-hochladen');

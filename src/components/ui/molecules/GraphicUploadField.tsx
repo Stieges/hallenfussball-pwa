@@ -58,11 +58,17 @@ const previewStyle: CSSProperties = {
 const hintStyle: CSSProperties = { margin: `${cssVars.spacing.sm} 0 0`, fontSize: cssVars.fontSizes.md, color: cssVars.colors.textSecondary };
 // Schmaler als der Standard-Knopf (Mockup „Stammdaten MVP“): Vorschau, „Ändern“ und „Entfernen“ stehen bei 390 px in einer Zeile.
 const buttonStyle: CSSProperties = { padding: `0 ${cssVars.spacing.md}` };
-// Ruhezustand: der Rahmen ist da, aber unsichtbar (kein Springen beim Ablegen); im Ablege-Zustand gestrichelt in der Akzentfarbe.
+// Ruhezustand: keine Zusatzstile, das Feld liegt wie zuvor. Ablege-Zustand: gestrichelter Rahmen und getönte Fläche um das Feld herum
+// (Outline und Schatten brauchen keinen Platz, es springt nichts).
 const dropAreaStyle = (over: boolean): CSSProperties => ({
-  marginTop: cssVars.spacing.lg, padding: cssVars.spacing.sm, borderRadius: cssVars.borderRadius.md,
-  border: `${cssVars.borderWidth.medium} ${over ? 'dashed' : 'solid'} ${over ? cssVars.colors.primary : 'transparent'}`,
-  background: over ? cssVars.colors.primarySubtle : 'transparent',
+  marginTop: cssVars.spacing.lg,
+  ...(over ? {
+    borderRadius: cssVars.borderRadius.md,
+    outline: `${cssVars.borderWidth.medium} dashed ${cssVars.colors.primary}`,
+    outlineOffset: cssVars.spacing.sm,
+    background: cssVars.colors.primarySubtle,
+    boxShadow: `0 0 0 ${cssVars.spacing.sm} ${cssVars.colors.primarySubtle}`,
+  } : {}),
 });
 const dropHintStyle: CSSProperties = { margin: `${cssVars.spacing.sm} 0 0`, fontSize: cssVars.fontSizes.md, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.primary };
 const noticeSlot: CSSProperties = { marginTop: cssVars.spacing.md };

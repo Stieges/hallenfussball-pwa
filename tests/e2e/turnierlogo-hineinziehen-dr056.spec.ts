@@ -29,7 +29,13 @@ async function bild(feld: Locator, name: string): Promise<void> {
   const ordner = process.env.DR056_BILDER;
   if (ordner === undefined) { return; }
   mkdirSync(ordner, { recursive: true });
-  await feld.screenshot({ path: join(ordner, `${name}.png`) });
+  // etwas größer als das Feld: der gestrichelte Rahmen des Ablege-Zustands liegt außerhalb seines Kastens
+  const box = await feld.boundingBox();
+  const rand = 20;
+  await feld.page().screenshot({
+    path: join(ordner, `${name}.png`),
+    ...(box === null ? {} : { clip: { x: Math.max(0, box.x - rand), y: Math.max(0, box.y - rand), width: box.width + 2 * rand, height: box.height + 2 * rand } }),
+  });
 }
 
 const GROESSEN = [{ breite: 390, hoehe: 844 }, { breite: 1440, hoehe: 900 }] as const;
@@ -49,15 +55,17 @@ for (const { breite, hoehe } of GROESSEN) {
     test('@DR-056 „wappen.svg“ auf die linke Grafik ziehen: übernommen wie nach „Datei auswählen“; Ruhe und Ablege-Zustand sind zu sehen', async ({ page }) => {
       await oeffne(page);
       await bild(feld, `logo-ruhe-${breite}-hell`);
+      const hoeheRuhe = (await feld.boundingBox())?.height;
 
       await ziehe(feld, 'dragenter', [wappen]);
       await ziehe(feld, 'dragover', [wappen]);
       await expect(page.getByTestId('turnierlogo-ablegen')).toHaveText(t('wizard:step3.graphics.drop'));
-      await expect(feld).toHaveCSS('border-top-style', 'dashed');
+      await expect(feld).toHaveCSS('outline-style', 'dashed');
       await bild(feld, `logo-ablegen-${breite}-hell`);
       await ziehe(feld, 'dragleave', [wappen]);
       await expect(page.getByTestId('turnierlogo-ablegen')).toHaveCount(0);
-      await expect(feld).toHaveCSS('border-top-style', 'solid');
+      await expect(feld).toHaveCSS('outline-style', 'none');
+      expect((await feld.boundingBox())?.height).toBe(hoeheRuhe); // Ruhezustand: das Feld liegt wie zuvor, nichts springt
 
       await ziehe(feld, 'drop', [wappen]);
 
