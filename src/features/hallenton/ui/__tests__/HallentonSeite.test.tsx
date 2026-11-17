@@ -52,10 +52,13 @@ function voll(feld1: { state: string; ageMs: number | null; test?: { testId: str
 }
 const lageAus = (antwort: HallStatusAntwort): Record<number, LautsprecherLage> =>
   Object.fromEntries(antwort.speakers.map((s) => [s.field, lautsprecherLage({ state: s.state, ageMs: s.ageMs, outputHint: s.outputHint }, antwort.serverNow)]));
+// Wie die geteilte Abfrage: die letzten Lautsprecher bleiben ohne Netz stehen (@HT-041)
+let zuletztSprecher: HallStatusVoll['speakers'] = [];
+const merkeSprecher = (antwort: HallStatusVoll | null): HallStatusVoll['speakers'] => { if (antwort !== null) { zuletztSprecher = antwort.speakers; } return zuletztSprecher; };
 const statusAus = (antwort: HallStatusVoll | null, stand: HallStatus['stand'] = 'aktuell', testton = vi.fn()): HallStatus => ({
   stand, antwort: stand === 'aktuell' ? antwort : null, felder: stand === 'aktuell' && antwort ? lageAus(antwort) : {},
   // „ein Lautsprecher war in der Sitzung bekannt“ gilt je Turnier (useHallStatus); ohne Netz bleibt es erhalten (@HT-041)
-  lautsprecherBekannt: stand === 'unbekannt' || (antwort !== null && antwort.speakers.length > 0), testtonAnfordern: testton, gehoert: vi.fn(),
+  lautsprecherBekannt: stand === 'unbekannt' || (antwort !== null && antwort.speakers.length > 0), letzteSprecher: merkeSprecher(antwort), testtonAnfordern: testton, gehoert: vi.fn(),
 });
 const setzeStatus = (antwort: HallStatusVoll | null, stand: HallStatus['stand'] = 'aktuell', testton = vi.fn()): void => { doppel.status = statusAus(antwort, stand, testton); };
 const anfordern = (): ReturnType<typeof vi.fn> => doppel.status.testtonAnfordern as unknown as ReturnType<typeof vi.fn>;

@@ -45,7 +45,7 @@ function setzeServer(sprecher: ReadonlyArray<{ feld: number; name: string }>): v
   };
   doppel.status = {
     stand: 'aktuell', antwort, felder: Object.fromEntries(antwort.speakers.map((s) => [s.field, lautsprecherLage({ state: s.state, ageMs: s.ageMs, outputHint: s.outputHint }, antwort.serverNow)])),
-    lautsprecherBekannt: sprecher.length > 0, testtonAnfordern: vi.fn(), gehoert: vi.fn(),
+    lautsprecherBekannt: sprecher.length > 0, letzteSprecher: antwort.speakers, testtonAnfordern: vi.fn(), gehoert: vi.fn(),
   } as unknown as HallStatus;
 }
 /** Ein anderes Fenster des Rechners hat den Schlüssel geändert: der Browser meldet es als `storage`-Ereignis. */

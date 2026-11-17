@@ -61,7 +61,7 @@ beforeEach(() => {
   verbinden.reconnect.mockReset().mockResolvedValue(false);
   verbinden.resync.mockReset().mockResolvedValue(undefined);
   geraet.wert = { rolle: 'keiner', felder: [], laufzeit: null, tonAktivieren: vi.fn().mockResolvedValue(true) };
-  statusMock.wert = { stand: 'aktuell', antwort: null, felder: { 1: { art: 'bereit', pruefen: false } }, lautsprecherBekannt: true, testtonAnfordern: vi.fn(), gehoert: vi.fn() };
+  statusMock.wert = { stand: 'aktuell', antwort: null, felder: { 1: { art: 'bereit', pruefen: false } }, lautsprecherBekannt: true, letzteSprecher: [], testtonAnfordern: vi.fn(), gehoert: vi.fn() };
 });
 afterEach(() => { setzeLeitung(null); });
 

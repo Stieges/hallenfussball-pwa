@@ -53,7 +53,7 @@ import { HallGeraetStreifen } from '../HallGeraetStreifen';
 import { hatStatusZeileHost } from '../StatusZeileOrt';
 
 const status = (felder: Record<number, LautsprecherLage>, stand: HallStatus['stand'] = 'aktuell', lautsprecherBekannt = Object.keys(felder).length > 0): HallStatus => ({
-  stand, antwort: null, felder, lautsprecherBekannt, testtonAnfordern: vi.fn(), gehoert: vi.fn(),
+  stand, antwort: null, felder, lautsprecherBekannt, letzteSprecher: [], testtonAnfordern: vi.fn(), gehoert: vi.fn(),
 });
 const laufzeit = (rolle: LaufzeitSnapshot['rolle'], zustand: string): LaufzeitSnapshot => ({
   rolle, turnierId: 't1', felder: [1], geraeteZustand: 'ready', zustandJeFeld: { 'field-1': zustand as never },

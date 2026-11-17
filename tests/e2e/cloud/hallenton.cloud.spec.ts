@@ -463,9 +463,7 @@ test.describe('Hallenton Störungen (zwei Geräte, lokaler Stack)', () => {
     }
   });
 
-  test('@HT-041 Befund C-HALLENTON-OFFLINE-GEOEFFNET-FALSCHER-STAND: Netz weg auf dem Dashboard, dann „Hallenton“ öffnen: „Kein Netz – Status unbekannt“ und bei Feld 1 „Status unbekannt“', async ({ browser }) => {
-    // Erwartet nach @HT-041: die Seite zeigt oben „Kein Netz – Status unbekannt“ und bei Feld 1 „Status unbekannt“. Beobachtet (CI-Lauf 43874890182, dreimal):
-    // die Karte zeigt „kein Hallen-Lautsprecher“. App-Fehler, nicht in diesem PR zu beheben; test.fail, bis er behoben ist (dann wird dieser Fall grün-erwartet).
+  test('@HT-041 Hallenton schon zweimal geöffnet, Netz weg auf dem Dashboard, dann „Hallenton“ öffnen: „Kein Netz – Status unbekannt“ und bei Feld 1 „Status unbekannt“', async ({ browser }) => {
     test.setTimeout(150_000);
     const cup = await cloneReleaseCup('ht41o', { withCoAdmin: false });
     const a = await neuesGeraet(browser, 'owner');
@@ -493,9 +491,6 @@ test.describe('Hallenton Störungen (zwei Geräte, lokaler Stack)', () => {
       await expect(karte).toBeVisible();
       const karteText = (await karte.textContent())?.trim() ?? '';
       process.stdout.write(`[H4-14] Karte offline: "${karteText}"; Kopfzeile vor dem Wechsel: "${kopfText}"\n`);
-      // Erst ab hier steht der Fall unter test.fail (zur Laufzeit gesetzt): alle Schritte davor sind normale Prüfungen, scheitert einer, ist der Fall rot.
-      // Nur diese eine Aussage ist der Befund: die Karte zeigt „kein Hallen-Lautsprecher“ statt „Status unbekannt“.
-      test.fail(true, 'Befund C-HALLENTON-OFFLINE-GEOEFFNET-FALSCHER-STAND: Karte zeigt „kein Hallen-Lautsprecher“ statt „Status unbekannt“');
       await expect(karte).toHaveText('Status unbekannt', { timeout: 5_000 });
     } finally {
       await a.context.setOffline(false).catch(() => undefined);

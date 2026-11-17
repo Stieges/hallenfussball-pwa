@@ -54,7 +54,7 @@ const serverStand = (felder: HallStatus['felder'], stand: HallStatus['stand'] = 
 beforeEach(() => {
   uhr.abgeglichen = true;
   status.gelesen = 0;
-  status.wert = { stand: 'aktuell', antwort: null, felder: { 1: { art: 'bereit', pruefen: false } }, lautsprecherBekannt: true, testtonAnfordern: vi.fn(), gehoert: vi.fn() };
+  status.wert = { stand: 'aktuell', antwort: null, felder: { 1: { art: 'bereit', pruefen: false } }, lautsprecherBekannt: true, letzteSprecher: [], testtonAnfordern: vi.fn(), gehoert: vi.fn() };
 });
 afterEach(() => { setzeLeitung(null); });
 

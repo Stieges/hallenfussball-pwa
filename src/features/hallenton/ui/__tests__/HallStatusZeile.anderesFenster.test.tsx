@@ -25,7 +25,7 @@ vi.mock('react-i18next', () => ({
 const doppel = vi.hoisted(() => ({ lautsprecher: null as unknown as HallLautsprecher }));
 vi.mock('../../../auth/hooks/useCan', () => ({ useCan: () => true }));
 vi.mock('../../useHallStatus', () => ({
-  useHallStatus: (): HallStatus => ({ stand: 'laedt', antwort: null, felder: {}, lautsprecherBekannt: false, testtonAnfordern: vi.fn(), gehoert: vi.fn() }),
+  useHallStatus: (): HallStatus => ({ stand: 'laedt', antwort: null, felder: {}, lautsprecherBekannt: false, letzteSprecher: [], testtonAnfordern: vi.fn(), gehoert: vi.fn() }),
 }));
 const keinSpiel = vi.hoisted(() => new Map<number, number>());
 vi.mock('../../useLaufendeSpiele', () => ({ useLaufendeSpiele: () => keinSpiel }));

@@ -53,7 +53,7 @@ function setzeServer(state: string): void {
   };
   doppel.status = {
     stand: 'aktuell', antwort, felder: { 1: lautsprecherLage({ state: antwort.speakers[0].state, ageMs: 3000, outputHint: false }, SERVER_JETZT) },
-    lautsprecherBekannt: true, testtonAnfordern: vi.fn(), gehoert: vi.fn(),
+    lautsprecherBekannt: true, letzteSprecher: antwort.speakers, testtonAnfordern: vi.fn(), gehoert: vi.fn(),
   } as unknown as HallStatus;
 }
 const lautsprecher = (rolle: 'toent' | 'andererTab'): HallLautsprecher => ({
