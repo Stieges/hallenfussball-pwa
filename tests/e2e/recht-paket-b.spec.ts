@@ -207,3 +207,36 @@ test.describe('@RE-003 Keine fremden Server', () => {
     expect(schriftAnfragen.every((u) => new URL(u).origin === eigene), 'alle Schriftdateien von der eigenen Herkunft').toBe(true);
   });
 });
+
+test.describe('@RE-008 Impressum und Datenschutz ohne Raute erreichbar', () => {
+  test.beforeEach(({ page: _page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop', 'nur Projekt desktop (setzt Fenster selbst)');
+  });
+
+  for (const [adresse, titel, hash] of [
+    ['/impressum', 'Impressum', '#/impressum'],
+    ['/datenschutz', 'Datenschutzerklärung', '#/datenschutz'],
+    ['/impressum/', 'Impressum', '#/impressum'],
+  ] as const) {
+    test(`@RE-008 ${adresse} ohne Raute zeigt die Seite, Adresszeile mit Raute, „Zurück“ führt in die App`, async ({ page }) => {
+      await oeffne(page, GERAETE[2], adresse);
+      await expect(page.getByRole('heading', { level: 1, name: titel })).toBeVisible({ timeout: 25000 });
+      await expect.poll(() => new URL(page.url()).hash).toBe(hash);
+      await page.getByTestId('legal-back-button').click();
+      await expect.poll(() => new URL(page.url()).hash).toMatch(/^(#\/?)?$/);
+      await expect(page.getByRole('heading', { level: 1, name: titel })).toHaveCount(0);
+    });
+  }
+
+  test('@RE-008 Gegenbeispiele: /live/CODE führt wie bisher zur Zuschauer-Seite, andere Pfade nicht zu den Rechtsseiten', async ({ page }) => {
+    await oeffne(page, GERAETE[2], '/live/MESS26');
+    await expect.poll(() => new URL(page.url()).hash).toBe('#/live/MESS26');
+    await expect(page.locator('nav[aria-label="Public Navigation"]')).toBeVisible({ timeout: 25000 });
+    await page.goto('/impressum-foo');
+    await expect.poll(() => new URL(page.url()).pathname).toBe('/impressum-foo');
+    await expect.poll(() => new URL(page.url()).hash).not.toMatch(/impressum|datenschutz/);
+    await page.goto('/#/impressum');
+    await expect(page.getByRole('heading', { level: 1, name: 'Impressum' })).toBeVisible({ timeout: 25000 });
+    await expect.poll(() => new URL(page.url()).hash).toBe('#/impressum');
+  });
+});
