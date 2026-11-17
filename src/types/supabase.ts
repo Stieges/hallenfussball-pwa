@@ -2119,6 +2119,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      account_deletion_check: { Args: { p_user_id: string }; Returns: Json }
       adopt_tournament_monitor: {
         Args: {
           p_gathering_id: string

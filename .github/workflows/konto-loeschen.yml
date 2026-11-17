@@ -1,0 +1,47 @@
+name: Konto-Loeschen
+
+# Konto auf Anfrage loeschbar, Turniere geschuetzt (supabase/migrations/20261128_001_konto_loeschen.sql, Record
+# docs/anforderungen/2026-10-03_recht-impressum-datenschutz.md, @RE-009, @RE-010, @RE-011). scripts/konto-loeschen-check.sh spielt Baseline +
+# Migrationen in einen eigenen Wegwerf-Container supabase/postgres und prueft Loeschen ohne Turnier, Ablehnung mit Turnier (Pruefsumme der
+# Turnierzeilen), Vorpruefung nur fuer service_role, Hin- und Rueckweg, Fail-fast und Sperr-Timeout; die Gegenproben beweisen, dass der Check
+# Fehler auch erkennt.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/rollbacks/20261128_001_konto_loeschen_rollback.sql'
+      - 'scripts/konto-loeschen-check.sh'
+      - 'scripts/db_privilege_assertions.sql'
+      - 'scripts/lib/migrations-since-baseline.sh'
+      - '.github/workflows/konto-loeschen.yml'
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/rollbacks/20261128_001_konto_loeschen_rollback.sql'
+      - 'scripts/konto-loeschen-check.sh'
+      - 'scripts/db_privilege_assertions.sql'
+      - 'scripts/lib/migrations-since-baseline.sh'
+      - '.github/workflows/konto-loeschen.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  konto-loeschen:
+    name: Konto-Loeschen (Postgres-Wegwerfcontainer)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Konto-Loeschen pruefen
+        run: bash scripts/konto-loeschen-check.sh
+
+      - name: Gegenprobe A (ohne die Migration muessen R, S, V ROT sein)
+        run: bash scripts/konto-loeschen-check.sh --without-migration
+
+      - name: Gegenprobe B (jede Mutation muss ihre Kategorie ROT machen)
+        run: bash scripts/konto-loeschen-check.sh --gegenprobe
