@@ -23,7 +23,7 @@ vi.mock('../../../lib/sentry', () => ({
   captureFeatureError: (...args: unknown[]) => captureFeatureError(...args),
 }));
 
-import { LocalStorageRepository } from '../LocalStorageRepository';
+import { LocalStorageRepository, resetReportedLoadErrorsForTest } from '../LocalStorageRepository';
 
 const TEAM_A = '11111111-1111-4111-8111-111111111111';
 const TEAM_B = '22222222-2222-4222-8222-222222222222';
@@ -69,6 +69,7 @@ describe('LocalStorageRepository – Altformat (@FU-007)', () => {
   beforeEach(() => {
     data.clear();
     vi.clearAllMocks();
+    resetReportedLoadErrorsForTest();
   });
 
   it('@FU-007 Turnier mit einem Spiel ohne slotA/slotB landet unter tournaments_legacy_v1 mit Hinweis', async () => {
