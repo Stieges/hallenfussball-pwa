@@ -1,6 +1,6 @@
 import { useId, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, displayList, displayMonitor, monitorThemes } from '../../../design-tokens';
+import { cssVars, displayMonitor, monitorThemes } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { MatchView } from '../../../core/view';
 import type { MonitorTheme } from '../../../types/monitor';
@@ -9,7 +9,7 @@ import { resultFigures, tableResultExtra, tableResultExtraTerms } from '../../..
 import { resolveTheme } from '../monitorDisplayHelpers';
 import { monitorSideLabel } from '../matchSides';
 import { monitorBadgeTone } from '../../../components/ui/molecules/matchStatusBadgeStyle';
-import { DEFAULT_FRAME, hyphenWordStaysTogether, nameCharsPerLine, rowHeight, type ListColumns, type ListFrame } from '../listRows';
+import { DEFAULT_FRAME, hyphenWordStaysTogether, nameCharsPerLine, rowHeight, scaledList, type ListColumns, type ListFrame } from '../listRows';
 import { MonitorTimeCell } from './MonitorTimeCell';
 import { SlashBreaks } from '../../../components/ui/atoms/TeamName';
 
@@ -45,6 +45,8 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
   const { t } = useTranslation(['tournament', 'sport']);
   const colors = monitorThemes[resolveTheme(theme)];
   const perLine = nameCharsPerLine(frame);
+  // @ZM-125: Schrift und Abstände der Zeile mit dem Maßstab der Folie (1 = Stufen der Tokens)
+  const displayList = scaledList(frame.scale ?? 1);
   // B-44b (@ZM-125, @ZM-087): Schrift relativ zur Bildhöhe, Namen umbrechen statt zu kürzen
   const cell: CSSProperties = {
     fontSize: displayList.fontSizes.team,
@@ -115,6 +117,7 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
           color={colors.text}
           tone={monitorBadgeTone(colors)}
           style={{ ...cell, fontWeight: cssVars.fontWeights.semibold }}
+          list={displayList}
         />
         <div data-teamname style={{ ...cell, flex: '1 1 0', textAlign: 'right' }}><NameText name={monitorSideLabel(match.home)} perLine={perLine} /></div>
         <div

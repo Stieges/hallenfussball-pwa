@@ -43,6 +43,33 @@ export const displayList = {
   markerSize: '1.6vh',
   /** Tabelle: Platz | Team | S | U | N | Diff | Pkt (in em der Zeilenschrift) */
   standingsColumns: '1.6em minmax(0, 1fr) 1.6em 1.6em 1.6em 2.6em 2.2em',
+  /**
+   * Anpassung an die freie Bildhöhe (@ZM-125, @ZM-129): Die Schriftstufen oben sind die Untergrenze. Hat die Folie Platz (wenige Zeilen),
+   * wachsen Zeilen und Schrift gemeinsam um einen Maßstab bis `maxScale`; bei vielen Zeilen bleibt es bei der Untergrenze.
+   */
+  fit: {
+    /** Größter Maßstab der Spiellisten (Nächste Spiele, Spielplan) gegenüber den Stufen oben. 1 = Listen unverändert; Paket „schmalere Uhrzeitspalte“ hebt ihn an (`listScale`). */
+    maxScale: 1,
+    /** Schrittweite der Suche nach dem größten passenden Maßstab */
+    scaleStep: 0.02,
+  },
+  /**
+   * Tabelle (Gesamttabelle, Gruppentabelle): Die Zeilenschrift richtet sich nach der freien Höhe und der Zahl der Zeilen (`standingsFit.ts`);
+   * alle Abstände stehen in em dieser Schrift, damit sie mitwachsen. Die Zeilenschrift liegt zwischen `fontMin` (HART 3 % der Bildhöhe,
+   * @ZM-125) und `fontMax`; der Tabellenkopf nie unter 3 % (`head`).
+   */
+  standings: {
+    fontMax: '6.5vh',
+    fontMin: '3vh',
+    /** Tabellenkopf im Verhältnis zur Zeilenschrift (die Untergrenze `fontSizes.head` gilt immer) */
+    headRatio: 0.84,
+    /** Zeilenhöhe der Schrift (unitlos): das Höhenmodell rechnet mit demselben Wert */
+    lineHeight: 1.2,
+    rowPaddingY: '0.25em',
+    rowPaddingX: '0.5em',
+    cardPadding: '0.3em 0.5em',
+    cellGap: '0.5em',
+  },
   /** Überschrift-Symbol: Größe gleich der Schrift */
   headingIconSize: '1em',
   /** Abstand zwischen Überschrift-Symbol und Wort */

@@ -41,6 +41,10 @@ function num(token: string): number {
 }
 
 const FONT = num(displayList.fontSizes.team);
+/** Zahl des Maßstabs der Folie (1 = Stufen der Tokens). */
+function scaleOf(frame: ListFrame): number {
+  return frame.scale ?? 1;
+}
 /** Zeilenhöhe der Schrift (Inter, `normal`), gemessen am Bild: 31 px bei 25,9 px Schrift. */
 const LINE = 1.2;
 /** Breite eines Zeichens in em der Schrift, vorsichtig (gemessen: 2,05 vh bei 3,6 vh Schrift = 0,57 em). */
@@ -52,6 +56,33 @@ const WIDTH_VH = (100 * 16) / 9;
 export interface ListFrame {
   overscan: number;
   notice: boolean;
+  /** Maßstab der Zeilen gegenüber den Stufen von `displayList` (@ZM-125, `listScale`); ohne Angabe 1. */
+  scale?: number;
+}
+
+/** Tokens der Listen-Folien mit beliebigen Werten (`scaledList` liefert dieselbe Gestalt mit anderen Zahlen). */
+export type ListTokens = { fontSizes: Record<keyof typeof displayList.fontSizes, string> }
+  & Record<Exclude<keyof typeof displayList, 'fontSizes' | 'fit' | 'standings'>, string>
+  & Pick<typeof displayList, 'fit' | 'standings'>;
+
+const SCALED_FONTS = ['team', 'time', 'score', 'note', 'timeNote'] as const;
+const SCALED_LENGTHS = ['rowGap', 'rowPaddingY', 'rowPaddingX', 'cellGap', 'timeNoteGap', 'labelGap', 'markerSize'] as const;
+
+function scaledToken(token: string, scale: number): string {
+  return `${String(Math.round(num(token) * scale * 1000) / 1000)}vh`;
+}
+
+/**
+ * Die Tokens der Zeilen (Schrift, Abstände, Polster) mit dem Maßstab der Folie; Überschrift, Tabellenkopf und Seitenhinweis bleiben, die
+ * Breiten in em wachsen mit der Schrift. Maßstab 1 liefert die Tokens unverändert.
+ */
+export function scaledList(scale: number): ListTokens {
+  if (scale === 1) { return displayList; }
+  const fontSizes: ListTokens['fontSizes'] = { ...displayList.fontSizes };
+  for (const key of SCALED_FONTS) { fontSizes[key] = scaledToken(displayList.fontSizes[key], scale); }
+  const list: ListTokens = { ...displayList, fontSizes };
+  for (const key of SCALED_LENGTHS) { list[key] = scaledToken(displayList[key], scale); }
+  return list;
 }
 
 /** Vorbelegter Rahmen: Standard-Bildrand, kein Hinweis. */
@@ -63,20 +94,21 @@ const NOTICE_VH = num(displayFontSizes.notice) * displayLayout.scoreArea.noticeL
 /** Rahmen einer Zeile oben und unten in vh (1 px bei 720 Zeilen, aufgerundet). */
 const ROW_BORDER = 0.3;
 /** Rest des Bildes für Überschrift (Zeile, Abstand), Seitenhinweis (Zeile, Abstand) und Reserve. */
-const CHROME = num(displayList.fontSizes.heading) * LINE + num(displayList.headingGap)
-  + num(displayList.fontSizes.head) * LINE + num(displayList.rowGap) + 1.5;
+const CHROME_FIXED = num(displayList.fontSizes.heading) * LINE + num(displayList.headingGap)
+  + num(displayList.fontSizes.head) * LINE + 1.5;
 
 /** Höhe der Zeilen-Fläche einer Seite in vh. */
 function availableHeight(frame: ListFrame): number {
-  return 100 - 2 * frame.overscan - (frame.notice ? NOTICE_VH : 0) - CHROME;
+  return 100 - 2 * frame.overscan - (frame.notice ? NOTICE_VH : 0) - CHROME_FIXED - num(displayList.rowGap) * scaleOf(frame);
 }
 
 /** Breite eines Teamnamens in Zeichen je Zeile (Heim und Gast gleich breit). */
 export function nameCharsPerLine(frame: ListFrame): number {
   const gaps = 3;
-  const fixed = num(displayList.timeFieldWidth) * FONT + num(displayList.separatorWidth) * FONT;
-  const inner = WIDTH_VH * (1 - (2 * frame.overscan) / 100) - 2 * num(displayList.rowPaddingX) - gaps * num(displayList.cellGap) - fixed;
-  return Math.max(1, Math.floor(inner / 2 / (CHAR_EM * FONT)));
+  const s = scaleOf(frame);
+  const fixed = num(displayList.timeFieldWidth) * FONT * s + num(displayList.separatorWidth) * FONT * s;
+  const inner = WIDTH_VH * (1 - (2 * frame.overscan) / 100) - 2 * num(displayList.rowPaddingX) * s - gaps * num(displayList.cellGap) * s - fixed;
+  return Math.max(1, Math.floor(inner / 2 / (CHAR_EM * FONT * s)));
 }
 
 /**
@@ -132,17 +164,18 @@ export function nameLines(text: string, perLine: number): number {
 export function rowHeight(match: MatchView, cols: ListColumns, frame: ListFrame = DEFAULT_FRAME, reserveExtra: boolean = cols.state): number {
   const perLine = nameCharsPerLine(frame);
   const names = Math.max(nameLines(monitorSideLabel(match.home), perLine), nameLines(monitorSideLabel(match.away), perLine));
-  const note = num(displayList.fontSizes.note) * LINE;
-  const padY = num(displayList.rowPaddingY);
+  const s = scaleOf(frame);
+  const note = num(displayList.fontSizes.note) * s * LINE;
+  const padY = num(displayList.rowPaddingY) * s;
   const unterMitte = (zeile: number, zusatz: number): number => (zusatz === 0 ? zeile : 2 * (zeile / 2 + Math.max(0, zusatz - 0.8 * padY)));
   const zusatzZeit = (cols.state ? note : 0) + (cols.field ? note : 0);
-  const timeCell = unterMitte(num(displayList.fontSizes.time) * LINE, zusatzZeit);
+  const timeCell = unterMitte(num(displayList.fontSizes.time) * s * LINE, zusatzZeit);
   // Die Spielbezeichnung („Halbfinale 1“) ist eine eigene Zwischenzeile über der Zeilenkarte und gehört zum Spiel (Höhe: Zeile plus Abstand)
-  const zwischenzeile = match.labelText ? num(displayList.fontSizes.timeNote) * LINE + num(displayList.labelGap) : 0;
+  const zwischenzeile = match.labelText ? num(displayList.fontSizes.timeNote) * s * LINE + num(displayList.labelGap) * s : 0;
   const unten = reserveExtra ? Math.max(0, note - 0.8 * padY) : 0;
-  const scoreLine = num(displayList.fontSizes.score) * LINE;
+  const scoreLine = num(displayList.fontSizes.score) * s * LINE;
   const scoreCell = unten > 0 ? 2 * (scoreLine / 2 + unten) : scoreLine;
-  const namen = names * FONT * LINE;
+  const namen = names * FONT * s * LINE;
   const content = Math.max(timeCell, namen, scoreCell);
   return zwischenzeile + 2 * padY + ROW_BORDER + content;
 }
@@ -153,7 +186,7 @@ export function rowHeight(match: MatchView, cols: ListColumns, frame: ListFrame 
  */
 export function listPages(matches: readonly MatchView[], cols: ListColumns, maxRows: number = Number.POSITIVE_INFINITY, frame: ListFrame = DEFAULT_FRAME): MatchView[][] {
   const available = availableHeight(frame);
-  const gap = num(displayList.rowGap);
+  const gap = num(displayList.rowGap) * scaleOf(frame);
   const pages: MatchView[][] = [[]];
   let used = 0;
   for (const match of matches) {
@@ -188,7 +221,7 @@ export function listPagesBalanced(matches: readonly MatchView[], cols: ListColum
     von += anzahl;
   }
   const available = availableHeight(frame);
-  const gap = num(displayList.rowGap);
+  const gap = num(displayList.rowGap) * scaleOf(frame);
   const fits = (chunk: readonly MatchView[]): boolean => chunk.length <= maxRows
     && chunk.reduce((sum, m, i) => sum + rowHeight(m, cols, frame) + (i === 0 ? 0 : gap), 0) <= available;
   return chunks.every(fits) ? chunks : pages;
@@ -197,4 +230,33 @@ export function listPagesBalanced(matches: readonly MatchView[], cols: ListColum
 /** Seite (0-basiert), auf der das Spiel `matchId` steht; -1, wenn es in keiner Seite steht. */
 export function pageIndexOf(pages: readonly (readonly MatchView[])[], matchId: string): number {
   return pages.findIndex(page => page.some(m => m.id === matchId));
+}
+
+/** Höhe der Zeilen einer Seite in vh (Zeilen und Abstände). */
+function pageHeight(page: readonly MatchView[], cols: ListColumns, frame: ListFrame): number {
+  const gap = num(displayList.rowGap) * scaleOf(frame);
+  return page.reduce((sum, m, i) => sum + rowHeight(m, cols, frame) + (i === 0 ? 0 : gap), 0);
+}
+
+/**
+ * Größter Maßstab (1 bis `displayList.fit.maxScale`), bei dem jede Seite noch in die freie Höhe passt (@ZM-125): wenige Zeilen füllen die Bildhöhe
+ * mit größerer Schrift. Die Seiten selbst bleiben die des Maßstabs 1 (gleiche Aufteilung, gleiche Seitenzahl für den Takt); Namen, die bei größerer
+ * Schrift erst durch die Vergrößerung umbrechen würden, bremsen den Maßstab (kein „FC / Nordstadt“), ebenso die Zeilenhöhe. Nie unter 1: die Stufen der Tokens sind die Untergrenze.
+ */
+export function listScale(pages: readonly (readonly MatchView[])[], cols: ListColumns, frame: ListFrame): number {
+  const base = { ...frame, scale: 1 };
+  const baseLines = pages.map(page => page.map(m => nameLinesOf(m, base)));
+  for (let scale = displayList.fit.maxScale; scale > 1; scale -= displayList.fit.scaleStep) {
+    const scaled = { ...frame, scale: Math.round(scale * 100) / 100 };
+    // kein Name bricht erst durch die Vergrößerung um („FC / Nordstadt“): die Zeilenzahl der Namen bleibt die des Maßstabs 1
+    const sameLines = pages.every((page, p) => page.every((m, i) => nameLinesOf(m, scaled) <= baseLines[p][i]));
+    if (sameLines && pages.every(page => pageHeight(page, cols, scaled) <= availableHeight(scaled))) { return scaled.scale; }
+  }
+  return 1;
+}
+
+/** Zeilen, die der längere der beiden Teamnamen eines Spiels belegt. */
+function nameLinesOf(match: MatchView, frame: ListFrame): number {
+  const perLine = nameCharsPerLine(frame);
+  return Math.max(nameLines(monitorSideLabel(match.home), perLine), nameLines(monitorSideLabel(match.away), perLine));
 }
