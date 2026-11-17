@@ -36,3 +36,32 @@ describe('@RZ-029 Der Kanal-Zusatz überlebt die Umleitung', () => {
   });
 });
 
+
+describe('@RE-008 Impressum und Datenschutz auch ohne Raute', () => {
+  it('/impressum und /datenschutz, auch mit abschließendem „/“, werden auf die Hash-Adresse umgeleitet', () => {
+    expect(shortLiveTarget('/impressum', '', '')).toBe('/#/impressum');
+    expect(shortLiveTarget('/datenschutz', '', '')).toBe('/#/datenschutz');
+    expect(shortLiveTarget('/impressum/', '', '')).toBe('/#/impressum');
+    expect(shortLiveTarget('/datenschutz/', '', '#')).toBe('/#/datenschutz');
+  });
+
+  it('die Suche bleibt erhalten', () => {
+    expect(shortLiveTarget('/impressum', '?a=1', '')).toBe('/#/impressum?a=1');
+  });
+
+  it('Gegenbeispiel: mit Hash-Route (auch /#/impressum) wird nichts angefasst', () => {
+    expect(shortLiveTarget('/', '', '#/impressum')).toBeNull();
+    expect(shortLiveTarget('/impressum', '', '#/datenschutz')).toBeNull();
+  });
+
+  it('Gegenbeispiel: ähnliche und andere Pfade bleiben unberührt', () => {
+    for (const pfad of ['/', '/irgendwas', '/impressum-foo', '/impressum//', '/impressum/x', '/datenschutz/x', '/Impressum', '/x/impressum', '/login', '/auth/callback']) {
+      expect(shortLiveTarget(pfad, '', ''), pfad).toBeNull();
+    }
+  });
+
+  it('Gegenbeispiel: /live/CODE verhält sich unverändert', () => {
+    expect(shortLiveTarget('/live/ABC123', '', '')).toBe('/#/live/ABC123');
+    expect(shortLiveTarget('/live/ABC123/', '?k=q', '')).toBe('/#/live/ABC123?k=q');
+  });
+});
