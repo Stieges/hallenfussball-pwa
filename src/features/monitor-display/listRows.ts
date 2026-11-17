@@ -240,13 +240,23 @@ function pageHeight(page: readonly MatchView[], cols: ListColumns, frame: ListFr
 
 /**
  * Größter Maßstab (1 bis `displayList.fit.maxScale`), bei dem jede Seite noch in die freie Höhe passt (@ZM-125): wenige Zeilen füllen die Bildhöhe
- * mit größerer Schrift. Die Seiten selbst bleiben die des Maßstabs 1 (gleiche Aufteilung, gleiche Seitenzahl für den Takt); lange Namen, die bei größerer
- * Schrift mehr Zeilen brauchen, bremsen den Maßstab über die Zeilenhöhe. Nie unter 1: die Stufen der Tokens sind die Untergrenze.
+ * mit größerer Schrift. Die Seiten selbst bleiben die des Maßstabs 1 (gleiche Aufteilung, gleiche Seitenzahl für den Takt); Namen, die bei größerer
+ * Schrift erst durch die Vergrößerung umbrechen würden, bremsen den Maßstab (kein „FC / Nordstadt“), ebenso die Zeilenhöhe. Nie unter 1: die Stufen der Tokens sind die Untergrenze.
  */
 export function listScale(pages: readonly (readonly MatchView[])[], cols: ListColumns, frame: ListFrame): number {
+  const base = { ...frame, scale: 1 };
+  const baseLines = pages.map(page => page.map(m => nameLinesOf(m, base)));
   for (let scale = displayList.fit.maxScale; scale > 1; scale -= displayList.fit.scaleStep) {
     const scaled = { ...frame, scale: Math.round(scale * 100) / 100 };
-    if (pages.every(page => pageHeight(page, cols, scaled) <= availableHeight(scaled))) { return scaled.scale; }
+    // kein Name bricht erst durch die Vergrößerung um („FC / Nordstadt“): die Zeilenzahl der Namen bleibt die des Maßstabs 1
+    const sameLines = pages.every((page, p) => page.every((m, i) => nameLinesOf(m, scaled) <= baseLines[p][i]));
+    if (sameLines && pages.every(page => pageHeight(page, cols, scaled) <= availableHeight(scaled))) { return scaled.scale; }
   }
   return 1;
+}
+
+/** Zeilen, die der längere der beiden Teamnamen eines Spiels belegt. */
+function nameLinesOf(match: MatchView, frame: ListFrame): number {
+  const perLine = nameCharsPerLine(frame);
+  return Math.max(nameLines(monitorSideLabel(match.home), perLine), nameLines(monitorSideLabel(match.away), perLine));
 }

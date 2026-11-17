@@ -12,7 +12,8 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { displayList, displayMonitor } from '../../../design-tokens';
 import { resolveCss } from '../../../components/monitor/__tests__/cssResolve';
 import { standingsFont, standingsHeight, standingsFontSize } from '../standingsFit';
-import { listColumns, listPages, listScale, rowHeight, scaledList } from '../listRows';
+import { listColumns, listPages, listScale, nameCharsPerLine, nameLines, rowHeight, scaledList } from '../listRows';
+import { monitorSideLabel } from '../matchSides';
 import { nextMatchesLayout, scheduleFieldLayout } from '../slideContent';
 import { AllStandingsSlide } from '../slides/AllStandingsSlide';
 import { QrSlide } from '../slides/QrSlide';
@@ -98,6 +99,21 @@ describe('@ZM-125 @ZM-129 Listen: Maßstab nur, solange jede Seite in die Höhe 
       for (const seite of layout.pages) {
         const hoehe = seite.reduce((summe, m, i) => summe + rowHeight(m, layout.columns, layout.frame) + (i === 0 ? 0 : gap), 0);
         expect(hoehe, `${namen}, Rand ${String(rand)} %`).toBeLessThanOrEqual(100 - 2 * rand);
+      }
+    }
+  });
+
+  it.each(RAENDER)('kein Name bricht erst durch die Vergrößerung um (kein „FC / Nordstadt“), Rand %s %%', (rand) => {
+    for (const namen of ['kurz', 'lang'] as const) {
+      const { view } = withView(listenTurnier({ namen, beendet: 5 }));
+      for (const layout of [nextMatchesLayout(view, 5, { overscan: rand, notice: false }), scheduleFieldLayout(view, 1, { overscan: rand, notice: false })]) {
+        const basis = { ...layout.frame, scale: 1 };
+        for (const m of layout.pages.flat()) {
+          for (const seite of [m.home, m.away]) {
+            const name = monitorSideLabel(seite);
+            expect(nameLines(name, nameCharsPerLine(layout.frame)), `${namen}: ${name}`).toBeLessThanOrEqual(nameLines(name, nameCharsPerLine(basis)));
+          }
+        }
       }
     }
   });
