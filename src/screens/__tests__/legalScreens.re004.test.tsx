@@ -127,9 +127,17 @@ describe('@RE-004 Datenschutzerklärung sagt, was die App wirklich tut (Prüfung
     const text = abschnitt(4);
     expect(text).toContain('ob die Verbindung zwischendurch gestört war');
     expect(text).toContain('Verbindungsstörungen: Die Seite zählt auch mit, wenn die Verbindung zwischendurch gestört war und wieder da ist');
-    expect(text).toContain('„kurz“, wenn seit dem letzten gelungenen Abruf weniger als 20 Sekunden vergangen sind, sonst als „lang“');
+    expect(text).toContain('„kurz“, wenn vom letzten gelungenen Abruf bis zur Rückkehr der Verbindung weniger als 20 Sekunden vergangen sind, sonst als „lang“');
+    expect(text).toContain('Schließt du die Seite während einer Störung, wird diese Störung nicht gezählt.');
+    expect(text).not.toContain('Wer die Seite während einer Störung schließt, wird nicht gezählt');
+    expect(text).toContain('auf welchem Weg sie sie erreichen und wie oft Zuschauer-Geräte in der Halle die Verbindung verlieren');
     expect(text).toContain('Gespeichert wird auch hier nur eine Summe je Turnier und 5-Minuten-Zeitraum');
     expect(text).toContain('merkt sich die Seite die Störung nur, solange sie geöffnet ist, im Arbeitsspeicher; auf deinem Gerät wird dafür nichts gespeichert');
+  });
+
+  it('Fehlerberichte (Abschnitt 10): ungefährer Ort aus der IP-Adresse wird ehrlich genannt, die IP-Adresse selbst nicht gespeichert', () => {
+    const text = abschnitt(10);
+    expect(text).toContain('leitet Sentry aus der IP-Adresse einen ungefähren Ort (Land und Stadt) ab und speichert ihn am Bericht; die IP-Adresse selbst wird nicht gespeichert');
   });
 
   it('Gegenbeispiel: „keine Reichweitenmessung“ steht nicht mehr da, und „keine Kennung“ wird nicht mehr pauschal versprochen', () => {

@@ -51,7 +51,7 @@ export function AbschnitteFehlerRechte() {
         <BulletList
           items={[
             'Inhalt: Fehlermeldung und technischer Ablauf, aufgerufene Seite (ohne Zugangscodes), Browser, Betriebssystem, App-Version, einzelne Leistungsmessungen (nur ein kleiner Teil der Aufrufe) und bei Angemeldeten die Kennung des Kontos (eine zufällige Zeichenfolge, keine E-Mail, kein Name).',
-            <>Die <Strong>IP-Adresse wird nicht gespeichert.</Strong> Technisch erreicht sie Sentry beim Empfang trotzdem kurz, wird aber nicht abgelegt. Es gibt <Strong>keine Aufzeichnung deiner Bildschirm-Sitzung.</Strong></>,
+            <>Die <Strong>IP-Adresse wird nicht gespeichert.</Strong> Technisch erreicht sie Sentry beim Empfang trotzdem kurz, wird aber nicht abgelegt. Beim Empfang leitet Sentry aus der IP-Adresse einen ungefähren Ort (Land und Stadt) ab und speichert ihn am Bericht; die IP-Adresse selbst wird nicht gespeichert. Es gibt <Strong>keine Aufzeichnung deiner Bildschirm-Sitzung.</Strong></>,
             'Start-Bericht: Außerdem sendet die App bei jedem Start einmal einen kurzen Start-Bericht: App-Version, ob das Gerät online ist, Zustand des Service Workers samt der Adresse seines Skripts und die Namen der Zwischenspeicher und Datenbanken der App (keine Inhalte). Damit erkenne ich Ladeprobleme bei schlechtem Netz in der Halle. Er wird nur gesendet, solange Fehlerberichte eingeschaltet sind.',
             'Zweck: Fehler finden und beheben, damit die App am Turniertag zuverlässig läuft',
             'Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer funktionierenden App). Die Fehlerberichte sind eingeschaltet, ohne dass du zustimmen musst.',
