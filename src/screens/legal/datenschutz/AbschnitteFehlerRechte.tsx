@@ -12,7 +12,7 @@ import { LEGAL_CONFIG } from '../../../config/legal';
 
 const SPEICHERDAUER: string[][] = [
   ['Turnier mit Spielen, Ereignissen, Rückennummern, Helfern und Monitor-Daten', 'spätestens 6 Monate nach dem Turnier von mir gelöscht oder anonymisiert. Endergebnisse und Tabellen ohne Rückennummern können länger bleiben, wenn der Veranstalter das Turnier behalten will.'],
-  ['Zahlen der Zuschauer-Zählung (nur Summen) und Daten des Hallen-Lautsprechers', 'gehören zum Turnier, siehe erste Zeile'],
+  ['Zahlen der Zuschauer-Zählung (nur Summen) und Daten des Hallen-Lautsprechers', 'werden gelöscht, wenn ich das Turnier endgültig lösche (spätestens nach 6 Monaten, siehe erste Zeile)'],
   ['Konto', 'bis zur Löschung auf Anfrage'],
   ['Hosting-Protokolle (Vercel)', 'kurz, nach den Vorgaben von Vercel'],
   ['Datenbank-Protokolle (Supabase)', 'kurz, nach den Vorgaben von Supabase'],
@@ -24,8 +24,10 @@ const GERAETESPEICHER: string[][] = [
   ['Anmeldung (Sitzungs-Token) und zwischengespeichertes Profil', 'lokaler Speicher', 'damit du angemeldet bleibst'],
   ['Geräte-Kennung', 'lokaler Speicher', 'damit immer nur ein Gerät ein Spielfeld steuert und Einträge zugeordnet werden'],
   ['Helfer-Zugang', 'lokaler Speicher', 'damit Helfer nicht jedes Mal neu anfragen müssen'],
-  ['Hallen-Lautsprecher: zugeordnete Spielfelder und Gerätename, Marken zu Abmeldung und Fehlern (nur am Lautsprecher-Gerät)', 'lokaler Speicher', 'damit das Gerät nach dem Neuladen weiter Ton gibt'],
-  ['Namen der Zwischenspeicher und Datenbanken der App sowie Zustand des Service Workers', 'wird beim Start nur gelesen, nicht gespeichert', 'geht einmal pro Start in den Fehlerbericht (Abschnitt 10), damit Ladefehler gefunden werden'],
+  ['Hallen-Lautsprecher (nur am Lautsprecher-Gerät): zugeordnete Spielfelder, Gerätename und zuletzt benutzter Gerätename, Merker für Abmeldung, Fehlergrund und „erneut versuchen“', 'lokaler Speicher', 'damit das Gerät nach dem Neuladen weiter Ton gibt'],
+  ['Hallen-Lautsprecher: gewählter Audio-Ausgang (Kennung und Name)', 'lokaler Speicher', 'damit das Gerät denselben Ausgang weiter benutzt; verlässt das Gerät nie'],
+  ['Hallen-Lautsprecher: Lautstärke je Ton (in Prozent)', 'lokaler Speicher', 'deine eigene Einstellung'],
+  ['Hallen-Lautsprecher: Kennungen schon gespielter Testtöne und Zeitpunkte zuletzt gespielter Töne (letzte 10 Minuten)', 'lokaler Speicher', 'damit ein Ton nach dem Neuladen nicht noch einmal ertönt'],
   ['„Mein Team“ (Zuschauer)', 'lokaler Speicher', 'deine eigene Auswahl'],
   ['Letzter Turnierstand (Zuschauer)', 'lokaler Speicher', 'Anzeige ohne Netz, an einem späteren Tag nicht mehr angezeigt'],
   ['Turnierdaten für den Offline-Betrieb', 'Datenbank im Browser (IndexedDB)', 'damit Turnierleitung und Helfer ohne Netz weiterarbeiten'],
@@ -46,8 +48,9 @@ export function AbschnitteFehlerRechte() {
         </Paragraph>
         <BulletList
           items={[
-            'Inhalt: Fehlermeldung und technischer Ablauf, aufgerufene Seite (ohne Zugangscodes), Browser, Betriebssystem, App-Version, einzelne Leistungsmessungen (nur ein kleiner Teil der Aufrufe) und bei Angemeldeten die Kennung des Kontos (eine zufällige Zeichenfolge, keine E-Mail, kein Name). Bei jedem Start gehen einmal technische Angaben zum Zwischenspeicher der App mit.',
+            'Inhalt: Fehlermeldung und technischer Ablauf, aufgerufene Seite (ohne Zugangscodes), Browser, Betriebssystem, App-Version, einzelne Leistungsmessungen (nur ein kleiner Teil der Aufrufe) und bei Angemeldeten die Kennung des Kontos (eine zufällige Zeichenfolge, keine E-Mail, kein Name). Außerdem sendet die App bei jedem Start einmal einen kurzen Start-Bericht (siehe unten).',
             <>Die <Strong>IP-Adresse wird nicht gespeichert.</Strong> Technisch erreicht sie Sentry beim Empfang trotzdem kurz, wird aber nicht abgelegt. Es gibt <Strong>keine Aufzeichnung deiner Bildschirm-Sitzung.</Strong></>,
+            'Start-Bericht: Außerdem sendet die App bei jedem Start einmal einen kurzen Start-Bericht: App-Version, ob das Gerät online ist, Zustand des Service Workers und die Namen der Zwischenspeicher und Datenbanken der App (keine Inhalte). Damit erkenne ich Ladeprobleme bei schlechtem Netz in der Halle. Er wird nur gesendet, solange Fehlerberichte eingeschaltet sind.',
             'Zweck: Fehler finden und beheben, damit die App am Turniertag zuverlässig läuft',
             'Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer funktionierenden App). Die Fehlerberichte sind eingeschaltet, ohne dass du zustimmen musst.',
             <><Strong>Widerspruch:</Strong> Du kannst Fehlerberichte jederzeit in den <Link to="/settings" style={sectionStyles.link} data-testid="datenschutz-einstellungen-link">Einstellungen der App</Link> abschalten (Art. 21 DSGVO). Das gilt ab dann für dieses Gerät.</>,
@@ -107,22 +110,33 @@ export function AbschnitteFehlerRechte() {
       <Section number={14} title="Speichern auf deinem Gerät (§ 25 TDDDG)">
         <Paragraph>
           Die App ist eine „Progressive Web App“. Damit sie auch in der Halle ohne Netz läuft, legt sie Daten auf deinem Gerät ab. Alles
-          Folgende ist <Strong>unbedingt erforderlich</Strong>, damit die App den Dienst bereitstellt, den du aufgerufen hast, oder wird
-          nur auf deinen eigenen Wunsch gesetzt. Deshalb brauche ich keine Einwilligung (§ 25 Abs. 2 Nr. 2 TDDDG). Es gibt keine Cookies
+          in der folgenden Tabelle ist <Strong>unbedingt erforderlich</Strong>, damit die App den Dienst bereitstellt, den du aufgerufen hast, oder wird
+          nur auf deinen eigenen Wunsch gesetzt. Deshalb brauche ich dafür keine Einwilligung (§ 25 Abs. 2 Nr. 2 TDDDG). Es gibt keine Cookies
           zu Werbe- oder Analysezwecken.
         </Paragraph>
         <DataTable headers={['Eintrag', 'Wo', 'Wofür']} rows={GERAETESPEICHER} />
         <Paragraph>
           Du kannst alles jederzeit in den Browser-Einstellungen löschen („Websitedaten löschen“). Angemeldete Geräte müssen sich danach
-          neu anmelden, und nicht synchronisierte Eingaben können verloren gehen. Auch das Lesen der Namen der Audio-Ausgänge am
-          Hallen-Lautsprecher (Abschnitt 8) geschieht nur auf deinen eigenen Klick.
+          neu anmelden, und nicht synchronisierte Eingaben können verloren gehen.
+        </Paragraph>
+        <Paragraph>
+          <Strong>Nur gelesen, nicht gespeichert:</Strong> Zwei Dinge liest die App von deinem Gerät, ohne dass du dazu etwas tust, und legt
+          sie dort nicht ab. Erstens beim Start der App die Namen der Zwischenspeicher und Datenbanken der App, den Zustand des Service Workers
+          und ob das Gerät online ist, für den Start-Bericht an Sentry (Abschnitt 10), damit ich Ladeprobleme bei schlechtem Netz in der Halle
+          erkenne; das hört auf, wenn du Fehlerberichte abschaltest. Zweitens beim Öffnen der Zuschauer-Seite die Bildschirmgröße, die Bedienart
+          (Finger oder Maus) und ob die Seite als App geöffnet wurde, für die Zählung (Abschnitt 4), damit ich Zuschauer-Geräte nach Geräteklasse
+          zählen kann. Dafür frage ich keine Einwilligung ab.
+        </Paragraph>
+        <Paragraph>
+          Die Namen der Audio-Ausgänge am Hallen-Lautsprecher (Abschnitt 8) liest die App erst, nachdem du dort selbst einen Ausgang gewählt hast.
+          Danach prüft das Gerät von selbst, ob der Ausgang noch angeschlossen ist.
         </Paragraph>
       </Section>
 
       <Section number={15} title="Änderungen">
         <Paragraph>
-          Wenn sich die App ändert, passe ich diese Erklärung an. Für alles, was eine Einwilligung braucht, würde die App vorher fragen.
-          Das würde nie den Zugang zur Zuschauer-Seite sperren.
+          Wenn sich die App ändert, passe ich diese Erklärung an. Derzeit holt die App keine Einwilligung ein; was sie auf deinem Gerät speichert und liest, steht in Abschnitt 14.
+          Sollte sich das ändern, würde sie vorher fragen. Das würde nie den Zugang zur Zuschauer-Seite sperren.
         </Paragraph>
       </Section>
     </>

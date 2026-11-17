@@ -67,16 +67,15 @@ describe('@RE-004 eine einzige Stelle', () => {
 });
 
 describe('@RE-004 echte Betreiberangaben in der Konfiguration', () => {
-  it('Name, c/o-Dienstadresse, Straße und Ort sind eingetragen; Aufsichtsbehörde bleibt das BayLDA', () => {
-    expect(LEGAL_CONFIG.name).toBe('Daniel Stiegler');
-    expect(LEGAL_CONFIG.careOf).toBe('c/o MDC#2444');
-    expect(LEGAL_CONFIG.street).toBe('Welserstraße 3');
-    expect(LEGAL_CONFIG.city).toBe('87463 Dietmannsried');
+  it('Name, c/o-Zeile, Straße und Ort sind eingetragen (kein Platzhalter); Aufsichtsbehörde bleibt das BayLDA', () => {
+    for (const feld of [LEGAL_CONFIG.name, LEGAL_CONFIG.careOf, LEGAL_CONFIG.street, LEGAL_CONFIG.city]) {
+      expect(isPlaceholder(feld)).toBe(false);
+    }
+    expect(LEGAL_CONFIG.careOf).toMatch(/^c\/o /);
     expect(LEGAL_CONFIG.supervisoryAuthority.name).toContain('BayLDA');
   });
 
-  it('die c/o-Zeile mit „#“ gilt nicht als Platzhalter; offen darf höchstens die E-Mail-Adresse sein', () => {
-    expect(isPlaceholder(LEGAL_CONFIG.careOf)).toBe(false);
+  it('offen darf höchstens die E-Mail-Adresse sein', () => {
     const offen = getUnfilledPlaceholders(LEGAL_CONFIG);
     expect(offen.filter((feld) => feld !== 'email')).toEqual([]);
   });

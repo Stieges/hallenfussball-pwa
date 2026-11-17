@@ -59,30 +59,28 @@ export function AbschnitteKontenDaten() {
         </Paragraph>
         <Paragraph>
           <Strong>Hallen-Lautsprecher (Hallenton):</Strong> Ein Gerät in der Halle, das die Turnierleitung einem Spielfeld zuordnet, spielt dort
-          Töne ab (zum Beispiel zur Halbzeit und zum Abpfiff). Gespeichert werden der Name, den die Turnierleitung dem Gerät gibt, eine
-          zufällige Gerätekennung, wann sich das Gerät zuletzt gemeldet hat, sein Zustand (zum Beispiel „bereit“ oder „Ton nicht aktiviert“),
-          der letzte Testton und wann das Gerät einen Wechsel seines Audio-Ausgangs bemerkt hat. Das Gerät, das ein Spielfeld leitet, meldet
-          sich ebenfalls regelmäßig (nur Gerätekennung und Zeitpunkt, kein Name). Eigene Töne, die die Turnierleitung hochlädt, liegen bei
-          Supabase (Abschnitt 9) und sind für jeden abrufbar, der die lange, nicht erratbare Adresse der Datei kennt. Lade bitte nur Töne hoch,
-          auf denen keine Personen zu hören sind. Zweck: Ton zur richtigen Zeit und die Anzeige für die Turnierleitung, ob der Lautsprecher
-          bereit ist. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO. Speicherdauer: Die Hallenton-Daten gehören zum Turnier, siehe Abschnitt 11.
+          Töne ab (zum Beispiel zur Halbzeit und zum Abpfiff).
         </Paragraph>
-        <Paragraph>
-          <Strong>Mikrofon:</Strong> Wählst du an einem Hallen-Lautsprecher einen bestimmten Audio-Ausgang, fragt dein Browser einmal nach dem
-          Mikrofon. Die App nimmt nichts auf. Sie gibt das Mikrofon sofort wieder frei und liest nur die Namen der Audio-Ausgänge, um sie dir
-          zur Auswahl zu zeigen. Die Namen bleiben auf deinem Gerät und werden nicht an einen Server gesendet. Lehnst du ab, bleibt der Standard-Ausgang.
-        </Paragraph>
+        <BulletList
+          items={[
+            'Daten: der Name, den die Turnierleitung dem Gerät gibt, eine zufällige Gerätekennung, wann sich das Gerät zuletzt gemeldet hat, sein Zustand (zum Beispiel „bereit“ oder „Ton nicht aktiviert“), der letzte Testton und wann das Gerät einen Wechsel seines Audio-Ausgangs bemerkt hat. Das Gerät, das ein Spielfeld leitet, meldet sich ebenfalls regelmäßig (nur Gerätekennung und Zeitpunkt, kein Name).',
+            'Eigene Töne, die die Turnierleitung hochlädt, liegen bei Supabase (Abschnitt 9) und sind für jeden abrufbar, der die lange, nicht erratbare Adresse der Datei kennt. Lade bitte nur Töne hoch, auf denen keine Personen zu hören sind.',
+            'Zweck: Ton zur richtigen Zeit und die Anzeige für die Turnierleitung, ob der Lautsprecher bereit ist',
+            'Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO',
+            'Speicherdauer: Die Hallenton-Daten werden gelöscht, wenn ich das Turnier endgültig lösche (spätestens nach 6 Monaten, Abschnitt 11).',
+            <><Strong>Mikrofon:</Strong> Wählst du an einem Hallen-Lautsprecher einen bestimmten Audio-Ausgang, fragt dein Browser einmal nach dem Mikrofon. Die App nimmt nichts auf. Sie gibt das Mikrofon sofort wieder frei und liest nur die Namen der Audio-Ausgänge, um sie dir zur Auswahl zu zeigen. Die Namen bleiben auf deinem Gerät und werden nicht an einen Server gesendet. Lehnst du ab, bleibt der Standard-Ausgang.</>,
+          ]}
+        />
       </Section>
 
       <Section number={9} title="Datenbank und Anmeldung (Supabase)">
         <Paragraph>
-          Alle Daten aus den Abschnitten 5 bis 8 liegen bei Supabase Pte. Ltd., 65 Chulia Street #38-02/03, OCBC Centre, Singapur 049513.
+          Alle Daten aus den Abschnitten 4 bis 8 liegen in der Datenbank von Supabase Pte. Ltd., 65 Chulia Street #38-02/03, OCBC Centre, Singapur 049513.
           Die Datenbank läuft in der <Strong>Region „Central EU (Frankfurt)“</Strong> (AWS eu-central-1).
         </Paragraph>
         <BulletList
           items={[
-            'Mit Supabase gilt ein Vertrag zur Auftragsverarbeitung (Art. 28 DSGVO). Er wird mit den Nutzungsbedingungen von Supabase angenommen.',
-            'Supabase selbst hat seinen Sitz in Singapur. Für Singapur gibt es keinen Angemessenheitsbeschluss der EU-Kommission; für Zugriffe von dort gelten deshalb die Standardvertragsklauseln der EU-Kommission. Sie stehen im Vertrag von Supabase (supabase.com/legal/dpa). Das gilt auch für Unterauftragnehmer von Supabase außerhalb der EU (u. a. USA).',
+            'Mein Vertragspartner ist Supabase Pte. Ltd. mit Sitz in Singapur; die Daten selbst liegen in Frankfurt (siehe oben). Supabase und seine Unterauftragnehmer (u. a. in den USA) können für Betrieb und Support von außerhalb der EU auf die Daten zugreifen. Für Singapur gibt es keinen Angemessenheitsbeschluss der EU-Kommission; als Garantie sieht der Vertrag zur Auftragsverarbeitung von Supabase die Standardvertragsklauseln der EU-Kommission vor (einsehbar unter supabase.com/legal/dpa).',
             'Supabase führt technische Protokolle (u. a. IP-Adresse bei Anmeldungen und Abrufen). Sie werden nur kurz nach den Vorgaben von Supabase aufbewahrt.',
             'Für die Anmeldung von Helfern erhält dein Gerät eine anonyme Gerätesitzung, ohne dass du ein Konto anlegst.',
           ]}

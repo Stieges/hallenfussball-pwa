@@ -113,10 +113,12 @@ describe('@RE-004 Datenschutzerklärung sagt, was die App wirklich tut (Prüfung
     expect(text).toContain('nie eine Versionsnummer');
     expect(text).toContain('keine IP-Adresse und keine Kennung deines Geräts in dieser Zählung; ich kann dich daran nicht wiedererkennen');
     expect(text).toContain('die Bildschirmgröße, die Bedienart (Finger oder Maus) und ob sie als App geöffnet wurde');
-    expect(text).toContain('Auf deinem Gerät wird dafür nichts gespeichert und nichts aus dem Speicher des Geräts gelesen: kein Cookie, kein lokaler Speicher, keine Kennung');
+    expect(text).toContain('Auf deinem Gerät wird dafür nichts gespeichert: kein Cookie, kein lokaler Speicher, keine Kennung');
+    expect(text).not.toContain('nichts aus dem Speicher des Geräts gelesen');
+    expect(text).toContain('liest: nur die Bildschirmgröße, die Bedienart (Finger oder Maus) und ob sie als App geöffnet wurde');
     expect(text).toContain('nur im Arbeitsspeicher');
     expect(text).toContain('Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO');
-    expect(text).toContain('Die Summen werden mit dem Turnier gelöscht (Abschnitt 11)');
+    expect(text).toContain('Die Summen werden gelöscht, wenn ich das Turnier endgültig lösche (spätestens nach 6 Monaten, Abschnitt 11)');
   });
 
   it('Gegenbeispiel: „keine Reichweitenmessung“ steht nicht mehr da, und „keine Kennung“ wird nicht mehr pauschal versprochen', () => {
@@ -143,7 +145,10 @@ describe('@RE-004 Datenschutzerklärung sagt, was die App wirklich tut (Prüfung
   });
 
   it('Supabase in Singapur (Abschnitt 9)', () => {
-    expect(abschnitt(9)).toContain('Supabase selbst hat seinen Sitz in Singapur. Für Singapur gibt es keinen Angemessenheitsbeschluss der EU-Kommission');
+    const text9 = abschnitt(9);
+    expect(text9).toContain('Mein Vertragspartner ist Supabase Pte. Ltd. mit Sitz in Singapur; die Daten selbst liegen in Frankfurt');
+    expect(text9).toContain('Für Singapur gibt es keinen Angemessenheitsbeschluss der EU-Kommission');
+    expect(text9).not.toContain('Er wird mit den Nutzungsbedingungen von Supabase angenommen');
   });
 
   it('Art. 13 Abs. 2 e und f und Widerspruchsrecht (Abschnitt 13)', () => {
@@ -157,10 +162,31 @@ describe('@RE-004 Datenschutzerklärung sagt, was die App wirklich tut (Prüfung
     expect(abschnitt(11)).toContain('beim nächsten Öffnen der Zuschauer-Seite gelöscht');
     expect(screen.getByTestId('datenschutz-section-11').textContent).toContain('Zahlen der Zuschauer-Zählung (nur Summen) und Daten des Hallen-Lautsprechers');
     expect(screen.getByTestId('datenschutz-section-11').textContent).not.toContain('nur bis zum Ende des Turniertags');
-    expect(screen.getByTestId('datenschutz-section-14').textContent).toContain('Hallen-Lautsprecher: zugeordnete Spielfelder und Gerätename');
-    expect(screen.getByTestId('datenschutz-section-14').textContent).toContain('Namen der Zwischenspeicher und Datenbanken der App sowie Zustand des Service Workers');
+    expect(screen.getByTestId('datenschutz-section-14').textContent).toContain('Hallen-Lautsprecher (nur am Lautsprecher-Gerät): zugeordnete Spielfelder, Gerätename');
+    const s14 = screen.getByTestId('datenschutz-section-14').textContent ?? '';
+    expect(s14).toContain('Nur gelesen, nicht gespeichert:');
+    expect(s14).toContain('Start-Bericht an Sentry (Abschnitt 10)');
+    expect(s14).toContain('die Bildschirmgröße, die Bedienart (Finger oder Maus) und ob die Seite als App geöffnet wurde');
+    expect(s14).toContain('in der folgenden Tabelle ist unbedingt erforderlich');
+    expect(s14).toContain('liest die App erst, nachdem du dort selbst einen Ausgang gewählt hast');
+    for (const eintrag of ['gewählter Audio-Ausgang (Kennung und Name)', 'Lautstärke je Ton', 'Kennungen schon gespielter Testtöne']) {
+      expect(s14).toContain(eintrag);
+    }
+    const s15 = screen.getByTestId('datenschutz-section-15').textContent ?? '';
+    expect(s15).toContain('Derzeit holt die App keine Einwilligung ein; was sie auf deinem Gerät speichert und liest, steht in Abschnitt 14.');
+    expect(s15).not.toContain('Für alles, was eine Einwilligung braucht');
+    const s10 = screen.getByTestId('datenschutz-section-10').textContent ?? '';
+    expect(s10).toContain('Außerdem sendet die App bei jedem Start einmal einen kurzen Start-Bericht: App-Version, ob das Gerät online ist, Zustand des Service Workers und die Namen der Zwischenspeicher und Datenbanken der App (keine Inhalte). Damit erkenne ich Ladeprobleme bei schlechtem Netz in der Halle.');
     expect(screen.getByTestId('datenschutz-section-6').textContent).toContain('der Gerätetyp (Handy, Tablet oder Computer');
     expect(screen.getByTestId('datenschutz-section-6').textContent).not.toContain('iPhone');
     expect(screen.getByTestId('datenschutz-section-10').textContent).toContain('die Kennung des Kontos (eine zufällige Zeichenfolge, keine E-Mail, kein Name)');
+  });
+
+  it('Vercel im kostenlosen Tarif: kein Vertrag zur Auftragsverarbeitung zugesagt (Abschnitt 3), Torschützen-Zwischenstand genau beschrieben (Abschnitt 4)', () => {
+    const text3 = abschnitt(3);
+    expect(text3).toContain('Ich nutze Vercel im kostenlosen Tarif. Einen gesonderten Vertrag zur Auftragsverarbeitung mit Vercel sage ich dafür nicht zu');
+    expect(screen.getByTestId('datenschutz-section-4').textContent).toContain('laufende Spiele nur, wenn der Live-Spielstand öffentlich ist');
+    expect(screen.getByTestId('datenschutz-section-8').textContent).toContain('werden gelöscht, wenn ich das Turnier endgültig lösche (spätestens nach 6 Monaten, Abschnitt 11)');
+    expect(screen.getByTestId('datenschutz-section-9').textContent).toContain('Alle Daten aus den Abschnitten 4 bis 8');
   });
 });
