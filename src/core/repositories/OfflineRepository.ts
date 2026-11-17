@@ -23,6 +23,8 @@ import { mergeAccountList, offlineAccountList, readAccountRoleMemory, writeAccou
 import { checkedVersion, withCheckedVersion } from './confirmedVersion';
 import { assertWholeTournament } from './listEntryGuard';
 import { groupsOfSystem } from './supabaseMappers';
+import { markReportedOnce } from './reportOnce';
+import { isPureNetworkError } from './networkError';
 
 /**
  * A2 Fixrunde 3 (N2a, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
@@ -269,7 +271,9 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         } catch (error) {
             if (!isAbortError(error)) {
                 console.warn('OfflineRepository: Cloud fetch failed.', error);
-                if (error instanceof Error) {
+                // @RE-007: dieser Zweig gilt fuer Geraete ohne Eigentuemer-Kopie (Co-Admin, Helfer) im 5-s-Takt: Netzfehler und
+                // Zeitgrenze nie melden, sonst einmal je Turnier und Sitzung
+                if (error instanceof Error && !isCloudReadTimeout(error) && !isPureNetworkError(error) && markReportedOnce('get', id)) {
                     captureFeatureError(error, 'repository', 'get', { tournamentId: id });
                 }
             }
@@ -284,7 +288,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
             await this.syncFromCloud(id, undefined, fresh);
             return true;
         } catch (error) {
-            if (!isAbortError(error) && !isCloudReadTimeout(error) && error instanceof Error) {
+            // @RE-007: reiner Netzfehler = nie melden; sonst hoechstens einmal je Turnier und Sitzung (Takt 5 s bei unterbrochenem Kanal)
+            if (!isAbortError(error) && !isCloudReadTimeout(error) && !isPureNetworkError(error) && error instanceof Error && markReportedOnce('backgroundSync', id)) {
                 captureFeatureError(error, 'repository', 'backgroundSync', { tournamentId: id });
             }
             return false;
@@ -536,8 +541,9 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                 setTimeout(() => reject(new Error('Cloud fetch timeout')), 5000)
             );
             const cloud = await Promise.race([this.supabaseRepo.listWithMemberships(), timeoutPromise]);
-            if (cloud.membershipError) { captureFeatureError(cloud.membershipError, 'repository', 'listMemberships'); }
-            if (cloud.startedError) { captureFeatureError(cloud.startedError, 'repository', 'listStarted'); }
+            // @RE-007: Teilfehler der Liste (bei jedem Laden): reine Netzfehler nie, sonst einmal je Teilabfrage und Sitzung
+            if (cloud.membershipError && !isPureNetworkError(cloud.membershipError) && markReportedOnce('listMemberships', 'all')) { captureFeatureError(cloud.membershipError, 'repository', 'listMemberships'); }
+            if (cloud.startedError && !isPureNetworkError(cloud.startedError) && markReportedOnce('listStarted', 'all')) { captureFeatureError(cloud.startedError, 'repository', 'listStarted'); }
             if (this.accountId !== undefined) {
                 await this.localRepo.assignUnmarkedOwners(this.accountId, new Set(cloud.tournaments.filter(t => t.myRole === 'owner').map(t => t.id)));
             }
@@ -556,7 +562,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
             // Only log non-AbortErrors (AbortError is expected during navigation)
             if (!isAbortError(error)) {
                 console.warn('OfflineRepository: Cloud list failed, returning local list.', error);
-                if (error instanceof Error) {
+                // @RE-007: reiner Netzfehler = nie melden; sonst hoechstens einmal je Sitzung (Liste wird bei jedem Online-Wechsel neu geladen)
+                if (error instanceof Error && !isPureNetworkError(error) && markReportedOnce('list', 'all')) {
                     captureFeatureError(error, 'repository', 'list');
                 }
             }
@@ -642,7 +649,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                     }
                 } catch (err) {
                     console.error(`Failed to sync tournament ${localT.id}`, err);
-                    if (err instanceof Error) {
+                    // @RE-007: reiner Netzfehler = nie melden; sonst hoechstens einmal je Turnier und Sitzung (jeder Online-Wechsel)
+                    if (err instanceof Error && !isPureNetworkError(err) && markReportedOnce('syncTournament', localT.id)) {
                         captureFeatureError(err, 'sync', 'syncTournament', { tournamentId: localT.id });
                     }
                 }

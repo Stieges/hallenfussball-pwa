@@ -19,27 +19,7 @@ import { readServerRevisions, writeServerRevisions, type CloudAdoption, type Ser
 import { parsePlacementsToPlayOut } from '../standings/playOutPlaces';
 import { generateShareCode } from '../models/shareCode';
 import { checkedVersion, ownChainBase } from './confirmedVersion';
-
-/**
- * @RE-006: Fehler, die beim Laden der Liste bei JEDEM Laden wieder auftreten wuerden (z. B. ein altes lokales
- * Turnier, das die Pruefung nicht besteht), werden je Art und Turnier nur einmal je Sitzung gemeldet.
- * Bewusst Modul-Ebene (nicht Instanz): mehrere Repository-Instanzen in einer Sitzung teilen sich den Merker.
- * Nur im Arbeitsspeicher – nichts wird auf dem Geraet gespeichert; nach dem Neuladen der Seite ist er leer.
- */
-const reportedLoadErrors = new Set<string>();
-
-/** true, wenn diese Art/Kennung in dieser Sitzung noch nicht gemeldet wurde (und merkt sie sich). */
-function markReportedOnce(kind: string, id: unknown): boolean {
-    const key = `${kind}:${String(id)}`;
-    if (reportedLoadErrors.has(key)) { return false; }
-    reportedLoadErrors.add(key);
-    return true;
-}
-
-/** Nur fuer Tests: bildet das Neuladen der Seite nach. */
-export function resetReportedLoadErrorsForTest(): void {
-    reportedLoadErrors.clear();
-}
+import { markReportedOnce } from './reportOnce';
 
 /**
  * A2 Fixrunde 3 (N2, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-rereview.md`):
