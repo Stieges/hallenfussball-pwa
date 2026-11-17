@@ -86,6 +86,8 @@ function regelnFuer(t: Tournament, phase: string): MatchRules {
   })
 }
 
+export type EreignisPlanEingabe = EreignisPlan
+
 interface EreignisPlan {
   /** Tore der regulaeren Spielzeit in Reihenfolge (Team-ID); sie verteilen sich gleichmaessig ueber die Spielzeit. */
   tore: string[]
@@ -286,7 +288,7 @@ const seiteId = (m: Match, seite: 'slotA' | 'slotB'): string => {
  * besetzte Finalrunde. Ohne den Abschluss zeigte die Ansicht einen Vorschlag für Gruppen, deren Halbfinals längst laufen
  * (Review #336 A3) – diesen Zustand gibt es nach A-13c nicht mehr.
  */
-function schliesseGruppenAb(t: Tournament): void {
+export function schliesseGruppenAb(t: Tournament): void {
   for (const gruppe of ['A', 'B']) {
     const { tournament } = applyCompleteGroup(t, {
       groupId: gruppe, ranking: activeRanking(t, gruppe), openRanks: [], tieDecisions: [], knownDecisionIds: [], expectedState: expectedState(t, gruppe),
@@ -308,7 +310,7 @@ function werkbank(t: Tournament): { kopien: EngineKopie[]; ersetze: (alt: Match,
   }
 }
 
-const halbfinaleVon = (t: Tournament): [Match, Match] => {
+export const halbfinaleVon = (t: Tournament): [Match, Match] => {
   const hf = t.matches.filter((m) => /Halbfinale/.test(m.label ?? '')).sort((x, y) => (x.label ?? '').localeCompare(y.label ?? ''))
   if (hf.length !== 2) { throw new Error(`Erwartet 2 Halbfinals, erzeugt ${String(hf.length)}`) }
   return [hf[0], hf[1]]

@@ -6,7 +6,7 @@
 
 import { z } from 'zod';
 import type { MonitorSlide, SlideConfig, TournamentMonitor } from '../../types/monitor';
-import { DEFAULT_MONITOR, MONITOR_OVERSCAN } from '../../types/monitor';
+import { DEFAULT_MONITOR, MONITOR_OVERSCAN, MONITOR_PROFILES, monitorProfileOf } from '../../types/monitor';
 import type { Sponsor } from '../../types/sponsor';
 
 // --- KONSTANTEN ---
@@ -58,6 +58,7 @@ const transferMonitorSchema = z.object({
   transitionDuration: z.number().int().min(0).max(5000),
   theme: z.enum(['light', 'dark', 'auto']),
   performanceMode: z.enum(['auto', 'high', 'low']),
+  profile: z.enum(MONITOR_PROFILES).optional().catch(undefined), // Darstellungsprofil (@ZM-212); ein unbekannter Wert (neuere Datei) gilt als nicht gesetzt
   overscanPercent: z.number().min(MONITOR_OVERSCAN.minPercent).max(MONITOR_OVERSCAN.maxPercent).multipleOf(MONITOR_OVERSCAN.stepPercent).optional(), // % je Seite (@ME-067); altes overscanPx wird nicht übernommen
   slides: z.array(transferSlideSchema).max(MAX_SLIDES_PER_MONITOR),
 });
@@ -162,6 +163,7 @@ export function exportMonitorConfig(
       transitionDuration: monitor.transitionDuration,
       theme: monitor.theme,
       performanceMode: monitor.performanceMode,
+      ...(monitorProfileOf(monitor) === undefined ? {} : { profile: monitorProfileOf(monitor) }),
       overscanPercent: monitor.overscanPercent,
       slides: [...monitor.slides]
         .sort((a, b) => a.order - b.order)
@@ -299,6 +301,7 @@ export function instantiateMonitorConfig(
       transitionDuration: entry.transitionDuration,
       theme: entry.theme,
       performanceMode: entry.performanceMode,
+      ...(entry.profile === undefined ? {} : { profile: entry.profile }),
       overscanPercent: entry.overscanPercent ?? DEFAULT_MONITOR.overscanPercent,
       slides,
       createdAt: options.now,

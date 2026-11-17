@@ -221,3 +221,10 @@ export const fieldErrorStyle: CSSProperties = {
 export const inputInvalidStyle: CSSProperties = {
   borderColor: cssVars.colors.error,
 };
+
+/** Hinweis unter einer Einstellung (z. B. Profil „Halle (sehr fern)“, @ZM-212): ruhige Schrift, mindestens `sm`. */
+export const hintStyle: CSSProperties = {
+  fontSize: cssVars.fontSizes.sm,
+  color: cssVars.colors.textSecondary,
+  lineHeight: cssVars.lineHeights.bodySm,
+};

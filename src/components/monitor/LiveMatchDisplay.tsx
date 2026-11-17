@@ -13,8 +13,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars, displayFontSizes, displayLayout } from '../../design-tokens';
 import type { MonitorTheme } from '../../types/monitor';
-import { DEFAULT_SPECTATOR_DISPLAY } from '../../core/models/spectatorDisplay';
-import { resolveBoxColors } from '../../core/models/scoreBoxColors';
+import { standardBoxes } from './standardBoxes';
 import { LiveMatch } from '../../hooks/useLiveMatches';
 import { useMonitorTheme } from '../../hooks';
 import { MatchTimer, type MatchTimerUhrQuelle } from './MatchTimer';
@@ -58,12 +57,6 @@ export interface LiveMatchDisplayProps {
   zeitstrafenQuelle?: ZeitstrafenQuelle;
   /** Vor dem Anpfiff (@ZM-195, Folie „Nächstes Spiel“): die Anstoßzeit steht an der Stelle der Uhr, die Kästen zeigen „0 : 0“ in Größe und Lage wie im Spiel */
   kickoff?: { time: string; notes?: ReactNode };
-}
-
-/** Ohne Ansicht (z. B. Vorschau): keine Seite trägt eine Farbe, also Standardfarben Heim/Gast (@ZM-159 Fall A). */
-function standardBoxes(): NonNullable<LiveMatchDisplayProps['boxes']> {
-  const { a, b } = resolveBoxColors({ worn: {}, settings: DEFAULT_SPECTATOR_DISPLAY });
-  return { home: a, away: b };
 }
 
 // ---------------------------------------------------------------------------

@@ -955,6 +955,61 @@
       "saat": "leibchen-vor-anpfiff"
     },
     {
+      "id": "monitor-halle-live",
+      "titel": "Hallenmonitor, Profil „Halle (sehr fern)“, Live-Folie „Farbseiten“: Spiel läuft, TSV Fridolfing gegen SG Taching/Tengling (@ZM-213)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/display/halle-laeuft/mon-halle",
+      "erwarte": "[data-testid=\"hall-display\"]",
+      "profil": "monitor",
+      "saat": "monitor-halle"
+    },
+    {
+      "id": "monitor-halle-vor",
+      "titel": "Hallenmonitor, Profil „Halle (sehr fern)“, vor dem Anpfiff: Anstoßzeit und „Nächstes Spiel“ (@ZM-214, @ZM-195)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/display/halle-vor/mon-halle",
+      "erwarte": "[data-testid=\"hall-display\"]",
+      "profil": "monitor",
+      "saat": "monitor-halle"
+    },
+    {
+      "id": "monitor-halle-halbzeit",
+      "titel": "Hallenmonitor, Profil „Halle (sehr fern)“, Halbzeitpause (@ZM-214)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/display/halle-halbzeit/mon-halle",
+      "erwarte": "[data-testid=\"hall-display\"]",
+      "profil": "monitor",
+      "saat": "monitor-halle"
+    },
+    {
+      "id": "monitor-halle-lang25",
+      "titel": "Hallenmonitor, Profil „Halle (sehr fern)“, zwei Namen mit 25 Zeichen, Stand 2:2 (@ZM-213)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/display/halle-lang25/mon-halle",
+      "erwarte": "[data-testid=\"hall-display\"]",
+      "profil": "monitor",
+      "saat": "monitor-halle"
+    },
+    {
+      "id": "monitor-halle-leibchen",
+      "titel": "Hallenmonitor, Profil „Halle (sehr fern)“, Leibchen bestätigt: Fläche in der Leibchenfarbe (@ZM-214)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/display/halle-leibchen/mon-halle",
+      "erwarte": "[data-testid=\"hall-display\"]",
+      "profil": "monitor",
+      "saat": "monitor-halle"
+    },
+    {
       "id": "zuschauer-naechstes-lang",
       "titel": "Zuschauer-Seite, Kopf „Als Nächstes“ vor dem Anpfiff, langer Name „Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921“, bestätigt (@ZM-201)",
       "gruppen": [

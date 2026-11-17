@@ -40,6 +40,9 @@
     "winnerAria": "Trophy",
     "bibAria": "Bib",
     "afterOvertime": "after extra time",
+    "hall": {
+      "afterShootout": "{{home}} : {{away}} $t(sport:phases.afterPenalties)"
+    },
     "winnerLine": "<name>{{name}}</name> wins",
     "penaltyAria": "$t(sport:events.timePenalty) #{{number}}, {{rest}} left",
     "penaltyAriaNoNumber": "$t(sport:events.timePenalty) without shirt number, {{rest}} left"
@@ -81,7 +84,8 @@
       "idleSkip": "Waiting for the next match...",
       "nextMatch": "Next match",
       "noMatch": "No match scheduled",
-      "kickoff": "Kickoff"
+      "kickoff": "Kickoff",
+      "hallNoMoreMatch": "No more matches on {{field}} today"
     },
     "sponsor": {
       "notFound": "Sponsor not found",

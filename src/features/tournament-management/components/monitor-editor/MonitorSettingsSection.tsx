@@ -5,7 +5,8 @@
 
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { MonitorTheme, PerformanceMode, TournamentMonitor, TransitionType } from '../../../../types/monitor';
+import type { MonitorProfile, MonitorTheme, PerformanceMode, TournamentMonitor, TransitionType } from '../../../../types/monitor';
+import { monitorProfileOf } from '../../../../types/monitor';
 import { MonitorOverscanField } from '../MonitorOverscanField';
 import type { MonitorSettingsUpdate } from './monitorDraft';
 import type { MonitorNameError } from './validateMonitorName';
@@ -17,6 +18,7 @@ import {
   labelStyle,
   sectionStyle,
   sectionTitleStyle,
+  hintStyle,
   selectStyle,
   settingsGridStyle,
 } from './monitorEditorStyles';
@@ -58,6 +60,14 @@ export function MonitorSettingsSection({ monitor, nameError, onUpdateSettings }:
     { value: 'light', label: t('monitorEditor.settings.themes.light') },
     { value: 'auto', label: t('monitorEditor.settings.themes.auto') },
   ];
+
+  // Profil (@ZM-171, @ZM-212): leer = bisherige Darstellung „Spielfeld (fern)“; ein unbekannter gespeicherter Wert zeigt ebenfalls diese Auswahl
+  const profiles: Option<MonitorProfile | ''>[] = [
+    { value: '', label: t('monitorEditor.settings.profiles.standard') },
+    { value: 'hall-very-far', label: t('monitorEditor.settings.profiles.hallVeryFar') },
+  ];
+  const profile = monitorProfileOf(monitor);
+  const hiddenSlides = monitor.slides.filter(slide => slide.type !== 'live').length;
 
   const nameId = `${id}-name`;
   const nameErrorId = `${id}-name-error`;
@@ -144,6 +154,28 @@ export function MonitorSettingsSection({ monitor, nameError, onUpdateSettings }:
           >
             {themes.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
+        </div>
+
+        <div style={inputGroupStyle}>
+          <label htmlFor={`${id}-profile`} style={labelStyle}>{t('monitorEditor.settings.profileLabel')}</label>
+          <select
+            id={`${id}-profile`}
+            data-testid="monitor-profile-select"
+            style={selectStyle}
+            value={profile ?? ''}
+            onChange={(e) => {
+              const value = pick(profiles, e.target.value);
+              if (value !== undefined) {onUpdateSettings({ profile: value === '' ? undefined : value });}
+            }}
+          >
+            {profiles.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+          {profile === 'hall-very-far' && (
+            <div style={hintStyle} data-testid="monitor-profile-hint">
+              {t('monitorEditor.settings.profileHallHint')}
+              {hiddenSlides > 0 && <> {t('monitorEditor.settings.profileHallHiddenCount', { count: hiddenSlides })}</>}
+            </div>
+          )}
         </div>
 
         {/* Bildrand in Prozent (@ME-067) */}

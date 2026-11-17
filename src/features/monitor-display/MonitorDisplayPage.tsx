@@ -22,7 +22,7 @@
 import { useMemo, useCallback } from 'react';
 import { displayLayout, monitorThemes } from '../../design-tokens';
 import type { TournamentMonitor } from '../../types/monitor';
-import { LOCAL_FALLBACK_POLL_MS, PERFORMANCE_PROFILES, calculateCacheStatus } from '../../types/monitor';
+import { LOCAL_FALLBACK_POLL_MS, PERFORMANCE_PROFILES, calculateCacheStatus, monitorProfileOf } from '../../types/monitor';
 import { useTranslation, I18nextProvider } from 'react-i18next';
 import { ANZEIGE_SPRACHE, anzeigeI18n } from '../../i18n/anzeigeSprache';
 import { GoalAnimation, CardAnimation } from '../../components/monitor';
@@ -37,6 +37,7 @@ import {
   alleUebersprungen, liveSpielLaeuft, selectDisplayableSlides, SPIELPLAN_FALLBACK_SLIDE, ZUSCHAUER_QR_SLIDE, type SlideProgram,
 } from './slideProgramme';
 import { isSlideShowable } from './publicVisibility';
+import { hallProgramSlides } from './hallProgram';
 import { listFrame, monitorPageCount, startPage, scheduleFieldLayout } from './slideContent';
 import { useListenStart } from './useListenStart';
 import { applyEnd } from './monitorEnd';
@@ -137,9 +138,11 @@ function MonitorDisplayPageContent({
   // die nächste immer darstellbare Folie (Spielplan) — der Bildschirm ist nie leer.
   const qrMoeglich = tournament?.isPublic === true && Boolean(tournament?.shareCode);
   // B-16e2 (@ZM-090): Bei ausgeblendeten Ergebnissen fallen wertende Folien weg (Rückfall: QR)
+  // Profil „Halle (sehr fern)“ (@ZM-212): nur die Live-Folie; die gespeicherte Folienliste bleibt unberührt
+  const profile = monitorProfileOf(monitor);
   const programSlides = useMemo(
-    () => selectDisplayableSlides(monitor?.slides ?? [], { qrMoeglich, sponsors: tournament ? (tournament.sponsors ?? []) : undefined, isShowable: (slide) => view === null || isSlideShowable(slide, view.rules) }),
-    [monitor, qrMoeglich, view, tournament]
+    () => selectDisplayableSlides(profile === 'hall-very-far' ? hallProgramSlides(monitor?.slides ?? []) : monitor?.slides ?? [], { qrMoeglich, sponsors: tournament ? (tournament.sponsors ?? []) : undefined, isShowable: (slide) => view === null || isSlideShowable(slide, view.rules) }),
+    [monitor, profile, qrMoeglich, view, tournament]
   );
   // Nach dem Abschluss ersetzt die Folie „Endstand“ Live-Spiel, Tabellen, Nächste Spiele und Spielplan (R3-7, @ZM-121)
   const slides = useMemo(() => applyEnd(programSlides, end), [programSlides, end]);
@@ -174,10 +177,11 @@ function MonitorDisplayPageContent({
 
   // Current slide
   const currentSlide = useMemo(() => {
-    const rueckfallAktiv = slideState.pinnedMatchId === null
+    // Profil „Halle (sehr fern)“: die Live-Folie bleibt zwischen den Spielen stehen (nächstes Spiel bzw. „kein Spiel mehr“), kein Rückfall
+    const rueckfallAktiv = profile !== 'hall-very-far' && slideState.pinnedMatchId === null
       && alleUebersprungen(slides, ruleMatches ?? [], ansichtZeitMs);
     return rueckfallAktiv ? rueckfallFolie : slides[slideState.currentIndex] ?? null;
-  }, [slides, slideState.currentIndex, slideState.pinnedMatchId, rueckfallFolie, ruleMatches, ansichtZeitMs]);
+  }, [slides, profile, slideState.currentIndex, slideState.pinnedMatchId, rueckfallFolie, ruleMatches, ansichtZeitMs]);
 
   // @ZM-190: Startseite des Spielplans, beim Eintritt in die Folie festgehalten (nicht bei jedem Poll neu)
   const listenStart = useListenStart(slideState.currentIndex, slideState.page, () => {
@@ -235,6 +239,7 @@ function MonitorDisplayPageContent({
               overscanPercent={overscanPercent}
               hinweisHoehe={hinweisZeigt ? displayLayout.noticeHeight : undefined}
               pinnedMatchId={slideState.pinnedMatchId}
+              profile={profile}
               page={slideState.page}
               pageStart={listenStart}
               end={end}

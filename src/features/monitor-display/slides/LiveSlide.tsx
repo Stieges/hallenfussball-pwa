@@ -1,13 +1,35 @@
-import type { CSSProperties } from 'react';
+import type { ComponentProps, CSSProperties, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { displayFontSizes, displaySpacing, monitorThemes } from '../../../design-tokens';
+import { cssVars, displayFontSizes, displayHall, displaySpacing, monitorThemes } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { TournamentView } from '../../../core/view';
-import type { MonitorSlide, MonitorTheme, PerformanceSettings } from '../../../types/monitor';
+import type { MonitorProfile, MonitorSlide, MonitorTheme, PerformanceSettings } from '../../../types/monitor';
 import { LiveMatchDisplay } from '../../../components/monitor';
-import { fieldIdToNumber, resolveTheme } from '../monitorDisplayHelpers';
+import { HallMatchDisplay } from '../../../components/monitor/hall';
+import { resolveTheme } from '../monitorDisplayHelpers';
+import { liveSlideState } from './liveSlideState';
 import { toLiveMatch } from '../monitorMatch';
 import { MonitorTimeNotes } from '../components/MonitorTimeCell';
+
+/** Die bisherige Live-Folie füllt den Größen-Container (`fullscreen`); gleiche Eigenschaften wie `HallMatchDisplay`. */
+function FullscreenLiveMatchDisplay(props: ComponentProps<typeof HallMatchDisplay>): ReactElement {
+  return <LiveMatchDisplay {...props} fullscreen />;
+}
+
+/** Satz „Auf Feld 1 folgt heute kein Spiel mehr“ im Profil „Halle (sehr fern)“ */
+const hallNoMatchStyle = (color: string): CSSProperties => ({
+  boxSizing: 'border-box',
+  width: '100%',
+  height: '100%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: `0 ${displayHall.noMatch.padX}`,
+  textAlign: 'center',
+  fontSize: displayHall.noMatch.font,
+  fontWeight: cssVars.fontWeights.bold,
+  color,
+});
 
 interface LiveSlideProps {
   slide: MonitorSlide;
@@ -19,37 +41,30 @@ interface LiveSlideProps {
   style: CSSProperties;
   /** Gepinntes Spiel (B-16e1): bleibt bis zum Ende der Haltezeit sichtbar, auch mit Endstand. */
   pinnedMatchId?: string | null;
+  /** Darstellungsprofil des Monitors (@ZM-212): „Halle (sehr fern)“ zeigt die Anordnung „Farbseiten“, sonst die bisherige Folie */
+  profile?: MonitorProfile;
 }
 
-export function LiveSlide({ slide, tournament, view, theme, style, pinnedMatchId }: LiveSlideProps) {
+export function LiveSlide({ slide, tournament, view, theme, style, pinnedMatchId, profile }: LiveSlideProps) {
   const { t } = useTranslation('monitor');
   const resolvedTheme = resolveTheme(theme);
   const themeColors = monitorThemes[resolvedTheme];
 
-  const fieldNumber = fieldIdToNumber(slide.config.fieldId);
-  const fieldConfig = tournament.fields?.find(f => f.id === slide.config.fieldId);
-  const fieldName = fieldConfig?.customName ?? fieldConfig?.defaultName ?? t('fieldSelector.field', { field: fieldNumber });
-  const { matches, teams } = tournament;
+  const { fieldName, shown, runningMatch, nextMatch, nextRaw } = liveSlideState(slide, tournament, view, pinnedMatchId, t);
+  const { teams } = tournament;
+  const hall = profile === 'hall-very-far';
+  // Beide Anordnungen nehmen dieselben Daten; die Fassung für die Hallentiefe braucht kein `fullscreen`
+  const Display = hall ? HallMatchDisplay : FullscreenLiveMatchDisplay;
 
-  // Gepinntes Spiel (@ZM-075/077), sonst das laufende Spiel auf diesem Feld (Halbzeit zählt mit): `isLive` der Ansicht
-  const field = view.currentFor(fieldNumber);
-  const shown = (pinnedMatchId ? view.byId.get(pinnedMatchId) : undefined) ?? field.live[0];
-  const runningMatch = shown === undefined ? undefined : matches.find(m => m.id === shown.id);
-
-  // Nächstes offenes Spiel dieses Feldes, in Anpfiff-Reihenfolge (B-16f2, C-MON-NAECHSTES-UNSORTIERT); nie ein
-  // laufendes oder unterbrochenes Spiel (@ZM-041)
-  const nextMatch = !runningMatch ? field.next : undefined;
-
-  // Delegate to LiveMatchDisplay for running matches
+  // Delegate to LiveMatchDisplay (bzw. im Profil „Halle (sehr fern)“ an HallMatchDisplay) for running matches
   if (runningMatch && shown) {
     const liveMatch = toLiveMatch(shown, runningMatch, teams, tournament);
     // B-44a4 (@ME-020): Die Folie ist Größen-Container; die Live-Anzeige misst an ihrer Fläche innerhalb des Bildrands
     return (
       <div style={{ ...style, containerType: 'size' }} data-testid="live-slide-area">
-        <LiveMatchDisplay
+        <Display
           match={liveMatch}
           group={runningMatch.group}
-          fullscreen
           theme={theme}
           boxes={shown.boxes}
           hideScore={!view.rules.results}
@@ -70,24 +85,34 @@ export function LiveSlide({ slide, tournament, view, theme, style, pinnedMatchId
   }
 
   // No live match - show next match or idle state based on whenIdle config
-  const whenIdleType = slide.config.whenIdle?.type ?? 'next-match';
+  // Profil „Halle (sehr fern)“: die Folie bleibt zwischen den Spielen stehen und zeigt das nächste Spiel (@ZM-212), nie die Folie überspringen
+  const whenIdleType = hall ? 'next-match' : slide.config.whenIdle?.type ?? 'next-match';
 
   // Vor dem Anpfiff (@ZM-195, @ZM-138): die Live-Folie zeigt das nächste Spiel in denselben Kästen wie im Spiel (0 : 0, Farbe = Trikot bzw. Ausweichfarbe,
   // ein festgelegtes Leibchen als Weste), die Anstoßzeit an der Stelle der Uhr; Initialen-Kreise folgen mit dem Neubau der Kästen (#418)
-  const nextRaw = nextMatch === undefined ? undefined : matches.find(m => m.id === nextMatch.id);
   if (whenIdleType !== 'skip' && nextMatch && nextRaw) {
     return (
       <div style={{ ...style, containerType: 'size' }} data-testid="next-slide-area">
-        <LiveMatchDisplay
+        <Display
           match={toLiveMatch(nextMatch, nextRaw, teams, tournament)}
           group={nextRaw.group}
-          fullscreen
           theme={theme}
           boxes={nextMatch.boxes}
           hideScore={!view.rules.results}
           badge={{ kind: 'next' }}
           kickoff={nextMatch.kickoff ? { time: nextMatch.kickoff.time, notes: <MonitorTimeNotes match={nextMatch} color={themeColors.text} testIdPrefix="monitor-next" /> } : undefined}
         />
+      </div>
+    );
+  }
+
+  if (hall) {
+    // Folgt kein Spiel mehr auf dem Feld (@ZM-212): ein Satz, groß und mittig
+    return (
+      <div style={{ ...style, containerType: 'size' }} data-testid="hall-no-match-area">
+        <div data-testid="hall-no-match" data-monitor="uhr" style={hallNoMatchStyle(themeColors.text)}>
+          {t('slides.live.hallNoMoreMatch', { field: fieldName })}
+        </div>
       </div>
     );
   }

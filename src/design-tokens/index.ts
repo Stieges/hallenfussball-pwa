@@ -134,6 +134,7 @@ export {
 } from './display';
 export { displayList } from './displayList';
 export { displayFinal } from './displayFinal';
+export { displayHall } from './displayHall';
 export { mixHex, getBlockFrame, getBlockFrames, type BlockFrame, type BlockFrameWidths } from './displayColor';
 
 export {
