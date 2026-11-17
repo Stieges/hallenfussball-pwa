@@ -35,7 +35,7 @@ export interface TonBeginn {
   dauer: number;
 }
 
-interface TonStopp { id: number; when: number }
+interface TonStopp { id: number; when: number; ctxTime: number }
 
 declare global {
   interface Window {
@@ -62,7 +62,7 @@ export async function installiereTonSpion(context: BrowserContext): Promise<void
     };
     const originalStop = AudioBufferSourceNode.prototype.stop;
     AudioBufferSourceNode.prototype.stop = function stop(this: AudioBufferSourceNode, when?: number): void {
-      spion.stops.push({ id: kennungen.get(this) ?? 0, when: when ?? 0 });
+      spion.stops.push({ id: kennungen.get(this) ?? 0, when: when ?? 0, ctxTime: this.context.currentTime });
       return originalStop.call(this, when);
     };
     const originalPlay = HTMLMediaElement.prototype.play;
@@ -76,7 +76,7 @@ export async function installiereTonSpion(context: BrowserContext): Promise<void
 /** Die hörbaren Töne auf diesem Gerät (siehe `installiereTonSpion`). */
 export async function tonBeginne(page: Page): Promise<TonBeginn[]> {
   const roh = await page.evaluate(() => window.__tonSpion ?? { starts: [], stops: [], medienPlay: 0 });
-  return roh.starts.filter((st) => st.ctxState === 'running' && st.dauer > 0 && !roh.stops.some((sp) => sp.id === st.id && sp.when <= st.when));
+  return roh.starts.filter((st) => st.ctxState === 'running' && st.dauer > 0 && !roh.stops.some((sp) => sp.id === st.id && sp.when <= st.when && sp.ctxTime <= st.when));
 }
 
 /** Wie oft hat dieses Gerät ein Medienelement (`Audio`) gestartet? (Cockpit-Ton, „Hier anhören“ am Rechner, nicht der Hallenton). */
@@ -127,10 +127,11 @@ export function frist(t0: number, grenzeMs: number = GRENZE_15S_MS): number {
  * Beobachtet die Sammelabfragen (`match_events`) dieses Geräts: zwei Abfragen im Abstand von höchstens 1,5 s zeigen, dass es das angepfiffene
  * Spiel kennt (Takt 1 s, `feldStand.ts`; solange es keins kennt, fragt es nur alle 5 s). Vor dem Anpfiff aufrufen.
  */
-export function beobachteAbfragen(page: Page): { warteAufEngenTakt(timeout?: number): Promise<void> } {
+export function beobachteAbfragen(page: Page): { warteAufEngenTakt(timeout?: number): Promise<void>; anzahlSeit(t: number): number } {
   const zeiten: number[] = [];
   page.on('request', (req) => { if (req.url().includes('/rest/v1/match_events')) { zeiten.push(Date.now()); } });
   return {
+    anzahlSeit: (t: number): number => zeiten.filter((z) => z >= t).length,
     async warteAufEngenTakt(timeout = 20_000): Promise<void> {
       await expect.poll(() => {
         const n = zeiten.length;

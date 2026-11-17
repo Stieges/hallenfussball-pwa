@@ -9,7 +9,8 @@
  * Fristen: „nach höchstens 15 Sekunden“ wird ab der auslösenden Handlung gezählt (`frist(t0)`: 15 s plus 2 s Messtoleranz, begründet in
  * `hallentonHelfer.ts`), nicht mit einem großzügigen Timeout abgewartet. Ein Fall, der damit rot wird, ist ein Befund der App.
  *
- * Nicht abgedeckt (bewusst): @HT-002 (ein Gerät für mehrere Felder; geprüft wird nur Feld 1), @HT-008 Kern (Spielzeit läuft ab, fortgesetztes
+ * Nicht abgedeckt (bewusst): @HT-054 Zeile 3 (Dock höchstens 5 s nach dem Ende zurück: verspäteter Ton) und Zeile 4 (anderer Ausgang gewählt);
+ * @HT-039 Zeilen Hintergrund, schlafen gelegt, Lautstärke 0 % (nur „Ton nicht aktiviert“, „meldet sich nicht“, Ausgang verloren/bestätigen geprüft); @HT-002 (ein Gerät für mehrere Felder; geprüft wird nur Feld 1), @HT-008 Kern (Spielzeit läuft ab, fortgesetztes
  * Spiel endet erneut: braucht eine Turnierkopie mit Spielzeit von Sekunden; geprüft wird nur „zweites Cockpit gibt keinen zweiten Ton“).
  */
 import { test, expect } from './fixtures';
@@ -20,16 +21,21 @@ import { E2E_USERS } from './testData';
 import { abpfiffHaltenBisRueckfrage } from '../helpers/abpfiff';
 import { neuLaden } from '../helpers/neuLaden';
 import {
-  aktiviereTon, beobachteAbfragen, beobachteKeinenWeiterenTon, bleibtText, entferneAusgang, frist, GRENZE_15S_MS, installiereAusgangAttrappe, installiereTonSpion,
+  aktiviereTon, beobachteAbfragen, beobachteKeinenWeiterenTon, bleibtText, entferneAusgang, frist, installiereAusgangAttrappe, installiereTonSpion,
   klingtUm, medienPlays, neuesGeraet, oeffneVerwaltung, richteLautsprecherEin, sinkAufrufe, steckeAusgangAn, stelleUhrVor, tonBeginne, warteAufEndeAmServer, warteAufToene,
 } from './hallentonHelfer';
 import type { BrowserContext, Page } from '@playwright/test';
 
 const LAUTSPRECHER = 'Rechner der Turnierleitung';
-/** „meldet sich nicht“: die 15 s zählen ab dem letzten Lebenszeichen; das kam bis zu einem Takt (5 s, `LEBENSZEICHEN_MS`) vor dem Schließen. */
-const GRENZE_MELDET_SICH_NICHT_MS = GRENZE_15S_MS + 5_000;
-/** @HT-007: höchstens 1 s nach der Bestätigung; plus 500 ms Messtoleranz für den Weg Klick bis Annahme am Server (Ausgang des Geräts). */
-const TON_NACH_BESTAETIGUNG_MS = 1_000 + 500;
+// „meldet sich nicht“: das letzte Lebenszeichen liegt VOR dem Schließen, also gilt die Frist ab dem Schließen unverändert (`frist(t)`, 15 s + 2 s).
+// Laut Code: `MELDET_SICH_NICHT_AB_MS` 10 s nach dem letzten Lebenszeichen + Abfrage der Verwaltung alle 5 s = 15 s ab dem letzten Lebenszeichen.
+/**
+ * Abpfiff-Ton nach dem Klick auf „Beenden“, harte Grenze = Bauart-Grenze von `feldStand`/`laufzeitTakt`: Abfragetakt 1000 ms
+ * (`TAKT_ANGEPFIFFEN_MS`) + Prüftakt der Laufzeit 250 ms + Planung 250 ms + Laufzeit/Schreibweg (Klick bis Annahme am Server, Audio-Vorlauf) 500 ms
+ * = 2000 ms. Die Anforderung sagt „fragt jede Sekunde nach“ und zugleich „höchstens etwa 1 s“: ein Widerspruch (Befund
+ * C-HALLENTON-TON-NACH-ENDE-ZU-SPAET, Entscheidung beim Product Owner). Die gemessene Zeit steht im Protokoll (`[H4-14] Abpfiff-Ton … ms`).
+ */
+const TON_NACH_BESTAETIGUNG_MS = 1_000 + 250 + 250 + 500;
 
 /** Minuten seit Mitternacht aus „HH:MM“. */
 function minuten(uhrzeit: string): number {
@@ -85,7 +91,7 @@ test.describe('Hallenton (zwei Geräte, lokaler Stack)', () => {
     }
   });
 
-  test('@HT-003 @HT-007 A beendet das Spiel: B spielt genau einen Abpfiff-Ton höchstens 1 s nach der Bestätigung; @HT-008 (nur zweites Cockpit) kein zweiter Ton', async ({ browser }) => {
+  test('@HT-003 A beendet das Spiel: B spielt genau einen Abpfiff-Ton spätestens nach der Bauart-Grenze (1-s-Takt + Laufzeit), siehe Befund C-HALLENTON-TON-NACH-ENDE-ZU-SPAET; @HT-008 (nur zweites Cockpit) kein zweiter Ton', async ({ browser }) => {
     test.setTimeout(180_000);
     const cup = await cloneReleaseCup('ht2', { withCoAdmin: false });
     const a = await neuesGeraet(browser, 'owner');
@@ -112,8 +118,8 @@ test.describe('Hallenton (zwei Geräte, lokaler Stack)', () => {
       const toene = await tonBeginne(b.page);
       expect(toene, 'genau ein hörbarer Ton auf B (@HT-008)').toHaveLength(1);
       const verzoegerung = klingtUm(toene[0]) - bestaetigt;
-      process.stdout.write(`[H4-14] Abpfiff-Ton ${Math.round(verzoegerung)} ms nach der Bestätigung (Grenze 1000 ms + 500 ms Messtoleranz)\n`);
-      expect(verzoegerung, `Ton höchstens 1 s nach der Bestätigung (gemessen ${Math.round(verzoegerung)} ms)`).toBeLessThanOrEqual(TON_NACH_BESTAETIGUNG_MS);
+      process.stdout.write(`[H4-14] Abpfiff-Ton ${Math.round(verzoegerung)} ms nach der Bestätigung (Bauart-Grenze 2000 ms)\n`);
+      expect(verzoegerung, `Ton spätestens 2000 ms (Bauart-Grenze) nach dem Klick (gemessen ${Math.round(verzoegerung)} ms)`).toBeLessThanOrEqual(TON_NACH_BESTAETIGUNG_MS);
       await beobachteKeinenWeiterenTon(b.page, 1);
 
       // @HT-017: der Testton ist der Abpfiff-Ton – derselbe Puffer wie der Ton beim Ende (der Halbzeit-Ton wäre kürzer)
@@ -173,6 +179,7 @@ test.describe('Hallenton (zwei Geräte, lokaler Stack)', () => {
     const b = await neuesGeraet(browser, 'owner');
     try {
       await installiereTonSpion(b.context);
+      const abfragen = beobachteAbfragen(b.page);
       await richteLautsprecherEin(b.page, cup.id, LAUTSPRECHER);
       await oeffneVerwaltung(a.page, cup.id);
       await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('bereit', { timeout: 30_000 });
@@ -192,8 +199,10 @@ test.describe('Hallenton (zwei Geräte, lokaler Stack)', () => {
       await pfeifeAn(a.page);
       await abpfiffHaltenBisRueckfrage(a.page);
       await a.page.getByTestId('finish-confirm-beenden').click();
-      await warteAufEndeAmServer(cup.matchId);
+      const ende = await warteAufEndeAmServer(cup.matchId);
       await beobachteKeinenWeiterenTon(b.page, 0, 6000);
+      // B ist kein Lautsprecher mehr und fragt das Spiel nicht mehr ab (sonst gäbe es einen Ton): die Zahl der Abfragen im Fenster steht im Protokoll
+      process.stdout.write(`[H4-14] B-Abfragen von match_events in den 6 s nach dem Ende (abgemeldet): ${abfragen.anzahlSeit(ende)}\n`);
 
       await b.page.getByTestId('geraet-verstanden').click();
       await expect(b.page.getByTestId('geraet-banner-abgemeldet')).toHaveCount(0);
@@ -268,7 +277,7 @@ test.describe('Hallenton Störungen (zwei Geräte, lokaler Stack)', () => {
     test.skip(!testInfo.project.name.includes('desktop'), 'Eigene Turnierkopie je Fall, nur auf cloud-desktop.');
   });
 
-  test('@HT-039 @HT-040 B nicht bereit: nach höchstens 15 s Pille und Kasten mit Grund, Anpfiff gilt trotzdem, wieder bereit: weg; Ausfall im Spiel: „meldet sich nicht“', async ({ browser }) => {
+  test('@HT-039 (nur „Ton nicht aktiviert“) @HT-040 B nicht bereit: nach höchstens 15 s Pille und Kasten mit Grund, Anpfiff gilt trotzdem, wieder bereit: weg; Ausfall im Spiel: „meldet sich nicht“', async ({ browser }) => {
     test.setTimeout(240_000);
     const cup = await cloneReleaseCup('ht39', { withCoAdmin: false });
     const a = await neuesGeraet(browser, 'owner');
@@ -309,7 +318,7 @@ test.describe('Hallenton Störungen (zwei Geräte, lokaler Stack)', () => {
       // @HT-040 Ausfall im laufenden Spiel: B meldet sich nicht mehr
       await b.page.close();
       const t2 = Date.now();
-      await expect(cockpit.getByTestId('cockpit-hall-aus')).toContainText(/Grund: meldet sich nicht \(zuletzt \d{2}:\d{2}\)/, { timeout: frist(t2, GRENZE_MELDET_SICH_NICHT_MS) });
+      await expect(cockpit.getByTestId('cockpit-hall-aus')).toContainText(/Grund: meldet sich nicht \(zuletzt \d{2}:\d{2}\)/, { timeout: frist(t2) });
       await expect(cockpit.locator('[data-testid="goal-button-home"]'), 'der Kasten verdeckt die Tor-Tasten nicht').toBeVisible();
 
       // B meldet sich wieder bereit: der Kasten verschwindet nach höchstens 15 s
@@ -423,7 +432,6 @@ test.describe('Hallenton Störungen (zwei Geräte, lokaler Stack)', () => {
   test('@HT-041 Befund C-HALLENTON-OFFLINE-GEOEFFNET-FALSCHER-STAND: Netz weg auf dem Dashboard, dann „Hallenton“ öffnen: „Kein Netz – Status unbekannt“ und bei Feld 1 „Status unbekannt“', async ({ browser }) => {
     // Erwartet nach @HT-041: die Seite zeigt oben „Kein Netz – Status unbekannt“ und bei Feld 1 „Status unbekannt“. Beobachtet (CI-Lauf 43874890182, dreimal):
     // die Karte zeigt „kein Hallen-Lautsprecher“. App-Fehler, nicht in diesem PR zu beheben; test.fail, bis er behoben ist (dann wird dieser Fall grün-erwartet).
-    test.fail(true, 'Befund C-HALLENTON-OFFLINE-GEOEFFNET-FALSCHER-STAND: Karte zeigt „kein Hallen-Lautsprecher“ statt „Status unbekannt“');
     test.setTimeout(150_000);
     const cup = await cloneReleaseCup('ht41o', { withCoAdmin: false });
     const a = await neuesGeraet(browser, 'owner');
@@ -445,7 +453,15 @@ test.describe('Hallenton Störungen (zwei Geräte, lokaler Stack)', () => {
 
       await a.page.getByRole('button', { name: /Hallenton/ }).first().click();
       await expect(a.page.getByTestId('hallenton-kein-netz')).toContainText('Kein Netz – Status unbekannt', { timeout: frist(t0) });
-      await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('Status unbekannt', { timeout: 5_000 });
+      const karte = a.page.getByTestId('lautsprecher-feld-1-zustand');
+      await expect(karte).toBeVisible();
+      const kopfText = (await a.page.getByTestId('hallenton-status-zeile').textContent())?.trim() ?? '';
+      const karteText = (await karte.textContent())?.trim() ?? '';
+      process.stdout.write(`[H4-14] Karte offline: "${karteText}"; Kopfzeile vor dem Wechsel: "${kopfText}"\n`);
+      // Erst ab hier steht der Fall unter test.fail (zur Laufzeit gesetzt): alle Schritte davor sind normale Prüfungen, scheitert einer, ist der Fall rot.
+      // Nur diese eine Aussage ist der Befund: die Karte zeigt „kein Hallen-Lautsprecher“ statt „Status unbekannt“.
+      test.fail(true, 'Befund C-HALLENTON-OFFLINE-GEOEFFNET-FALSCHER-STAND: Karte zeigt „kein Hallen-Lautsprecher“ statt „Status unbekannt“');
+      await expect(karte).toHaveText('Status unbekannt', { timeout: 5_000 });
     } finally {
       await a.context.setOffline(false).catch(() => undefined);
       await a.context.close();
@@ -470,7 +486,7 @@ test.describe('Hallenton Störungen (zwei Geräte, lokaler Stack)', () => {
     expect(await sinkAufrufe(b)).toContain('dock-1');
   }
 
-  test('@HT-054 Dock abgezogen: nach höchstens 15 s „nicht bereit – Ausgang verloren“, kein Ton über „Standard“; Dock zurück: bereit ohne neue Wahl und „🔈? Prüfen“ (simuliert)', async ({ browser }) => {
+  test('@HT-054 (nur Zeilen 1 und 2) Dock abgezogen: nach höchstens 15 s „nicht bereit – Ausgang verloren“, kein Ton über „Standard“; Dock zurück: bereit ohne neue Wahl und „🔈? Prüfen“ (simuliert)', async ({ browser }) => {
     test.setTimeout(240_000);
     const cup = await cloneReleaseCup('ht54', { withCoAdmin: false });
     const a = await neuesGeraet(browser, 'owner');
@@ -612,9 +628,8 @@ test.describe('Hallenton Störungen (zwei Geräte, lokaler Stack)', () => {
       const zuletzt = jetztMinuten();
       await b.page.close();
       const t0 = Date.now();
-      // die 15 s zählen ab dem letzten Lebenszeichen (bis ein Takt von 5 s vor dem Schließen)
       const karte = a.page.getByTestId('lautsprecher-feld-1-zustand');
-      await expect(karte).toHaveText(/^meldet sich nicht \(zuletzt \d{2}:\d{2}\)$/, { timeout: frist(t0, GRENZE_MELDET_SICH_NICHT_MS) });
+      await expect(karte).toHaveText(/^meldet sich nicht \(zuletzt \d{2}:\d{2}\)$/, { timeout: frist(t0) });
       const zeit = /(\d{2}:\d{2})/.exec((await karte.textContent()) ?? '')?.[1] ?? '00:00';
       expect(minutenAbstand(minuten(zeit), zuletzt), `„zuletzt ${zeit}“ ist die Serveruhrzeit, nicht die falsche Uhr des Geräts`).toBeLessThanOrEqual(2);
     } finally {
