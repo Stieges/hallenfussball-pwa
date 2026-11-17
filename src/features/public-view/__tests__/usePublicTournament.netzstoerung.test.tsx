@@ -1,12 +1,11 @@
 /**
  * @RZ-033 @RZ-034 @RZ-035 Die Zuschauer-Seite merkt sich überstandene Netzstörungen (nur im Arbeitsspeicher) und meldet jede genau einmal:
- * kurz (unter 20 s ohne gelungenen Abruf), lang (ab 20 s). Szenarien aus docs/anforderungen/2026-09-26_reichweite-zuschauersicht.md.
+ * kurz (ein gescheiterter Abruf), lang (mindestens zwei gescheiterte Abrufe in Folge, Stand 2026-11-17). Szenarien aus docs/anforderungen/2026-09-26_reichweite-zuschauersicht.md.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { buildLiveViewTournament, SHARE_CODE } from '../../../screens/__tests__/liveViewFixture';
 import { usePublicTournament } from '../usePublicTournament';
-import { CONNECTION_HINT_AFTER_MS } from '../useConnectionHint';
 import type { PublicFetchResult, PublicTournamentSource } from '../publicSource';
 import { saveContact, saveStand, type StandStorage } from '../publicStandStore';
 
@@ -53,57 +52,99 @@ beforeEach(() => {
 });
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
 
-/** Seite öffnen (Erfolg), dann `ausfall` ms lang scheitern, dann gelingt der nächste Abruf. */
-async function stoerung(ausfall: number, quelle = scriptedSource(), code = SHARE_CODE) {
+/** Seite öffnen (Erfolg), dann `fehlschlaege` Abrufe in Folge scheitern (je 10 s Takt), dann gelingt der nächste Abruf. */
+async function stoerung(fehlschlaege: number, quelle = scriptedSource(), code = SHARE_CODE) {
   const storage = memoryStorage();
   quelle.erfolg();
   const hook = renderHook((p: { code: string }) => usePublicTournament(p.code, quelle.source, { storage }), { initialProps: { code } });
   await vergehen(0);
   quelle.fehlschlag();
-  await act(async () => { await hook.result.current.refresh(); });
-  await vergehen(ausfall);
+  for (let i = 0; i < fehlschlaege; i += 1) {
+    await vergehen(10_000);
+    await act(async () => { await hook.result.current.refresh(); });
+  }
+  await vergehen(10_000);
   quelle.erfolg();
   await act(async () => { await hook.result.current.refresh(); });
   return { hook, quelle, storage };
 }
 
-describe('@RZ-033 Eine überstandene Netzstörung wird gemeldet', () => {
+type Schritt = 'fehl' | 'wirft' | 'ganz' | 'gleich' | 'weg';
+
+/** Spielt Abrufe nacheinander ab (je ein von Hand ausgelöster Abruf, 10 s dazwischen) und sammelt jede neu gemeldete Störung. */
+async function folge(schritte: Schritt[], quelle = scriptedSource()) {
+  quelle.erfolg();
+  const hook = renderHook(() => usePublicTournament(SHARE_CODE, quelle.source, { storage: memoryStorage() }));
+  await vergehen(0);
+  const gemeldet: Array<{ id: number; kind: string }> = [];
+  for (const schritt of schritte) {
+    quelle[{ fehl: 'fehlschlag', wirft: 'wirft', ganz: 'erfolg', gleich: 'unveraendert', weg: 'nichtGefunden' }[schritt] as 'fehlschlag'] ();
+    await vergehen(10_000);
+    await act(async () => { await hook.result.current.refresh(); });
+    const aktuell = hook.result.current.recoveredOutage;
+    if (aktuell !== null && !gemeldet.some((g) => g.id === aktuell.id)) { gemeldet.push({ id: aktuell.id, kind: aktuell.kind }); }
+  }
+  return { hook, quelle, gemeldet };
+}
+
+describe('@RZ-033 Eine überstandene Netzstörung wird gemeldet (Beispieltabelle)', () => {
   it.each([
-    ['10 Sekunden', 10_000, 'stoerung_kurz'],
-    ['45 Sekunden', 45_000, 'stoerung_lang'],
-  ] as const)('Abrufe scheitern %s lang, der nächste gelingt → genau eine Meldung „%s“ für dieses Turnier', async (_dauer, ms, art) => {
-    const { hook } = await stoerung(ms);
+    ['so lange, dass genau ein Abruf scheitert', 1, 'stoerung_kurz'],
+    ['so lange, dass zwei Abrufe hintereinander scheitern', 2, 'stoerung_lang'],
+    ['45 Sekunden (vier oder fünf Abrufe hintereinander)', 5, 'stoerung_lang'],
+    ['45 Sekunden mit vier Abrufen hintereinander', 4, 'stoerung_lang'],
+  ] as const)('%s → genau eine Meldung „%s“ für dieses Turnier', async (_dauer, fehlschlaege, art) => {
+    const { hook } = await stoerung(fehlschlaege);
     expect(hook.result.current.loadingState).toBe('success');
     expect(hook.result.current.recoveredOutage).toEqual({ id: 1, shareCode: SHARE_CODE, kind: art });
   });
 
-  it('Grenze 20 Sekunden = Frist des Hinweises „keine Verbindung“: 19,999 s kurz, 20 s lang (Gegenbeispiel auf beiden Seiten)', async () => {
-    expect(CONNECTION_HINT_AFTER_MS).toBe(20_000);
-    expect((await stoerung(CONNECTION_HINT_AFTER_MS - 1)).hook.result.current.recoveredOutage?.kind).toBe('stoerung_kurz');
-    expect((await stoerung(CONNECTION_HINT_AFTER_MS)).hook.result.current.recoveredOutage?.kind).toBe('stoerung_lang');
-  });
-
-  it('mehrere Fehlschläge in Folge (Ausnahme, „nicht erreichbar“) sind EINE Störung, gemessen ab dem ersten', async () => {
+  it('ein einzelner Abruf hängt 30 Sekunden und scheitert dann (Zeitüberschreitung) → kurze Störung, nie lang', async () => {
     const quelle = scriptedSource();
     quelle.erfolg();
     const { result } = renderHook(() => usePublicTournament(SHARE_CODE, quelle.source, { storage: memoryStorage() }));
     await vergehen(0);
-    quelle.wirft();
-    await act(async () => { await result.current.refresh(); });
-    await vergehen(8_000);
-    quelle.fehlschlag();
-    await act(async () => { await result.current.refresh(); });
-    await vergehen(8_000);
-    await act(async () => { await result.current.refresh(); });
-    expect(result.current.recoveredOutage).toBeNull();
-    await vergehen(8_000);
+    quelle.haengt();
+    let fertig = false;
+    act(() => { void result.current.refresh().then(() => { fertig = true; }); });
+    await vergehen(30_000);
+    expect(fertig).toBe(true);
+    expect(result.current.connectionHint).not.toBeNull();
     quelle.erfolg();
     await act(async () => { await result.current.refresh(); });
-    expect(result.current.recoveredOutage).toEqual({ id: 1, shareCode: SHARE_CODE, kind: 'stoerung_lang' });
+    expect(result.current.recoveredOutage).toEqual({ id: 1, shareCode: SHARE_CODE, kind: 'stoerung_kurz' });
+  });
+
+  it('Gegenbeispiel Zeit: ein einzelner Fehlschlag bleibt kurz, auch wenn danach Minuten vergehen, bis der nächste Abruf gelingt', async () => {
+    const quelle = scriptedSource();
+    quelle.erfolg();
+    const { result } = renderHook(() => usePublicTournament(SHARE_CODE, quelle.source, { storage: memoryStorage() }));
+    await vergehen(0);
+    quelle.fehlschlag();
+    await act(async () => { await result.current.refresh(); });
+    await vergehen(5 * 60_000);
+    quelle.erfolg();
+    await act(async () => { await result.current.refresh(); });
+    expect(result.current.recoveredOutage?.kind).toBe('stoerung_kurz');
+  });
+
+  it('Gegenbeispiel Zähler: Fehlschlag, Erfolg, Fehlschlag, Erfolg → zwei kurze Störungen, keine lange', async () => {
+    const { gemeldet } = await folge(['fehl', 'ganz', 'fehl', 'ganz']);
+    expect(gemeldet).toEqual([{ id: 1, kind: 'stoerung_kurz' }, { id: 2, kind: 'stoerung_kurz' }]);
+  });
+
+  it('Fehlschlag, Fehlschlag, Erfolg, Fehlschlag, Erfolg → eine lange, danach eine kurze (der Zähler beginnt nach dem Erfolg von vorn)', async () => {
+    const { gemeldet } = await folge(['fehl', 'fehl', 'ganz', 'fehl', 'ganz']);
+    expect(gemeldet).toEqual([{ id: 1, kind: 'stoerung_lang' }, { id: 2, kind: 'stoerung_kurz' }]);
+  });
+
+  it('mehrere Fehlschläge in Folge (Ausnahme, „nicht erreichbar“) sind EINE Störung, lang ab dem zweiten', async () => {
+    const { gemeldet } = await folge(['wirft', 'fehl', 'fehl', 'ganz']);
+    expect(gemeldet).toEqual([{ id: 1, kind: 'stoerung_lang' }]);
   });
 
   it('genau einmal: weitere gelungene Abrufe nach der Störung melden nichts mehr', async () => {
-    const { hook, quelle } = await stoerung(10_000);
+    const { hook, quelle } = await stoerung(1);
     for (let i = 0; i < 3; i += 1) {
       await vergehen(10_000);
       await act(async () => { await hook.result.current.refresh(); });
@@ -114,44 +155,126 @@ describe('@RZ-033 Eine überstandene Netzstörung wird gemeldet', () => {
   });
 
   it('zwei getrennte Störungen sind zwei Meldungen mit fortlaufender Kennung; gehalten wird nur die letzte (keine wachsende Liste)', async () => {
-    const { hook, quelle } = await stoerung(5_000);
+    const { hook, quelle } = await stoerung(1);
     expect(hook.result.current.recoveredOutage).toEqual({ id: 1, shareCode: SHARE_CODE, kind: 'stoerung_kurz' });
     await vergehen(30_000);
     quelle.fehlschlag();
-    await act(async () => { await hook.result.current.refresh(); });
-    await vergehen(60_000);
+    for (let i = 0; i < 2; i += 1) {
+      await vergehen(10_000);
+      await act(async () => { await hook.result.current.refresh(); });
+    }
     quelle.erfolg();
     await act(async () => { await hook.result.current.refresh(); });
     expect(hook.result.current.recoveredOutage).toEqual({ id: 2, shareCode: SHARE_CODE, kind: 'stoerung_lang' });
     expect(Array.isArray(hook.result.current.recoveredOutage)).toBe(false);
   });
 
-  it('auch „nichts Neues“ beendet die Störung (der Abruf ist gelungen)', async () => {
-    const quelle = scriptedSource();
+  it('„nichts Neues“ ist ein Erfolg: Fehlschlag, „nichts Neues“ → kurz; Fehlschlag, Fehlschlag, „nichts Neues“ → lang', async () => {
+    expect((await folge(['fehl', 'gleich'])).gemeldet).toEqual([{ id: 1, kind: 'stoerung_kurz' }]);
+    expect((await folge(['fehl', 'fehl', 'gleich'])).gemeldet).toEqual([{ id: 1, kind: 'stoerung_lang' }]);
+  });
+
+  it('„nichts Neues“ zwischen zwei Fehlschlägen unterbricht die Folge: zwei kurze Störungen', async () => {
+    expect((await folge(['fehl', 'gleich', 'fehl', 'gleich'])).gemeldet).toEqual([
+      { id: 1, kind: 'stoerung_kurz' }, { id: 2, kind: 'stoerung_kurz' },
+    ]);
+  });
+
+  it('„Turnier nicht gefunden“ beendet die Folge ohne Meldung und setzt den Zähler zurück', async () => {
+    const { hook, quelle } = await folge(['fehl', 'weg']);
+    expect(hook.result.current.recoveredOutage).toBeNull();
+    quelle.fehlschlag();
+    await vergehen(10_000);
+    await act(async () => { await hook.result.current.refresh(); });
+    quelle.erfolg();
+    await vergehen(10_000);
+    await act(async () => { await hook.result.current.refresh(); });
+    // wäre der Zähler aus der Folge davor erhalten geblieben, wäre dies „lang“
+    expect(hook.result.current.recoveredOutage?.kind).toBe('stoerung_kurz');
+  });
+
+  it('von Hand ausgelöster Abruf (refresh), „online“-Ereignis und Rückkehr in den Vordergrund zählen wie ein Takt-Abruf', async () => {
+    const quelle = scriptedSource(10_000);
     quelle.erfolg();
     const { result } = renderHook(() => usePublicTournament(SHARE_CODE, quelle.source, { storage: memoryStorage() }));
     await vergehen(0);
     quelle.fehlschlag();
+    await vergehen(10_000); // Takt: Fehlschlag 1
+    await act(async () => { window.dispatchEvent(new Event('online')); await vi.advanceTimersByTimeAsync(0); }); // Fehlschlag 2
+    quelle.erfolg();
     await act(async () => { await result.current.refresh(); });
-    await vergehen(3_000);
-    quelle.unveraendert();
+    expect(result.current.recoveredOutage?.kind).toBe('stoerung_lang');
+  });
+
+  it('ein Durchlauf mit zwei Versuchen („Änderung passt nicht“, dann ganzer Abruf scheitert) zählt als EIN Fehlschlag → kurz', async () => {
+    const quelle = scriptedSource();
+    quelle.erfolg();
+    const { result } = renderHook(() => usePublicTournament(SHARE_CODE, quelle.source, { storage: memoryStorage() }));
+    await vergehen(0);
+    const antworten: PublicFetchResult[] = [
+      { kind: 'delta', version: 'vX', baseVersion: 'nicht-die-gehaltene', delta: { matches: [], removedMatchIds: [] } },
+      { kind: 'unreachable' },
+    ];
+    quelle.fetch.mockImplementationOnce(() => Promise.resolve(antworten[0])).mockImplementationOnce(() => Promise.resolve(antworten[1]));
+    await act(async () => { await result.current.refresh(); });
+    expect(quelle.fetch).toHaveBeenCalledTimes(3);
+    expect(quelle.fetch.mock.calls[2][1]).toBeNull();
+    quelle.erfolg();
     await act(async () => { await result.current.refresh(); });
     expect(result.current.recoveredOutage?.kind).toBe('stoerung_kurz');
   });
 
-  it('Störung schon beim ersten Laden: scheitert das erste Laden und gelingt es später in derselben Sitzung, zählt sie', async () => {
+  it('ein Durchlauf mit zwei Versuchen, der zum Erfolg führt („Änderung passt nicht“, dann ganzer Abruf gelingt), ist keine Störung', async () => {
     const quelle = scriptedSource();
+    quelle.erfolg();
     const { result } = renderHook(() => usePublicTournament(SHARE_CODE, quelle.source, { storage: memoryStorage() }));
     await vergehen(0);
-    expect(result.current.loadingState).toBe('error');
-    await vergehen(30_000);
-    quelle.erfolg();
+    quelle.fetch.mockImplementationOnce(() => Promise.resolve({
+      kind: 'delta', version: 'vX', baseVersion: 'nicht-die-gehaltene', delta: { matches: [], removedMatchIds: [] },
+    }));
     await act(async () => { await result.current.refresh(); });
-    expect(result.current.loadingState).toBe('success');
-    expect(result.current.recoveredOutage).toEqual({ id: 1, shareCode: SHARE_CODE, kind: 'stoerung_lang' });
+    expect(result.current.recoveredOutage).toBeNull();
   });
 
-  it('Seite im Hintergrund: der Takt ruht, die Störung bleibt offen und zählt nach der Rückkehr mit der verstrichenen Zeit', async () => {
+  it('überholte Antwort (Code gewechselt, alter Abruf scheitert erst danach) zählt nicht: danach ein Fehlschlag und Erfolg → kurz', async () => {
+    const quelle = scriptedSource();
+    quelle.erfolg();
+    const hook = renderHook((p: { code: string }) => usePublicTournament(p.code, quelle.source, { storage: memoryStorage() }), { initialProps: { code: 'AAA111' } });
+    await vergehen(0);
+    let ende: (r: PublicFetchResult) => void = () => undefined;
+    quelle.fetch.mockImplementationOnce(() => new Promise<PublicFetchResult>((resolve) => { ende = resolve; }));
+    let alt: Promise<void> = Promise.resolve();
+    act(() => { alt = hook.result.current.refresh(); });
+    hook.rerender({ code: 'BBB222' });
+    await act(async () => { ende({ kind: 'unreachable' }); await alt; });
+    // der überholte Fehlschlag darf keinen Zähler hinterlassen
+    quelle.fehlschlag();
+    await act(async () => { await hook.result.current.refresh(); });
+    quelle.erfolg();
+    await act(async () => { await hook.result.current.refresh(); });
+    expect(hook.result.current.recoveredOutage?.kind).toBe('stoerung_kurz');
+  });
+
+  it('Störung schon beim ersten Laden: ein Fehlschlag → kurz, zwei → lang (kein Erfolg davor)', async () => {
+    const lauf = async (fehlschlaege: number) => {
+      const quelle = scriptedSource();
+      const { result } = renderHook(() => usePublicTournament(SHARE_CODE, quelle.source, { storage: memoryStorage() }));
+      await vergehen(0);
+      expect(result.current.loadingState).toBe('error');
+      for (let i = 1; i < fehlschlaege; i += 1) {
+        await vergehen(10_000);
+        await act(async () => { await result.current.refresh(); });
+      }
+      quelle.erfolg();
+      await act(async () => { await result.current.refresh(); });
+      expect(result.current.loadingState).toBe('success');
+      return result.current.recoveredOutage;
+    };
+    expect(await lauf(1)).toEqual({ id: 1, shareCode: SHARE_CODE, kind: 'stoerung_kurz' });
+    expect(await lauf(2)).toEqual({ id: 1, shareCode: SHARE_CODE, kind: 'stoerung_lang' });
+  });
+
+  it('Seite im Hintergrund: der Takt ruht, die Störung bleibt offen und zählt nach der Rückkehr weiter (Fehlschlag davor + Fehlschlag danach → lang)', async () => {
     let sichtbar = true;
     Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => (sichtbar ? 'visible' : 'hidden') });
     const quelle = scriptedSource(10_000);
@@ -166,15 +289,14 @@ describe('@RZ-033 Eine überstandene Netzstörung wird gemeldet', () => {
     await vergehen(120_000);
     expect(quelle.fetch.mock.calls.length).toBe(abrufe);
     expect(result.current.recoveredOutage).toBeNull();
-    quelle.erfolg();
     sichtbar = true;
-    await act(async () => { document.dispatchEvent(new Event('visibilitychange')); await vi.advanceTimersByTimeAsync(0); });
+    await act(async () => { document.dispatchEvent(new Event('visibilitychange')); await vi.advanceTimersByTimeAsync(0); }); // Fehlschlag 2
+    quelle.erfolg();
+    await act(async () => { await result.current.refresh(); });
     expect(result.current.recoveredOutage?.kind).toBe('stoerung_lang');
   });
-});
 
-describe('@RZ-033 Zeitmessung: ein Sprung der Geräteuhr verfälscht die Dauer nicht', () => {
-  it('Uhr springt mitten in der Störung um 1 Stunde vor: 5 Sekunden bleiben kurz', async () => {
+  it('ein Sprung der Geräteuhr ändert nichts: ein Fehlschlag bleibt kurz, zwei bleiben lang', async () => {
     const quelle = scriptedSource();
     quelle.erfolg();
     const { result } = renderHook(() => usePublicTournament(SHARE_CODE, quelle.source, { storage: memoryStorage() }));
@@ -182,24 +304,16 @@ describe('@RZ-033 Zeitmessung: ein Sprung der Geräteuhr verfälscht die Dauer n
     quelle.fehlschlag();
     await act(async () => { await result.current.refresh(); });
     vi.setSystemTime(new Date(Date.now() + 3_600_000));
-    await vergehen(5_000);
     quelle.erfolg();
     await act(async () => { await result.current.refresh(); });
     expect(result.current.recoveredOutage?.kind).toBe('stoerung_kurz');
-  });
-
-  it('Uhr springt zurück: 30 Sekunden bleiben lang (Gegenbeispiel zum Sprung nach vorn)', async () => {
-    const quelle = scriptedSource();
-    quelle.erfolg();
-    const { result } = renderHook(() => usePublicTournament(SHARE_CODE, quelle.source, { storage: memoryStorage() }));
-    await vergehen(0);
     quelle.fehlschlag();
     await act(async () => { await result.current.refresh(); });
     vi.setSystemTime(new Date(Date.now() - 3_600_000));
-    await vergehen(30_000);
+    await act(async () => { await result.current.refresh(); });
     quelle.erfolg();
     await act(async () => { await result.current.refresh(); });
-    expect(result.current.recoveredOutage?.kind).toBe('stoerung_lang');
+    expect(result.current.recoveredOutage).toEqual({ id: 2, shareCode: SHARE_CODE, kind: 'stoerung_lang' });
   });
 });
 
@@ -282,7 +396,7 @@ describe('@RZ-035 Die Störungsmeldung hinterlässt nichts auf dem Gerät', () =
     const idb = { open: vi.fn() };
     vi.stubGlobal('indexedDB', idb);
     const lokal = vi.spyOn(Storage.prototype, 'setItem');
-    const { storage, hook } = await stoerung(45_000);
+    const { storage, hook } = await stoerung(5);
     expect(hook.result.current.recoveredOutage?.id).toBe(1);
     const alle = [...storage.schreibzugriffe, ...lokal.mock.calls.map((c) => c.join('='))];
     expect(alle.filter((s) => /st(oe|ö)rung|outage|kurz|lang/i.test(s))).toEqual([]);
@@ -294,7 +408,7 @@ describe('@RZ-035 Die Störungsmeldung hinterlässt nichts auf dem Gerät', () =
 
 describe('@RZ-033 Wechsel des Codes', () => {
   it('die Störung zählt für das Turnier, in dem sie stattfand; eine offene Störung geht nicht auf das neue Turnier über', async () => {
-    const { hook, quelle } = await stoerung(10_000, scriptedSource(), 'AAA111');
+    const { hook, quelle } = await stoerung(1, scriptedSource(), 'AAA111');
     expect(hook.result.current.recoveredOutage).toEqual({ id: 1, shareCode: 'AAA111', kind: 'stoerung_kurz' });
 
     quelle.fehlschlag();
@@ -308,61 +422,8 @@ describe('@RZ-033 Wechsel des Codes', () => {
   });
 });
 
-describe('@RZ-033 Die Dauer zählt ab dem letzten gelungenen Abruf (wie der Hinweis „keine Verbindung“), nicht ab dem erkannten Fehlschlag', () => {
-  it('hängende Abrufe (Takt 10 s, Zeitüberschreitung 8 s): Erfolg bei 0 s, Abrufe bei 10 s und 20 s hängen, Erfolg bei 30 s → lange Störung (der Hinweis war sichtbar)', async () => {
-    const quelle = scriptedSource(10_000);
-    quelle.erfolg();
-    const { result } = renderHook(() => usePublicTournament(SHARE_CODE, quelle.source, { storage: memoryStorage() }));
-    await vergehen(0);
-    quelle.haengt();
-    await vergehen(25_000);
-    expect(result.current.connectionHint).not.toBeNull();
-    quelle.erfolg();
-    await vergehen(5_000);
-    expect(result.current.recoveredOutage).toEqual({ id: 1, shareCode: SHARE_CODE, kind: 'stoerung_lang' });
-  });
-
-  it('Grenze ab dem letzten Erfolg: 15 s ruhig, dann Fehlschlag, Erfolg nach 4,999 s (zusammen 19,999 s) kurz, nach 5 s (20 s) lang', async () => {
-    const lauf = async (danach: number) => {
-      const quelle = scriptedSource();
-      quelle.erfolg();
-      const { result } = renderHook(() => usePublicTournament(SHARE_CODE, quelle.source, { storage: memoryStorage() }));
-      await vergehen(0);
-      await vergehen(15_000);
-      quelle.fehlschlag();
-      await act(async () => { await result.current.refresh(); });
-      await vergehen(danach);
-      quelle.erfolg();
-      await act(async () => { await result.current.refresh(); });
-      return result.current.recoveredOutage?.kind;
-    };
-    expect(await lauf(CONNECTION_HINT_AFTER_MS - 15_000 - 1)).toBe('stoerung_kurz');
-    expect(await lauf(CONNECTION_HINT_AFTER_MS - 15_000)).toBe('stoerung_lang');
-  });
-
-  it('erstes Laden scheitert: gezählt ab dem Beginn des ersten Abrufs', async () => {
-    const quelle = scriptedSource();
-    const { result } = renderHook(() => usePublicTournament(SHARE_CODE, quelle.source, { storage: memoryStorage() }));
-    await vergehen(0);
-    await vergehen(19_000);
-    quelle.erfolg();
-    await act(async () => { await result.current.refresh(); });
-    expect(result.current.recoveredOutage?.kind).toBe('stoerung_kurz');
-  });
-
-  it('erstes Laden hängt (Zeitüberschreitung 8 s), Erfolg bei 21 s → lang: der Bezug ist der Beginn des ersten Abrufs, nicht die Erkennung des Fehlschlags', async () => {
-    const quelle = scriptedSource();
-    quelle.haengt();
-    const { result } = renderHook(() => usePublicTournament(SHARE_CODE, quelle.source, { storage: memoryStorage() }));
-    await vergehen(8_000);
-    expect(result.current.loadingState).toBe('error');
-    await vergehen(13_000);
-    quelle.erfolg();
-    await act(async () => { await result.current.refresh(); });
-    expect(result.current.recoveredOutage?.kind).toBe('stoerung_lang');
-  });
-
-  it('ein wiederhergestellter Stand vom selben Tag ist kein gelungener Abruf dieser Sitzung (Gegenbeispiel: Kontakt vor Stunden)', async () => {
+describe('@RZ-033 Ein wiederhergestellter Stand ist kein Abruf dieser Sitzung', () => {
+  it('Stand vom selben Tag vom Gerät, erster Abruf scheitert, zweiter gelingt → kurz; ein gelungener erster Abruf meldet nichts', async () => {
     const storage = memoryStorage();
     const jetzt = Date.now();
     saveStand(storage, SHARE_CODE, { source: 'rpc', version: 'v1', day: '2026-10-10', tournament: TOURNAMENT });
@@ -371,7 +432,7 @@ describe('@RZ-033 Die Dauer zählt ab dem letzten gelungenen Abruf (wie der Hinw
     const { result } = renderHook(() => usePublicTournament(SHARE_CODE, quelle.source, { storage }));
     await vergehen(0);
     expect(result.current.tournament).not.toBeNull();
-    await vergehen(5_000);
+    expect(result.current.recoveredOutage).toBeNull();
     quelle.erfolg();
     await act(async () => { await result.current.refresh(); });
     expect(result.current.recoveredOutage?.kind).toBe('stoerung_kurz');

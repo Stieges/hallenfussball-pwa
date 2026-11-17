@@ -127,7 +127,7 @@ describe('@RE-004 Datenschutzerklärung sagt, was die App wirklich tut (Prüfung
     const text = abschnitt(4);
     expect(text).toContain('ob die Verbindung zwischendurch gestört war');
     expect(text).toContain('Verbindungsstörungen: Die Seite zählt auch mit, wenn die Verbindung zwischendurch gestört war und wieder da ist');
-    expect(text).toContain('„kurz“, wenn vom letzten gelungenen Abruf bis zur Rückkehr der Verbindung weniger als 20 Sekunden vergangen sind, sonst als „lang“');
+    expect(text).toContain('„lang“, wenn mindestens zwei Abrufe hintereinander gescheitert sind, sonst als „kurz“');
     expect(text).toContain('Schließt du die Seite während einer Störung, wird diese Störung nicht gezählt.');
     expect(text).not.toContain('Wer die Seite während einer Störung schließt, wird nicht gezählt');
     expect(text).toContain('auf welchem Weg sie sie erreichen und wie oft Zuschauer-Geräte in der Halle die Verbindung verlieren');
