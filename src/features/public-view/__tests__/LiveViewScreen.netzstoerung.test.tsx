@@ -65,6 +65,24 @@ describe('@RZ-033 Die Zuschauer-Seite reicht überstandene Störungen an die Zä
     expect(ausfall()).toEqual({ id: 1, shareCode: SHARE_CODE, kind: 'stoerung_kurz' });
   });
 
+  it('zwei gescheiterte Abrufe in Folge, dann ein gelungener: die Zählung bekommt eine lange Störung', async () => {
+    supabaseGet.mockResolvedValue(buildLiveViewTournament());
+    zeige();
+    await waitFor(() => { expect(letzte()?.[1]).toBe(true); });
+
+    supabaseGet.mockRejectedValue(new Error('Netz weg'));
+    await netzZurueck();
+    await waitFor(() => { expect(supabaseGet).toHaveBeenCalledTimes(2); });
+    await netzZurueck();
+    await waitFor(() => { expect(supabaseGet).toHaveBeenCalledTimes(3); });
+    expect(ausfall()).toBeNull();
+
+    supabaseGet.mockResolvedValue({ ...buildLiveViewTournament(), title: 'Nikolaus-Turnier neu' });
+    await netzZurueck();
+    await waitFor(() => { expect(ausfall()).not.toBeNull(); });
+    expect(ausfall()).toEqual({ id: 1, shareCode: SHARE_CODE, kind: 'stoerung_lang' });
+  });
+
   it('Gegenbeispiel: gelingen alle Abrufe, bekommt die Zählung nie eine Störung', async () => {
     supabaseGet.mockResolvedValue(buildLiveViewTournament());
     zeige();
