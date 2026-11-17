@@ -21,35 +21,67 @@ export async function neuesGeraet(browser: Browser, role: LoggedInRole): Promise
 }
 
 export interface TonBeginn {
+  /** Kennung dieses Tons (Reihenfolge der Aufrufe von `start`). */
+  id: number;
   /** Wanduhr (ms) beim Aufruf von `start`. */
   wall: number;
   /** Zeitpunkt (Audiozeit), zu dem der Ton beginnen soll. */
   when: number;
   /** Aktuelle Audiozeit des Kontexts beim Aufruf. */
   ctxTime: number;
+  /** Zustand des Audio-Kontexts beim Aufruf (`running`, wenn er ausgibt). */
+  ctxState: string;
+  /** Länge des abgespielten Puffers in Sekunden (der Abpfiff-Ton und der Testton sind derselbe Puffer, der Halbzeit-Ton ist kürzer). */
+  dauer: number;
 }
+
+interface TonStopp { id: number; when: number }
 
 declare global {
   interface Window {
-    __tonSpion?: { starts: TonBeginn[] };
+    __tonSpion?: { starts: TonBeginn[]; stops: TonStopp[]; medienPlay: number };
   }
 }
 
-/** Spion auf jeden Beginn eines Web-Audio-Tons in diesem Kontext (vor dem ersten Laden aufrufen). */
+/**
+ * Spion auf jeden Beginn (`start`) und jeden Stopp (`stop`) eines Web-Audio-Tons sowie auf `HTMLMediaElement.play` in diesem Kontext
+ * (vor dem ersten Laden aufrufen). Gezählt als Ton wird nur, was HÖRBAR wäre (`tonBeginne`): Kontext `running`, Puffer nicht leer und kein
+ * Stopp, der vor oder mit dem Beginn liegt (so bricht der Spieler einen geplanten Ton ab).
+ */
 export async function installiereTonSpion(context: BrowserContext): Promise<void> {
   await context.addInitScript(() => {
-    const spion = { starts: [] as TonBeginn[] };
+    const spion = { starts: [] as TonBeginn[], stops: [] as TonStopp[], medienPlay: 0 };
     window.__tonSpion = spion;
-    const original = AudioBufferSourceNode.prototype.start;
+    const kennungen = new WeakMap<AudioBufferSourceNode, number>();
+    const originalStart = AudioBufferSourceNode.prototype.start;
     AudioBufferSourceNode.prototype.start = function start(this: AudioBufferSourceNode, when?: number, ...rest: [number?, number?]): void {
-      spion.starts.push({ wall: Date.now(), when: when ?? 0, ctxTime: this.context.currentTime });
-      return original.call(this, when, ...rest);
+      const id = spion.starts.length + 1;
+      kennungen.set(this, id);
+      spion.starts.push({ id, wall: Date.now(), when: when ?? 0, ctxTime: this.context.currentTime, ctxState: this.context.state, dauer: this.buffer?.duration ?? 0 });
+      return originalStart.call(this, when, ...rest);
+    };
+    const originalStop = AudioBufferSourceNode.prototype.stop;
+    AudioBufferSourceNode.prototype.stop = function stop(this: AudioBufferSourceNode, when?: number): void {
+      spion.stops.push({ id: kennungen.get(this) ?? 0, when: when ?? 0 });
+      return originalStop.call(this, when);
+    };
+    const originalPlay = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function play(this: HTMLMediaElement): Promise<void> {
+      spion.medienPlay += 1;
+      return originalPlay.call(this);
     };
   });
 }
 
+/** Die hörbaren Töne auf diesem Gerät (siehe `installiereTonSpion`). */
 export async function tonBeginne(page: Page): Promise<TonBeginn[]> {
-  return page.evaluate(() => window.__tonSpion?.starts ?? []);
+  const roh = await page.evaluate(() => window.__tonSpion ?? { starts: [], stops: [], medienPlay: 0 });
+  return roh.starts.filter((st) => st.ctxState === 'running' && st.dauer > 0 && !roh.stops.some((sp) => sp.id === st.id && sp.when <= st.when));
+}
+
+/** Wie oft hat dieses Gerät ein Medienelement (`Audio`) gestartet? (Cockpit-Ton, „Hier anhören“ am Rechner, nicht der Hallenton). */
+export async function medienPlays(page: Page): Promise<number> {
+  return page.evaluate(() => window.__tonSpion?.medienPlay ?? 0);
 }
 
 export async function tonAnzahl(page: Page): Promise<number> {
@@ -61,20 +93,51 @@ export function klingtUm(b: TonBeginn): number {
   return b.wall + Math.max(0, b.when - b.ctxTime) * 1000;
 }
 
-/** Wartet, bis der Spion mindestens `n` Töne zählt. */
+/** Wartet, bis der Spion mindestens `n` hörbare Töne zählt. */
 export async function warteAufToene(page: Page, n: number, timeout = 30_000): Promise<void> {
   await expect.poll(() => tonAnzahl(page), { timeout, message: `Ton-Spion zählt mindestens ${n}` }).toBeGreaterThanOrEqual(n);
 }
 
 /**
- * Beobachtungsfenster für „kein weiterer Ton“: wartet bedingungsgesteuert, bis ein Ton über `soll` hinaus beginnt, höchstens `fensterMs`.
- * Kein fester Schlaf: kommt der Ton, bricht die Bedingung sofort ab und der Test schlägt fehl.
+ * Beobachtungsfenster für „kein weiterer Ton“: wartet bedingungsgesteuert, bis ein Ton über `soll` hinaus beginnt (auch ein später abgebrochener
+ * zählt hier, das ist strenger), höchstens `fensterMs`. Kein fester Schlaf: kommt der Ton, bricht die Bedingung sofort ab und der Test schlägt fehl.
  */
 export async function beobachteKeinenWeiterenTon(page: Page, soll: number, fensterMs = 4000): Promise<void> {
   const kamZusaetzlich = await page.waitForFunction((n) => (window.__tonSpion?.starts.length ?? 0) > n, soll, { timeout: fensterMs })
     .then(() => true, () => false);
   expect(kamZusaetzlich, `kein weiterer Ton nach ${soll}`).toBe(false);
   expect(await tonAnzahl(page)).toBe(soll);
+}
+
+/**
+ * Die 15-Sekunden-Grenze der Anforderung (@HT-039, @HT-040, @HT-041, @HT-042, @HT-054, @HT-059), gezählt ab der auslösenden Handlung, plus
+ * eine Messtoleranz von 2 s: Wiederholabstand der Prüfungen von Playwright (bis 1 s) und der Weg von der Handlung (Seite neu laden, Netz
+ * abschalten, Dock abziehen) bis zu dem Augenblick, den der Test als Beginn der Lage nimmt (bis etwa 1 s). Nicht gelockert: ein Fall, der
+ * danach noch rot ist, ist ein Befund der App.
+ */
+export const GRENZE_15S_MS = 15_000;
+export const MESSTOLERANZ_MS = 2_000;
+
+/** Restzeit der Frist, gezählt ab `t0` (Wanduhr des Tests); mindestens 500 ms, damit ein Ausdruck nach Ablauf noch einmal prüft. */
+export function frist(t0: number, grenzeMs: number = GRENZE_15S_MS): number {
+  return Math.max(500, grenzeMs + MESSTOLERANZ_MS - (Date.now() - t0));
+}
+
+/**
+ * Beobachtet die Sammelabfragen (`match_events`) dieses Geräts: zwei Abfragen im Abstand von höchstens 1,5 s zeigen, dass es das angepfiffene
+ * Spiel kennt (Takt 1 s, `feldStand.ts`; solange es keins kennt, fragt es nur alle 5 s). Vor dem Anpfiff aufrufen.
+ */
+export function beobachteAbfragen(page: Page): { warteAufEngenTakt(timeout?: number): Promise<void> } {
+  const zeiten: number[] = [];
+  page.on('request', (req) => { if (req.url().includes('/rest/v1/match_events')) { zeiten.push(Date.now()); } });
+  return {
+    async warteAufEngenTakt(timeout = 20_000): Promise<void> {
+      await expect.poll(() => {
+        const n = zeiten.length;
+        return n >= 2 && zeiten[n - 1] - zeiten[n - 2] <= 1500 && Date.now() - zeiten[n - 1] <= 1500;
+      }, { timeout, message: 'der Lautsprecher fragt im 1-s-Takt (kennt das angepfiffene Spiel)' }).toBe(true);
+    },
+  };
 }
 
 export function verwaltungUrl(turnierId: string): string {
@@ -97,7 +160,7 @@ export async function aktiviereTon(page: Page): Promise<void> {
  * Richtet das Gerät als Hallen-Lautsprecher für `feld` ein (@HT-001): Name, Schalter, Feld wählen, bei Belegung „Ablösen“ bestätigen,
  * „Ton aktivieren“. Danach steht „Lautsprecher bereit“ (Kasten „Dieses Gerät“).
  */
-export async function richteLautsprecherEin(page: Page, turnierId: string, name: string, options: { feld?: number; abloesen?: boolean } = {}): Promise<void> {
+export async function richteLautsprecherEin(page: Page, turnierId: string, name: string, options: { feld?: number; abloesen?: boolean; frage?: string } = {}): Promise<void> {
   const feld = options.feld ?? 1;
   await oeffneVerwaltung(page, turnierId);
   const nameFeld = page.getByTestId('geraet-name');
@@ -106,7 +169,7 @@ export async function richteLautsprecherEin(page: Page, turnierId: string, name:
   await page.getByTestId('geraet-schalter-zeile').click();
   await page.getByTestId(`geraet-feld-${feld}`).click();
   if (options.abloesen === true) {
-    await expect(page.getByRole('dialog')).toContainText('Ablösen?', { timeout: 15_000 });
+    await expect(page.getByRole('dialog')).toContainText(options.frage ?? 'Ablösen?', { timeout: 15_000 });
     await page.getByTestId('confirm-dialog-confirm').click();
   }
   await aktiviereTon(page);
@@ -199,13 +262,13 @@ export async function sinkAufrufe(page: Page): Promise<string[]> {
   return page.evaluate(() => window.__ausgang?.sinkAufrufe ?? []);
 }
 
-/** Die Uhr dieses Kontexts geht um `ms` vor (Verwaltungsgerät mit falscher Uhr, @HT-042). */
+/** Die Uhr dieses Kontexts geht um `ms` vor (negativ: nach), Verwaltungsgerät mit falscher Uhr (@HT-042). */
 export async function stelleUhrVor(context: BrowserContext, ms: number): Promise<void> {
   await context.addInitScript((versatz) => {
     const Echt = Date;
     class Vor extends Echt {
-      constructor(...args: [] | [number | string | Date]) {
-        if (args.length === 0) { super(Echt.now() + versatz); } else { super(args[0]); }
+      constructor(...args: unknown[]) {
+        super(...((args.length === 0 ? [Echt.now() + versatz] : args) as [number]));
       }
       static override now(): number { return Echt.now() + versatz; }
     }

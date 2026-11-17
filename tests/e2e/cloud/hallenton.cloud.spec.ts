@@ -2,22 +2,57 @@
  * tests/e2e/cloud/hallenton.cloud.spec.ts -- Hallenton Ende-zu-Ende gegen den lokalen Stack mit zwei Geräten (H4-14, Plan H4).
  * Erwartungen wörtlich aus docs/anforderungen/2026-10-15_hallenton.md (Szenarien @HT-001 … @HT-059).
  *
- * Gerät A = leitende Person (Cockpit und Verwaltung), Gerät B = Rechner der Turnierleitung als Hallen-Lautsprecher: zwei Browser-Kontexte
- * mit je eigener Geräte-ID. Der Ton wird beobachtet (Spion auf `AudioBufferSourceNode.prototype.start`, `hallentonHelfer.ts`), nicht gehört.
+ * Gerät A = leitende Person (Cockpit und Verwaltung), Gerät B = Rechner der Turnierleitung als Hallen-Lautsprecher: Browser-Kontexte
+ * mit je eigener Geräte-ID. Der Ton wird beobachtet (Spion auf `AudioBufferSourceNode.start/stop`, `hallentonHelfer.ts`), nicht gehört.
  * Jeder Fall legt seine eigene Kopie des Freigabe-Cup an (`cloneReleaseCup`) und löscht sie im `finally`. Nur cloud-desktop.
+ *
+ * Fristen: „nach höchstens 15 Sekunden“ wird ab der auslösenden Handlung gezählt (`frist(t0)`: 15 s plus 2 s Messtoleranz, begründet in
+ * `hallentonHelfer.ts`), nicht mit einem großzügigen Timeout abgewartet. Ein Fall, der damit rot wird, ist ein Befund der App.
+ *
+ * Nicht abgedeckt (bewusst): @HT-002 (ein Gerät für mehrere Felder; geprüft wird nur Feld 1), @HT-008 Kern (Spielzeit läuft ab, fortgesetztes
+ * Spiel endet erneut: braucht eine Turnierkopie mit Spielzeit von Sekunden; geprüft wird nur „zweites Cockpit gibt keinen zweiten Ton“).
  */
 import { test, expect } from './fixtures';
 import { addMember, cloneReleaseCup, deleteCup } from './coadminEinsatz';
 import { expectEngineMatchRunningUi, fetchUserIdByEmail, openCockpit } from './engineHelpers';
 import { safeCleanup } from './helpers';
 import { E2E_USERS } from './testData';
-import { abpfiffHalten } from '../helpers/abpfiff';
+import { abpfiffHaltenBisRueckfrage } from '../helpers/abpfiff';
 import { neuLaden } from '../helpers/neuLaden';
 import {
-  aktiviereTon, beobachteKeinenWeiterenTon, bleibtText, entferneAusgang, installiereAusgangAttrappe, neuesGeraet, sinkAufrufe, steckeAusgangAn, stelleUhrVor, installiereTonSpion, klingtUm, oeffneVerwaltung, richteLautsprecherEin, tonBeginne, warteAufEndeAmServer, warteAufToene,
+  aktiviereTon, beobachteAbfragen, beobachteKeinenWeiterenTon, bleibtText, entferneAusgang, frist, GRENZE_15S_MS, installiereAusgangAttrappe, installiereTonSpion,
+  klingtUm, medienPlays, neuesGeraet, oeffneVerwaltung, richteLautsprecherEin, sinkAufrufe, steckeAusgangAn, stelleUhrVor, tonBeginne, warteAufEndeAmServer, warteAufToene,
 } from './hallentonHelfer';
+import type { BrowserContext, Page } from '@playwright/test';
 
 const LAUTSPRECHER = 'Rechner der Turnierleitung';
+/** „meldet sich nicht“: die 15 s zählen ab dem letzten Lebenszeichen; das kam bis zu einem Takt (5 s, `LEBENSZEICHEN_MS`) vor dem Schließen. */
+const GRENZE_MELDET_SICH_NICHT_MS = GRENZE_15S_MS + 5_000;
+/** @HT-007: höchstens 1 s nach der Bestätigung; plus 500 ms Messtoleranz für den Weg Klick bis Annahme am Server (Ausgang des Geräts). */
+const TON_NACH_BESTAETIGUNG_MS = 1_000 + 500;
+
+/** Minuten seit Mitternacht aus „HH:MM“. */
+function minuten(uhrzeit: string): number {
+  const [h, m] = uhrzeit.split(':').map(Number);
+  return h * 60 + m;
+}
+
+/** Unterschied zweier Uhrzeiten in Minuten (über Mitternacht gerechnet). */
+function minutenAbstand(a: number, b: number): number {
+  const d = Math.abs(a - b) % 1440;
+  return Math.min(d, 1440 - d);
+}
+
+function jetztMinuten(): number {
+  const jetzt = new Date();
+  return jetzt.getHours() * 60 + jetzt.getMinutes();
+}
+
+/** Anpfiff im Cockpit von `page` (Cockpit steht schon offen). */
+async function pfeifeAn(page: Page): Promise<void> {
+  await page.locator('[data-testid="match-start-button"]').click();
+  await expectEngineMatchRunningUi(page);
+}
 
 test.describe('Hallenton (zwei Geräte, lokaler Stack)', () => {
   // eslint-disable-next-line no-empty-pattern
@@ -25,7 +60,7 @@ test.describe('Hallenton (zwei Geräte, lokaler Stack)', () => {
     test.skip(!testInfo.project.name.includes('desktop'), 'Eigene Turnierkopie je Fall, nur auf cloud-desktop.');
   });
 
-  test('@HT-001 @HT-002 B wird Hallen-Lautsprecher für Feld 1: B und die Verwaltung auf A zeigen „bereit“', async ({ browser }) => {
+  test('@HT-001 B wird Hallen-Lautsprecher für Feld 1: B und die Verwaltung auf A zeigen „bereit“', async ({ browser }) => {
     test.setTimeout(120_000);
     const cup = await cloneReleaseCup('ht1', { withCoAdmin: false });
     const a = await neuesGeraet(browser, 'owner');
@@ -50,32 +85,44 @@ test.describe('Hallenton (zwei Geräte, lokaler Stack)', () => {
     }
   });
 
-  test('@HT-003 @HT-008 A beendet das Spiel: B spielt genau einen Ton, höchstens ~1 s nach dem Ende am Server; ein zweites Cockpit erzeugt keinen zweiten', async ({ browser }) => {
-    test.setTimeout(150_000);
+  test('@HT-003 @HT-007 A beendet das Spiel: B spielt genau einen Abpfiff-Ton höchstens 1 s nach der Bestätigung; @HT-008 (nur zweites Cockpit) kein zweiter Ton', async ({ browser }) => {
+    test.setTimeout(180_000);
     const cup = await cloneReleaseCup('ht2', { withCoAdmin: false });
     const a = await neuesGeraet(browser, 'owner');
     const b = await neuesGeraet(browser, 'owner');
     const zweites = await neuesGeraet(browser, 'owner');
     try {
       await installiereTonSpion(b.context);
+      const abfragen = beobachteAbfragen(b.page);
       await richteLautsprecherEin(b.page, cup.id, LAUTSPRECHER);
       expect(await tonBeginne(b.page), 'vor dem Ende kein Ton auf B').toHaveLength(0);
 
       await openCockpit(zweites.page, cup.id, cup.matchId);
       await openCockpit(a.page, cup.id, cup.matchId);
-      await a.page.locator('[data-testid="match-start-button"]').click();
-      await expectEngineMatchRunningUi(a.page);
+      await pfeifeAn(a.page);
       expect(await tonBeginne(b.page), 'der Anpfiff gibt keinen Ton (@HT-003)').toHaveLength(0);
+      // erst abpfeifen, wenn B das angepfiffene Spiel kennt (1-s-Takt): sonst fragt B nur alle 5 s und der Ton käme dem Test zufolge zu spät
+      await abfragen.warteAufEngenTakt();
 
-      await abpfiffHalten(a.page);
-      const endeAmServer = await warteAufEndeAmServer(cup.matchId);
+      await abpfiffHaltenBisRueckfrage(a.page);
+      const bestaetigt = Date.now();
+      await a.page.getByTestId('finish-confirm-beenden').click();
+      await warteAufEndeAmServer(cup.matchId);
       await warteAufToene(b.page, 1);
       const toene = await tonBeginne(b.page);
-      expect(toene, 'genau ein Ton auf B (@HT-008)').toHaveLength(1);
-      const verzoegerung = klingtUm(toene[0]) - endeAmServer;
-      test.info().annotations.push({ type: 'hallenton-verzoegerung-ms', description: String(Math.round(verzoegerung)) });
-      expect(verzoegerung, `Ton höchstens ~1 s nach dem Ende am Server (gemessen ${Math.round(verzoegerung)} ms)`).toBeLessThanOrEqual(1500);
+      expect(toene, 'genau ein hörbarer Ton auf B (@HT-008)').toHaveLength(1);
+      const verzoegerung = klingtUm(toene[0]) - bestaetigt;
+      process.stdout.write(`[H4-14] Abpfiff-Ton ${Math.round(verzoegerung)} ms nach der Bestätigung (Grenze 1000 ms + 500 ms Messtoleranz)\n`);
+      expect(verzoegerung, `Ton höchstens 1 s nach der Bestätigung (gemessen ${Math.round(verzoegerung)} ms)`).toBeLessThanOrEqual(TON_NACH_BESTAETIGUNG_MS);
       await beobachteKeinenWeiterenTon(b.page, 1);
+
+      // @HT-017: der Testton ist der Abpfiff-Ton – derselbe Puffer wie der Ton beim Ende (der Halbzeit-Ton wäre kürzer)
+      const verwaltung = await a.context.newPage();
+      await oeffneVerwaltung(verwaltung, cup.id);
+      await verwaltung.getByTestId('testton-halle-1').click();
+      await warteAufToene(b.page, 2);
+      const alle = await tonBeginne(b.page);
+      expect(alle[0].dauer, 'Ton beim Ende hat die Länge des Abpfiff-Tons (Testton)').toBeCloseTo(alle[1].dauer, 2);
     } finally {
       await a.context.close();
       await b.context.close();
@@ -84,7 +131,7 @@ test.describe('Hallenton (zwei Geräte, lokaler Stack)', () => {
     }
   });
 
-  test('@HT-015 Ablösen: C übernimmt Feld 1 mit Rückfrage; danach tönt nur C, B zeigt den Hinweis', async ({ browser }) => {
+  test('@HT-015 Ablösen: C übernimmt Feld 1 mit Rückfrage; danach tönt nur C, B zeigt den Hinweis ohne Knopf zum Zurückholen', async ({ browser }) => {
     test.setTimeout(180_000);
     const cup = await cloneReleaseCup('ht3', { withCoAdmin: false });
     const a = await neuesGeraet(browser, 'owner');
@@ -93,16 +140,20 @@ test.describe('Hallenton (zwei Geräte, lokaler Stack)', () => {
     try {
       await installiereTonSpion(b.context);
       await installiereTonSpion(c.context);
+      const abfragenC = beobachteAbfragen(c.page);
       await richteLautsprecherEin(b.page, cup.id, LAUTSPRECHER);
-      await richteLautsprecherEin(c.page, cup.id, 'Zweiter Rechner', { abloesen: true });
+      // die Rückfrage nennt das bisherige Gerät beim Namen
+      await richteLautsprecherEin(c.page, cup.id, 'Zweiter Rechner', { abloesen: true, frage: `Feld 1 hat schon einen Hallen-Lautsprecher (${LAUTSPRECHER}). Ablösen?` });
 
-      // Rückfrage nennt das bisherige Gerät, B sagt „von einem anderen Gerät übernommen“
-      await expect(b.page.getByTestId('geraet-banner-uebernommen')).toContainText('Feld 1 von einem anderen Gerät übernommen', { timeout: 30_000 });
+      const hinweis = b.page.getByTestId('geraet-banner-uebernommen');
+      await expect(hinweis).toContainText('Feld 1 von einem anderen Gerät übernommen', { timeout: 30_000 });
+      await expect(b.page.getByRole('button', { name: /zurückholen|wieder übernehmen|zurück übernehmen/i }), 'kein Knopf zum Zurückholen').toHaveCount(0);
 
       await openCockpit(a.page, cup.id, cup.matchId);
-      await a.page.locator('[data-testid="match-start-button"]').click();
-      await expectEngineMatchRunningUi(a.page);
-      await abpfiffHalten(a.page);
+      await pfeifeAn(a.page);
+      await abfragenC.warteAufEngenTakt();
+      await abpfiffHaltenBisRueckfrage(a.page);
+      await a.page.getByTestId('finish-confirm-beenden').click();
       await warteAufToene(c.page, 1);
       expect(await tonBeginne(c.page), 'nur das neue Gerät tönt, genau einmal').toHaveLength(1);
       await beobachteKeinenWeiterenTon(c.page, 1);
@@ -115,7 +166,7 @@ test.describe('Hallenton (zwei Geräte, lokaler Stack)', () => {
     }
   });
 
-  test('@HT-057 Die Turnierleitung meldet B ab: B zeigt „abgemeldet“ mit „Verstanden“, kein Ton, die Verwaltung zeigt „kein Hallen-Lautsprecher“', async ({ browser }) => {
+  test('@HT-057 Die Turnierleitung meldet B ab: B zeigt „abgemeldet“ mit „Verstanden“ (nicht „übernommen“), kein Ton, die Verwaltung zeigt „kein Hallen-Lautsprecher“', async ({ browser }) => {
     test.setTimeout(180_000);
     const cup = await cloneReleaseCup('ht57', { withCoAdmin: false });
     const a = await neuesGeraet(browser, 'owner');
@@ -134,12 +185,13 @@ test.describe('Hallenton (zwei Geräte, lokaler Stack)', () => {
       const hinweis = b.page.getByTestId('geraet-banner-abgemeldet');
       await expect(hinweis).toContainText('Die Turnierleitung hat dieses Gerät als Hallen-Lautsprecher für Feld 1 abgemeldet.', { timeout: 30_000 });
       await expect(b.page.getByTestId('geraet-verstanden')).toHaveText('Verstanden');
+      await expect(b.page.getByTestId('geraet-banner-uebernommen'), 'nicht „von einem anderen Gerät übernommen“').toHaveCount(0);
 
       // kein Ton mehr für das Feld
       await openCockpit(a.page, cup.id, cup.matchId);
-      await a.page.locator('[data-testid="match-start-button"]').click();
-      await expectEngineMatchRunningUi(a.page);
-      await abpfiffHalten(a.page);
+      await pfeifeAn(a.page);
+      await abpfiffHaltenBisRueckfrage(a.page);
+      await a.page.getByTestId('finish-confirm-beenden').click();
       await warteAufEndeAmServer(cup.matchId);
       await beobachteKeinenWeiterenTon(b.page, 0, 6000);
 
@@ -163,11 +215,16 @@ test.describe('Hallenton (zwei Geräte, lokaler Stack)', () => {
       await olli.page.goto(`/#/tournament/${cup.id}/admin/dashboard`);
       await expect(olli.page.getByRole('button', { name: /Hallenton/ }).first()).toBeVisible({ timeout: 20_000 });
 
+      // Menü auf einer Seite mit Menü: ein anderer Menüpunkt ist da, „Hallenton“ nicht
+      await heiko.page.goto(`/#/tournament/${cup.id}/admin/dashboard`);
+      await expect(heiko.page.getByRole('button', { name: /Dashboard/ }).first()).toBeVisible({ timeout: 20_000 });
+      await expect(heiko.page.getByRole('button', { name: /Hallenton/ })).toHaveCount(0);
+
+      // direkte Adresse
       await heiko.page.goto(`/#/tournament/${cup.id}/admin/hallenton`);
       await expect(heiko.page.getByText('Ändern nur durch die Turnierleitung')).toBeVisible({ timeout: 20_000 });
       await expect(heiko.page.getByTestId('hallenton-seite')).toHaveCount(0);
       await expect(heiko.page.getByTestId('geraet-schalter')).toHaveCount(0);
-      await expect(heiko.page.getByRole('button', { name: /Hallenton/ })).toHaveCount(0);
     } finally {
       await olli.context.close();
       await heiko.context.close();
@@ -175,7 +232,7 @@ test.describe('Hallenton (zwei Geräte, lokaler Stack)', () => {
     }
   });
 
-  test('@HT-017 „Testton in der Halle“ von A: B spielt, A zeigt die Quittung „gespielt HH:MM“', async ({ browser }) => {
+  test('@HT-017 „Testton in der Halle“ von A: B spielt, A zeigt die Quittung „gespielt HH:MM“ (Uhrzeit des Klicks)', async ({ browser }) => {
     test.setTimeout(120_000);
     const cup = await cloneReleaseCup('ht17', { withCoAdmin: false });
     const a = await neuesGeraet(browser, 'owner');
@@ -187,9 +244,14 @@ test.describe('Hallenton (zwei Geräte, lokaler Stack)', () => {
       await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('bereit', { timeout: 30_000 });
       expect(await tonBeginne(b.page)).toHaveLength(0);
 
+      const geklickt = jetztMinuten();
       await a.page.getByTestId('testton-halle-1').click();
       await warteAufToene(b.page, 1);
-      await expect(a.page.getByTestId('testton-feld-1-ergebnis')).toHaveText(/gespielt \d{2}:\d{2}/, { timeout: 30_000 });
+      const quittung = a.page.getByTestId('testton-feld-1-ergebnis');
+      await expect(quittung).toHaveText(/gespielt \d{2}:\d{2}/, { timeout: 30_000 });
+      const zeit = /gespielt (\d{2}:\d{2})/.exec((await quittung.textContent()) ?? '')?.[1] ?? '00:00';
+      // die Uhrzeit der Quittung ist die des Klicks (Läufer und Browser laufen in derselben Zeitzone), höchstens eine Minute daneben
+      expect(minutenAbstand(minuten(zeit), geklickt), `Quittung „${zeit}“ gegen Klick`).toBeLessThanOrEqual(1);
       expect(await tonBeginne(b.page), 'der Testton spielt genau einmal').toHaveLength(1);
       await expect(b.page.getByTestId('ton-aktivieren'), 'B bleibt bereit').toHaveCount(0);
     } finally {
@@ -206,36 +268,56 @@ test.describe('Hallenton Störungen (zwei Geräte, lokaler Stack)', () => {
     test.skip(!testInfo.project.name.includes('desktop'), 'Eigene Turnierkopie je Fall, nur auf cloud-desktop.');
   });
 
-  test('@HT-039 @HT-040 B nicht bereit: Verwaltung zeigt die Pille, das Cockpit den Kasten mit Grund; wieder bereit: verschwindet', async ({ browser }) => {
-    test.setTimeout(180_000);
+  test('@HT-039 @HT-040 B nicht bereit: nach höchstens 15 s Pille und Kasten mit Grund, Anpfiff gilt trotzdem, wieder bereit: weg; Ausfall im Spiel: „meldet sich nicht“', async ({ browser }) => {
+    test.setTimeout(240_000);
     const cup = await cloneReleaseCup('ht39', { withCoAdmin: false });
     const a = await neuesGeraet(browser, 'owner');
     const b = await neuesGeraet(browser, 'owner');
     try {
       await richteLautsprecherEin(b.page, cup.id, LAUTSPRECHER);
-      await oeffneVerwaltung(a.page, cup.id);
-      await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('bereit', { timeout: 30_000 });
+      // drei Fenster von A: Verwaltung („Hallenton“), Kopfzeile (Dashboard), Cockpit – alle sehen dieselbe Störung
+      const verwaltung = a.page;
+      await oeffneVerwaltung(verwaltung, cup.id);
+      await expect(verwaltung.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('bereit', { timeout: 30_000 });
+      const kopf = await a.context.newPage();
+      await kopf.goto(`/#/tournament/${cup.id}/admin/dashboard`);
+      await expect(kopf.getByTestId('hallenton-status-zeile')).toContainText('Lautsprecher Feld 1 bereit', { timeout: 20_000 });
+      const cockpit = await a.context.newPage();
+      await openCockpit(cockpit, cup.id, cup.matchId);
+      await expect(cockpit.locator('[data-testid="match-start-button"]')).toBeVisible({ timeout: 20_000 });
 
-      // „Ton nicht aktiviert“: B lädt neu, der Browser braucht wieder einen Klick
+      // @HT-039 „Ton nicht aktiviert“: B lädt neu, der Browser braucht wieder einen Klick (die Lage gilt, sobald B es zeigt)
       await neuLaden(b.page);
       await expect(b.page.getByTestId('ton-aktivieren')).toBeVisible({ timeout: 20_000 });
-      await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('nicht bereit – Ton nicht aktiviert', { timeout: 30_000 });
-      await a.page.getByRole('button', { name: /Dashboard/ }).first().click();
-      await expect(a.page.getByTestId('hallenton-status-zeile')).toContainText('Lautsprecher Feld 1 nicht bereit', { timeout: 30_000 });
-
-      // Cockpit vor dem Anpfiff: Kasten mit Grund
-      await openCockpit(a.page, cup.id, cup.matchId);
-      const kasten = a.page.getByTestId('cockpit-hall-aus');
-      await expect(kasten).toContainText('Hallen-Lautsprecher aus – Ende selbst anzeigen', { timeout: 30_000 });
+      const t0 = Date.now();
+      await expect(verwaltung.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('nicht bereit – Ton nicht aktiviert', { timeout: frist(t0) });
+      await expect(kopf.getByTestId('hallenton-status-zeile')).toContainText('Lautsprecher Feld 1 nicht bereit', { timeout: frist(t0) });
+      const kasten = cockpit.getByTestId('cockpit-hall-aus');
+      await expect(kasten).toContainText('Hallen-Lautsprecher aus – Ende selbst anzeigen', { timeout: frist(t0) });
       await expect(kasten).toContainText('Grund: Ton nicht aktiviert');
 
-      // wieder bereit: der Kasten verschwindet
-      await aktiviereTon(b.page);
-      await expect(a.page.getByTestId('cockpit-hall-aus')).toHaveCount(0, { timeout: 30_000 });
+      // „pfeift Tom trotzdem an, gilt der Anpfiff, und der Kasten bleibt stehen“
+      await pfeifeAn(cockpit);
+      await expect(kasten).toBeVisible();
 
-      // „meldet sich nicht“: B schließt, nach höchstens 15 s steht „meldet sich nicht (zuletzt HH:MM)“
+      // wieder bereit: der Kasten verschwindet nach höchstens 15 s (@HT-040)
+      await aktiviereTon(b.page);
+      const t1 = Date.now();
+      await expect(cockpit.getByTestId('cockpit-hall-aus')).toHaveCount(0, { timeout: frist(t1) });
+      await expect(verwaltung.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('bereit', { timeout: frist(t1) });
+
+      // @HT-040 Ausfall im laufenden Spiel: B meldet sich nicht mehr
       await b.page.close();
-      await expect(a.page.getByTestId('cockpit-hall-aus')).toContainText(/Grund: meldet sich nicht \(zuletzt \d{2}:\d{2}\)/, { timeout: 40_000 });
+      const t2 = Date.now();
+      await expect(cockpit.getByTestId('cockpit-hall-aus')).toContainText(/Grund: meldet sich nicht \(zuletzt \d{2}:\d{2}\)/, { timeout: frist(t2, GRENZE_MELDET_SICH_NICHT_MS) });
+      await expect(cockpit.locator('[data-testid="goal-button-home"]'), 'der Kasten verdeckt die Tor-Tasten nicht').toBeVisible();
+
+      // B meldet sich wieder bereit: der Kasten verschwindet nach höchstens 15 s
+      const b2 = await b.context.newPage();
+      await oeffneVerwaltung(b2, cup.id);
+      await aktiviereTon(b2);
+      const t3 = Date.now();
+      await expect(cockpit.getByTestId('cockpit-hall-aus')).toHaveCount(0, { timeout: frist(t3) });
     } finally {
       await a.context.close();
       await b.context.close();
@@ -262,7 +344,8 @@ test.describe('Hallenton Störungen (zwei Geräte, lokaler Stack)', () => {
       await expect(a.page.getByTestId('hallenton-status-zeile'), 'bei „bereit“ keine Statuszeile im Cockpit').toHaveCount(0);
 
       await neuLaden(b.page);
-      await expect(a.page.getByTestId('cockpit-hall-aus')).toContainText('Grund: Ton nicht aktiviert', { timeout: 40_000 });
+      const t0 = Date.now();
+      await expect(a.page.getByTestId('cockpit-hall-aus')).toContainText('Grund: Ton nicht aktiviert', { timeout: frist(t0) });
       await expect(a.page.getByTestId('hallenton-status-zeile'), 'Kasten statt Pille').toHaveCount(0);
     } finally {
       await a.context.close();
@@ -272,38 +355,63 @@ test.describe('Hallenton Störungen (zwei Geräte, lokaler Stack)', () => {
     }
   });
 
-  test('@HT-041 Verwaltung ohne Netz: „Status unbekannt“; mit Netz wieder der Stand vom Server', async ({ browser }) => {
+  test('@HT-059 Cockpit am Handy 360×640: bei der Störung stehen Kasten, Tor-Tasten und Reihe Foul im Bild, ohne Pille', async ({ browser }) => {
+    test.setTimeout(180_000);
+    const cup = await cloneReleaseCup('ht59h', { withCoAdmin: false });
+    const a = await neuesGeraet(browser, 'owner');
+    const b = await neuesGeraet(browser, 'owner');
+    try {
+      await a.page.setViewportSize({ width: 360, height: 640 });
+      await richteLautsprecherEin(b.page, cup.id, LAUTSPRECHER);
+      await openCockpit(a.page, cup.id, cup.matchId);
+      await pfeifeAn(a.page);
+      await expect(a.page.getByTestId('hallenton-status-zeile'), 'bei „bereit“ keine Statuszeile').toHaveCount(0);
+
+      await neuLaden(b.page);
+      const t0 = Date.now();
+      await expect(a.page.getByTestId('cockpit-hall-aus')).toContainText('Grund: Ton nicht aktiviert', { timeout: frist(t0) });
+      await expect(a.page.getByTestId('hallenton-status-zeile'), 'Kasten statt Pille').toHaveCount(0);
+      for (const id of ['goal-button-home', 'goal-button-away', 'foul-button-home', 'penalty-button-home', 'card-button-home']) {
+        const box = await a.page.getByTestId(id).boundingBox();
+        expect(box, `${id} hat eine Box`).not.toBeNull();
+        expect((box?.y ?? 0) + (box?.height ?? 0), `${id} steht im Bild (Höhe 640)`).toBeLessThanOrEqual(640);
+      }
+    } finally {
+      await a.context.close();
+      await b.context.close();
+      await safeCleanup('HT59h Kopie löschen', () => deleteCup(cup.id));
+    }
+  });
+
+  test('@HT-041 Netz weg auf der geöffneten Seite: nach höchstens 15 s „Status unbekannt“ (Kopf, Seite, Testton); mit Netz wieder der Stand vom Server', async ({ browser }) => {
     test.setTimeout(180_000);
     const cup = await cloneReleaseCup('ht41', { withCoAdmin: false });
     const a = await neuesGeraet(browser, 'owner');
     const b = await neuesGeraet(browser, 'owner');
     try {
       await richteLautsprecherEin(b.page, cup.id, LAUTSPRECHER);
-      await oeffneVerwaltung(a.page, cup.id);
-      await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('bereit', { timeout: 30_000 });
-      // beide Unterpunkte einmal online besuchen (ihre Teile sind danach geladen), dann auf der Seite „Hallenton“ das Netz verlieren
-      await a.page.getByRole('button', { name: /Dashboard/ }).first().click();
-      await expect(a.page.getByTestId('hallenton-status-zeile')).toContainText('Lautsprecher Feld 1 bereit', { timeout: 20_000 });
-      await a.page.getByRole('button', { name: /Hallenton/ }).first().click();
-      await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('bereit', { timeout: 30_000 });
+      // zwei Fenster von A: Seite „Hallenton“ und Kopfzeile (Dashboard); der Wechsel zwischen den Unterpunkten entfällt, weil ein Tipp kurz nach der
+      // Rückkehr ins Netz einmal verloren ging (beobachtete Auffälligkeit, Befund C-HALLENTON-TIPP-NACH-NETZRUECKKEHR, kein Szenario dazu)
+      const verwaltung = a.page;
+      await oeffneVerwaltung(verwaltung, cup.id);
+      await expect(verwaltung.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('bereit', { timeout: 30_000 });
+      const kopf = await a.context.newPage();
+      await kopf.goto(`/#/tournament/${cup.id}/admin/dashboard`);
+      await expect(kopf.getByTestId('hallenton-status-zeile')).toContainText('Lautsprecher Feld 1 bereit', { timeout: 20_000 });
 
       await a.context.setOffline(true);
-      await expect(a.page.getByTestId('hallenton-kein-netz')).toContainText('Kein Netz – Status unbekannt', { timeout: 40_000 });
-      await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('Status unbekannt');
-      await a.page.getByTestId('testton-halle-1').click();
-      await expect(a.page.getByTestId('testton-feld-1-ergebnis')).toContainText('Kein Testton: kein Netz');
-      await a.page.getByRole('button', { name: /Dashboard/ }).first().click();
-      await expect(a.page.getByTestId('hallenton-status-zeile')).toContainText('Lautsprecher: Status unbekannt', { timeout: 20_000 });
+      const t0 = Date.now();
+      await expect(kopf.getByTestId('hallenton-status-zeile')).toContainText('Lautsprecher: Status unbekannt', { timeout: frist(t0) });
+      await expect(verwaltung.getByTestId('hallenton-kein-netz')).toContainText('Kein Netz – Status unbekannt', { timeout: frist(t0) });
+      await expect(verwaltung.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('Status unbekannt', { timeout: frist(t0) });
+      await verwaltung.getByTestId('testton-halle-1').click();
+      await expect(verwaltung.getByTestId('testton-feld-1-ergebnis')).toContainText('Kein Testton: kein Netz');
 
       await a.context.setOffline(false);
-      await expect(a.page.getByTestId('hallenton-status-zeile')).toContainText('Lautsprecher Feld 1 bereit', { timeout: 40_000 });
-      // der Wechsel gleich nach dem Netz kann im Umbau der Seite untergehen: Tipp wiederholen, bis die Seite steht (kein fester Schlaf)
-      await expect(async () => {
-        await a.page.getByRole('button', { name: /Hallenton/ }).first().click();
-        await expect(a.page.getByTestId('hallenton-seite')).toBeVisible({ timeout: 5_000 });
-      }).toPass({ timeout: 40_000 });
-      await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('bereit', { timeout: 40_000 });
-      await expect(a.page.getByTestId('hallenton-kein-netz')).toHaveCount(0);
+      const t1 = Date.now();
+      await expect(kopf.getByTestId('hallenton-status-zeile')).toContainText('Lautsprecher Feld 1 bereit', { timeout: frist(t1) });
+      await expect(verwaltung.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('bereit', { timeout: frist(t1) });
+      await expect(verwaltung.getByTestId('hallenton-kein-netz')).toHaveCount(0);
     } finally {
       await a.context.setOffline(false).catch(() => undefined);
       await a.context.close();
@@ -312,52 +420,105 @@ test.describe('Hallenton Störungen (zwei Geräte, lokaler Stack)', () => {
     }
   });
 
-  test('@HT-054 @HT-055 Ausgang verloren: nicht bereit, kein Ton; Rückkehr ohne neue Wahl; nach dem Neuladen „Ausgang bestätigen“ (simuliert)', async ({ browser }) => {
+  test('@HT-041 Befund C-HALLENTON-OFFLINE-GEOEFFNET-FALSCHER-STAND: Netz weg auf dem Dashboard, dann „Hallenton“ öffnen: „Kein Netz – Status unbekannt“ und bei Feld 1 „Status unbekannt“', async ({ browser }) => {
+    // Erwartet nach @HT-041: die Seite zeigt oben „Kein Netz – Status unbekannt“ und bei Feld 1 „Status unbekannt“. Beobachtet (CI-Lauf 43874890182, dreimal):
+    // die Karte zeigt „kein Hallen-Lautsprecher“. App-Fehler, nicht in diesem PR zu beheben; test.fail, bis er behoben ist (dann wird dieser Fall grün-erwartet).
+    test.fail(true, 'Befund C-HALLENTON-OFFLINE-GEOEFFNET-FALSCHER-STAND: Karte zeigt „kein Hallen-Lautsprecher“ statt „Status unbekannt“');
+    test.setTimeout(150_000);
+    const cup = await cloneReleaseCup('ht41o', { withCoAdmin: false });
+    const a = await neuesGeraet(browser, 'owner');
+    const b = await neuesGeraet(browser, 'owner');
+    try {
+      await richteLautsprecherEin(b.page, cup.id, LAUTSPRECHER);
+      await oeffneVerwaltung(a.page, cup.id);
+      await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('bereit', { timeout: 30_000 });
+      // „Hallenton“ war einmal offen (sein Teil ist geladen), dann Dashboard, dann Netz weg
+      await a.page.getByRole('button', { name: /Dashboard/ }).first().click();
+      await expect(a.page.getByTestId('hallenton-status-zeile')).toContainText('Lautsprecher Feld 1 bereit', { timeout: 20_000 });
+      await a.context.setOffline(true);
+      const t0 = Date.now();
+      await expect(a.page.getByTestId('hallenton-status-zeile')).toContainText('Lautsprecher: Status unbekannt', { timeout: frist(t0) });
+
+      await a.page.getByRole('button', { name: /Hallenton/ }).first().click();
+      await expect(a.page.getByTestId('hallenton-kein-netz')).toContainText('Kein Netz – Status unbekannt', { timeout: frist(t0) });
+      await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('Status unbekannt', { timeout: 5_000 });
+    } finally {
+      await a.context.setOffline(false).catch(() => undefined);
+      await a.context.close();
+      await b.context.close();
+      await safeCleanup('HT41o Kopie löschen', () => deleteCup(cup.id));
+    }
+  });
+
+  /** Lautsprecher B mit gewähltem Ausgang „Hallenanlage (Dock)“ (Attrappe), Verwaltung auf A zeigt „bereit“. */
+  async function dockEinrichten(cupId: string, a: Page, b: Page, bKontext: BrowserContext): Promise<void> {
+    await installiereTonSpion(bKontext);
+    await installiereAusgangAttrappe(bKontext);
+    await richteLautsprecherEin(b, cupId, LAUTSPRECHER);
+    await oeffneVerwaltung(a, cupId);
+    await expect(a.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('bereit', { timeout: 30_000 });
+    // Ausgang wählen: Mikrofon erlauben (simuliert), Dock wählen
+    await b.getByTestId('ausgang-aendern').click();
+    await b.getByTestId('mikrofon-erlauben').click();
+    await b.getByTestId('ausgang-wahl-1').click();
+    await expect(b.getByTestId('ausgang-name')).toHaveText('Hallenanlage (Dock)');
+    await expect(b.getByTestId('geraet-banner-bereit')).toBeVisible({ timeout: 20_000 });
+    expect(await sinkAufrufe(b)).toContain('dock-1');
+  }
+
+  test('@HT-054 Dock abgezogen: nach höchstens 15 s „nicht bereit – Ausgang verloren“, kein Ton über „Standard“; Dock zurück: bereit ohne neue Wahl und „🔈? Prüfen“ (simuliert)', async ({ browser }) => {
     test.setTimeout(240_000);
     const cup = await cloneReleaseCup('ht54', { withCoAdmin: false });
     const a = await neuesGeraet(browser, 'owner');
     const b = await neuesGeraet(browser, 'owner');
     try {
-      await installiereTonSpion(b.context);
-      await installiereAusgangAttrappe(b.context);
-      await richteLautsprecherEin(b.page, cup.id, LAUTSPRECHER);
-      await oeffneVerwaltung(a.page, cup.id);
-      await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('bereit', { timeout: 30_000 });
+      const abfragen = beobachteAbfragen(b.page);
+      await dockEinrichten(cup.id, a.page, b.page, b.context);
 
-      // Ausgang wählen: Mikrofon erlauben (simuliert), Dock wählen
-      await b.page.getByTestId('ausgang-aendern').click();
-      await b.page.getByTestId('mikrofon-erlauben').click();
-      await b.page.getByTestId('ausgang-wahl-1').click();
-      await expect(b.page.getByTestId('ausgang-name')).toHaveText('Hallenanlage (Dock)');
-      await expect(b.page.getByTestId('geraet-banner-bereit')).toBeVisible({ timeout: 20_000 });
-      expect(await sinkAufrufe(b.page)).toContain('dock-1');
-
-      // @HT-054: Dock abgezogen
       await entferneAusgang(b.page, 'dock-1');
-      await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('nicht bereit – Ausgang verloren', { timeout: 40_000 });
-      await openCockpit(a.page, cup.id, cup.matchId);
-      await a.page.locator('[data-testid="match-start-button"]').click();
-      await expectEngineMatchRunningUi(a.page);
-      await abpfiffHalten(a.page);
+      const t0 = Date.now();
+      await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('nicht bereit – Ausgang verloren', { timeout: frist(t0) });
+      const cockpit = await a.context.newPage();
+      await openCockpit(cockpit, cup.id, cup.matchId);
+      await pfeifeAn(cockpit);
+      await abfragen.warteAufEngenTakt();
+      await abpfiffHaltenBisRueckfrage(cockpit);
+      await cockpit.getByTestId('finish-confirm-beenden').click();
       await warteAufEndeAmServer(cup.matchId);
       await beobachteKeinenWeiterenTon(b.page, 0, 6000);
+      expect(await medienPlays(b.page), 'auch kein Medienelement spielt auf B').toBe(0);
       expect(await sinkAufrufe(b.page), 'kein stiller Wechsel auf „Standard“').not.toContain('');
 
-      // Rückkehr ohne neue Wahl
+      // Rückkehr ohne neue Wahl: bereit, und neben „bereit“ steht „🔈? Prüfen“ (@HT-047)
       await steckeAusgangAn(b.page, 'dock-1', 'Hallenanlage (Dock)');
-      await oeffneVerwaltung(a.page, cup.id);
-      await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('bereit', { timeout: 40_000 });
-
-      // @HT-055: nach dem Neuladen ist die Freigabe weg
-      await neuLaden(b.page);
-      await expect(b.page.getByTestId('ausgang-bestaetigen')).toBeVisible({ timeout: 20_000 });
-      await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('nicht bereit – Ausgang bestätigen', { timeout: 40_000 });
-      await b.page.getByTestId('ausgang-bestaetigen-taste').click();
-      await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('bereit', { timeout: 40_000 });
+      const t1 = Date.now();
+      await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('bereit', { timeout: frist(t1) });
+      await expect(a.page.getByTestId('lautsprecher-feld-1-pruefen'), '„🔈? Prüfen“ neben „bereit“').toBeVisible({ timeout: frist(t1) });
     } finally {
       await a.context.close();
       await b.context.close();
       await safeCleanup('HT54 Kopie löschen', () => deleteCup(cup.id));
+    }
+  });
+
+  test('@HT-055 Nach dem Neuladen „nicht bereit – Ausgang bestätigen“ (simuliert), ein Tipp macht bereit', async ({ browser }) => {
+    test.setTimeout(240_000);
+    const cup = await cloneReleaseCup('ht55', { withCoAdmin: false });
+    const a = await neuesGeraet(browser, 'owner');
+    const b = await neuesGeraet(browser, 'owner');
+    try {
+      await dockEinrichten(cup.id, a.page, b.page, b.context);
+      await neuLaden(b.page);
+      await expect(b.page.getByTestId('ausgang-bestaetigen')).toBeVisible({ timeout: 20_000 });
+      const t0 = Date.now();
+      await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('nicht bereit – Ausgang bestätigen', { timeout: frist(t0) });
+      await b.page.getByTestId('ausgang-bestaetigen-taste').click();
+      const t1 = Date.now();
+      await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('bereit', { timeout: frist(t1) });
+    } finally {
+      await a.context.close();
+      await b.context.close();
+      await safeCleanup('HT55 Kopie löschen', () => deleteCup(cup.id));
     }
   });
 
@@ -377,7 +538,7 @@ test.describe('Hallenton Störungen (zwei Geräte, lokaler Stack)', () => {
     }
   });
 
-  test('@HT-056 Zweites Turnier am selben Gerät: Rückfrage; Abbrechen ändert nichts, Wechseln übernimmt', async ({ browser }) => {
+  test('@HT-056 Zweites Turnier am selben Gerät: Rückfrage mit Turniername; Abbrechen ändert nichts, Wechseln übernimmt', async ({ browser }) => {
     test.setTimeout(180_000);
     const eins = await cloneReleaseCup('ht56a', { withCoAdmin: false });
     const zwei = await cloneReleaseCup('ht56b', { withCoAdmin: false });
@@ -391,11 +552,11 @@ test.describe('Hallenton Störungen (zwei Geräte, lokaler Stack)', () => {
       await oeffneVerwaltung(b.page, zwei.id);
       await b.page.getByTestId('geraet-schalter-zeile').click();
       await b.page.getByTestId('geraet-feld-1').click();
-      const frage = b.page.getByRole('dialog');
-      await expect(frage).toContainText('Dieses Gerät ist schon Hallen-Lautsprecher für', { timeout: 15_000 });
+      await expect(b.page.getByRole('dialog')).toContainText(`Dieses Gerät ist schon Hallen-Lautsprecher für ‚${eins.title}‘. Wechseln?`, { timeout: 15_000 });
       await b.page.getByTestId('confirm-dialog-cancel').click();
       await expect(b.page.getByTestId('geraet-schalter-zeile')).toContainText('Aus');
-      await expect(a.page.getByTestId('lautsprecher-feld-1-zustand'), 'Abbrechen ändert nichts').toHaveText('bereit');
+      // „Abbrechen ändert nichts“: eine Beobachtungszeit lang bleibt Feld 1 im ersten Turnier „bereit“
+      await bleibtText(a.page, 'lautsprecher-feld-1-zustand', 'bereit', 15_000);
 
       await b.page.getByTestId('geraet-schalter-zeile').click();
       await b.page.getByTestId('geraet-feld-1').click();
@@ -403,6 +564,10 @@ test.describe('Hallenton Störungen (zwei Geräte, lokaler Stack)', () => {
       await b.page.getByTestId('confirm-dialog-confirm').click();
       await oeffneVerwaltung(a.page, eins.id);
       await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('kein Hallen-Lautsprecher', { timeout: 40_000 });
+      // der Rechner ist Lautsprecher für Feld 1 im zweiten Turnier
+      const zweite = await a.context.newPage();
+      await oeffneVerwaltung(zweite, zwei.id);
+      await expect(zweite.getByTestId('lautsprecher-feld-1-geraet')).toContainText(LAUTSPRECHER, { timeout: 40_000 });
     } finally {
       await a.context.close();
       await b.context.close();
@@ -411,7 +576,7 @@ test.describe('Hallenton Störungen (zwei Geräte, lokaler Stack)', () => {
     }
   });
 
-  test('@HT-042 Uhr des Verwaltungsgeräts +20 s ändert die Bereitschaft nicht', async ({ browser }) => {
+  test('@HT-042 Uhr des Verwaltungsgeräts geht 20 s vor: bleibt „bereit“', async ({ browser }) => {
     test.setTimeout(120_000);
     const cup = await cloneReleaseCup('ht42', { withCoAdmin: false });
     const a = await neuesGeraet(browser, 'owner');
@@ -421,11 +586,37 @@ test.describe('Hallenton Störungen (zwei Geräte, lokaler Stack)', () => {
       await richteLautsprecherEin(b.page, cup.id, LAUTSPRECHER);
       await oeffneVerwaltung(a.page, cup.id);
       await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('bereit', { timeout: 30_000 });
+      await expect(a.page.getByTestId('lautsprecher-feld-1-geraet')).toContainText(`Hallen-Lautsprecher: ${LAUTSPRECHER}`);
       await bleibtText(a.page, 'lautsprecher-feld-1-zustand', 'bereit', 15_000);
     } finally {
       await a.context.close();
       await b.context.close();
       await safeCleanup('HT42 Kopie löschen', () => deleteCup(cup.id));
+    }
+  });
+
+  test('@HT-042 Uhr des Verwaltungsgeräts geht 20 s nach, B meldet sich nicht mehr: nach höchstens 15 s „meldet sich nicht (zuletzt HH:MM)“', async ({ browser }) => {
+    test.setTimeout(120_000);
+    const cup = await cloneReleaseCup('ht42n', { withCoAdmin: false });
+    const a = await neuesGeraet(browser, 'owner');
+    const b = await neuesGeraet(browser, 'owner');
+    try {
+      await stelleUhrVor(a.context, -20_000);
+      await richteLautsprecherEin(b.page, cup.id, LAUTSPRECHER);
+      await oeffneVerwaltung(a.page, cup.id);
+      await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('bereit', { timeout: 30_000 });
+      const zuletzt = jetztMinuten();
+      await b.page.close();
+      const t0 = Date.now();
+      // die 15 s zählen ab dem letzten Lebenszeichen (bis ein Takt von 5 s vor dem Schließen)
+      const karte = a.page.getByTestId('lautsprecher-feld-1-zustand');
+      await expect(karte).toHaveText(/^meldet sich nicht \(zuletzt \d{2}:\d{2}\)$/, { timeout: frist(t0, GRENZE_MELDET_SICH_NICHT_MS) });
+      const zeit = /(\d{2}:\d{2})/.exec((await karte.textContent()) ?? '')?.[1] ?? '00:00';
+      expect(minutenAbstand(minuten(zeit), zuletzt), `„zuletzt ${zeit}“ ist die Serveruhrzeit, nicht die falsche Uhr des Geräts`).toBeLessThanOrEqual(2);
+    } finally {
+      await a.context.close();
+      await b.context.close();
+      await safeCleanup('HT42n Kopie löschen', () => deleteCup(cup.id));
     }
   });
 });
