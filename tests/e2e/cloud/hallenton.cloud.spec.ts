@@ -450,12 +450,13 @@ test.describe('Hallenton Störungen (zwei Geräte, lokaler Stack)', () => {
       await a.context.setOffline(true);
       const t0 = Date.now();
       await expect(a.page.getByTestId('hallenton-status-zeile')).toContainText('Lautsprecher: Status unbekannt', { timeout: frist(t0) });
+      // auf der Seite „Hallenton“ steht keine Statuszeile (Regel 8): den Text der Kopfzeile jetzt, auf dem Dashboard, festhalten
+      const kopfText = ((await a.page.getByTestId('hallenton-status-zeile').textContent()) ?? '').trim();
 
       await a.page.getByRole('button', { name: /Hallenton/ }).first().click();
       await expect(a.page.getByTestId('hallenton-kein-netz')).toContainText('Kein Netz – Status unbekannt', { timeout: frist(t0) });
       const karte = a.page.getByTestId('lautsprecher-feld-1-zustand');
       await expect(karte).toBeVisible();
-      const kopfText = (await a.page.getByTestId('hallenton-status-zeile').textContent())?.trim() ?? '';
       const karteText = (await karte.textContent())?.trim() ?? '';
       process.stdout.write(`[H4-14] Karte offline: "${karteText}"; Kopfzeile vor dem Wechsel: "${kopfText}"\n`);
       // Erst ab hier steht der Fall unter test.fail (zur Laufzeit gesetzt): alle Schritte davor sind normale Prüfungen, scheitert einer, ist der Fall rot.
