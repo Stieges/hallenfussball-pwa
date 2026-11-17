@@ -67,7 +67,7 @@ const bereit: LautsprecherLage = { art: 'bereit', pruefen: false };
 const nichtBereit: LautsprecherLage = { art: 'nichtBereit', grund: 'background', pruefen: false };
 const ohneTon: LautsprecherLage = { art: 'nichtBereit', grund: 'not_activated', pruefen: false };
 const status = (felder: Record<number, LautsprecherLage>, stand: HallStatus['stand'] = 'aktuell'): HallStatus => ({
-  stand, antwort: null, felder, lautsprecherBekannt: true, testtonAnfordern: vi.fn(), gehoert: vi.fn(),
+  stand, antwort: null, felder, lautsprecherBekannt: true, letzteSprecher: [], testtonAnfordern: vi.fn(), gehoert: vi.fn(),
 });
 const laufzeit = (felder: number[], zustand: string): LaufzeitSnapshot => ({
   rolle: 'wartet', turnierId: 't1', felder, geraeteZustand: 'ready', zustandJeFeld: Object.fromEntries(felder.map((f) => [`field-${f}`, zustand])) as never,

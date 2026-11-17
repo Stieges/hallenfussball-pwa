@@ -1,5 +1,5 @@
 /**
- * Turnierlogo und zweite Grafik im Assistenten, Schritt 1 „Stammdaten“ (@W3-030, @W3-040, @DR-040, @DR-041, PDF-Paket T5).
+ * Turnierlogo und zweite Grafik im Assistenten, Schritt 1 „Stammdaten“ (@W3-030, @W3-040, @DR-040, @DR-041, @DR-056, PDF-Paket T5).
  *
  * Die Grafiken liegen nur auf diesem Gerät (`useTournamentGraphics`, getrennt vom Turnier) unter der ID des Entwurfs; sie
  * erscheinen hier und in den Ausdrucken, die dieses Gerät erzeugt. Eine Datei wird beim Hochladen geprüft und aufbereitet
@@ -21,7 +21,7 @@ import { isLowRes, type RejectReason } from '../../../lib/images/graphicRules';
 import { prepareTournamentGraphic } from '../../../lib/images/prepareTournamentGraphic';
 
 type Slot = 'left' | 'right';
-type Problem = { slot: Slot; kind: RejectReason | 'save' | 'load' };
+type Problem = { slot: Slot; kind: RejectReason | 'multiple' | 'none' | 'save' | 'load' };
 
 const BYTES_PER_MB = 1024 * 1024;
 const accentRowStyle: CSSProperties = { display: 'flex', alignItems: 'center', gap: cssVars.spacing.md, marginTop: cssVars.spacing.md };
@@ -106,7 +106,9 @@ export function TournamentGraphicsFields({ tournamentId }: TournamentGraphicsFie
   const accentName = graphics.left !== undefined && graphics.accent !== undefined
     ? t(`step3.graphics.accent.names.${accentNameKey(graphics.accent)}`)
     : t('step3.graphics.accent.appGreen');
-  const common = { formatHint: t('step3.graphics.format', { maxMb: printHeader.logoMaxBytes / BYTES_PER_MB }), busy } as const;
+  const common = { formatHint: t('step3.graphics.format', { maxMb: printHeader.logoMaxBytes / BYTES_PER_MB }), dropHint: t('step3.graphics.drop'), busy } as const;
+  // Hineinziehen (@DR-056): mehr als eine Datei oder keine Datei – die hinterlegte Grafik bleibt, der Grund steht am Feld
+  const handleDropRejected = (slot: Slot, kind: 'multiple' | 'none'): void => { setProblem({ slot, kind }); };
 
   return (
     <>
@@ -124,6 +126,7 @@ export function TournamentGraphicsFields({ tournamentId }: TournamentGraphicsFie
         error={errorText('left', graphics.left)}
         deviceHint={t('step3.graphics.logo.device')}
         onSelect={(file) => void handleSelect('left', file)}
+        onDropRejected={(kind) => handleDropRejected('left', kind)}
         onRemove={() => void handleRemove('left')}
       >
         <div style={accentRowStyle}>
@@ -147,6 +150,7 @@ export function TournamentGraphicsFields({ tournamentId }: TournamentGraphicsFie
         warning={warning('right', graphics.right)}
         error={errorText('right', graphics.right)}
         onSelect={(file) => void handleSelect('right', file)}
+        onDropRejected={(kind) => handleDropRejected('right', kind)}
         onRemove={() => void handleRemove('right')}
       />
     </>

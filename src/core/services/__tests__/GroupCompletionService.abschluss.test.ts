@@ -118,7 +118,7 @@ describe('A-13a Nikolaus (Jeder gegen jeden, echt erzeugt): Annahme und Pflicht 
     const { tournament, decision } = await decide(nikolaus([1, 2]), draft);
     expect(prepareGroupCompletion(tournament, '')).toEqual({
       code: 'READY',
-      ranking: [NK.kammer, NK.wagingRot, NK.petting, NK.otting, NK.fridolfing, NK.wagingBlau],
+      ranking: [NK.kammer, NK.waging1, NK.petting, NK.otting, NK.fridolfing, NK.waging2],
       openRanks: [],
       tieDecisions: [decision],
       expectedState: expectedState(tournament, ''),

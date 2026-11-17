@@ -10,7 +10,7 @@ import deDashboard from '../../../i18n/locales/de/dashboard.json';
 import enDashboard from '../../../i18n/locales/en/dashboard.json';
 import { ImportDialog } from '../ImportDialog';
 
-const teams = [{ id: 't1', name: 'TSV Waging rot' }, { id: 't2', name: 'DJK Kammer' }];
+const teams = [{ id: 't1', name: 'TSV Waging 1' }, { id: 't2', name: 'DJK Kammer' }];
 
 async function waehle(user: ReturnType<typeof userEvent.setup>, inhalt: object) {
   const datei = new File([JSON.stringify(inhalt)], 'f2.json', { type: 'application/json' });

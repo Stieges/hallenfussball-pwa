@@ -16,12 +16,12 @@
 import { useState, useEffect, useMemo, useCallback, useRef, CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, Input } from '../../components/ui';
-import { AgeClassPicker } from '../../components/AgeClassPicker';
 import { Tournament } from '../../types/tournament';
 import { cssVars } from '../../design-tokens'
 import { DEFAULT_VALUES } from '../../constants/tournamentOptions';
 import { LocationForm } from '../../components/LocationForm';
 import { ContactForm } from '../../components/ContactForm';
+import { SettingsMasterDataCard } from './SettingsMasterDataCard';
 import { SponsorManagement } from './SponsorManagement';
 import { FieldManagement } from './FieldManagement';
 import { PlayOutPlacesSettings } from './standings/PlayOutPlacesSettings';
@@ -78,6 +78,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const [formData, setFormData] = useState<Partial<Tournament>>({
     title: tournament.title,
     organizer: tournament.organizer,
+    rulebook: tournament.rulebook,
     ageClass: tournament.ageClass,
     location: tournament.location,
     contactInfo: tournament.contactInfo,
@@ -115,6 +116,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     const originalData = {
       title: tournament.title,
       organizer: tournament.organizer ?? '',
+      rulebook: tournament.rulebook ?? '',
       ageClass: tournament.ageClass,
       locationName: tournament.location.name,
       locationCity: tournament.location.city ?? '',
@@ -129,6 +131,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     const currentData = {
       title: formData.title ?? '',
       organizer: formData.organizer ?? '',
+      rulebook: formData.rulebook ?? '',
       ageClass: formData.ageClass ?? DEFAULT_VALUES.ageClass,
       locationName: formData.location?.name ?? '',
       locationCity: formData.location?.city ?? '',
@@ -180,6 +183,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       ...tournament,
       title: formData.title ?? tournament.title,
       organizer: formData.organizer,
+      rulebook: formData.rulebook,
       ageClass: formData.ageClass ?? tournament.ageClass,
       location: formData.location ?? tournament.location,
       contactInfo: formData.contactInfo,
@@ -213,6 +217,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     setFormData({
       title: tournament.title,
       organizer: tournament.organizer,
+      rulebook: tournament.rulebook,
       ageClass: tournament.ageClass,
       location: tournament.location,
       contactInfo: tournament.contactInfo,
@@ -403,36 +408,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             </div>
 
             {/* Formular */}
-            <Card>
-              <h3 style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.lg, margin: '0 0 24px 0' }}>
-                {t('settings.masterData')}
-              </h3>
-
-              <Input
-                label={t('settings.tournamentName')}
-                value={formData.title ?? ''}
-                onChange={(v) => handleUpdate('title', v)}
-                placeholder={t('settings.tournamentNamePlaceholder')}
-                errorMessage={metaErrors.title ? t('settings.tournamentNameRequired') : undefined}
-                required
-              />
-
-              <Input
-                label={t('settings.organizer')}
-                value={formData.organizer ?? ''}
-                onChange={(v) => handleUpdate('organizer', v)}
-                placeholder={t('settings.organizerPlaceholder')}
-                style={{ marginTop: '16px' }}
-              />
-
-              <div style={{ marginTop: cssVars.spacing.md }}>
-                <AgeClassPicker
-                  value={formData.ageClass ?? DEFAULT_VALUES.ageClass}
-                  onChange={(v) => handleUpdate('ageClass', v)}
-                  testId="settings-age-class"
-                />
-              </div>
-            </Card>
+            <SettingsMasterDataCard formData={formData} metaErrors={metaErrors} onUpdate={handleUpdate} />
 
             <Card style={{ marginTop: cssVars.spacing.lg }}>
               <h3 style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.lg, margin: '0 0 24px 0' }}>

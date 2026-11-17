@@ -115,7 +115,7 @@ $fn$;
 -- Nikolaus abschliessbar machen: Gruppe '' mit „Ergebnis so akzeptieren“ fuer Petting/Otting abschliessen (R_NIKO).
 CREATE FUNCTION lc.complete_niko(p_tid uuid) RETURNS text LANGUAGE sql AS $fn$
   SELECT harness.complete('olli', p_tid, '',
-    'DJK Kammer,TSV Waging rot,TSV Petting,DJK Otting,TSV 1921 Fridolfing,TSV Waging blau', '{}',
+    'DJK Kammer,TSV Waging 1,TSV Petting,DJK Otting,TSV 1921 Fridolfing,TSV Waging 2', '{}',
     jsonb_build_array(harness.dec('annahme-' || p_tid, p_tid, '', 'shared', 'TSV Petting,DJK Otting', 'TSV Petting,DJK Otting')),
     '{}', match_engine.group_state(p_tid, ''), false)
 $fn$;

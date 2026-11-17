@@ -4,6 +4,8 @@
  * - Kanal aus `?k=q|l` (sonst „direkt“); der Zusatz verschwindet danach aus der Adresse, alle anderen Teile bleiben.
  * - „Aufruf“ genau einmal je Laden der Seite, sobald das Turnier erfolgreich geladen ist (nicht bei „nicht gefunden“ oder Fehler).
  * - „Lebenszeichen“ jede Minute, nur solange die Seite sichtbar ist.
+ * - „Störung überstanden“ (`stoerung_kurz` / `stoerung_lang`, @RZ-033): jede Meldung aus `usePublicTournament` genau einmal, für das Turnier, in dem sie
+ *   stattfand, mit Kanal und Gerät des Öffnens; sonst derselbe Weg wie die übrigen Meldungen.
  * - Eigener Aufruf, nie im Lade-Pfad, ohne Warten; Fehler und Zeitüberschreitung werden verschluckt, nichts wird wiederholt.
  * - Nichts auf dem Gerät: kein Speicher, kein Cookie, keine Kennung (@RZ-027).
  * - Betriebssystem- und Browser-Familie (@RZ-031) kommen vom Server aus der Kennung, die der Browser ohnehin mitschickt; hier wird dafür nichts gelesen.
@@ -14,11 +16,14 @@ import {
   channelFromParam, deviceClassFromEnvironment, isInstalledApp, sendViewCount, HEARTBEAT_INTERVAL_MS,
   type ViewCountKind, type ViewCountTransport, type ViewChannel, type DeviceClass,
 } from '../../core/viewCount/publicViewCount';
+import type { RecoveredOutage } from '../../core/viewCount/publicOutage';
 import { defaultViewCountTransport } from './viewCountTransport';
 
 export interface UsePublicViewCountOptions {
   /** Versandweg (nur für Tests); Vorgabe: der Weg dieser App, `null` = Zählung aus */
   transport?: ViewCountTransport | null;
+  /** Die zuletzt überstandene Netzstörung (aus `usePublicTournament`); jede Kennung wird genau einmal gesendet (@RZ-033) */
+  outage?: RecoveredOutage | null;
 }
 
 interface DeviceFacts { device: DeviceClass; installed: boolean }
@@ -52,7 +57,9 @@ export function usePublicViewCount(shareCode: string, loaded: boolean, options: 
     }
   }, [searchParams, setSearchParams]);
 
+  const outage = options.outage ?? null;
   const countedCodeRef = useRef<string | null>(null);
+  const sentOutageIdRef = useRef(0);
   const transportRef = useRef(transport);
   transportRef.current = transport;
 
@@ -81,4 +88,19 @@ export function usePublicViewCount(shareCode: string, loaded: boolean, options: 
     }, HEARTBEAT_INTERVAL_MS);
     return () => { clearInterval(timer); };
   }, [loaded, shareCode]);
+
+  // Überstandene Störung: jede Meldung genau einmal (Kennung merken), ohne Warten, Fehler verschluckt, nie wiederholt (@RZ-035)
+  useEffect(() => {
+    const facts = factsRef.current;
+    if (outage === null || outage.id <= sentOutageIdRef.current) {
+      return;
+    }
+    sentOutageIdRef.current = outage.id;
+    const via = transportRef.current;
+    if (via !== null && facts !== null) {
+      void sendViewCount(via, {
+        p_share_code: outage.shareCode, p_art: outage.kind, p_kanal: facts.channel, p_geraet: facts.device, p_installiert: facts.installed,
+      });
+    }
+  }, [outage]);
 }

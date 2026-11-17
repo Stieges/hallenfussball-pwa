@@ -24,6 +24,7 @@ import { LateFinishNotice } from './LateFinishNotice';
 import { StateMark } from './ui/molecules/StateMark';
 import { cardStateOf, hasVisibleStateMark, STATE_MARK, STATE_WORD_KEY } from './tournamentCardState';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { importMarkText } from '../utils/importSource';
 
 /** Map categoryLabel to TournamentActionMenu category */
 type TournamentCategory = 'running' | 'upcoming' | 'finished' | 'draft' | 'trashed';
@@ -186,6 +187,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   // Der aria-label der Karte überdeckt ihren Inhalt: Zustand (nur wenn er nicht „Bereit“ ist), Altersklasse, Zeit, Ort, Rolle und Quelle
   // gehören hinein (sonst liest der Screenreader nur den Namen vor). Leere Teile entfallen, damit kein loses Komma bleibt.
   const showRole = myRole !== undefined && myRole !== 'owner';
+  const importMark = importMarkText(tournament);
   const ariaLabel = [
     t('card.ariaLabelTitle', { title: tournament.title }),
     cardState === 'ready' ? '' : t(STATE_WORD_KEY[cardState]),
@@ -193,7 +195,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
     timeText !== '' ? timeText : t('sections.today'),
     location,
     showRole ? t(`card.role.${myRole}`) : '',
-    tournament.externalSource ?? '',
+    importMark,
   ].filter((part) => part !== '').join(', ');
 
   return (
@@ -236,9 +238,9 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
                 {timeText !== '' && <span data-testid="card-time">{timeText}</span>}
               </span>
             )}
-            {tournament.isExternal && tournament.externalSource && (
-              <span style={externalBadgeStyle} aria-label={tournament.externalSource}>
-                {tournament.externalSource}
+            {importMark !== '' && (
+              <span style={externalBadgeStyle} aria-label={importMark} data-testid="card-import-mark">
+                {importMark}
               </span>
             )}
             {hasVisibleStateMark(cardState) && (

@@ -57,7 +57,7 @@ const lageAus = (antwort: HallStatusAntwort): Record<number, LautsprecherLage> =
   Object.fromEntries(antwort.speakers.map((s) => [s.field, lautsprecherLage({ state: s.state, ageMs: s.ageMs, outputHint: s.outputHint }, antwort.serverNow)]));
 const setzeStatus = (s: Stand, testton = vi.fn(), gehoert = vi.fn(() => Promise.resolve({ ok: true }))): void => {
   const antwort = voll(s);
-  doppel.status = { stand: 'aktuell', antwort, felder: lageAus(antwort), lautsprecherBekannt: true, testtonAnfordern: testton, gehoert } as unknown as HallStatus;
+  doppel.status = { stand: 'aktuell', antwort, felder: lageAus(antwort), lautsprecherBekannt: true, letzteSprecher: antwort.speakers, testtonAnfordern: testton, gehoert } as unknown as HallStatus;
 };
 const anfordernMock = () => vi.fn(() => Promise.resolve({ ok: true, status: 'requested', testId: 'x1', requestedAt: 1, serverNow: SERVER_JETZT }));
 

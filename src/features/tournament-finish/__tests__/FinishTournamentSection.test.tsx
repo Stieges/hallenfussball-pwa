@@ -238,7 +238,7 @@ describe('@LZ-009 Zustand C „abgeschlossen“ (Review #394 H-1: trotz gesperrt
     setTournamentClosed(fertig.id, true);
     env.stored = { status: 'ok', finishedAt: '2026-11-28T12:10:00.000Z', snapshot: { format: 1, scorers: [], appVersion: 't', computedAt: '2026-11-28T12:10:00.000+00:00', ranking: [
       { place: 1, teamId: NK.kammer, teamName: 'DJK Kammer', origin: { kind: 'groupPlace', group: '', place: 1 } },
-      { place: 2, teamId: NK.wagingRot, teamName: 'TSV Waging rot', origin: { kind: 'groupPlace', group: '', place: 2 } },
+      { place: 2, teamId: NK.waging1, teamName: 'TSV Waging 1', origin: { kind: 'groupPlace', group: '', place: 2 } },
       { place: 3, teamId: NK.otting, teamName: 'DJK Otting', origin: { kind: 'groupPlace', group: '', place: 3 } },
       { place: 4, teamId: NK.petting, teamName: 'TSV Petting', origin: { kind: 'groupPlace', group: '', place: 4 } },
     ] } };

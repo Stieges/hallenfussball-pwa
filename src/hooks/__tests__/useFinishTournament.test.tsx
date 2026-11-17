@@ -254,7 +254,7 @@ describe('W-M (a) der Server hält den Abschluss bei offener Klärung selbst auf
 describe('E4 eigener Ausgang und @LZ-029 Korrektur vor dem Abschluss', () => {
   it('das Gerät zeigt ein Tor, das noch wartet → „Erst übertragen“, kein Aufruf (kein STALE_STATE-Kreis)', async () => {
     env.pending = 1;
-    const m = matchOf(tournament, NK.kammer, NK.wagingRot);
+    const m = matchOf(tournament, NK.kammer, NK.waging1);
     const { result } = render(withMatch(tournament, m.id, { scoreA: (m.scoreA ?? 0) + 1 }));
     await act(async () => { await result.current.start(); });
     expect(result.current.state).toEqual({ phase: 'rejected', reason: { code: 'OWN_OUTBOX', pending: 1 } });
@@ -400,7 +400,7 @@ describe('m-1 Zustandsgrenzen: bestätigen und erneut senden nur aus der richtig
 
 describe('H-2 der Dienst bekommt den rohen Cloud-Stand, nicht die Überlagerung der Anzeige', () => {
   it('die Anzeige trägt ein Tor aus der Spielsteuerung, der rohe Stand gleicht dem Server → bereit, gesendet wird der Serverstand', async () => {
-    const m = matchOf(tournament, NK.kammer, NK.wagingRot);
+    const m = matchOf(tournament, NK.kammer, NK.waging1);
     const angezeigt = withMatch(tournament, m.id, { scoreA: (m.scoreA ?? 0) + 1 });
     const loadRaw = vi.fn(() => Promise.resolve(tournament));
     const { result } = renderHook(() => useFinishTournament(angezeigt, { reload, loadRaw }));
@@ -412,7 +412,7 @@ describe('H-2 der Dienst bekommt den rohen Cloud-Stand, nicht die Überlagerung 
   });
 
   it('Gegenbeispiel: ohne rohen Stand (nur die Überlagerung) endet es in „Stand neu laden“ – der Fehler, den H-2 verhindert', async () => {
-    const m = matchOf(tournament, NK.kammer, NK.wagingRot);
+    const m = matchOf(tournament, NK.kammer, NK.waging1);
     const { result } = render(withMatch(tournament, m.id, { scoreA: (m.scoreA ?? 0) + 1 }));
     await act(async () => { await result.current.start(); });
     expect(result.current.state).toEqual({ phase: 'rejected', reason: { code: 'STALE_STATE' } });

@@ -80,7 +80,7 @@ export interface HandzettelFall {
 /** Teilen-Code aller Fälle (Mockup): Zuschauer-Seite `…/#/live/K7M2QX`. */
 export const FALL_SHARE_CODE = 'K7M2QX';
 
-const NIKOLAUS_TEAMS = ['TSV Waging rot', 'TSV Waging blau', 'DJK Kammer', 'TSV Petting', 'DJK Otting', 'TSV 1921 Fridolfing'];
+const NIKOLAUS_TEAMS = ['TSV Waging 1', 'TSV Waging 2', 'DJK Kammer', 'TSV Petting', 'DJK Otting', 'TSV 1921 Fridolfing'];
 const LANGE_TEAMS = [
   'SpVgg Oberlangenbach-Unterhausen', 'FC Grün-Weiß Nordhausen/Süd', 'TSV 1860 Rosenheim-Westerndorf',
   'SG Kirchanschöring/Petting/Waging', 'DJK Otting', 'SV Surberg',

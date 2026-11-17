@@ -25,10 +25,10 @@ import {
   teamIdsOf,
 } from './roundsScenarioHelpers';
 
-/** Die ersten beiden Teams der ersten Gruppe heißen im Szenario „TSV Waging rot“ und „TSV Waging blau“. */
-function waging(options: GroupPhaseScheduleOptions, group = 0): { rot: string; blau: string } {
+/** Die ersten beiden Teams der ersten Gruppe heißen im Szenario „TSV Waging 1“ und „TSV Waging 2“. */
+function waging(options: GroupPhaseScheduleOptions, group = 0): { eins: string; zwei: string } {
   const teams = [...options.groups.values()][group];
-  return { rot: teams[0].id, blau: teams[1].id };
+  return { eins: teams[0].id, zwei: teams[1].id };
 }
 
 function firstMatch(matches: Match[]): Match {
@@ -55,12 +55,12 @@ describe('@W4-027 Eine Mannschaft des Veranstalters bestreitet das erste Spiel a
     { aufbau: '4 Teams auf einem Feld', sizes: [4], fields: 1 },
     { aufbau: '6 Teams auf 2 Feldern', sizes: [6], fields: 2 },
     { aufbau: '2 Gruppen zu je 6 Teams auf einem Feld', sizes: [6, 6], fields: 1 },
-  ])('$aufbau: rot und blau markiert → eine von beiden ist in Spiel 1 Heimmannschaft', ({ sizes, fields }) => {
+  ])('$aufbau: eins und zwei markiert → eine von beiden ist in Spiel 1 Heimmannschaft', ({ sizes, fields }) => {
     const base = scenarioOptions(sizes, fields);
-    const { rot, blau } = waging(base);
-    const matches = generateGroupPhaseSchedule({ ...base, hostTeamIds: [rot, blau] });
+    const { eins, zwei } = waging(base);
+    const matches = generateGroupPhaseSchedule({ ...base, hostTeamIds: [eins, zwei] });
 
-    expect([rot, blau]).toContain(homeOf(firstMatch(matches)));
+    expect([eins, zwei]).toContain(homeOf(firstMatch(matches)));
   });
 
   it('ohne markierte Mannschaft ist der Plan derselbe wie mit leerer Liste', () => {
@@ -73,30 +73,30 @@ describe('@W4-027 Eine Mannschaft des Veranstalters bestreitet das erste Spiel a
 
 describe('@W4-033 Bei zwei Mannschaften des Veranstalters wählt die Turnierleitung das Eröffnungsspiel', () => {
   const base = scenarioOptions([6], 1);
-  const { rot, blau } = waging(base);
+  const { eins, zwei } = waging(base);
   const ids = teamIdsOf(base);
   const ohneMarkierung = fairness(generateGroupPhaseSchedule(base), ids);
 
-  it('„Vereinsduell eröffnet“: Spiel 1 ist rot gegen blau', () => {
-    const matches = generateGroupPhaseSchedule({ ...base, hostTeamIds: [rot, blau], openingMode: 'club-derby' });
+  it('„Vereinsduell eröffnet“: Spiel 1 ist eins gegen zwei', () => {
+    const matches = generateGroupPhaseSchedule({ ...base, hostTeamIds: [eins, zwei], openingMode: 'club-derby' });
 
-    expect([homeOf(firstMatch(matches)), awayOf(firstMatch(matches))]).toEqual([rot, blau]);
+    expect([homeOf(firstMatch(matches)), awayOf(firstMatch(matches))]).toEqual([eins, zwei]);
     expect(fairness(matches, ids)).toEqual(ohneMarkierung);
   });
 
   it('„Veranstalter gegen einen Gast“: Waging als Heim gegen einen Gast, Vereinsduell in Spiel 4 bis 6', () => {
-    const matches = generateGroupPhaseSchedule({ ...base, hostTeamIds: [rot, blau], openingMode: 'guest-opening' });
+    const matches = generateGroupPhaseSchedule({ ...base, hostTeamIds: [eins, zwei], openingMode: 'guest-opening' });
 
-    expect([rot, blau]).toContain(homeOf(firstMatch(matches)));
-    expect([rot, blau]).not.toContain(awayOf(firstMatch(matches)));
-    expect(matchNumberOf(matches, rot, blau)).toBeGreaterThanOrEqual(4);
-    expect(matchNumberOf(matches, rot, blau)).toBeLessThanOrEqual(6);
+    expect([eins, zwei]).toContain(homeOf(firstMatch(matches)));
+    expect([eins, zwei]).not.toContain(awayOf(firstMatch(matches)));
+    expect(matchNumberOf(matches, eins, zwei)).toBeGreaterThanOrEqual(4);
+    expect(matchNumberOf(matches, eins, zwei)).toBeLessThanOrEqual(6);
     expect(fairness(matches, ids)).toEqual(ohneMarkierung);
   });
 
   it('ohne eigene Wahl gilt „Veranstalter gegen einen Gast, Vereinsduell in Runde 2“', () => {
-    const ohneWahl = generateGroupPhaseSchedule({ ...base, hostTeamIds: [rot, blau] });
-    const gastEroeffnung = generateGroupPhaseSchedule({ ...base, hostTeamIds: [rot, blau], openingMode: 'guest-opening' });
+    const ohneWahl = generateGroupPhaseSchedule({ ...base, hostTeamIds: [eins, zwei] });
+    const gastEroeffnung = generateGroupPhaseSchedule({ ...base, hostTeamIds: [eins, zwei], openingMode: 'guest-opening' });
 
     expect(signature(ohneWahl)).toBe(signature(gastEroeffnung));
   });
@@ -108,28 +108,28 @@ describe('@W4-033 Bei zwei Mannschaften des Veranstalters wählt die Turnierleit
     const reference = fairness(generateGroupPhaseSchedule(options), allIds);
     const perRound = Math.floor(n / 2);
 
-    const derby = generateGroupPhaseSchedule({ ...options, hostTeamIds: [pair.rot, pair.blau], openingMode: 'club-derby' });
-    expect(matchNumberOf(derby, pair.rot, pair.blau)).toBe(1);
-    expect(homeOf(firstMatch(derby))).toBe(pair.rot);
+    const derby = generateGroupPhaseSchedule({ ...options, hostTeamIds: [pair.eins, pair.zwei], openingMode: 'club-derby' });
+    expect(matchNumberOf(derby, pair.eins, pair.zwei)).toBe(1);
+    expect(homeOf(firstMatch(derby))).toBe(pair.eins);
     expect(fairness(derby, allIds)).toEqual(reference);
 
-    const guest = generateGroupPhaseSchedule({ ...options, hostTeamIds: [pair.rot, pair.blau], openingMode: 'guest-opening' });
-    expect([pair.rot, pair.blau]).toContain(homeOf(firstMatch(guest)));
-    expect(matchNumberOf(guest, pair.rot, pair.blau)).toBeGreaterThan(perRound);
-    expect(matchNumberOf(guest, pair.rot, pair.blau)).toBeLessThanOrEqual(2 * perRound);
+    const guest = generateGroupPhaseSchedule({ ...options, hostTeamIds: [pair.eins, pair.zwei], openingMode: 'guest-opening' });
+    expect([pair.eins, pair.zwei]).toContain(homeOf(firstMatch(guest)));
+    expect(matchNumberOf(guest, pair.eins, pair.zwei)).toBeGreaterThan(perRound);
+    expect(matchNumberOf(guest, pair.eins, pair.zwei)).toBeLessThanOrEqual(2 * perRound);
     expect(fairness(guest, allIds)).toEqual(reference);
   });
 
   it('stehen beide in verschiedenen Gruppen, entfällt die Wahl und eine von ihnen eröffnet als Heim', () => {
     const groups = scenarioOptions([6, 6], 1);
-    const rotA = waging(groups, 0).rot;
-    const blauB = waging(groups, 1).rot;
+    const einsA = waging(groups, 0).eins;
+    const zweiB = waging(groups, 1).eins;
     const allIds = teamIdsOf(groups);
     const reference = fairness(generateGroupPhaseSchedule(groups), allIds);
 
     for (const openingMode of ['club-derby', 'guest-opening'] as const) {
-      const matches = generateGroupPhaseSchedule({ ...groups, hostTeamIds: [rotA, blauB], openingMode });
-      expect([rotA, blauB]).toContain(homeOf(firstMatch(matches)));
+      const matches = generateGroupPhaseSchedule({ ...groups, hostTeamIds: [einsA, zweiB], openingMode });
+      expect([einsA, zweiB]).toContain(homeOf(firstMatch(matches)));
       expect(fairness(matches, allIds)).toEqual(reference);
     }
   });
@@ -138,26 +138,26 @@ describe('@W4-033 Bei zwei Mannschaften des Veranstalters wählt die Turnierleit
 describe('@W4-041 Wo kein Rundenplan entsteht, wirkt die Wahl des Eröffnungsspiels nicht (Generator-Teil)', () => {
   it('6 Teams auf 2 Feldern: beide Wahlen ergeben denselben Plan, eine Waging-Mannschaft eröffnet als Heim', () => {
     const base = scenarioOptions([6], 2);
-    const { rot, blau } = waging(base);
-    const derby = generateGroupPhaseSchedule({ ...base, hostTeamIds: [rot, blau], openingMode: 'club-derby' });
-    const guest = generateGroupPhaseSchedule({ ...base, hostTeamIds: [rot, blau], openingMode: 'guest-opening' });
+    const { eins, zwei } = waging(base);
+    const derby = generateGroupPhaseSchedule({ ...base, hostTeamIds: [eins, zwei], openingMode: 'club-derby' });
+    const guest = generateGroupPhaseSchedule({ ...base, hostTeamIds: [eins, zwei], openingMode: 'guest-opening' });
 
     expect(signature(derby)).toBe(signature(guest));
-    expect([rot, blau]).toContain(homeOf(firstMatch(derby)));
+    expect([eins, zwei]).toContain(homeOf(firstMatch(derby)));
   });
 });
 
 describe('@W4-042 Bei mehreren Feldern eröffnet die Mannschaft des Veranstalters auf Feld 1', () => {
-  it('6 Teams auf 2 Feldern: rot spielt in Spiel 1 auf Feld 1 im ersten Zeitfenster als Heim', () => {
+  it('6 Teams auf 2 Feldern: eins spielt in Spiel 1 auf Feld 1 im ersten Zeitfenster als Heim', () => {
     const base = scenarioOptions([6], 2);
-    const { rot } = waging(base);
+    const { eins } = waging(base);
     const ohne = generateGroupPhaseSchedule(base);
-    const mit = generateGroupPhaseSchedule({ ...base, hostTeamIds: [rot] });
+    const mit = generateGroupPhaseSchedule({ ...base, hostTeamIds: [eins] });
     const first = firstMatch(mit);
 
     expect(first.field).toBe(1);
     expect(first.slot).toBe(0);
-    expect(homeOf(first)).toBe(rot);
+    expect(homeOf(first)).toBe(eins);
     expect(slotCount(mit)).toBe(slotCount(ohne));
     expect(longestPauseMinutes(mit)).toBe(longestPauseMinutes(ohne));
   });
@@ -176,14 +176,14 @@ describe('@W4-042 Bei mehreren Feldern eröffnet die Mannschaft des Veranstalter
 });
 
 describe('@W4-043 Steht die Mannschaft des Veranstalters in Gruppe B, eröffnet trotzdem sie', () => {
-  it.each([0, 2, 4])('2 Gruppen zu je 5 Teams, rot = Team %i aus Gruppe B → Spiel 1 als Heim, nicht unfairer', (index) => {
+  it.each([0, 2, 4])('2 Gruppen zu je 5 Teams, eins = Team %i aus Gruppe B → Spiel 1 als Heim, nicht unfairer', (index) => {
     const base = scenarioOptions([5, 5], 1);
-    const rot = [...base.groups.values()][1][index].id;
+    const eins = [...base.groups.values()][1][index].id;
     const ids = teamIdsOf(base);
     const ohne = generateGroupPhaseSchedule(base);
-    const mit = generateGroupPhaseSchedule({ ...base, hostTeamIds: [rot] });
+    const mit = generateGroupPhaseSchedule({ ...base, hostTeamIds: [eins] });
 
-    expect(homeOf(firstMatch(mit))).toBe(rot);
+    expect(homeOf(firstMatch(mit))).toBe(eins);
     expect(longestPauseGames(mit)).toBeLessThanOrEqual(longestPauseGames(ohne));
     expect(playedTimeline(mit, ids).maxDiff).toBeLessThanOrEqual(playedTimeline(ohne, ids).maxDiff);
   });
@@ -324,20 +324,20 @@ describe('@W4-045 Geht die Eröffnung durch den Veranstalter nur mit längerer P
 });
 
 describe('@W4-044 Eine gelöschte oder abgewählte Mannschaft des Veranstalters hinterlässt keine Regel (Generator-Teil)', () => {
-  it('blau gelöscht: die verwaiste Markierung wird ignoriert, es gilt nur rot', () => {
+  it('zwei gelöscht: die verwaiste Markierung wird ignoriert, es gilt nur eins', () => {
     const base = scenarioOptions([7], 1);
-    const { rot, blau } = waging(base);
-    const ohneBlau = new Map([...base.groups].map(([key, teams]) => [key, teams.filter((t) => t.id !== blau)]));
-    const options = { ...base, groups: ohneBlau };
+    const { eins, zwei } = waging(base);
+    const ohneZwei = new Map([...base.groups].map(([key, teams]) => [key, teams.filter((t) => t.id !== zwei)]));
+    const options = { ...base, groups: ohneZwei };
 
-    const verwaist = generateGroupPhaseSchedule({ ...options, hostTeamIds: [rot, blau], openingMode: 'club-derby' });
-    const nurRot = generateGroupPhaseSchedule({ ...options, hostTeamIds: [rot] });
+    const verwaist = generateGroupPhaseSchedule({ ...options, hostTeamIds: [eins, zwei], openingMode: 'club-derby' });
+    const nurEins = generateGroupPhaseSchedule({ ...options, hostTeamIds: [eins] });
 
-    expect(signature(verwaist)).toBe(signature(nurRot));
-    expect(homeOf(firstMatch(verwaist))).toBe(rot);
+    expect(signature(verwaist)).toBe(signature(nurEins));
+    expect(homeOf(firstMatch(verwaist))).toBe(eins);
   });
 
-  it('auch rot abgewählt: derselbe Plan wie ohne Markierung', () => {
+  it('auch eins abgewählt: derselbe Plan wie ohne Markierung', () => {
     const base = scenarioOptions([6], 1);
 
     expect(signature(generateGroupPhaseSchedule({ ...base, hostTeamIds: [], openingMode: 'club-derby' })))

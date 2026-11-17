@@ -59,8 +59,8 @@ function rundreise(spectatorDisplay?: SpectatorDisplaySettings): Tournament {
 const TEAM_A = testUuid(901);
 const TEAM_B = testUuid(902);
 const TEAM_ROWS = [
-  createTeamRow({ id: TEAM_A, name: 'TSV Waging rot', sort_order: 0 }),
-  createTeamRow({ id: TEAM_B, name: 'TSV Waging blau', sort_order: 1 }),
+  createTeamRow({ id: TEAM_A, name: 'TSV Waging 1', sort_order: 0 }),
+  createTeamRow({ id: TEAM_B, name: 'TSV Waging 2', sort_order: 1 }),
 ];
 
 function rundreiseAlle(fields: Partial<Tournament>): Tournament {

@@ -1866,7 +1866,9 @@ SELECT 'hallenton-speaker-unassign-rpc-authenticated-only',
 UNION ALL
 SELECT 'zuschauer-zaehlung-os-browser-columns',
        coalesce((SELECT string_agg(a.attname, ',' ORDER BY a.attnum)
-                          = 'tournament_id,window_start,channel,device_class,installed,views,heartbeats,os_family,browser_family'
+                          IN ('tournament_id,window_start,channel,device_class,installed,views,heartbeats,os_family,browser_family',
+                              -- mit Stufe 1c (20261127_001) kommen die zwei Stoerungs-Zaehler dazu; beide Staende sind gueltig
+                              'tournament_id,window_start,channel,device_class,installed,views,heartbeats,os_family,browser_family,outages_short,outages_long')
                    FROM pg_attribute a
                   WHERE a.attrelid = to_regclass('public.public_view_counts') AND a.attnum > 0 AND NOT a.attisdropped), false)
        AND coalesce((SELECT count(*) = 2
@@ -1900,6 +1902,34 @@ SELECT 'zuschauer-zaehlung-os-browser-derive-function',
        AND coalesce((SELECT position('public_view_agent_families' IN p.prosrc) > 0
                             AND position('request.headers' IN p.prosrc) > 0
                             AND position('user-agent' IN p.prosrc) > 0
+                            AND position('RAISE' IN p.prosrc) = 0
+                       FROM pg_proc p WHERE p.oid = to_regprocedure('public.count_public_view(text,text,text,text,boolean)')), false)
+-- ---------------------------------------------------------------------------------------------------------------
+-- Zuschauer-Zaehlung Stufe 1c (20261127_001_zuschauer_zaehlung_netzstoerung.sql, Record Reichweite Zuschauersicht @RZ-033 bis @RZ-036):
+-- Pruefskript scripts/zuschauer-zaehlung-check.sh. Vor dem Live-Einspielen "f" (vom Drift-Check bis dahin ausgelassen).
+-- ---------------------------------------------------------------------------------------------------------------
+-- Die zwei Zaehler: integer NOT NULL, Vorgabe 0, Pruefregel >= 0; Primaerschluessel unveraendert (dieselben sieben Spalten); count_public_view
+-- kennt die zwei neuen Arten und bleibt SECURITY DEFINER mit festem search_path.
+UNION ALL
+SELECT 'zuschauer-zaehlung-netzstoerung-columns',
+       coalesce((SELECT count(*) = 2
+                   FROM pg_attribute a
+                   JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
+                  WHERE a.attrelid = to_regclass('public.public_view_counts') AND a.attname IN ('outages_short', 'outages_long')
+                    AND a.attnotnull AND a.atttypid = 'integer'::regtype AND NOT a.attisdropped
+                    AND pg_get_expr(d.adbin, d.adrelid) = '0'), false)
+       AND coalesce((SELECT pg_get_constraintdef(con.oid) = 'CHECK ((outages_short >= 0))'
+                       FROM pg_constraint con WHERE con.conrelid = to_regclass('public.public_view_counts') AND con.conname = 'public_view_counts_outages_short_check'), false)
+       AND coalesce((SELECT pg_get_constraintdef(con.oid) = 'CHECK ((outages_long >= 0))'
+                       FROM pg_constraint con WHERE con.conrelid = to_regclass('public.public_view_counts') AND con.conname = 'public_view_counts_outages_long_check'), false)
+       AND coalesce((SELECT string_agg(a.attname, ',' ORDER BY k.ord)
+                            = 'tournament_id,window_start,channel,device_class,installed,os_family,browser_family'
+                       FROM pg_constraint c
+                       CROSS JOIN LATERAL unnest(c.conkey) WITH ORDINALITY AS k(attnum, ord)
+                       JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum
+                      WHERE c.conrelid = to_regclass('public.public_view_counts') AND c.contype = 'p'), false)
+       AND coalesce((SELECT p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                            AND position('stoerung_kurz' IN p.prosrc) > 0 AND position('stoerung_lang' IN p.prosrc) > 0
                             AND position('RAISE' IN p.prosrc) = 0
                        FROM pg_proc p WHERE p.oid = to_regprocedure('public.count_public_view(text,text,text,text,boolean)')), false)
 ;

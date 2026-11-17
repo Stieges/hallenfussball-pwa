@@ -33,7 +33,7 @@ export const VOLATILE_TOURNAMENT_COLUMNS = ['date', 'published_at', 'share_code'
 /** Dieselben Angaben im `config` der Turnierzeile. */
 export const VOLATILE_CONFIG_KEYS = ['publishedAt', 'shareCode', 'shareCodeCreatedAt'] as const;
 
-const NIKOLAUS_TEAMS = ['DJK Kammer', 'TSV Waging rot', 'TSV Petting', 'DJK Otting', 'TSV 1921 Fridolfing', 'TSV Waging blau'];
+const NIKOLAUS_TEAMS = ['DJK Kammer', 'TSV Waging 1', 'TSV Petting', 'DJK Otting', 'TSV 1921 Fridolfing', 'TSV Waging 2'];
 const HALLENCUP_TEAMS: ReadonlyArray<readonly [string, 'A' | 'B']> = [
   ['FC Nord', 'A'], ['SV Süd', 'A'], ['TSV West', 'A'], ['SC Ost', 'A'],
   ['SG Mitte', 'B'], ['DJK Berg', 'B'], ['VfB Ufer', 'B'], ['TuS Tal', 'B'],

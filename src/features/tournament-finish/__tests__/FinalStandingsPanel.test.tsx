@@ -29,11 +29,11 @@ import { N7C, nikolausFertig } from '../../../core/services/__tests__/finishKit'
 const { FinalStandingsPanel } = await import('../components/FinalStandingsPanel');
 
 const FINISHED_AT = '2026-11-28T12:10:00.000Z';
-const ids = [NK.kammer, NK.wagingRot, NK.otting, NK.petting, NK.fridolfing, NK.wagingBlau];
+const ids = [NK.kammer, NK.waging1, NK.otting, NK.petting, NK.fridolfing, NK.waging2];
 
 /** Gespeicherter Endstand, bewusst ANDERS als die Neurechnung (Kammer ganz hinten): so einer entstünde mit einer anderen Rechnung. */
 function storedOther(over: Partial<FinalStandingsSnapshot> = {}): FinalStandingsSnapshot {
-  const names = ['TSV Waging blau', 'TSV 1921 Fridolfing', 'TSV Petting', 'DJK Otting', 'TSV Waging rot', 'DJK Kammer'];
+  const names = ['TSV Waging 2', 'TSV 1921 Fridolfing', 'TSV Petting', 'DJK Otting', 'TSV Waging 1', 'DJK Kammer'];
   return {
     format: 1, appVersion: 'alt', computedAt: '2026-11-28T12:10:00.000+00:00',
     ranking: names.map((teamName, index) => ({ place: index + 1, teamId: ids[5 - index] as never, teamName, origin: { kind: 'groupPlace' as const, group: '', place: index + 1 } })),
@@ -41,7 +41,7 @@ function storedOther(over: Partial<FinalStandingsSnapshot> = {}): FinalStandings
       { kind: 'player', rank: 1, teamId: NK.kammer as TeamId, teamName: 'DJK Kammer', number: 9, goals: 5 },
       { kind: 'player', rank: 2, teamId: NK.otting as TeamId, teamName: 'DJK Otting', number: 7, goals: 4 },
       { kind: 'player', rank: 3, teamId: NK.petting as TeamId, teamName: 'TSV Petting', number: 10, goals: 3 },
-      { kind: 'player', rank: 3, teamId: NK.wagingRot as TeamId, teamName: 'TSV Waging rot', number: 4, goals: 3 },
+      { kind: 'player', rank: 3, teamId: NK.waging1 as TeamId, teamName: 'TSV Waging 1', number: 4, goals: 3 },
       { kind: 'player', rank: 5, teamId: NK.fridolfing as TeamId, teamName: 'TSV 1921 Fridolfing', number: 2, goals: 1 },
       { kind: 'noNumber', rank: null, teamId: NK.kammer as TeamId, teamName: 'DJK Kammer', goals: 2 },
       { kind: 'ownGoals', rank: null, teamId: NK.otting as TeamId, teamName: 'DJK Otting', goals: 1 },
@@ -67,7 +67,7 @@ describe('@ET-045 nach dem Abschluss gilt der gespeicherte Endstand, nie eine Ne
     render(<FinalStandingsPanel tournament={finished(fertig)} />);
     await screen.findByTestId('final-standings-list');
     const rows = rowsOf();
-    expect(rows[0]).toContain('TSV Waging blau');
+    expect(rows[0]).toContain('TSV Waging 2');
     expect(rows[5]).toContain('DJK Kammer');
     expect(recompute.calls).toBe(0);
     expect(screen.getByTestId('final-standings')).toHaveAttribute('data-state', 'stored');
@@ -140,9 +140,9 @@ describe('@ET-041 Plätze, Herkunft je Platz, Torschützen, Sieger', () => {
         { place: 1, teamId: NK.kammer as TeamId, teamName: 'FC Nord', origin: { kind: 'placementGame', finalType: 'final', role: 'winner' } },
         { place: 2, teamId: NK.otting as TeamId, teamName: 'SG Mitte', origin: { kind: 'placementGame', finalType: 'final', role: 'loser' } },
         { place: 3, teamId: NK.petting as TeamId, teamName: 'DJK Berg', origin: { kind: 'koRound', round: 'semi' } },
-        { place: 4, teamId: NK.wagingRot as TeamId, teamName: 'SV Süd', origin: { kind: 'koRound', round: 'semi' } },
+        { place: 4, teamId: NK.waging1 as TeamId, teamName: 'SV Süd', origin: { kind: 'koRound', round: 'semi' } },
         { place: 5, teamId: NK.fridolfing as TeamId, teamName: 'TSV West', origin: { kind: 'groupPlace', group: 'A', place: 3 } },
-        { place: 6, teamId: NK.wagingBlau as TeamId, teamName: 'VfB Ufer', origin: { kind: 'open' } },
+        { place: 6, teamId: NK.waging2 as TeamId, teamName: 'VfB Ufer', origin: { kind: 'open' } },
       ],
     });
     read.mockResolvedValue({ status: 'ok', snapshot, finishedAt: FINISHED_AT });
@@ -154,7 +154,7 @@ describe('@ET-041 Plätze, Herkunft je Platz, Torschützen, Sieger', () => {
 
   it('Sieger-Karte und „Platz 1 per Strafstoßschießen“ (E6) mit dem Ergebnis aus der Entscheidung', async () => {
     const t = finished(fertig);
-    read.mockResolvedValue({ status: 'ok', snapshot: { ...storedOther(), ranking: storedOther().ranking.map((row, i) => ({ ...row, teamId: [NK.otting, NK.petting, NK.kammer, NK.wagingRot, NK.fridolfing, NK.wagingBlau][i] as never, teamName: ['DJK Otting', 'TSV Petting', 'DJK Kammer', 'TSV Waging rot', 'TSV 1921 Fridolfing', 'TSV Waging blau'][i] })) }, finishedAt: FINISHED_AT });
+    read.mockResolvedValue({ status: 'ok', snapshot: { ...storedOther(), ranking: storedOther().ranking.map((row, i) => ({ ...row, teamId: [NK.otting, NK.petting, NK.kammer, NK.waging1, NK.fridolfing, NK.waging2][i] as never, teamName: ['DJK Otting', 'TSV Petting', 'DJK Kammer', 'TSV Waging 1', 'TSV 1921 Fridolfing', 'TSV Waging 2'][i] })) }, finishedAt: FINISHED_AT });
     render(<FinalStandingsPanel tournament={t} />);
     const winner = await screen.findByTestId('final-standings-winner');
     expect(winner).toHaveTextContent('Sieger');
@@ -166,7 +166,7 @@ describe('@ET-041 Plätze, Herkunft je Platz, Torschützen, Sieger', () => {
   it('Gegenbeispiel (Review #397 M-1): die Entscheidung gilt nicht mehr (Grundlage verfallen) → Sieger-Karte ohne „Strafstoßschießen“', async () => {
     const t = finished(fertig);
     const verfallen = { ...t, standingDecisions: (t.standingDecisions ?? []).map((d) => ({ ...d, basis: 'verfallen' })) };
-    read.mockResolvedValue({ status: 'ok', snapshot: { ...storedOther(), ranking: storedOther().ranking.map((row, i) => ({ ...row, teamId: [NK.otting, NK.petting, NK.kammer, NK.wagingRot, NK.fridolfing, NK.wagingBlau][i] as never, teamName: ['DJK Otting', 'TSV Petting', 'DJK Kammer', 'TSV Waging rot', 'TSV 1921 Fridolfing', 'TSV Waging blau'][i] })) }, finishedAt: FINISHED_AT });
+    read.mockResolvedValue({ status: 'ok', snapshot: { ...storedOther(), ranking: storedOther().ranking.map((row, i) => ({ ...row, teamId: [NK.otting, NK.petting, NK.kammer, NK.waging1, NK.fridolfing, NK.waging2][i] as never, teamName: ['DJK Otting', 'TSV Petting', 'DJK Kammer', 'TSV Waging 1', 'TSV 1921 Fridolfing', 'TSV Waging 2'][i] })) }, finishedAt: FINISHED_AT });
     render(<FinalStandingsPanel tournament={verfallen} />);
     const winner = await screen.findByTestId('final-standings-winner');
     expect(winner).toHaveTextContent('DJK Otting');

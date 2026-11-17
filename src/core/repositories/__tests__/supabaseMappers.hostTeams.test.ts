@@ -13,8 +13,8 @@ const ROT = testUuid(1);
 const BLAU = testUuid(2);
 const GAST = testUuid(3);
 const teamRows = [
-  createTeamRow({ id: ROT, name: 'TSV Waging rot', sort_order: 0 }),
-  createTeamRow({ id: BLAU, name: 'TSV Waging blau', sort_order: 1 }),
+  createTeamRow({ id: ROT, name: 'TSV Waging 1', sort_order: 0 }),
+  createTeamRow({ id: BLAU, name: 'TSV Waging 2', sort_order: 1 }),
   createTeamRow({ id: GAST, name: 'Gast', sort_order: 2 }),
 ];
 

@@ -7,10 +7,12 @@
  * die Seite liest dafür nichts am Gerät aus und sendet dafür nichts Eigenes.
  */
 import { breakpointValues } from '../../design-tokens/breakpoints';
+import type { OutageKind } from './publicOutage';
 
 export type ViewChannel = 'qr' | 'link' | 'direkt';
 export type DeviceClass = 'handy' | 'tablet' | 'gross';
-export type ViewCountKind = 'aufruf' | 'lebenszeichen';
+/** Aufruf, Lebenszeichen, oder eine überstandene Netzstörung (kurz/lang, @RZ-033) – alle über denselben Weg und dieselben fünf Felder. */
+export type ViewCountKind = 'aufruf' | 'lebenszeichen' | OutageKind;
 
 /** Die Felder der Server-Funktion `count_public_view` – nichts sonst verlässt das Gerät. */
 export interface ViewCountArgs {

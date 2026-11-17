@@ -35,7 +35,7 @@ describe('A-19a Pflichttest Nikolaus (eine Gruppe, 6 Teams, echt erzeugt)', () =
     const result = computeFinalStandings(abgeschlossen);
     expect(result.state).toBe('complete');
     expect(placed(result.ranking)).toEqual([
-      ['DJK Kammer', 1], ['TSV Waging rot', 2], ['DJK Otting', 3], ['TSV Petting', 4], ['TSV 1921 Fridolfing', 5], ['TSV Waging blau', 6],
+      ['DJK Kammer', 1], ['TSV Waging 1', 2], ['DJK Otting', 3], ['TSV Petting', 4], ['TSV 1921 Fridolfing', 5], ['TSV Waging 2', 6],
     ]);
     expect(result.ranking.map((row) => row.origin)).toEqual([1, 2, 3, 4, 5, 6].map((place) => ({ kind: 'groupPlace', group: '', place })));
   });
@@ -48,7 +48,7 @@ describe('A-19a Pflichttest Nikolaus (eine Gruppe, 6 Teams, echt erzeugt)', () =
 
   it('@TM-058 14 von 15 entschieden, Tom pfeift das letzte Spiel ab (15/15): ohne Gruppenabschluss steht der Endstand noch nicht fest', async () => {
     const t = nikolaus();
-    const letztes = matchOf(t, NK.fridolfing, NK.wagingBlau);
+    const letztes = matchOf(t, NK.fridolfing, NK.waging2);
     const vierzehn = withMatch(t, letztes.id, { matchStatus: 'scheduled', scoreA: undefined, scoreB: undefined });
     expect(vierzehn.matches.filter((m) => m.matchStatus === 'finished')).toHaveLength(14); // Vorbedingung
     expect(computeFinalStandings(vierzehn).state).toBe('provisional');
@@ -64,9 +64,9 @@ describe('A-19a Pflichttest Nikolaus (eine Gruppe, 6 Teams, echt erzeugt)', () =
 
   it('@ET-031 Gegenbeispiel: ein Abschluss, in dem ein Team fehlt oder ein fremdes Team steht, macht den Endstand nicht fest (kein Team fehlt)', async () => {
     const t = await decide(nikolaus(), ottingGewinnt);
-    const ohneFridolfing = [NK.kammer, NK.wagingRot, NK.otting, NK.petting, NK.wagingBlau];
+    const ohneFridolfing = [NK.kammer, NK.waging1, NK.otting, NK.petting, NK.waging2];
     expect(computeFinalStandings({ ...t, groupCompletions: [completion('', ohneFridolfing)] }).state).toBe('provisional');
-    const fremd = [...ohneFridolfing.slice(0, 4), '00000000-0000-4000-8000-000000000999', NK.wagingBlau];
+    const fremd = [...ohneFridolfing.slice(0, 4), '00000000-0000-4000-8000-000000000999', NK.waging2];
     expect(computeFinalStandings({ ...t, groupCompletions: [completion('', fremd)] }).state).toBe('provisional');
   });
 
@@ -90,14 +90,14 @@ describe('A-19a Pflichttest Nikolaus (eine Gruppe, 6 Teams, echt erzeugt)', () =
     const t = await decide(nikolaus(), ottingGewinnt);
     const result = computeFinalStandings(t);
     expect(result.state).toBe('provisional');
-    expect(placed(result.ranking).map(([name]) => name)).toEqual(['DJK Kammer', 'TSV Waging rot', 'DJK Otting', 'TSV Petting', 'TSV 1921 Fridolfing', 'TSV Waging blau']);
+    expect(placed(result.ranking).map(([name]) => name)).toEqual(['DJK Kammer', 'TSV Waging 1', 'DJK Otting', 'TSV Petting', 'TSV 1921 Fridolfing', 'TSV Waging 2']);
   });
 
   it('Gegenbeispiel: ein offener Gleichstand ohne Entscheidung wird nie still geteilt – auch ein Abschluss-Eintrag macht ihn nicht fest', () => {
     const t = nikolaus([1, 2]);
     expect(prepareGroupCompletion(t, '').code).toBe('DECISION_REQUIRED');
     expect(computeFinalStandings(t).state).toBe('provisional');
-    const mitAbschluss: Tournament = { ...t, groupCompletions: [completion('', [NK.kammer, NK.wagingRot, NK.petting, NK.otting, NK.fridolfing, NK.wagingBlau])] };
+    const mitAbschluss: Tournament = { ...t, groupCompletions: [completion('', [NK.kammer, NK.waging1, NK.petting, NK.otting, NK.fridolfing, NK.waging2])] };
     expect(computeFinalStandings(mitAbschluss).state).toBe('provisional');
   });
 
@@ -126,24 +126,24 @@ describe('A-19a @ET-022 der Endstand ist die abgeschlossene Tabelle', () => {
   });
 
   it('@ET-022 die Reihenfolge kommt aus dem Gruppenabschluss: eine spätere andere Rechnung (Kriterien-Reihenfolge) ändert sie nicht', () => {
-    // @ET-056: Kammer gewann das direkte Spiel 2:1, Waging rot hat die bessere Tordifferenz – abgeschlossen unter BFV privat.
+    // @ET-056: Kammer gewann das direkte Spiel 2:1, Waging 1 hat die bessere Tordifferenz – abgeschlossen unter BFV privat.
     const t = completeGroup(jgj('RKMUNO', DATA.ET_056));
     const neueRechnung: Tournament = { ...t, placementLogic: GD_FIRST_ORDER };
     const result = computeFinalStandings(neueRechnung);
     expect(result.state).toBe('complete');
-    expect(placed(result.ranking).slice(0, 2)).toEqual([['DJK Kammer', 1], ['TSV Waging rot', 2]]);
+    expect(placed(result.ranking).slice(0, 2)).toEqual([['DJK Kammer', 1], ['TSV Waging 1', 2]]);
   });
 
-  it('@ET-056 punktgleich, DJK Kammer gewann das direkte Spiel: Kammer steht im Endstand vor Waging rot, ohne Strafstoßschießen', () => {
+  it('@ET-056 punktgleich, DJK Kammer gewann das direkte Spiel: Kammer steht im Endstand vor Waging 1, ohne Strafstoßschießen', () => {
     const t = jgj('RKMUNO', DATA.ET_056);
     expect(prepareGroupCompletion(t, '').code).toBe('READY');
     const names = computeFinalStandings(completeGroup(t)).ranking.map((row) => row.teamName);
-    expect(names.indexOf('DJK Kammer')).toBeLessThan(names.indexOf('TSV Waging rot'));
+    expect(names.indexOf('DJK Kammer')).toBeLessThan(names.indexOf('TSV Waging 1'));
   });
 
   it.each([
-    { sieger: 'K' as const, verlierer: 'R' as const, dritter: 'DJK Kammer', vierter: 'TSV Waging rot' },
-    { sieger: 'R' as const, verlierer: 'K' as const, dritter: 'TSV Waging rot', vierter: 'DJK Kammer' },
+    { sieger: 'K' as const, verlierer: 'R' as const, dritter: 'DJK Kammer', vierter: 'TSV Waging 1' },
+    { sieger: 'R' as const, verlierer: 'K' as const, dritter: 'TSV Waging 1', vierter: 'DJK Kammer' },
   ])('@ET-055 Strafstoßschießen für $dritter: der Sieger steht im Endstand vor dem anderen (3 vor 4)', async ({ sieger, verlierer, dritter, vierter }) => {
     const t = completeGroup(await decide(jgj('RKMUNO', DATA.ET_055, [1, 2, 3]), shootout(sieger, verlierer, 4, 3)));
     const result = computeFinalStandings(t);
@@ -200,7 +200,7 @@ describe('A-19a @ET-058 ein entferntes Team steht nicht im Endstand (Daniel F5)'
     const t = nikolaus();
     return { ...t, teams: t.teams.map((team) => (team.id === NK.petting ? { ...team, isRemoved: true, removedAt: '2026-11-28T10:30:00Z' } : team)) };
   };
-  const uebrige = [NK.kammer, NK.wagingRot, NK.otting, NK.fridolfing, NK.wagingBlau];
+  const uebrige = [NK.kammer, NK.waging1, NK.otting, NK.fridolfing, NK.waging2];
 
   it('@ET-058 Gruppe abgeschlossen (Rangfolge am Server ohne entferntes Team) → die übrigen 5 Teams auf den Plätzen 1 bis 5, Petting fehlt', () => {
     const t: Tournament = { ...ohnePetting(), groupCompletions: [completion('', uebrige)] };
@@ -213,7 +213,7 @@ describe('A-19a @ET-058 ein entferntes Team steht nicht im Endstand (Daniel F5)'
 
   it('@ET-058 auch vorläufig und auch, wenn eine Rangfolge das entfernte Team noch enthält: kein Platz für Petting, die übrigen rücken auf', () => {
     expect(computeFinalStandings(ohnePetting()).ranking.map((row) => [row.teamId as string, row.place])).toEqual(uebrige.map((id, i) => [id, i + 1]));
-    const alt: Tournament = { ...ohnePetting(), groupCompletions: [completion('', [NK.kammer, NK.wagingRot, NK.petting, NK.otting, NK.fridolfing, NK.wagingBlau])] };
+    const alt: Tournament = { ...ohnePetting(), groupCompletions: [completion('', [NK.kammer, NK.waging1, NK.petting, NK.otting, NK.fridolfing, NK.waging2])] };
     const result = computeFinalStandings(alt);
     expect(result.state).toBe('complete');
     expect(result.ranking.map((row) => [row.teamId as string, row.place])).toEqual(uebrige.map((id, i) => [id, i + 1]));

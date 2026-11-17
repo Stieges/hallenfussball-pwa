@@ -20,7 +20,7 @@ const row = (rows: Standing[], key: Key): Standing => {
 const before = (rows: Standing[], a: Key, b: Key): boolean =>
   rows.findIndex((r) => r.team.id === id(a)) < rows.findIndex((r) => r.team.id === id(b));
 
-/** Gruppe B: TSV Waging blau 9 Punkte (+3), TSV Petting 6, SV Süd 3, TuS Tal 0 – gegengerechnet. */
+/** Gruppe B: TSV Waging 2 9 Punkte (+3), TSV Petting 6, SV Süd 3, TuS Tal 0 – gegengerechnet. */
 const GRUPPE_B = 'X–P 1:0; X–S 1:0; X–T 1:0; P–S 1:0; P–T 1:0; S–T 1:0';
 
 function zweiGruppen(gruppeA: string) {
@@ -33,7 +33,7 @@ function zweiGruppen(gruppeA: string) {
 }
 
 describe('TB-1 direkter Vergleich zuerst und Gruppenblöcke', () => {
-  it('@ET-056 @W2A-003 Kammer gewann das direkte Spiel 2:1 und steht vor Waging rot (bessere Tordifferenz), kein Strafstoßschießen', () => {
+  it('@ET-056 @W2A-003 Kammer gewann das direkte Spiel 2:1 und steht vor Waging 1 (bessere Tordifferenz), kein Strafstoßschießen', () => {
     const { teams, matches, tournament } = league('RKMUNO', DATA.ET_056);
     const rows = calculateStandings(teams, matches, tournament);
 
@@ -43,7 +43,7 @@ describe('TB-1 direkter Vergleich zuerst und Gruppenblöcke', () => {
     expect(rows.some((r) => r.decisionNeeded === true)).toBe(false);
     expect(rows.map((r) => r.place)).toEqual([1, 2, 3, 4, 5, 6]);
 
-    // Gegenbeispiel: Reihenfolge „Punkte, Tordifferenz, Tore, direkter Vergleich“ → Waging rot vor Kammer.
+    // Gegenbeispiel: Reihenfolge „Punkte, Tordifferenz, Tore, direkter Vergleich“ → Waging 1 vor Kammer.
     const anders = league('RKMUNO', DATA.ET_056, { placementLogic: GD_FIRST_ORDER });
     expect(names(calculateStandings(anders.teams, anders.matches, anders.tournament)).slice(0, 2)).toEqual([NAME.R, NAME.K]);
   });
@@ -56,7 +56,7 @@ describe('TB-1 direkter Vergleich zuerst und Gruppenblöcke', () => {
     expect(names(gruppeA).slice(0, 2)).toEqual([NAME.K, NAME.R]);
     expect(row(calculateStandings(teams, matches, tournament, 'B'), 'X').points).toBe(9);
 
-    // Aufruf ohne Gruppe bei zwei Gruppen: gruppenübergreifend, ohne direkten Vergleich (Waging rot +6, Waging blau +3, Kammer +1).
+    // Aufruf ohne Gruppe bei zwei Gruppen: gruppenübergreifend, ohne direkten Vergleich (Waging 1 +6, Waging 2 +3, Kammer +1).
     const gesamt = calculateStandings(teams, matches, tournament);
     expect(names(gesamt).slice(0, 3)).toEqual([NAME.R, NAME.X, NAME.K]);
 
@@ -72,7 +72,7 @@ describe('TB-1 direkter Vergleich zuerst und Gruppenblöcke', () => {
     expect(gesamt.some((r) => r.decisionNeeded === true)).toBe(false);
     expect(row(gesamt, 'R').place).toBe(row(gesamt, 'K').place);
 
-    // Gegenbeispiel: dieselben Daten je Gruppe A → Waging rot und Kammer markiert (Platz 3 und 3).
+    // Gegenbeispiel: dieselben Daten je Gruppe A → Waging 1 und Kammer markiert (Platz 3 und 3).
     const gruppeA = calculateStandings(teams, matches, tournament, 'A');
     expect([row(gruppeA, 'R').decisionNeeded, row(gruppeA, 'K').decisionNeeded]).toEqual([true, true]);
     expect([row(gruppeA, 'R').place, row(gruppeA, 'K').place]).toEqual([3, 3]);

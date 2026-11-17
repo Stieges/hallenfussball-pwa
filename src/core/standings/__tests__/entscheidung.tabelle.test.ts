@@ -29,7 +29,7 @@ async function et055MitEntscheidung(places?: number[]): Promise<MemoryRepo> {
 }
 
 describe('TB-3 Entscheidung in der Tabelle', () => {
-  it('@ET-055 Platz 1 bis 3 auszuspielen: Strafstoßschießen nötig; nach 4:3 steht Kammer vor Waging rot (Platz 3 und 4), die Spielstände bleiben', async () => {
+  it('@ET-055 Platz 1 bis 3 auszuspielen: Strafstoßschießen nötig; nach 4:3 steht Kammer vor Waging 1 (Platz 3 und 4), die Spielstände bleiben', async () => {
     const vorher = jgj('RKMUNO', DATA.ET_055, [1, 2, 3]);
     expect([row(table(vorher), 'R').decisionNeeded, row(table(vorher), 'K').decisionNeeded]).toEqual([true, true]);
     expect(sharedPlaceAllowed(vorher, '', { place: 3, size: 2 })).toBe(false);
@@ -77,7 +77,7 @@ describe('TB-3 Entscheidung in der Tabelle', () => {
   });
 
   it.each([
-    { aenderung: 'Olli korrigiert TSV Waging rot – DJK Kammer von 1:1 auf 2:2', aendern: (r: MemoryRepo) => { r.correct('R', 'K', 2, 2); } },
+    { aenderung: 'Olli korrigiert TSV Waging 1 – DJK Kammer von 1:1 auf 2:2', aendern: (r: MemoryRepo) => { r.correct('R', 'K', 2, 2); } },
     { aenderung: 'Olli ändert das Punkteschema von 3/1/0 auf 2/1/0', aendern: (r: MemoryRepo) => { r.tournament = { ...r.tournament, pointSystem: POINTS_210 }; } },
   ])('@W2A-005 die Entscheidung verfällt, wenn sich ihre Grundlage ändert: $aenderung', async ({ aendern }) => {
     const repo = await et055MitEntscheidung();
@@ -92,7 +92,7 @@ describe('TB-3 Entscheidung in der Tabelle', () => {
     expect(row(rows, 'K').decision).toBeUndefined();
   });
 
-  it('@W2A-052 kommt durch eine Korrektur ein weiteres Team in den Gleichstand, verfällt die Entscheidung (Waging rot, FC Nord, Kammer)', async () => {
+  it('@W2A-052 kommt durch eine Korrektur ein weiteres Team in den Gleichstand, verfällt die Entscheidung (Waging 1, FC Nord, Kammer)', async () => {
     const repo = new MemoryRepo(jgj('RKMUNO', DATA.W2A_052));
     expect((await repo.service(['e-1']).decide(repo.tournament.id, shootout('K', 'R', 4, 3))).ok).toBe(true);
     expect(names(table(repo.tournament)).slice(1, 3)).toEqual([NAME.K, NAME.R]);
@@ -121,7 +121,7 @@ describe('TB-3 Entscheidung in der Tabelle', () => {
     expect(result.rows.some((r) => r.decision !== undefined)).toBe(false);
   });
 
-  it('@W2A-053 eine Korrektur, die den Gleichstand nicht berührt, lässt die Entscheidung stehen (Kammer vor Waging rot, ohne Markierung)', async () => {
+  it('@W2A-053 eine Korrektur, die den Gleichstand nicht berührt, lässt die Entscheidung stehen (Kammer vor Waging 1, ohne Markierung)', async () => {
     const repo = new MemoryRepo(jgj('RKMUNO', DATA.W2A_052));
     expect((await repo.service(['e-1']).decide(repo.tournament.id, shootout('K', 'R', 4, 3))).ok).toBe(true);
 

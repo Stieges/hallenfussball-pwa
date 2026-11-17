@@ -84,7 +84,7 @@
               },
               {
                 "id": "00000000-0000-4000-8000-000000000007",
-                "name": "TSV Waging rot"
+                "name": "TSV Waging 1"
               },
               {
                 "id": "00000000-0000-4000-8000-000000000012",
@@ -100,7 +100,7 @@
               },
               {
                 "id": "00000000-0000-4000-8000-000000000011",
-                "name": "TSV Waging blau"
+                "name": "TSV Waging 2"
               }
             ],
             "matches": [
@@ -439,11 +439,11 @@
     "shareCode": "NIKO26",
     "teams": [
       "DJK Kammer",
-      "TSV Waging rot",
+      "TSV Waging 1",
       "TSV Petting",
       "DJK Otting",
       "Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921 e. V.",
-      "TSV Waging blau"
+      "TSV Waging 2"
     ],
     "spiele": 15
   }

@@ -45,7 +45,7 @@ function tabellenZeile(texte: string[], team: string, ab: number): string[] {
 }
 
 // --- (a) Nikolaus: eine Gruppe, jeder gegen jeden, keine Finalrunde ---
-const NIKOLAUS_NAMEN = ['DJK Kammer', 'TSV Waging rot', 'DJK Otting', 'TSV Petting', 'TSV 1921 Fridolfing', 'TSV Waging blau'];
+const NIKOLAUS_NAMEN = ['DJK Kammer', 'TSV Waging 1', 'DJK Otting', 'TSV Petting', 'TSV 1921 Fridolfing', 'TSV Waging 2'];
 const nikoTeams: Team[] = NIKOLAUS_NAMEN.map((name, i) => ({ id: testUuid(200 + i), name }));
 function nikolaus(): Tournament {
   const base = createMockTournament({

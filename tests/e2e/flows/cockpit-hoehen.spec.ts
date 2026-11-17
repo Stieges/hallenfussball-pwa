@@ -13,7 +13,7 @@ import { tippeZeitstrafe, tippeTor } from '../helpers/cockpitNeu';
 import { anpfeifen, cup, BILDER, NAME_50 } from '../helpers/laptopCup';
 import { neuLaden } from '../helpers/neuLaden';
 
-const NAMEN = ['TSV Petting', 'DJK Otting', 'TSV Waging rot', 'DJK Kammer'];
+const NAMEN = ['TSV Petting', 'DJK Otting', 'TSV Waging 1', 'DJK Kammer'];
 const FARBEN = ['#6B21A8', '#2E7D32', '#C0392B', '#1E56D9'];
 const NAME_45 = 'Eintracht Oberweiler-Niederstetten 1919 e. V.';
 /** Fensterhöhen der Stufen und ihre Breiten: knapp (620, 719), normal (720, 799), gross (800, 1080 auf dem großen Bildschirm) */
@@ -207,7 +207,7 @@ test.describe('Laptop 1280×720: Einblendung, Zeitstrafen, lange Namen', () => {
   });
 
   test('@SL-182 lange Teamnamen (50 und 45 Zeichen) brechen in Tafel, Leiste und Strafen-Karte um, stehen vollständig da, nie „…“, nichts ragt heraus', async ({ page, seedIndexedDB }) => {
-    await vorbereiten(page, seedIndexedDB, { namen: [NAME_50, NAME_45, 'TSV Waging rot', 'DJK Kammer'], farben: FARBEN });
+    await vorbereiten(page, seedIndexedDB, { namen: [NAME_50, NAME_45, 'TSV Waging 1', 'DJK Kammer'], farben: FARBEN });
     await tippeZeitstrafe(page, 'home');
     await page.waitForTimeout(3300);
     for (const [id, name] of [['scoreboard-name-links', NAME_50], ['scoreboard-name-rechts', NAME_45], ['team-name-home', NAME_50], ['team-name-away', NAME_45]] as const) {

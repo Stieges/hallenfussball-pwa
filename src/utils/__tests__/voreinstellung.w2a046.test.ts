@@ -39,11 +39,11 @@ describe('TB-2 Voreinstellung BFV privat', () => {
   });
 
   it('@W2A-046 Import (CSV, JSON ohne Reihenfolge) und Importvorlage sind gleich vorbelegt', () => {
-    const csv = validateAndParseTournamentImport('Team;Gruppe\nTSV Waging rot;A\nDJK Kammer;A', 'csv');
+    const csv = validateAndParseTournamentImport('Team;Gruppe\nTSV Waging 1;A\nDJK Kammer;A', 'csv');
     expect(csv.isValid).toBe(true);
     expect(kern(csv.tournament?.placementLogic)).toEqual(BFV_PRIVAT);
 
-    const json = validateAndParseTournamentImport(JSON.stringify({ title: 'Nikolaus', date: '2026-11-28', startTime: '09:00', teams: [{ name: 'TSV Waging rot' }, { name: 'DJK Kammer' }] }), 'json');
+    const json = validateAndParseTournamentImport(JSON.stringify({ title: 'Nikolaus', date: '2026-11-28', startTime: '09:00', teams: [{ name: 'TSV Waging 1' }, { name: 'DJK Kammer' }] }), 'json');
     expect(kern(json.tournament?.placementLogic)).toEqual(BFV_PRIVAT);
 
     expect(kern(JSON_TEMPLATE.placementLogic)).toEqual(BFV_PRIVAT);
@@ -57,14 +57,14 @@ describe('TB-2 Voreinstellung BFV privat', () => {
   it.each([
     { quelle: 'Cloud-Zeile ohne placementLogic', config: {} },
     { quelle: 'Cloud-Zeile mit leerer placementLogic', config: { placementLogic: [] } },
-  ])('@W2A-046 C-WERTUNG-LEER $quelle: Voreinstellung, Tabelle der @ET-056-Daten hat Kammer vor Waging rot', ({ config }) => {
+  ])('@W2A-046 C-WERTUNG-LEER $quelle: Voreinstellung, Tabelle der @ET-056-Daten hat Kammer vor Waging 1', ({ config }) => {
     const mapped = mapTournamentFromSupabase(createTournamentRow({ config }), [], []);
     expect(kern(mapped.placementLogic)).toEqual(BFV_PRIVAT);
 
     const fx = league('RKMUNO', DATA.ET_056);
     const rows = calculateStandings(fx.teams, fx.matches, { ...fx.tournament, placementLogic: mapped.placementLogic });
     expect(names(rows).slice(0, 2)).toEqual([NAME.K, NAME.R]);
-    // Gegenbeispiel: nicht die Eingabereihenfolge (dort stünde Waging rot vorn).
+    // Gegenbeispiel: nicht die Eingabereihenfolge (dort stünde Waging 1 vorn).
     expect(fx.teams[0].name).toBe(NAME.R);
     // Eine gespeicherte Liste bleibt unverändert.
     const gespeichert = mapTournamentFromSupabase(createTournamentRow({ config: { placementLogic: [{ id: 'points', enabled: true }] } }), [], []);

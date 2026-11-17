@@ -55,7 +55,7 @@ beforeEach(() => {
   vi.restoreAllMocks();
   localStorage.clear();
   kitChoiceQueueFor('guest').reset();
-  hall.status = { stand: 'aktuell', antwort: null, felder: { 1: { art: 'nichtBereit', grund: 'background', pruefen: false } }, lautsprecherBekannt: true, testtonAnfordern: vi.fn(), gehoert: vi.fn() };
+  hall.status = { stand: 'aktuell', antwort: null, felder: { 1: { art: 'nichtBereit', grund: 'background', pruefen: false } }, lautsprecherBekannt: true, letzteSprecher: [], testtonAnfordern: vi.fn(), gehoert: vi.fn() };
 });
 
 describe('@HT-059 R1 Leibchen-Wahl verdeckt den Kasten (echtes LiveCockpit)', () => {

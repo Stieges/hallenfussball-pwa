@@ -96,7 +96,7 @@ export function endstandHallencup(overrides: Partial<Tournament> = {}, scorers: 
   return { tournament, schedule: withTournamentState(schedule, tournament), standings: HALLENCUP_TABELLEN, ranking: HALLENCUP_PLAETZE, scorers };
 }
 
-const NIKOLAUS_NAMEN = ['DJK Kammer', 'TSV Waging rot', 'DJK Otting', 'TSV Petting', 'TSV 1921 Fridolfing', 'TSV Waging blau'];
+const NIKOLAUS_NAMEN = ['DJK Kammer', 'TSV Waging 1', 'DJK Otting', 'TSV Petting', 'TSV 1921 Fridolfing', 'TSV Waging 2'];
 const nikoSchuetze = (rank: number, index: number, number: number, goals: number): ScorerRow =>
   ({ kind: 'player', rank, teamId: testUuid(200 + index) as TeamId, teamName: NIKOLAUS_NAMEN[index], number, goals });
 /** Torschützen im Stil des E2E-Seeds: Spieler der Vereine, deren Namen auch in der Platzliste stehen (Gleichstand auf Rang 2, Sammelzeilen). */

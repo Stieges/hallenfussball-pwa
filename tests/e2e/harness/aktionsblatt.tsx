@@ -29,10 +29,10 @@ const mockup = query.get('mockup') === '1';
 const noop = (): void => undefined;
 
 const NAMEN = mockup
-  ? ['TSV Petting', 'DJK Kammer', 'TSV Waging rot', 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921 e. V.']
+  ? ['TSV Petting', 'DJK Kammer', 'TSV Waging 1', 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921 e. V.']
   : lang
-  ? ['Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921 e. V.', 'Turn- und Sportverein Petting-Oberhausen 1888', 'DJK Kammer', 'TSV Waging rot']
-  : ['DJK Kammer', 'TSV Petting', 'TSV Waging rot', 'DJK Otting'];
+  ? ['Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921 e. V.', 'Turn- und Sportverein Petting-Oberhausen 1888', 'DJK Kammer', 'TSV Waging 1']
+  : ['DJK Kammer', 'TSV Petting', 'TSV Waging 1', 'DJK Otting'];
 const teams: Team[] = NAMEN.map((name, i) => ({ id: `00000000-0000-4000-8000-00000000000${i + 1}`, name }));
 const turnier = createMockTournament({ id: 'harness-aktion', teams, numberOfTeams: 4, numberOfGroups: 1, numberOfFields: 1, groupSystem: 'roundRobin', refereeConfig: { mode: 'organizer', numberOfReferees: 2 } });
 const plan = generateFullSchedule(turnier);

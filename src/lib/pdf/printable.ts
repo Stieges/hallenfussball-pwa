@@ -16,12 +16,19 @@ const LINE_BREAK = '\n';
 /** Variantenwähler-16 (U+FE0F) und Zero-Width-Joiner (U+200D): unsichtbar, kein „?“ für sie. */
 const INVISIBLE = /[\uFE0F\u200D]/g;
 
+/**
+ * Der Text, wie er vor dem Zeichenprüfen und Drucken aussieht: zusammengesetzte Form (zerlegtes „ü“ bleibt „ü“, @DR-055),
+ * einheitliche Zeilenenden, Variantenwähler und ZWJ ohne Ersatz. Wer wissen will, ob ein „?“ entsteht (`buildHints`),
+ * prüft DIESEN Text, nicht den rohen.
+ */
+export function prepareForPrint(text: string): string {
+  return text.normalize('NFC').replace(/\r\n?/g, LINE_BREAK).replace(INVISIBLE, '');
+}
+
 /** Ersetzt jedes nicht druckbare Zeichen (je Codepunkt) durch „?“. */
 export function printable(text: string, covers: GlyphCheck = isPdfGlyph): string {
   let result = '';
-  // Vorher: zusammengesetzte Form (NFD-„ü“ bleibt „ü“), einheitliche Zeilenenden, Variantenwähler und ZWJ ohne Ersatz
-  const prepared = text.normalize('NFC').replace(/\r\n?/g, LINE_BREAK).replace(INVISIBLE, '');
-  for (const char of prepared) {
+  for (const char of prepareForPrint(text)) {
     result += char === LINE_BREAK || covers(char) ? char : SUBSTITUTE;
   }
   return result;

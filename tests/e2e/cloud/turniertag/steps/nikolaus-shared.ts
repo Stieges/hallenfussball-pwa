@@ -124,11 +124,11 @@ export async function spieleErgebnis(spiel: NikolausMatch, toreA: number, toreB:
 
 /**
  * Die Ergebnisse aller 15 Spiele für Tabelle und Endstand (Heim:Gast in Spielplan-Reihenfolge). Spiel 1 ist das 1:0 aus N4. Seit @W4-050 wählt die Eröffnung unter den gleich fairen Plänen den mit den wenigsten direkten Folgen der Waging-Mannschaften; dieselben Paarungen und Ergebnisse wie vorher, nur andere Spielnummern. Gewählt für die Szenarien:
- *  - Kammer und Waging rot punktgleich (je 10), Kammer gewann das direkte Spiel 2:1 (Spiel 14: Waging rot 1:2 Kammer), Waging rot hat die bessere
- *    Tordifferenz (+7 gegen +2): Kammer steht vor Waging rot (@ET-056);
+ *  - Kammer und Waging 1 punktgleich (je 10), Kammer gewann das direkte Spiel 2:1 (Spiel 14: Waging 1 1:2 Kammer), Waging 1 hat die bessere
+ *    Tordifferenz (+7 gegen +2): Kammer steht vor Waging 1 (@ET-056);
  *  - Petting und Otting nach allen Kriterien gleich (8 Punkte, Tordifferenz 0, 9 Tore), das direkte Spiel 2 endete 1:1: Strafstoßschießen nötig (@ET-055, @ET-025);
- *  - Fridolfing 4 Punkte, Waging blau 1 Punkt.
- * Erwartete Reihenfolge: Kammer, Waging rot, Petting/Otting (gleichauf), Fridolfing, Waging blau.
+ *  - Fridolfing 4 Punkte, Waging 2 1 Punkt.
+ * Erwartete Reihenfolge: Kammer, Waging 1, Petting/Otting (gleichauf), Fridolfing, Waging 2.
  */
 export const NIKOLAUS_ERGEBNISSE: ReadonlyArray<readonly [number, number]> = [
   [1, 0], [1, 1], [0, 1], [3, 3], [2, 2], [1, 1], [3, 1], [2, 1], [0, 4], [1, 0], [4, 3], [4, 1], [0, 3], [1, 2], [0, 2],

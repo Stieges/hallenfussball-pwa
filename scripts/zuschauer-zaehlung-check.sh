@@ -36,6 +36,14 @@
 # (R) Rueckweg fuehrt die Summen wieder zusammen (Summe vorher = nachher), Schema danach = Stand 004, Fail-fast bei Sperre / fehlender
 # Voraussetzung / fremder Fassung der Funktion.
 #
+# Vierte Migration (20261127_001_zuschauer_zaehlung_netzstoerung.sql, Stufe 1c: @RZ-033, @RZ-034, @RZ-035, @RZ-036): ueberstandene
+# Netzstoerungen (kurz/lang) als zwei neue Spalten und zwei neue Arten 'stoerung_kurz' / 'stoerung_lang' in count_public_view. Hier mit
+# bewiesen (Kategorie N, dazu V und R): beide Arten zaehlen in der Zeile der Aufrufe derselben Kombination, nichts zaehlt als Aufruf oder
+# Lebenszeichen, unbekannte Arten und alles, was schon bei Aufruf nicht zaehlt, bleiben still; Bestandszeilen behalten ihre Summen; der
+# ausgelieferte Client zaehlt vor UND nach dem Einspielen; ein neuer Client gegen den Server OHNE die Migration wird still verworfen; ein
+# waehrend der Migration wartender Aufruf geht nicht verloren; Rueckweg, Idempotenz, Fail-fast; nur ergaenzend (Primaerschluessel gleich).
+#   bash scripts/zuschauer-zaehlung-check.sh --without-ns    Gegenprobe: Stand 003+004+1b ohne 20261127_001 -- die Pruefungen N muessen rot sein
+#
 # Aendert NICHTS an der Produktionsdatenbank und nichts am lokalen Supabase-Stack: eigener Container, am Ende entfernt.
 set -euo pipefail
 
@@ -45,6 +53,7 @@ case "${1:-}" in
   --without-migration) MODE="without-migration" ;;
   --gegenprobe) MODE="gegenprobe" ;;
   --without-1b) MODE="without-1b" ;;
+  --without-ns) MODE="without-ns" ;;
   *) echo "::error::Unbekannte Option: $1" >&2; exit 2 ;;
 esac
 
@@ -61,6 +70,10 @@ GRANT_ROLLBACK_FILE="$REPO_ROOT/supabase/rollbacks/20261124_004_zuschauer_zaehlu
 NEW_NAME="20261126_001_zuschauer_zaehlung_os_browser.sql"
 NEW_FILE="$MIGRATIONS_DIR/$NEW_NAME"
 NEW_ROLLBACK_FILE="$REPO_ROOT/supabase/rollbacks/20261126_001_zuschauer_zaehlung_os_browser_rollback.sql"
+NS_NAME="20261127_001_zuschauer_zaehlung_netzstoerung.sql"
+NS_FILE="$MIGRATIONS_DIR/$NS_NAME"
+NS_ROLLBACK_FILE="$REPO_ROOT/supabase/rollbacks/20261127_001_zuschauer_zaehlung_netzstoerung_rollback.sql"
+MD5_1B="814b327fa1dc1e8e92a03fd7031ff0b8"   # prosrc-md5 von count_public_view in der Fassung 20261126_001
 PREFIX="zaehlung-check-$$"
 NET="$PREFIX-net"
 C="$PREFIX-db"
@@ -72,6 +85,7 @@ WORK="$(mktemp -d "${TMPDIR:-/tmp}/zaehlung-check.XXXXXX")"
 [[ -f "$TARGET_FILE" ]] || { echo "::error::$TARGET_NAME fehlt." >&2; exit 1; }
 [[ -f "$NEW_FILE" && -f "$NEW_ROLLBACK_FILE" ]] || { echo "::error::$NEW_NAME oder sein Rueckweg fehlt." >&2; exit 1; }
 command -v curl >/dev/null 2>&1 || { echo "::error::curl wird benoetigt." >&2; exit 1; }
+[[ -f "$NS_FILE" && -f "$NS_ROLLBACK_FILE" ]] || { echo "::error::$NS_NAME oder sein Rueckweg fehlt." >&2; exit 1; }
 [[ -f "$GRANT_FILE" && -f "$GRANT_ROLLBACK_FILE" ]] || { echo "::error::$GRANT_NAME oder sein Rueckweg fehlt." >&2; exit 1; }
 
 source "$REPO_ROOT/scripts/lib/migrations-since-baseline.sh"
@@ -87,6 +101,7 @@ while IFS= read -r line; do
   elif [[ "$SEEN" -eq 0 ]]; then BEFORE+=("$line")
   elif [[ "$(basename "$line")" == "$OWN_HARNESS_LATER" ]]; then :
   elif [[ "$(basename "$line")" == "$NEW_NAME" ]]; then :   # Stufe 1b: wird gesondert eingespielt (Vorher-/Nachher-Pruefung)
+  elif [[ "$(basename "$line")" == "$NS_NAME" ]]; then :   # Stufe 1c: wird gesondert eingespielt (Vorher-/Nachher-Pruefung)
   elif [[ "$(basename "$line")" == "$GRANT_NAME" ]]; then :   # wird gesondert eingespielt (apply_target), damit --without-migration sie nicht braucht
   else AFTER+=("$line"); fi
 done <<< "$(migrations_newer_than_baseline "$MIGRATIONS_DIR" "$BASELINE_FILE")"
@@ -148,9 +163,9 @@ dump_as_reader() { # Ausgabe "<Exitcode>|<Anzahl CREATE TABLE public_view_counts
 }
 schema_dump() { docker exec "$C" pg_dump -U postgres --schema-only --schema=public postgres | grep -vE '^\\(un)?restrict '; }
 
-CATS=(Z S R H V)   # Z zaehlen/nicht zaehlen, S Schema/Rechte, R Rueckweg/idempotent, H Kennung ueber PostgREST/Ableitung, V Vertraeglichkeit alter Client
-DEVS=(0 0 0 0 0)
-OKS=(0 0 0 0 0)
+CATS=(Z S R H V N)   # Z zaehlen/nicht zaehlen, S Schema/Rechte, R Rueckweg/idempotent, H Kennung ueber PostgREST/Ableitung, V Vertraeglichkeit alter Client, N Netzstoerung (Stufe 1c)
+DEVS=(0 0 0 0 0 0)
+OKS=(0 0 0 0 0 0)
 cat_index() { local i; for i in "${!CATS[@]}"; do [[ "${CATS[$i]}" == "$1" ]] && { echo "$i"; return 0; }; done; exit 2; }
 check() { # check <Kategorie> <Name> <erwartet> <erhalten>
   local i; i="$(cat_index "$1")"
@@ -161,7 +176,7 @@ check() { # check <Kategorie> <Name> <erwartet> <erhalten>
   fi
 }
 total_dev() { local s=0 d; for d in "${DEVS[@]}"; do s=$((s + d)); done; echo "$s"; }
-reset_counts() { DEVS=(0 0 0 0 0); OKS=(0 0 0 0 0); }
+reset_counts() { DEVS=(0 0 0 0 0 0); OKS=(0 0 0 0 0 0); }
 
 U='00000000-0000-4000-8000-0000000000a1'
 T_PUB='00000000-0000-4000-8000-0000000000b1'
@@ -477,7 +492,7 @@ run_checks() {
   priv="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } \
     | docker exec -i -e PGOPTIONS="-c client_min_messages=warning" "$C" psql -U postgres -X -q -tA -v ON_ERROR_STOP=1 2>&1 || true)"
   # Die zwei hallenton-*-Zeilen von 20261125_001 sind hier ausser Betracht (Migration laeuft in hallenton-check.sh, siehe OWN_HARNESS_LATER)
-  red="$( (grep -v '|t$' <<<"$priv" | grep -vE '^hallenton-(output-states-heartbeat|speaker-unassign-rpc-authenticated-only)\|f$' || true) | head -5 | tr '\n' ';')"
+  red="$( (grep -v '|t$' <<<"$priv" | grep -vE '^(hallenton-(output-states-heartbeat|speaker-unassign-rpc-authenticated-only)|zuschauer-zaehlung-netzstoerung-columns)\|f$' || true) | head -5 | tr '\n' ';')"
   own="$( (grep -E '^zuschauer-zaehlung-[a-z-]+\|t$' <<<"$priv" || true) | grep -c . || true)"
   check S "db_privilege_assertions.sql als ci_schema_reader: jede Zeile |t, darunter die fuenf zuschauer-zaehlung-* (inkl. ci-schema-reader-select, os-browser-*)" "keine|5" "${red:-keine}|$own"
 }
@@ -724,6 +739,273 @@ mutation_lauf() { # <id> <Beschreibung der Datei> -- run_checks im aktuellen Sta
   fi
 }
 
+# =====================================================================================================================================
+# Stufe 1c (20261127_001_zuschauer_zaehlung_netzstoerung.sql): ueberstandene Netzstoerungen (@RZ-033 bis @RZ-036). Kategorie N.
+# =====================================================================================================================================
+NS_USE="$NS_FILE"   # die Datei, die vor_ns einspielt (Gegenprobe: eine Mutation)
+ns_cols() { q "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='public_view_counts' AND column_name IN ('outages_short','outages_long');"; }
+# Bestand ohne die neuen Spalten: Pruefsumme ueber alle Zeilen (nur die Spalten der Stufe 1b) -- Bestandszeilen duerfen sich nie aendern
+bestand_md5() { q "SELECT coalesce(md5(string_agg(concat_ws('|', tournament_id, window_start, channel, device_class, installed, os_family, browser_family, views, heartbeats), ';' ORDER BY tournament_id, window_start, channel, device_class, installed, os_family, browser_family)), '-') FROM public.public_view_counts WHERE ${1:-true};"; }
+# Summen der Stoerungen (kurz/lang) ueber alle Zeilen
+outsums() { q "SELECT coalesce(sum(outages_short),0) || '/' || coalesce(sum(outages_long),0) FROM public.public_view_counts;"; }
+# nsf -- Zeilen des Turniers T_PUB: "os/browser/kanal v<Aufrufe> h<Lebenszeichen> k<kurz> l<lang>"
+nsf() { q "SELECT coalesce(string_agg(os_family || '/' || browser_family || '/' || channel || ' v' || views || ' h' || heartbeats || ' k' || outages_short || ' l' || outages_long, ',' ORDER BY os_family, browser_family, channel), '-') FROM public.public_view_counts WHERE tournament_id = '$T_PUB';"; }
+
+# Vor dem Einspielen von 20261127_001 (Stand 003 + 004 + 1b): neuer Client gegen alten Server, Bestand, Fail-fast, Sperre, Einspielen.
+vor_ns() {
+  local rc=0 b_md5 b_n s_k s_l
+  seed_tournaments
+  q "TRUNCATE public.public_view_counts;" >/dev/null
+  check V "Vorbedingung: count_public_view ist die Fassung 20261126_001 (prosrc-md5)" "$MD5_1B" "$(fn_md5)"
+  check V "Vorbedingung: die Spalten der Stufe 1c gibt es noch nicht" "0" "$(ns_cols)"
+  alt_client_zaehlt "V vor Stufe 1c: ausgelieferter Client"
+  schema_dump > "$WORK/schema_1b_vor_ns.sql"
+  # Bestandszeilen (aus der Zeit vor Stufe 1c): verschiedene Familien, Kanaele, Lebenszeichen
+  rest_zaehle "$UA_IPHONE_SAFARI" >/dev/null; rest_zaehle "$UA_IPHONE_SAFARI" >/dev/null; rest_zaehle "$UA_WIN_FIREFOX" anon NIKO26 aufruf gross true direkt >/dev/null
+  rest_zaehle "$UA_IPHONE_SAFARI" anon NIKO26 lebenszeichen >/dev/null; rest_zaehle "$UA_ANDROID_SAMSUNG" anon NIKO26 aufruf tablet false link >/dev/null
+  b_md5="$(bestand_md5)"; b_n="$(q "SELECT count(*) FROM public.public_view_counts;")"
+  # @RZ-036: ein neuer Client (Art stoerung_kurz / stoerung_lang) trifft den Server OHNE die Erweiterung: 2xx, still verworfen, nichts gezaehlt
+  s_k="$(rest_zaehle "$UA_IPHONE_SAFARI" anon NIKO26 stoerung_kurz handy false qr)"
+  s_l="$(rest_zaehle "$UA_WIN_FIREFOX" authenticated NIKO26 stoerung_lang gross true direkt)"
+  check N "@RZ-036 neuer Client gegen den Server ohne Erweiterung: Meldung 'stoerung_kurz' und 'stoerung_lang' ergibt 2xx (kein Fehler), Zaehlung unveraendert" "ok|ok|$b_md5|$b_n" \
+    "$(ok2xx "$s_k")|$(ok2xx "$s_l")|$(bestand_md5)|$(q "SELECT count(*) FROM public.public_view_counts;")"
+  # Fail-fast: fremde Fassung von count_public_view -> Einspielen scheitert (Exit 3), nichts aendert sich
+  sed "s/RETURN; END IF;/RETURN; END IF; /" "$NEW_FILE" > "$WORK/fremd1b.sql"
+  psql_stdin < "$WORK/fremd1b.sql" >/dev/null
+  schema_dump > "$WORK/schema_fremd_ns.sql"
+  check R "1c: fremde Fassung von count_public_view -> Fail-fast (Exit 3), nichts geaendert" "3|" \
+    "$(psql_stdin < "$NS_USE" >/dev/null 2>&1; echo -n "$?|"; schema_dump | diff "$WORK/schema_fremd_ns.sql" - || true)"
+  psql_stdin < "$NEW_FILE" >/dev/null   # Fassung 1b wieder herstellen
+  schema_dump > "$WORK/schema_1b_b.sql"
+  check R "1c: nach dem Wiederherstellen der Fassung 1b ist das Schema wieder wie vor dem Versuch, die Funktion ist die Fassung 1b" "|$MD5_1B" \
+    "$(diff "$WORK/schema_1b_vor_ns.sql" "$WORK/schema_1b_b.sql" || true)|$(fn_md5)"
+  # Fail-fast bei Sperre
+  docker exec -i "$C" psql -U postgres -X -q -c "BEGIN; LOCK TABLE public.public_view_counts IN ACCESS SHARE MODE; SELECT pg_sleep(10); COMMIT;" >/dev/null 2>&1 &
+  local bg=$! t0 t1
+  sleep 2
+  t0=$(date +%s)
+  psql_stdin < "$NS_USE" >/dev/null 2>"$WORK/lock_ns.err" || rc=$?
+  t1=$(date +%s)
+  wait "$bg" || true
+  check R "1c: Sperre gehalten -> Einspielen bricht nach hoechstens ~5 s mit Sperr-Zeitueberschreitung ab (Exit 3)" "3|ja|ja" \
+    "$rc|$([[ $((t1 - t0)) -le 8 ]] && echo ja || echo "nein: $((t1 - t0)) s")|$(grep -qi 'lock timeout' "$WORK/lock_ns.err" && echo ja || echo "nein: $(head -c 150 "$WORK/lock_ns.err")")"
+  schema_dump > "$WORK/schema_1b_c.sql"
+  check R "1c: nach dem Sperr-Abbruch ist nichts geaendert" "" "$(diff "$WORK/schema_1b_vor_ns.sql" "$WORK/schema_1b_c.sql" || true)"
+  # Einspielen, mit einem ALTEN Aufruf (Fassung 1b), der waehrend der Migration startet und hinter ihr wartet
+  local pause_sum_vor; pause_sum_vor="$(q "SELECT coalesce(sum(views),0) FROM public.public_view_counts;")"
+  sed 's/^COMMIT;/SELECT pg_sleep(4); COMMIT;/' "$NS_USE" > "$WORK/ns_mit_pause.sql"
+  nebenlaeufig "$WORK/ns_mit_pause.sql"
+  rc="$F_RC"
+  [[ "${QUIET:-0}" == "1" ]] || echo "INFO        alter Aufruf (Fassung 1b) wartet hinter der Migration: Exit $W_RC ${W_ERR:0:200}"
+  start_rest
+  check V "1c wird auf dem Bestand eingespielt (Exit 0); der waehrend der Migration wartende Aufruf der Fassung 1b geht nicht verloren (kein Fehler, +1 Aufruf)" "0|0|$((pause_sum_vor + 1))" \
+    "$rc|$W_RC|$(q "SELECT coalesce(sum(views),0) FROM public.public_view_counts;")"
+  # Die Zeile des wartenden Aufrufs (sonstige/sonstige, ohne Kennung) ist neu; alle Bestandszeilen sind unveraendert
+  check V "@RZ-036 Bestandszeilen behalten ihre Summen und alle anderen Werte, tragen 0 Stoerungen; keine Zeile geloescht oder umgeschrieben" "$b_md5|0/0|$((b_n + 1))" \
+    "$(bestand_md5 "NOT (os_family = 'sonstige' AND browser_family = 'sonstige')")|$(outsums)|$(q "SELECT count(*) FROM public.public_view_counts;")"
+  schema_dump > "$WORK/schema_ns.sql"
+  rc=0; psql_stdin < "$NS_USE" >/dev/null 2>&1 || rc=$?
+  schema_dump > "$WORK/schema_ns2.sql"
+  check R "1c: zweites Einspielen laeuft sauber (idempotent), Schema unveraendert" "0|" "$rc|$(diff "$WORK/schema_ns.sql" "$WORK/schema_ns2.sql" || true)"
+  alt_client_zaehlt "V nach dem Einspielen von Stufe 1c: ausgelieferter Client"
+}
+
+# Pruefungen im Stand 003 + 004 + 1b + 1c
+run_ns_checks() {
+  local st s1 s2 s3
+  seed_tournaments
+  q "TRUNCATE public.public_view_counts;" >/dev/null
+  # ---- Schema: nur ergaenzend ----
+  check N "1c Spalten: genau die elf (die neun der Stufe 1b, dazu outages_short und outages_long)" "tournament_id,window_start,channel,device_class,installed,views,heartbeats,os_family,browser_family,outages_short,outages_long" \
+    "$(q "SELECT string_agg(column_name, ',' ORDER BY ordinal_position) FROM information_schema.columns WHERE table_schema='public' AND table_name='public_view_counts';")"
+  check N "1c die zwei Spalten: integer, NOT NULL, Vorgabe 0 (Vorgabe und Pruefregel >= 0 wie bei views und heartbeats; der Typ ist integer, dort bigint)" "outages_long:integer:NO:0,outages_short:integer:NO:0" \
+    "$(q "SELECT string_agg(column_name || ':' || data_type || ':' || is_nullable || ':' || column_default, ',' ORDER BY column_name) FROM information_schema.columns WHERE table_schema='public' AND table_name='public_view_counts' AND column_name LIKE 'outages_%';")"
+  check N "1c Primaerschluessel unveraendert (dieselben sieben Spalten wie in Stufe 1b)" "tournament_id,window_start,channel,device_class,installed,os_family,browser_family" \
+    "$(q "SELECT string_agg(a.attname, ',' ORDER BY k.ord) FROM pg_constraint c CROSS JOIN LATERAL unnest(c.conkey) WITH ORDINALITY AS k(attnum, ord) JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum WHERE c.conrelid = 'public.public_view_counts'::regclass AND c.contype = 'p';")"
+  check N "1c Pruefregel: eine negative Zahl wird abgewiesen (kurz und lang)" "ja|ja" \
+    "$([[ "$(q "INSERT INTO public.public_view_counts (tournament_id, window_start, channel, device_class, installed, outages_short) VALUES ('$T_PUB', now(), 'qr', 'handy', false, -1);")" == *'public_view_counts_outages_short_check'* ]] && echo ja || echo nein)|$([[ "$(q "INSERT INTO public.public_view_counts (tournament_id, window_start, channel, device_class, installed, outages_long) VALUES ('$T_PUB', now(), 'qr', 'handy', false, -1);")" == *'public_view_counts_outages_long_check'* ]] && echo ja || echo nein)"
+  check N "1c Funktion: gleiche Signatur und Rueckgabetyp (void), SECURITY DEFINER, fester search_path, nur anon/authenticated/service_role duerfen sie rufen, kein RAISE" "true|{\"search_path=public, pg_temp\"}|true|true|true|false|void|0" \
+    "$(q "SELECT prosecdef || '|' || proconfig::text || '|' || has_function_privilege('anon', oid, 'EXECUTE') || '|' || has_function_privilege('authenticated', oid, 'EXECUTE') || '|' || has_function_privilege('service_role', oid, 'EXECUTE') || '|' || has_function_privilege('public', oid, 'EXECUTE') || '|' || prorettype::regtype || '|' || position('RAISE' IN prosrc) FROM pg_proc WHERE oid = to_regprocedure('public.count_public_view(text,text,text,text,boolean)');")"
+  check N "1c Funktion ist nicht mehr die Fassung 1b, kennt die zwei neuen Arten" "ja|ja" \
+    "$([[ "$(fn_md5)" != "$MD5_1B" ]] && echo ja || echo nein)|$(q "SELECT (position('stoerung_kurz' IN prosrc) > 0 AND position('stoerung_lang' IN prosrc) > 0) FROM pg_proc WHERE oid = to_regprocedure('public.count_public_view(text,text,text,text,boolean)');" | sed 's/^t$/ja/;s/^f$/nein/')"
+  [[ "${QUIET:-0}" == "1" ]] || echo "INFO        prosrc-md5 von count_public_view in Stufe 1c: $(fn_md5)"
+  check N "@RZ-030 anon und authenticated koennen die neuen Spalten nicht lesen und nichts schreiben (kein Tabellenrecht, RLS an, keine Policy)" "ERROR:  permission denied for table public_view_counts|ERROR:  permission denied for table public_view_counts|t|0" \
+    "$(as_role anon "SELECT sum(outages_short) FROM public.public_view_counts;")|$(as_role authenticated "UPDATE public.public_view_counts SET outages_long = 99;")|$(q "SELECT relrowsecurity FROM pg_class WHERE oid='public.public_view_counts'::regclass;")|$(q "SELECT count(*) FROM pg_policies WHERE tablename='public_view_counts';")"
+
+  # ---- @RZ-033: die zwei Arten zaehlen, in der Zeile der Aufrufe derselben Kombination ----
+  st="$(rest_zaehle "$UA_IPHONE_SAFARI" anon NIKO26 stoerung_kurz handy false qr)"
+  check N "@RZ-033 kurze Stoerung (iPhone/Safari, QR, Handy) ueber PostgREST: 2xx, eine Zeile, kurz 1, lang 0, kein Aufruf und kein Lebenszeichen" "ok|ios/safari/qr v0 h0 k1 l0" "$(ok2xx "$st")|$(nsf)"
+  st="$(rest_zaehle "$UA_IPHONE_SAFARI" anon NIKO26 stoerung_lang handy false qr)"
+  check N "@RZ-033 lange Stoerung derselben Kombination: gleiche Zeile, lang 1 (kurz bleibt 1)" "ok|ios/safari/qr v0 h0 k1 l1" "$(ok2xx "$st")|$(nsf)"
+  rest_zaehle "$UA_IPHONE_SAFARI" anon NIKO26 stoerung_kurz handy false qr >/dev/null
+  check N "@RZ-033 eine zweite kurze Stoerung addiert (kurz 2): zwei getrennte Stoerungen = zwei Meldungen = Summe 2, keine zweite Zeile" "ios/safari/qr v0 h0 k2 l1" "$(nsf)"
+  rest_zaehle "$UA_IPHONE_SAFARI" anon NIKO26 aufruf handy false qr >/dev/null
+  rest_zaehle "$UA_IPHONE_SAFARI" anon NIKO26 lebenszeichen handy false qr >/dev/null
+  check N "@RZ-033 'aufgeteilt wie die Aufrufe': Aufruf und Lebenszeichen derselben Kombination stehen in derselben Zeile, ihre Summen bleiben von Stoerungen unberuehrt" "ios/safari/qr v1 h1 k2 l1" "$(nsf)"
+  rest_zaehle "$UA_WIN_FIREFOX" authenticated NIKO26 stoerung_lang gross true direkt >/dev/null
+  rest_zaehle "$UA_IPHONE_SAFARI" anon NIKO26 stoerung_kurz handy false link >/dev/null
+  rest_zaehle "$UA_ANDROID_SAMSUNG" anon NIKO26 stoerung_kurz tablet false qr >/dev/null
+  check N "@RZ-033 aufgeteilt nach Betriebssystem und Browser, Kanal, Geraeteart, installiert (auch fuer authenticated): je Kombination eine Zeile" "android/samsung/qr v0 h0 k1 l0,ios/safari/link v0 h0 k1 l0,ios/safari/qr v1 h1 k2 l1,windows/firefox/direkt v0 h0 k0 l1" "$(nsf)"
+  check N "@RZ-033 Fenster: Beginn liegt auf voller 5-Minuten-Marke, im laufenden Fenster" "0|1" \
+    "$(q "SELECT count(*) FILTER (WHERE (extract(epoch FROM window_start)::bigint % 300) <> 0) FROM public.public_view_counts;")|$(q "SELECT count(DISTINCT window_start) FROM public.public_view_counts WHERE window_start > now() - interval '5 minutes' AND window_start <= now();")"
+  q "TRUNCATE public.public_view_counts;" >/dev/null
+  zaehle FIN001 stoerung_kurz qr handy false
+  check N "@RZ-033 abgeschlossenes Turnier (finished): eine Stoerung zaehlt wie ein Aufruf, ohne Fehler" "1/0" "$(q "SELECT coalesce(sum(outages_short),0) || '/' || coalesce(sum(outages_long),0) FROM public.public_view_counts WHERE tournament_id = '$T_FIN';")"
+
+  # ---- @RZ-034: ohne Stoerung keine Stoerung; Unbekanntes bleibt still ----
+  q "TRUNCATE public.public_view_counts;" >/dev/null
+  zaehle NIKO26 aufruf qr handy false; zaehle NIKO26 lebenszeichen qr handy false; zaehle NIKO26 aufruf link gross true authenticated
+  check N "@RZ-034 nur Aufrufe und Lebenszeichen: keine Stoerung gezaehlt (0/0), Aufrufe 2, Lebenszeichen 1" "0/0|2/1" "$(outsums)|$(sums)"
+  q "TRUNCATE public.public_view_counts;" >/dev/null
+  local art
+  for art in "stoerung" "stoerung_mittel" "STOERUNG_KURZ" "stoerung_kurz " "stoerung_kurz;DROP" "" "stoerung_kurz_lang"; do
+    zaehle NIKO26 "$art" qr handy false
+  done
+  as_role anon "SELECT 1 FROM (SELECT public.count_public_view('NIKO26', NULL, 'qr', 'handy', false)) x;" >/dev/null
+  check N "@RZ-034 unbekannte Arten (abweichend geschrieben, mit Zusatz, leer, NULL) zaehlen nichts und werfen keinen Fehler" "0|1" \
+    "$(q "SELECT count(*) FROM public.public_view_counts;")|$(as_role anon "SELECT 1 FROM (SELECT public.count_public_view('NIKO26','stoerung_mittel','qr','handy',false)) x;")"
+  zaehle PRIV01 stoerung_kurz qr handy false
+  zaehle TRASH1 stoerung_lang qr handy false
+  zaehle NOPE99 stoerung_kurz qr handy false
+  zaehle NIKO26 stoerung_kurz qr smartwatch false
+  zaehle NIKO26 stoerung_kurz qr NULL false
+  zaehle "" stoerung_kurz qr handy false
+  zaehle "NIKO26;DROP" stoerung_lang qr handy false
+  check N "@RZ-028 gilt auch fuer Stoerungen: nicht oeffentliches Turnier, Papierkorb, unbekannter Code, falsche oder fehlende Geraeteart, leerer oder zu langer Code: nichts gezaehlt, kein Fehler" "0|1|1" \
+    "$(q "SELECT count(*) FROM public.public_view_counts;")|$(as_role anon "SELECT 1 FROM (SELECT public.count_public_view('NOPE99','stoerung_lang','qr','handy',false)) x;")|$(as_role anon "SELECT 1 FROM (SELECT public.count_public_view('NIKO26','stoerung_kurz','qr','smartwatch',false)) x;")"
+  check N "@RZ-035 Fehlerfreiheit fuer die Seite: NULL-Werte und Stoerung mit unbekanntem Kanal werfen keinen Fehler (Kanal wird direkt)" "1|direkt" \
+    "$(as_role anon "SELECT 1 FROM (SELECT public.count_public_view(NULL,'stoerung_kurz',NULL,NULL,NULL)) x;")|$(zaehle NIKO26 stoerung_kurz irgendwas handy false; q "SELECT channel FROM public.public_view_counts WHERE tournament_id='$T_PUB';")"
+  q "TRUNCATE public.public_view_counts;" >/dev/null
+  zaehle NIKO26 stoerung_lang qr handy NULL
+  check N "@RZ-033 installiert NULL zaehlt als nein (wie bei Aufrufen)" "f" "$(q "SELECT installed FROM public.public_view_counts WHERE tournament_id='$T_PUB';")"
+
+  # ---- @RZ-036: der ausgelieferte Client und die Kennung (Stufe 1b) arbeiten unveraendert weiter ----
+  alt_client_zaehlt "V mit Stufe 1c: ausgelieferter Client"
+  ua_fall "1c: iPhone in Safari" "ios/safari" "$UA_IPHONE_SAFARI"
+  ua_fall "1c: Windows in Edge" "windows/sonstige" "$UA_WIN_EDGE"
+  ua_fall "1c: Samsung-Browser" "android/samsung" "$UA_ANDROID_SAMSUNG"
+  q "TRUNCATE public.public_view_counts;" >/dev/null
+  st="$(rest_zaehle --keine-- anon NIKO26 stoerung_lang)"
+  check N "@RZ-032 gilt auch fuer Stoerungen: ohne Kennung zaehlt sie unter sonstige/sonstige, 2xx" "ok|sonstige/sonstige/qr v0 h0 k0 l1" "$(ok2xx "$st")|$(nsf)"
+  q "TRUNCATE public.public_view_counts;" >/dev/null
+
+  # Rechte-Assertionen als ci_schema_reader: jede Zeile |t, jetzt auch die der Stufe 1c
+  local priv red own
+  priv="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } \
+    | docker exec -i -e PGOPTIONS="-c client_min_messages=warning" "$C" psql -U postgres -X -q -tA -v ON_ERROR_STOP=1 2>&1 || true)"
+  red="$( (grep -v '|t$' <<<"$priv" | grep -vE '^hallenton-(output-states-heartbeat|speaker-unassign-rpc-authenticated-only)\|f$' || true) | head -5 | tr '\n' ';')"
+  own="$( (grep -E '^zuschauer-zaehlung-[a-z-]+\|t$' <<<"$priv" || true) | grep -c . || true)"
+  check N "db_privilege_assertions.sql: jede Zeile |t, darunter die sechs zuschauer-zaehlung-* (inkl. netzstoerung-columns)" "keine|6" "${red:-keine}|$own"
+}
+
+# Rueckweg von 1c: Summen der Aufrufe und Lebenszeichen vorher = nachher, Schema danach = Stand 1b, Funktion = Fassung 1b
+rueckweg_ns() { # [Rueckwegdatei]
+  local rbf="${1:-$NS_ROLLBACK_FILE}" rc=0 s_vor n_vor md5_vor s_k s_l
+  seed_tournaments
+  q "TRUNCATE public.public_view_counts;" >/dev/null
+  rest_zaehle "$UA_IPHONE_SAFARI" >/dev/null; rest_zaehle "$UA_IPHONE_SAFARI" >/dev/null; rest_zaehle "$UA_WIN_FIREFOX" anon NIKO26 aufruf gross true direkt >/dev/null
+  rest_zaehle "$UA_IPHONE_SAFARI" anon NIKO26 lebenszeichen >/dev/null
+  rest_zaehle "$UA_IPHONE_SAFARI" anon NIKO26 stoerung_kurz >/dev/null; rest_zaehle "$UA_ANDROID_CHROME" anon NIKO26 stoerung_lang >/dev/null
+  s_vor="$(sums)"; md5_vor="$(bestand_md5)"; n_vor="$(q "SELECT count(*) FROM public.public_view_counts;")"
+  check R "1c Rueckweg: Ausgangslage (Stoerungen gezaehlt: 1/1)" "1/1" "$(outsums)"
+  psql_stdin < "$rbf" >/dev/null 2>"$WORK/rbns.err" || rc=$?
+  check R "1c Rueckweg laeuft sauber (Exit 0)" "0" "$rc"
+  check R "1c Rueckweg: Summen der Aufrufe und Lebenszeichen vorher = nachher, alle Zeilen der Stufe 1b gleich" "$s_vor|$md5_vor" "$(sums)|$(bestand_md5)"
+  check R "1c Rueckweg: die zwei Spalten sind weg, count_public_view = Fassung 1b (md5)" "0|$MD5_1B" "$(ns_cols)|$(fn_md5)"
+  schema_dump > "$WORK/schema_nach_ns_rueckweg.sql"
+  check R "1c Rueckweg: Schema danach = Stand 1b (Tabelle, Schluessel, Funktion, Rechte, Kommentare)" "" "$(diff "$WORK/schema_1b_vor_ns.sql" "$WORK/schema_nach_ns_rueckweg.sql" || true)"
+  start_rest
+  s_k="$(rest_zaehle "$UA_IPHONE_SAFARI" anon NIKO26 stoerung_kurz)"
+  s_l="$(rest_zaehle "$UA_WIN_FIREFOX" authenticated NIKO26 stoerung_lang)"
+  check V "@RZ-036 nach dem Rueckweg: ein neuer Client (stoerung_kurz/stoerung_lang) wird still verworfen (2xx), nichts gezaehlt" "ok|ok|$s_vor|$n_vor" \
+    "$(ok2xx "$s_k")|$(ok2xx "$s_l")|$(sums)|$(q "SELECT count(*) FROM public.public_view_counts;")"
+  alt_client_zaehlt "V nach Rueckweg 1c: ausgelieferter Client"
+}
+
+run_rueckweg_ns() {
+  # Rueckweg, zweimal, wieder vorwaerts (Zustand beim Eintritt: 1c eingespielt)
+  rueckweg_ns
+  check R "1c Rueckweg zweimal hintereinander laeuft sauber, nichts aendert sich" "0|" \
+    "$(psql_stdin < "$NS_ROLLBACK_FILE" >/dev/null 2>&1; echo -n "$?|"; schema_dump | diff "$WORK/schema_1b_vor_ns.sql" - || true)"
+  local s_mitte; s_mitte="$(sums)"
+  check R "1c wieder vorwaerts nach dem Rueckweg: laeuft sauber, Summen bleiben, Schema = erstes Einspielen, Stoerungen 0/0" "0|$s_mitte||0/0" \
+    "$(psql_stdin < "$NS_FILE" >/dev/null 2>&1; echo -n "$?|"; echo -n "$(sums)|"; schema_dump | diff "$WORK/schema_ns.sql" - || true; echo -n "|"; outsums)"
+  start_rest
+  # Rueckweg mit gleichzeitigem Schreiber: die Sperre haelt den Schreiber bis zum Ende; Summe bleibt, der Aufruf ist gezaehlt
+  seed_tournaments
+  q "TRUNCATE public.public_view_counts;" >/dev/null
+  rest_zaehle "$UA_IPHONE_SAFARI" >/dev/null; rest_zaehle "$UA_WIN_FIREFOX" >/dev/null
+  local v_vor v_nach erw
+  v_vor="$(q "SELECT coalesce(sum(views),0) FROM public.public_view_counts;")"
+  sed 's#^    LOCK TABLE public.public_view_counts IN ACCESS EXCLUSIVE MODE;#&\n    PERFORM pg_sleep(4);#' "$NS_ROLLBACK_FILE" > "$WORK/nl_rb_ns.sql"
+  cmp -s "$NS_ROLLBACK_FILE" "$WORK/nl_rb_ns.sql" && { echo "::error::nebenlaeufig 1c: sed greift nicht" >&2; DEVS[2]=$((DEVS[2] + 1)); }
+  nebenlaeufig "$WORK/nl_rb_ns.sql"
+  v_nach="$(q "SELECT coalesce(sum(views),0) FROM public.public_view_counts;")"
+  [[ "$W_RC" == "0" ]] && erw=$((v_vor + 1)) || erw="$v_vor"   # ein Aufruf, der gerade unterwegs ist, darf scheitern (der Client verschluckt das); gelingt er, ist er auch gezaehlt
+  [[ "${QUIET:-0}" == "1" ]] || echo "INFO        Schreiber waehrend des Rueckwegs 1c: Exit $W_RC ${W_ERR:0:160}; Summe $v_vor -> $v_nach"
+  check R "1c Rueckweg mit gleichzeitigem Schreiber: Rueckweg ohne Abbruch, Summe vorher = nachher, ein erfolgreicher Aufruf ist auch gezaehlt" "0|$erw" "$F_RC|$v_nach"
+  psql_stdin < "$NS_FILE" >/dev/null 2>&1 || true
+  start_rest
+}
+
+# Letzter Schritt (zerstoerend): ohne Tabelle scheitert 1c (Fail-fast), und sein Rueckweg legt die Funktion nicht neu an
+ns_ohne_tabelle() {
+  psql_stdin < "$NS_ROLLBACK_FILE" >/dev/null; psql_stdin < "$NEW_ROLLBACK_FILE" >/dev/null
+  psql_stdin < "$GRANT_ROLLBACK_FILE" >/dev/null; psql_stdin < "$ROLLBACK_FILE" >/dev/null
+  schema_dump > "$WORK/schema_ohne.sql"
+  check R "1c ohne Tabelle: Fail-fast (Einspielen scheitert, Exit 3) und es bleibt nichts zurueck" "3|" \
+    "$(psql_stdin < "$NS_FILE" >/dev/null 2>&1; echo -n "$?|"; schema_dump | diff "$WORK/schema_ohne.sql" - || true)"
+  check R "1c Rueckweg ohne Tabelle: laeuft sauber, legt count_public_view nicht neu an, nichts bleibt zurueck" "0||" \
+    "$(psql_stdin < "$NS_ROLLBACK_FILE" >/dev/null 2>&1; echo -n "$?|"; echo -n "$(q "SELECT coalesce(to_regprocedure('public.count_public_view(text,text,text,text,boolean)')::text,'');")|"; schema_dump | diff "$WORK/schema_ohne.sql" - || true)"
+}
+
+# Mutationen an 1c (Gegenprobe): jede muss in vor_ns oder run_ns_checks mindestens eine Pruefung rot machen
+MUTATIONEN_NS=(
+  "N1|s/v_views := 0; v_beats := 0; v_short := 0; v_long := 1;/v_views := 0; v_beats := 0; v_short := 1; v_long := 0;/"
+  "N2|s/v_views := 0; v_beats := 0; v_short := 1; v_long := 0;/v_views := 1; v_beats := 0; v_short := 1; v_long := 0;/"
+  "N3|s/outages_short = c.outages_short + EXCLUDED.outages_short, outages_long = c.outages_long + EXCLUDED.outages_long/outages_short = EXCLUDED.outages_short, outages_long = EXCLUDED.outages_long/"
+  "N4|s/CHECK (outages_short >= 0)/CHECK (true)/"
+  "N5|s/outages_long integer NOT NULL DEFAULT 0/outages_long integer NOT NULL DEFAULT 1/"
+  "N6|s/^    RETURN;\$/    RAISE EXCEPTION 'x';/"
+  "N7|s/AND t.deleted_at IS NULL;/;/"
+  "N8|s/coalesce(t.is_public, false) AND //"
+  "N9|s/TO anon, authenticated, service_role;/TO anon, authenticated, service_role, PUBLIC;/"
+  "N10|s/coalesce(p_installiert, false), v_os, v_browser,/coalesce(p_installiert, false), 'sonstige', 'sonstige',/"
+  "N11|s/814b327fa1dc1e8e92a03fd7031ff0b8/00000000000000000000000000000000/"
+  "N12|s/date_bin('5 minutes', now(), timestamptz '2000-01-01 00:00:00+00')/now()/"
+  "N13|/SET LOCAL lock_timeout/d"
+  "N14|s/ELSIF p_art = 'stoerung_lang' THEN/ELSIF p_art = 'stoerung_mittel' THEN/"
+  "N15|s/ELSIF p_art = 'stoerung_kurz' THEN/ELSIF p_art ILIKE 'stoerung_k%' THEN/"
+  "N16|s/AND position('outages_short' IN coalesce(v_src, '')) = 0//"
+  "N17|s/IF p_geraet IS NULL OR p_geraet NOT IN ('handy', 'tablet', 'gross') THEN RETURN; END IF;//"
+  "N18|s/v_views := 0; v_beats := 1; v_short := 0; v_long := 0;/v_views := 0; v_beats := 1; v_short := 1; v_long := 0;/"
+  "N19|s/outages_long integer NOT NULL DEFAULT 0/outages_long integer DEFAULT 0/"
+)
+# Mutationen am Rueckweg von 1c
+MUTATIONEN_RBNS=(
+  "N20|s/DROP COLUMN IF EXISTS outages_short, DROP COLUMN IF EXISTS outages_long/DROP COLUMN IF EXISTS outages_short/"
+  "N21|s#GRANT EXECUTE ON FUNCTION public.count_public_view(text, text, text, text, boolean) TO anon, authenticated, service_role;##"
+  "N23|s#^    LOCK TABLE public.public_view_counts IN ACCESS EXCLUSIVE MODE;#    DELETE FROM public.public_view_counts; &#"
+  "N24|s#v_headers := nullif(current_setting('request.headers', true), '');#v_headers := current_setting('request.headers');#"
+)
+
+# Stand 003 + 004 + 1b aufbauen, dann 1c mit <Datei> (vor_ns) und die Pruefungen N
+ns_aufbauen() { # <1c-Datei>; Rueckgabe 1 = Aufbau scheitert (gilt bei Mutationen als rot)
+  install_stack "$TARGET_FILE" "$GRANT_FILE" "$NEW_FILE" || return 1
+  NS_USE="$1"
+  vor_ns
+}
+
+ns_mutation_lauf() { # <id> -- vor_ns und run_ns_checks mit der Mutation (NS_USE), Ergebnis rot/gruen
+  local id="$1"
+  { QUIET=1 vor_ns; QUIET=1 run_ns_checks; } > "$WORK/run-$id.log" 2>&1 || true
+  if [[ "$(total_dev)" -gt 0 ]]; then
+    echo "Mutation $id: rot ($(total_dev) Abweichung(en), z. B. $(grep -m1 '^ABWEICHUNG' "$WORK/run-$id.log" || echo '?'))"
+  else
+    echo "::error::Mutation $id bleibt gruen -- keine Pruefung faengt sie." >&2; failed=1
+  fi
+}
+
 prepare
 case "$MODE" in
   normal)
@@ -731,6 +1013,10 @@ case "$MODE" in
     vor_1b
     run_checks
     run_rueckweg
+    vor_ns
+    run_ns_checks
+    run_rueckweg_ns
+    ns_ohne_tabelle
     summary
     [[ "$(total_dev)" -eq 0 ]] || { echo "::error::$(total_dev) Abweichung(en)." >&2; exit 1; }
     echo "zuschauer-zaehlung-check: alles gruen."
@@ -749,8 +1035,17 @@ case "$MODE" in
     [[ "$(total_dev)" -gt 0 ]] || { echo "::error::ohne Stufe 1b nicht rot." >&2; exit 1; }
     echo "zuschauer-zaehlung-check --without-1b: Stand 003+004 ohne Stufe 1b ist rot (erwartet)."
     ;;
+  without-ns)
+    apply_target "$TARGET_FILE" "$GRANT_FILE" "$NEW_FILE"
+    QUIET=1 run_ns_checks
+    summary
+    [[ "$(total_dev)" -gt 0 ]] || { echo "::error::ohne Stufe 1c nicht rot." >&2; exit 1; }
+    echo "zuschauer-zaehlung-check --without-ns: Stand 003+004+1b ohne Stufe 1c ist rot (erwartet)."
+    ;;
   gegenprobe)
     failed=0
+    # GEGENPROBE_NUR=ns: nur die Mutationen der Stufe 1c (lokale Abkuerzung; CI und Vorgabe laufen immer alle)
+    if [[ "${GEGENPROBE_NUR:-}" != "ns" ]]; then
     for m in "${MUTATIONEN_003[@]}"; do
       id="${m%%|*}"; expr="${m#*|}"
       sed "$expr" "$TARGET_FILE" > "$WORK/mutant.sql"
@@ -785,6 +1080,33 @@ case "$MODE" in
       else
         QUIET=1 rueckweg_1b "$WORK/mutant_rb.sql" > "$WORK/run-$id.log" 2>&1 || true
       fi
+      if [[ "$(total_dev)" -gt 0 ]]; then
+        echo "Mutation $id: rot ($(total_dev) Abweichung(en), z. B. $(grep -m1 '^ABWEICHUNG' "$WORK/run-$id.log" || echo '?'))"
+      else
+        echo "::error::Mutation $id bleibt gruen -- keine Pruefung faengt sie." >&2; failed=1
+      fi
+    done
+    fi
+    # Mutationen an 20261127_001 (Stufe 1c): Stand 003+004+1b, dann die veraenderte Migration (vor_ns) und die Pruefungen N
+    for m in "${MUTATIONEN_NS[@]}"; do
+      id="${m%%|*}"; expr="${m#*|}"
+      [[ -z "${GEGENPROBE_ID:-}" || "$id" == "$GEGENPROBE_ID" ]] || continue   # lokale Abkuerzung: nur eine Mutation
+      sed "$expr" "$NS_FILE" > "$WORK/mutant_ns.sql"
+      if cmp -s "$NS_FILE" "$WORK/mutant_ns.sql"; then echo "::error::Mutation $id aendert nichts (sed greift nicht)." >&2; failed=1; continue; fi
+      if ! install_stack "$TARGET_FILE" "$GRANT_FILE" "$NEW_FILE"; then echo "::error::Grundaufbau fuer $id scheitert." >&2; failed=1; continue; fi
+      NS_USE="$WORK/mutant_ns.sql"
+      ns_mutation_lauf "$id"
+    done
+    NS_USE="$NS_FILE"
+    # Mutationen am Rueckweg von 1c: Stand mit eingespielter 1c, dann der veraenderte Rueckweg; die Pruefungen R muessen rot werden
+    for m in "${MUTATIONEN_RBNS[@]}"; do
+      id="${m%%|*}"; expr="${m#*|}"
+      sed "$expr" "$NS_ROLLBACK_FILE" > "$WORK/mutant_rb_ns.sql"
+      if cmp -s "$NS_ROLLBACK_FILE" "$WORK/mutant_rb_ns.sql"; then echo "::error::Mutation $id aendert nichts (sed greift nicht)." >&2; failed=1; continue; fi
+      install_stack "$TARGET_FILE" "$GRANT_FILE" "$NEW_FILE" || { echo "::error::Grundaufbau fuer $id scheitert." >&2; failed=1; continue; }
+      schema_dump > "$WORK/schema_1b_vor_ns.sql"
+      psql_stdin < "$NS_FILE" >/dev/null; schema_dump > "$WORK/schema_ns.sql"; start_rest
+      QUIET=1 rueckweg_ns "$WORK/mutant_rb_ns.sql" > "$WORK/run-$id.log" 2>&1 || true
       if [[ "$(total_dev)" -gt 0 ]]; then
         echo "Mutation $id: rot ($(total_dev) Abweichung(en), z. B. $(grep -m1 '^ABWEICHUNG' "$WORK/run-$id.log" || echo '?'))"
       else

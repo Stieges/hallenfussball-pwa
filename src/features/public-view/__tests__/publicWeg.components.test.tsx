@@ -179,7 +179,7 @@ describe('@ZM-196 PublicParticipants', () => {
   });
 
   it('Jeder gegen jeden (keine Gruppen): „Teilnehmer (6)“, aufgeklappt ohne Gruppenüberschrift', () => {
-    const sechs = ['DJK Kammer', 'TSV Waging rot', 'TSV Petting', 'DJK Otting', 'TSV 1921 Fridolfing', 'TSV Waging blau'].map((n, i) => team(String(i), n));
+    const sechs = ['DJK Kammer', 'TSV Waging 1', 'TSV Petting', 'DJK Otting', 'TSV 1921 Fridolfing', 'TSV Waging 2'].map((n, i) => team(String(i), n));
     render(<PublicParticipants teams={sechs} />);
     expect(screen.getByTestId('public-participants-toggle').textContent).toContain('Teilnehmer (6)');
     fireEvent.click(screen.getByTestId('public-participants-toggle'));

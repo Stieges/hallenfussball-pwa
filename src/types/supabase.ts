@@ -29,6 +29,8 @@
  * (generate_typescript_types) neu erzeugt.
  * 2026-11-15 (Zuschauer-Zaehlung 1b, @RZ-031): nach dem Einspielen von 20261126_001 aus der Produktion per Supabase-MCP
  * (generate_typescript_types) erzeugt: Spalten public_view_counts.os_family/browser_family und public_view_agent_families.
+ * 2026-11-17 (Zuschauer-Zaehlung 1c, @RZ-033): public_view_counts.outages_long/outages_short von Hand nachgezogen; Migration 20261127_001 ist
+ * inzwischen in der Produktion eingespielt (der Drift-Check gegen die Typen belegt die Gleichheit).
  */
 export type Json =
   | string
@@ -1319,6 +1321,8 @@ export type Database = {
           heartbeats: number
           installed: boolean
           os_family: string
+          outages_long: number
+          outages_short: number
           tournament_id: string
           views: number
           window_start: string
@@ -1330,6 +1334,8 @@ export type Database = {
           heartbeats?: number
           installed: boolean
           os_family?: string
+          outages_long?: number
+          outages_short?: number
           tournament_id: string
           views?: number
           window_start: string
@@ -1341,6 +1347,8 @@ export type Database = {
           heartbeats?: number
           installed?: boolean
           os_family?: string
+          outages_long?: number
+          outages_short?: number
           tournament_id?: string
           views?: number
           window_start?: string

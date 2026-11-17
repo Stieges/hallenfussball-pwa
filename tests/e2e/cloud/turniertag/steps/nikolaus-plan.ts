@@ -90,15 +90,15 @@ async function zeilenImSpielplan(seite: Page): Promise<string[]> {
   return [...gesehen.entries()].sort(([a], [b]) => a - b).map(([, zeile]) => zeile);
 }
 
-/** N2a: Spiel 1 ist eine Waging-Mannschaft als Heimmannschaft gegen einen Gast, das Vereinsduell liegt in Runde 2 (Spiel 4 bis 6); die Oberfläche zeigt denselben Plan (@W4-027, @W4-033). Hinweis: @W4-027 ist hier nicht trennscharf (Waging rot steht an erster Stelle der Teamliste, der Rundenplan eröffnet ohnehin mit Team 1 als Heim); belegt ist es durch die Generator-Tests aus #290, @W4-033 trennt. */
+/** N2a: Spiel 1 ist eine Waging-Mannschaft als Heimmannschaft gegen einen Gast, das Vereinsduell liegt in Runde 2 (Spiel 4 bis 6); die Oberfläche zeigt denselben Plan (@W4-027, @W4-033). Hinweis: @W4-027 ist hier nicht trennscharf (Waging 1 steht an erster Stelle der Teamliste, der Rundenplan eröffnet ohnehin mit Team 1 als Heim); belegt ist es durch die Generator-Tests aus #290, @W4-033 trennt. */
 async function eroeffnungWaging({ asRole }: StepContext): Promise<void> {
   const { spiele, namen } = await ladeSpielplan();
-  const [rot, blau] = E2E_NIKOLAUS_HOST_TEAM_NAMES;
+  const [waging1, waging2] = E2E_NIKOLAUS_HOST_TEAM_NAMES;
   const heim = namen.get(spiele[0].team_a_id) ?? '';
   const gast = namen.get(spiele[0].team_b_id) ?? '';
-  expect([rot, blau], `Spiel 1: ${heim} gegen ${gast}`).toContain(heim);
-  expect([rot, blau], 'Spiel 1 ist gegen einen Gast').not.toContain(gast);
-  const duell = spiele.flatMap((s) => ([rot, blau].includes(namen.get(s.team_a_id) as never) && [rot, blau].includes(namen.get(s.team_b_id) as never) ? [spielnummer(s)] : []));
+  expect([waging1, waging2], `Spiel 1: ${heim} gegen ${gast}`).toContain(heim);
+  expect([waging1, waging2], 'Spiel 1 ist gegen einen Gast').not.toContain(gast);
+  const duell = spiele.flatMap((s) => ([waging1, waging2].includes(namen.get(s.team_a_id) as never) && [waging1, waging2].includes(namen.get(s.team_b_id) as never) ? [spielnummer(s)] : []));
   expect(duell, 'das Vereinsduell liegt in Runde 2 (Spiel 4 bis 6)').toHaveLength(1);
   expect(duell[0]).toBeGreaterThanOrEqual(4);
   expect(duell[0]).toBeLessThanOrEqual(6);
@@ -110,7 +110,7 @@ async function eroeffnungWaging({ asRole }: StepContext): Promise<void> {
 }
 
 /**
- * N2b: im Assistenten (Turnier bearbeiten, Schritt „Teams“) stehen „TSV Waging rot“ und „TSV Waging blau“ als Mannschaften des Veranstalters markiert,
+ * N2b: im Assistenten (Turnier bearbeiten, Schritt „Teams“) stehen „TSV Waging 1“ und „TSV Waging 2“ als Mannschaften des Veranstalters markiert,
  * alle anderen nicht; bei zwei Markierten erscheint die Wahl der Eröffnung mit der Voreinstellung „Ein Team eröffnet als Heim“, und die Übersicht
  * nennt beide (@W4-034, @W4-033). Es wird nichts geändert und nichts gespeichert (nur Lesen im Assistenten).
  */
@@ -126,7 +126,7 @@ async function markierungImAssistenten({ asRole }: StepContext): Promise<void> {
   await expect(ownerPage.getByTestId('wizard-host-choice'), 'bei zwei Markierten erscheint die Wahl der Eröffnung').toBeVisible();
   await expect(ownerPage.getByTestId('wizard-opening-guest-opening'), 'Voreinstellung „Ein Team eröffnet als Heim“').toHaveAttribute('aria-checked', 'true');
   await ownerPage.getByTestId('wizard-footer-bar').getByRole('button', { name: 'Weiter' }).click();
-  await expect(ownerPage.getByTestId('host-summary-teams'), 'die Übersicht nennt beide Mannschaften des Veranstalters').toHaveText('TSV Waging rot, TSV Waging blau');
+  await expect(ownerPage.getByTestId('host-summary-teams'), 'die Übersicht nennt beide Mannschaften des Veranstalters').toHaveText('TSV Waging 1, TSV Waging 2');
 }
 
 /**
@@ -166,7 +166,7 @@ async function zeitplanVorziehen({ asRole, browser }: StepContext): Promise<void
     spiele.map((_, i) => `${String(16 + Math.floor((15 + i * 10) / 60)).padStart(2, '0')}:${String((15 + i * 10) % 60).padStart(2, '0')}:00`)
   );
   // ohne Neuladen innerhalb von 10 Sekunden (@ZP-090)
-  const zeile1 = zuschauer.locator('[aria-label="Spiel 1: TSV Waging rot gegen TSV 1921 Fridolfing"]:visible');
+  const zeile1 = zuschauer.locator('[aria-label="Spiel 1: TSV Waging 1 gegen TSV 1921 Fridolfing"]:visible');
   const zeile2 = zuschauer.locator('[aria-label="Spiel 2: DJK Otting gegen TSV Petting"]:visible');
   await expect(zeile1, 'Zuschauer-Seite: Spiel 1 um 16:15, (war 16:30)').toContainText(/16:15[\s\S]*\(war 16:30\)/, { timeout: 10000 });
   await expect(zeile2, 'Zuschauer-Seite: Spiel 2 um 16:25').toContainText('16:25', { timeout: 10000 });

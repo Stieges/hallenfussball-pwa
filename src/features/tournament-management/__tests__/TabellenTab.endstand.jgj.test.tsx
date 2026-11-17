@@ -46,16 +46,16 @@ describe('A-19a TabellenTab Gesamtplatzierung Jeder gegen jeden = Endstand', () 
     const ohnePetting: Tournament = {
       ...t,
       teams: t.teams.map((team) => (team.id === NK.petting ? { ...team, isRemoved: true } : team)),
-      groupCompletions: [completion('', [NK.kammer, NK.wagingRot, NK.otting, NK.fridolfing, NK.wagingBlau])],
+      groupCompletions: [completion('', [NK.kammer, NK.waging1, NK.otting, NK.fridolfing, NK.waging2])],
     };
     await zeigeGesamtplatzierung(ohnePetting);
-    expect(['DJK Kammer', 'TSV Waging rot', 'DJK Otting', 'TSV 1921 Fridolfing', 'TSV Waging blau'].map(platzVon)).toEqual(['1', '2', '3', '4', '5']);
+    expect(['DJK Kammer', 'TSV Waging 1', 'DJK Otting', 'TSV 1921 Fridolfing', 'TSV Waging 2'].map(platzVon)).toEqual(['1', '2', '3', '4', '5']);
     expect(platzVon('TSV Petting')).toBeNull();
   });
 
   it('@ET-022 die Gesamtplatzierung folgt der abgeschlossenen Tabelle, auch wenn eine spätere Rechnung anders ordnen würde', async () => {
     const t: Tournament = { ...completeGroup(jgj('RKMUNO', DATA.ET_056)), placementLogic: GD_FIRST_ORDER };
     await zeigeGesamtplatzierung(t);
-    expect([platzVon('DJK Kammer'), platzVon('TSV Waging rot')]).toEqual(['1', '2']);
+    expect([platzVon('DJK Kammer'), platzVon('TSV Waging 1')]).toEqual(['1', '2']);
   });
 });

@@ -29,7 +29,7 @@ describe('TB-3 StandingDecisionService', () => {
 
   it('@W2A-060 Gegenbeispiel: hat sich der Block inzwischen geändert, meldet die App BLOCK_CHANGED und schreibt nichts', async () => {
     const repo = new MemoryRepo(jgj('RKMUNO', DATA.W2A_052));
-    repo.correct('N', 'O', 1, 1); // FC Nord kommt dazu – der Block ist jetzt Waging rot, FC Nord, Kammer … und aufgelöst
+    repo.correct('N', 'O', 1, 1); // FC Nord kommt dazu – der Block ist jetzt Waging 1, FC Nord, Kammer … und aufgelöst
     const result = await repo.service().decide(repo.tournament.id, shootout('K', 'R', 4, 3));
     expect(result).toEqual({ ok: false, code: 'BLOCK_CHANGED' });
     expect(repo.writes).toBe(0);

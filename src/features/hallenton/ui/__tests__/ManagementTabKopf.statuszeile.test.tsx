@@ -54,7 +54,7 @@ import { ManagementTabKopf } from '../../../tournament-management/components/Man
 
 const turnier = { id: 't1', title: 'Hallencup Süd', numberOfFields: 2, matches: [], teams: [] } as unknown as Tournament;
 const status = (felder: Record<number, LautsprecherLage>): HallStatus => ({
-  stand: 'aktuell', antwort: null, felder, lautsprecherBekannt: true, testtonAnfordern: vi.fn(), gehoert: vi.fn(),
+  stand: 'aktuell', antwort: null, felder, lautsprecherBekannt: true, letzteSprecher: [], testtonAnfordern: vi.fn(), gehoert: vi.fn(),
 });
 const kopf = () => render(
   <AuthContext.Provider value={{} as never}><MemoryRouter>

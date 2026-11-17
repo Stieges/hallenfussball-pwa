@@ -197,14 +197,14 @@ A_CLEAN="FC Nord|SV Süd|2|1;FC Nord|TSV West|2|1;FC Nord|SC Ost|0|0;SV Süd|TSV
 A_TIE="FC Nord|SV Süd|2|1;FC Nord|TSV West|2|1;FC Nord|SC Ost|0|0;SV Süd|TSV West|1|1;SV Süd|SC Ost|2|0;TSV West|SC Ost|2|0"
 A_FIVE="FC Nord|SV Süd|2|1;FC Nord|TSV West|2|1;SV Süd|TSV West|2|1;SV Süd|SC Ost|2|0;TSV West|SC Ost|2|0"
 # @W2A-067 Nikolaus-Lage (DATA.NIKOLAUS)
-NIKO="DJK Kammer|TSV Waging rot|2|1;DJK Kammer|TSV Petting|2|2;DJK Otting|DJK Kammer|2|1;DJK Kammer|TSV 1921 Fridolfing|2|0"
-NIKO="$NIKO;DJK Kammer|TSV Waging blau|3|0;TSV Waging rot|DJK Otting|2|2;TSV Waging rot|TSV Petting|4|0"
-NIKO="$NIKO;TSV Waging rot|TSV 1921 Fridolfing|3|0;TSV Waging rot|TSV Waging blau|3|0;TSV Petting|DJK Otting|1|1"
-NIKO="$NIKO;TSV Petting|TSV 1921 Fridolfing|3|1;TSV Petting|TSV Waging blau|3|1;DJK Otting|TSV Waging blau|3|1"
-NIKO="$NIKO;TSV 1921 Fridolfing|DJK Otting|4|1;TSV 1921 Fridolfing|TSV Waging blau|1|1"
+NIKO="DJK Kammer|TSV Waging 1|2|1;DJK Kammer|TSV Petting|2|2;DJK Otting|DJK Kammer|2|1;DJK Kammer|TSV 1921 Fridolfing|2|0"
+NIKO="$NIKO;DJK Kammer|TSV Waging 2|3|0;TSV Waging 1|DJK Otting|2|2;TSV Waging 1|TSV Petting|4|0"
+NIKO="$NIKO;TSV Waging 1|TSV 1921 Fridolfing|3|0;TSV Waging 1|TSV Waging 2|3|0;TSV Petting|DJK Otting|1|1"
+NIKO="$NIKO;TSV Petting|TSV 1921 Fridolfing|3|1;TSV Petting|TSV Waging 2|3|1;DJK Otting|TSV Waging 2|3|1"
+NIKO="$NIKO;TSV 1921 Fridolfing|DJK Otting|4|1;TSV 1921 Fridolfing|TSV Waging 2|1|1"
 R_CLEAN="FC Nord,SV Süd,TSV West,SC Ost"
 R_WEST="FC Nord,TSV West,SV Süd,SC Ost"
-R_NIKO="DJK Kammer,TSV Waging rot,TSV Petting,DJK Otting,TSV 1921 Fridolfing,TSV Waging blau"
+R_NIKO="DJK Kammer,TSV Waging 1,TSV Petting,DJK Otting,TSV 1921 Fridolfing,TSV Waging 2"
 
 setup_templates() {
   TPL_CLEAN="$(q "SELECT harness.instantiate('hallencup', 'vorlage-sauber');")"
@@ -440,7 +440,7 @@ run_pflicht() {
   for zeile in Z1 Z2 Z3 Z4 Z5; do
     t="$(clone "$TPL_NIKO")"; s="$(state "$t" '')"
     case "$zeile" in
-      Z2) q "SELECT harness.correction('maria', '$t', 'TSV 1921 Fridolfing', 'TSV Waging blau', 2, 1);" >/dev/null ;;
+      Z2) q "SELECT harness.correction('maria', '$t', 'TSV 1921 Fridolfing', 'TSV Waging 2', 2, 1);" >/dev/null ;;
       Z3) as_exec maria "UPDATE public.tournaments SET config = jsonb_set(config, '{placementsToPlayOut}', '[1,2,3]') WHERE id = '$t'" >/dev/null ;;
       Z4) dm="$(dec tabelle-otting "$t" '' shootout "TSV Petting,DJK Otting" "DJK Otting,TSV Petting" 4 3)"
           decide maria "$t" decide "$dm" "" "$(version "$t")" >/dev/null ;;
@@ -507,7 +507,7 @@ run_pflicht() {
   check P "P-10 Gegenbeispiel: 'all' ist keine Gruppe -> UNKNOWN_GROUP" "rejected:UNKNOWN_GROUP" \
     "$(complete olli "$t" all "$R_NIKO" '{}' '[]' '{}' '[]' false)"
   check P "P-10 Korrektur eines Nikolaus-Spiels setzt den Abschluss auf stale (Trigger bildet 'all' ab)" "accepted|stale" \
-    "$(q "SELECT harness.correction('olli', '$t', 'TSV 1921 Fridolfing', 'TSV Waging blau', 2, 1);")|$(gc "$t" '')"
+    "$(q "SELECT harness.correction('olli', '$t', 'TSV 1921 Fridolfing', 'TSV Waging 2', 2, 1);")|$(gc "$t" '')"
 
   # --- P-11 (Soll 12): Voll-Speichern schreibt keine Entscheidungen; reassigned_at nur der Server ---------------------
   t="$(clone "$TPL_NIKO")"
@@ -519,7 +519,7 @@ run_pflicht() {
     "$(q "SELECT harness.decisions('$t') -> 0 ->> 'id';")|$(q "SELECT (config -> 'placementsToPlayOut')::text FROM public.tournaments WHERE id = '$t';")|$(q "SELECT count(*) FROM public.bracket_log WHERE tournament_id = '$t';")"
   check P "P-11 Voll-Speichern kann keine Entscheidung hinzufuegen" "ok:1|1" \
     "$(as_exec olli "UPDATE public.tournaments SET config = jsonb_set(config, '{standingDecisions}', config -> 'standingDecisions' || '[{\"id\":\"rest\"}]') WHERE id = '$t'")|$(ndec "$t")"
-  m="$(gm "$t" 'DJK Kammer' 'TSV Waging rot')"
+  m="$(gm "$t" 'DJK Kammer' 'TSV Waging 1')"
   check P "P-11 Eigentuemer und Co-Admin: REST-UPDATE matches.reassigned_at -> 42501" "error:42501|error:42501" \
     "$(as_exec olli "UPDATE public.matches SET reassigned_at = now() WHERE id = '$m'")|$(as_exec maria "UPDATE public.matches SET reassigned_at = now() WHERE id = '$m'")"
   check P "P-11 INSERT mit reassigned_at -> neutral (NULL)" "ok:1|null" \
