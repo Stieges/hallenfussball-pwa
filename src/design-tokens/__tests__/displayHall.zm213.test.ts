@@ -12,9 +12,10 @@ const cqh = (wert: string): number => {
 
 describe('@ZM-213 displayHall', () => {
   it('Torzahlen mindestens 34 % der Höhe', () => { expect(cqh(displayHall.digit.font)).toBeGreaterThanOrEqual(34); });
-  it('Restzeit mindestens 26 % der Höhe', () => { expect(cqh(displayHall.clock.font)).toBeGreaterThanOrEqual(26); });
+  it('Restzeit mindestens 26 % der Höhe, nach @ZM-215 so groß wie möglich (über 29,3 %)', () => { expect(cqh(displayHall.clock.font)).toBeGreaterThan(29.3); });
+  it('Zeitbalken mindestens 6 % der Höhe (@ZM-215, Profil „Halle (sehr fern)“)', () => { expect(cqh(displayHall.bar.height)).toBeGreaterThanOrEqual(6); });
   it('Namen: die größte Schrift erlaubt 20 % („Team 3“ gegen „Team 4“ mindestens 20 %)', () => { expect(cqh(displayHall.name.maxFont)).toBeGreaterThanOrEqual(20); });
-  it('zwei Farbflächen füllen die oberen 69 % der Höhe', () => { expect(cqh(displayHall.panel.height)).toBe(69); });
+  it('zwei Farbflächen füllen die oberen 64,5 % der Höhe (geändert mit @ZM-215: der Platz geht an Restzeit und Zeitbalken)', () => { expect(cqh(displayHall.panel.height)).toBe(64.5); });
   it('Zwei Zeilen Name passen ins Namensfeld (Feldhöhe mindestens zwei Zeilen der Schrift, die 12,5 % trägt)', () => {
     expect(cqh(displayHall.name.height)).toBeGreaterThanOrEqual(2 * 12.5 * displayHall.name.lineHeight);
   });

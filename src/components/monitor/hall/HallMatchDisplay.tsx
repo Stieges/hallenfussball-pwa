@@ -13,6 +13,7 @@ import { useMonitorTheme } from '../../../hooks';
 import { pairFrameStrength, type ScoreBoxOutcome } from '../../ui/molecules/scoreBoxStyle';
 import type { LiveMatchDisplayProps } from '../LiveMatchDisplay';
 import { badgeOfLiveMatch } from '../liveBadge';
+import { outcomeOfSide, winnerOf } from '../matchOutcome';
 import { standardBoxes } from '../standardBoxes';
 import { gemeinsameNamenGroesse } from '../teamNameFit';
 import { useLaufendeZeitstrafen } from '../useLaufendeZeitstrafen';
@@ -26,10 +27,13 @@ export type HallMatchDisplayProps = Pick<
 > & {
   /** Vor dem Anpfiff (@ZM-195): Anstoßzeit an der Stelle der Restzeit; die Flächen zeigen 0 und 0 */
   kickoff?: { time: string; notes?: ReactNode };
+  /** Feld bzw. Gruppe im Band nur bei mehr als einem Feld bzw. mehr als einer Gruppe im Turnier (@ZM-215) */
+  showField?: boolean;
+  showGroup?: boolean;
 };
 
 export function HallMatchDisplay({
-  match, group, theme = 'dark', boxes, hideScore = false, clockMode, finalScore, finalRound = false, badge, uhr, zeitstrafenQuelle, kickoff,
+  match, group, theme = 'dark', boxes, hideScore = false, clockMode, finalScore, finalRound = false, badge, uhr, zeitstrafenQuelle, kickoff, showField, showGroup,
 }: HallMatchDisplayProps): ReactElement {
   const { themeColors } = useMonitorTheme(theme);
   const shown = boxes ?? standardBoxes();
@@ -42,8 +46,8 @@ export function HallMatchDisplay({
   const sharedNamePx = gemeinsameNamenGroesse(namePx.home, namePx.away);
 
   // Sieger/Verlierer nur nach dem Abpfiff und mit Entscheidung; ein Unentschieden in der Gruppe hat weder Ring noch Pokal (wie `LiveScoreGrid`)
-  const winner = !hideScore && match.status === 'FINISHED' ? finalScore?.winner ?? null : null;
-  const outcomeOf = (side: 'a' | 'b'): ScoreBoxOutcome | undefined => (winner === null ? undefined : winner === side ? 'winner' : 'loser');
+  const winner = winnerOf(match.status, hideScore, finalScore);
+  const outcomeOf = (side: 'a' | 'b'): ScoreBoxOutcome | undefined => outcomeOfSide(winner, side);
   // Gleiche Rahmenbreite beider Flächen, unabhängig vom Zustand (@ZM-151)
   const frame = pairFrameStrength({ fill: shown.home.fill }, { fill: shown.away.fill }, themeColors.background);
 
@@ -69,7 +73,7 @@ export function HallMatchDisplay({
       </div>
       <HallBand
         match={match} group={group ?? match.group} badge={badge ?? badgeOfLiveMatch(match)} theme={theme} colors={themeColors}
-        clockMode={clockMode} uhr={uhr} finalScore={finalScore} hideScore={hideScore} kickoff={kickoff}
+        clockMode={clockMode} uhr={uhr} finalScore={finalScore} hideScore={hideScore} kickoff={kickoff} showField={showField} showGroup={showGroup}
       />
     </div>
   );

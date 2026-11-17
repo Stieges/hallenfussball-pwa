@@ -67,7 +67,8 @@ export function MonitorSettingsSection({ monitor, nameError, onUpdateSettings }:
     { value: 'hall-very-far', label: t('monitorEditor.settings.profiles.hallVeryFar') },
   ];
   const profile = monitorProfileOf(monitor);
-  const hiddenSlides = monitor.slides.filter(slide => slide.type !== 'live').length;
+  // Im Profil läuft nur eine Live-Folie (die erste, sonst Feld 1): alle übrigen Folien der Liste werden nicht gezeigt, auch weitere Live-Folien (@ZM-212)
+  const hiddenSlides = Math.max(0, monitor.slides.length - (monitor.slides.some(slide => slide.type === 'live') ? 1 : 0));
 
   const nameId = `${id}-name`;
   const nameErrorId = `${id}-name-error`;

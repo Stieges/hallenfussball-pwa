@@ -5,11 +5,12 @@
  * und Torzahlen in jedem Zustand an derselben Stelle). Spiel 7 „FC Nord – SV Süd“ steht auf Feld 1; Farben kommen aus den Trikots bzw. `match.kit`.
  * Layout-Pixel misst die Playwright-Aufnahme (jsdom hat keine Geometrie); hier gelten die Zusicherungen an Bauteile, Texte, Farben und Tokens.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { LiveSlide } from '../slides/LiveSlide';
+import { ZeitBalken } from '../../../components/ui/atoms/ZeitBalken';
 import type { MonitorProfile, PerformanceSettings } from '../../../types/monitor';
-import type { Match } from '../../../types/tournament';
+import type { Match, Tournament } from '../../../types/tournament';
 import { NowSourceContext } from '../../../components/schedule/useTickingNow';
 import { displayHall, monitorThemes } from '../../../design-tokens';
 import { getContrastRatio } from '../../../design-tokens/display';
@@ -20,7 +21,12 @@ import { withView } from './monitorViewHelper';
 
 vi.unmock('i18next');
 vi.unmock('react-i18next');
+import i18n from 'i18next';
 import { initRealDeI18n } from '../../../test/realDeI18n';
+import enMonitor from '../../../i18n/locales/en/monitor.json';
+import enSport from '../../../i18n/locales/en/sport.json';
+import enShort from '../../../i18n/locales/en/short.json';
+import enTournament from '../../../i18n/locales/en/tournament.json';
 await initRealDeI18n();
 
 const performanceSettings = {} as PerformanceSettings;
@@ -36,12 +42,12 @@ const ANGEHALTEN = { ...LAEUFT, status: 'paused', anchorAt: null };
 const HALBZEIT = { status: 'section_break', phase: 'regular', section: 1, sections: 2, sectionSeconds: 300, sectionStartMs: 0, elapsedMs: 300_000, anchorAt: null, breakStartedAt: T0 - 20_000, breakSeconds: 60 };
 const geplant: Partial<Match> = { matchStatus: 'scheduled', scoreA: undefined, scoreB: undefined, scheduledTime: new Date('2026-10-10T14:00:00') };
 
-interface Zeige { patch?: Partial<Match>; farben?: Record<string, string | undefined>; namen?: Record<string, string>; ohneErgebnis?: boolean; profil?: MonitorProfile | null; feld?: string; pinned?: string }
+interface Zeige { patch?: Partial<Match>; farben?: Record<string, string | undefined>; namen?: Record<string, string>; ohneErgebnis?: boolean; profil?: MonitorProfile | null; feld?: string; pinned?: string; turnier?: Partial<Tournament> }
 
 /** Live-Folie des Felds im Profil (Vorgabe „Halle (sehr fern)“); `patch` ändert Spiel 7, `farben` die Trikotfarben, `namen` die Teamnamen. */
-function zeige({ patch = {}, farben = {}, namen = {}, ohneErgebnis = false, profil = HALLE, feld = 'field-1', pinned }: Zeige = {}) {
+function zeige({ patch = {}, farben = {}, namen = {}, ohneErgebnis = false, profil = HALLE, feld = 'field-1', pinned, turnier = {} }: Zeige = {}) {
   const teams = FIXTURE_TEAMS.map((t) => ({ ...t, name: namen[t.id] ?? t.name, ...(farben[t.id] === undefined ? {} : { colors: { primary: farben[t.id]! } }) }));
-  const tournament = buildTournament({ teams, matches: withMatch('match-7', patch), hideScoresForPublic: ohneErgebnis });
+  const tournament = buildTournament({ teams, matches: withMatch('match-7', patch), hideScoresForPublic: ohneErgebnis, ...turnier });
   return render(
     <NowSourceContext.Provider value={() => T0}>
       <LiveSlide slide={slide('live', { fieldId: feld })} {...withView(tournament)} performanceSettings={performanceSettings} theme="dark" style={{}} pinnedMatchId={pinned} profile={profil ?? undefined} />
@@ -94,12 +100,12 @@ describe('@ZM-212 Profil „Halle (sehr fern)“: die Live-Folie in der Anordnun
 });
 
 describe('@ZM-213 Anordnung und Mindestgrößen (Anteil der Höhe der Folienfläche innerhalb des Bildrands)', () => {
-  it('Torzahlen mindestens 34 %, Restzeit mindestens 26 %, Flächen die oberen 69 %, Namen bis 22,5 % (kurze Namen mindestens 20 %)', () => {
+  it('Torzahlen mindestens 34 %, Restzeit mindestens 26 %, Flächen die oberen 64,5 % (seit @ZM-215), Namen bis 22,5 % (kurze Namen mindestens 20 %)', () => {
     zeige({ patch: laeuft() });
     expect(cqh(displayHall.digit.font)).toBeGreaterThanOrEqual(34);
     expect(cqh(displayHall.clock.font)).toBeGreaterThanOrEqual(26);
     expect(cqh(displayHall.name.maxFont)).toBeGreaterThanOrEqual(20);
-    expect(cqh(displayHall.panel.height)).toBe(69);
+    expect(cqh(displayHall.panel.height)).toBe(64.5);
     // die Bauteile tragen genau diese Werte (nicht nur die Tokens)
     expect(ziffer('home').style.fontSize).toBe(displayHall.digit.font);
     expect(screen.getByTestId('hall-clock').parentElement?.style.fontSize).toBe(displayHall.clock.font);
@@ -184,9 +190,10 @@ describe('@ZM-214 Zustände ohne Sprung', () => {
     expect(slot.style.color).toBe(rgbVon(monitorThemes.dark.timerNormal)); // dieselbe Farbe wie laufend
   });
 
-  it('Gegenbeispiel: läuft die Uhr, steht „Restzeit“ daneben und der Balken ist grün', () => {
+  it('Gegenbeispiel: läuft die Uhr, steht kein Wort daneben (@ZM-215: auch kein „Restzeit“) und der Balken ist grün', () => {
     zeige({ patch: laeuft() });
-    expect(screen.getByTestId('hall-phase-text')).toHaveTextContent('Restzeit');
+    expect(screen.queryByTestId('hall-phase-text')).toBeNull();
+    expect(screen.queryByText('Restzeit')).toBeNull();
     expect(screen.getByTestId('hall-zeitbalken')).toHaveAttribute('data-ton', 'gruen');
   });
 
@@ -216,17 +223,17 @@ describe('@ZM-214 Zustände ohne Sprung', () => {
     expect(panel('away')).not.toHaveAttribute('data-outcome');
   });
 
-  it('Strafstoßergebnis: die Torzahlen zeigen 1 und 1, an der Stelle der Restzeit „4 : 3 n. E.“', () => {
+  it('Strafstoßergebnis: die Torzahlen zeigen 1 und 1, an der Stelle der Restzeit „4 : 3 i. E.“', () => {
     zeige({ patch: { matchStatus: 'finished', scoreA: 1, scoreB: 1, penaltyScoreA: 4, penaltyScoreB: 3, decidedBy: 'penalty', liveState: undefined }, pinned: 'match-7' });
     expect(ziffer('home')).toHaveTextContent('1');
     expect(ziffer('away')).toHaveTextContent('1');
-    expect(screen.getByTestId('hall-shootout-result')).toHaveTextContent('4 : 3 n. E.');
+    expect(screen.getByTestId('hall-shootout-result')).toHaveTextContent('4 : 3 i. E.');
     expect(screen.queryByTestId('hall-endstand')).toBeNull();
   });
 
-  it('Gegenbeispiel: nach regulärer Zeit steht kein „n. E.“', () => {
+  it('Gegenbeispiel: nach regulärer Zeit steht kein „i. E.“', () => {
     zeige({ patch: { matchStatus: 'finished', scoreA: 2, scoreB: 1, decidedBy: 'regular', liveState: undefined }, pinned: 'match-7' });
-    expect(screen.queryByText(/n\. E\./)).toBeNull();
+    expect(screen.queryByText(/i\. E\./)).toBeNull();
   });
 
   it.each([[WEISS, 'Weiß'], [GELB, 'Gelb']])('Ein Team in %s: Name und Torzahl dunkel, Kontrast zur Fläche mindestens 4,5 : 1 (%s)', (farbe, _name) => {
@@ -289,6 +296,153 @@ describe('@ZM-214 Zustände ohne Sprung', () => {
     ende.unmount();
     zeige({ feld: 'field-1', patch: geplant });
     expect(messe()).toEqual(imSpiel);
+  });
+});
+
+const ZWEI_ABSCHNITTE = { ...LAEUFT, section: 2, sections: 2, sectionSeconds: 300, elapsedMs: 100_000 };
+const NUR_FELD_1 = { fields: [{ id: 'field-1', defaultName: 'Feld 1' }] as Tournament['fields'], numberOfFields: 1 };
+const EINE_GRUPPE = { groups: [{ id: 'A', customName: 'Gruppe A' }] as Tournament['groups'], numberOfGroups: 1 };
+
+describe('@ZM-215 Die Live-Sicht zeigt nur, was man aus der Ferne braucht, und die Zeit so groß wie möglich (Profil „Halle (sehr fern)“)', () => {
+  it('Die Zahl „6:00“ steht für sich: kein Wort „Restzeit“ (9 Minuten Spielzeit, 3 gespielt)', () => {
+    zeige({ patch: { scoreA: 1, scoreB: 0, liveState: { ...LAEUFT, sectionSeconds: 540, elapsedMs: 180_000 } } });
+    expect(screen.getByTestId('hall-clock')).toHaveTextContent('6:00');
+    expect(screen.queryByText(/Restzeit/)).toBeNull();
+    expect(screen.queryByTestId('hall-phase-text')).toBeNull();
+  });
+
+  it.each([
+    ['angehalten', { patch: { scoreA: 1, scoreB: 0, liveState: ANGEHALTEN, matchStatus: 'paused' as const } }, 'angehalten'],
+    ['Pause', { patch: { scoreA: 1, scoreB: 0, liveState: HALBZEIT } }, 'Pause'],
+  ])('Ein Wort steht nur bei Abweichung vom laufenden Spiel: %s', (_n, eingabe, wort) => {
+    zeige(eingabe);
+    expect(screen.getByTestId('hall-phase-text')).toHaveTextContent(new RegExp(`^${wort}$`));
+  });
+
+  it('Feld und Gruppe stehen bei mehr als einem Feld und mehr als einer Gruppe', () => {
+    zeige({ patch: laeuft() });
+    expect(screen.getByTestId('hall-field')).toHaveTextContent('Feld 1');
+    expect(screen.getByTestId('hall-group')).toHaveTextContent('Gruppe A');
+  });
+
+  it('Gegenbeispiel: bei einem Feld steht kein Feld, bei einer Gruppe keine Gruppe', () => {
+    zeige({ patch: laeuft(), turnier: { ...NUR_FELD_1, ...EINE_GRUPPE } });
+    expect(screen.queryByTestId('hall-field')).toBeNull();
+    expect(screen.queryByTestId('hall-group')).toBeNull();
+    expect(screen.getByTestId('hall-clock')).toHaveTextContent('5:50');
+  });
+
+  it('Gegenbeispiel: zwei Felder, aber eine Gruppe – nur das Feld steht da', () => {
+    zeige({ patch: laeuft(), turnier: EINE_GRUPPE });
+    expect(screen.getByTestId('hall-field')).toBeInTheDocument();
+    expect(screen.queryByTestId('hall-group')).toBeNull();
+  });
+
+  it('Der frei gewordene Platz geht an Restzeit und Zeitbalken, die Torzahlen werden nicht kleiner (Tokens)', () => {
+    expect(cqh(displayHall.clock.font)).toBeGreaterThan(29.3);
+    expect(cqh(displayHall.bar.height)).toBeGreaterThanOrEqual(6);
+    expect(cqh(displayHall.digit.font)).toBeGreaterThanOrEqual(34);
+    zeige({ patch: laeuft() });
+    expect(screen.getByTestId('hall-zeitbalken').style.height).toBe(displayHall.bar.height);
+  });
+
+  it('Der Zeitbalken läuft wie die Restzeit herunter: nach 3 von 9 Minuten sind zwei Drittel gefüllt, grün', () => {
+    zeige({ patch: { scoreA: 1, scoreB: 0, liveState: { ...LAEUFT, sectionSeconds: 540, elapsedMs: 180_000 } } });
+    const balken = screen.getByTestId('hall-zeitbalken');
+    expect(Number(balken.getAttribute('data-anteil'))).toBeCloseTo(2 / 3, 2);
+    expect(balken).toHaveAttribute('data-ton', 'gruen');
+    expect((balken.firstElementChild as HTMLElement).style.width).toBe('66.67%'); // links verankert, die abgelaufene Strecke bleibt als Bahn
+  });
+
+  it('Die abgelaufene Strecke bleibt als umrandete Bahn sichtbar (auch neben grauer Füllung); die Bahn des Bestands hat keine Umrandung', () => {
+    zeige({ patch: { scoreA: 1, scoreB: 0, liveState: ANGEHALTEN, matchStatus: 'paused' } });
+    const balken = screen.getByTestId('hall-zeitbalken');
+    expect(balken.style.borderStyle).toBe('solid');
+    expect(balken.style.borderWidth).toBe(displayHall.bar.border);
+    expect(balken.style.borderColor).not.toBe('');
+    const bestand = render(<ZeitBalken anteil={0.5} ton="gruen" testId="bestand-balken" />);
+    expect(bestand.getByTestId('bestand-balken').style.borderStyle).toBe('');
+    expect(bestand.getByTestId('bestand-balken').style.borderWidth).toBe('');
+  });
+
+  it('Gegenbeispiel: angehalten wird der Balken grau, nie rot', () => {
+    zeige({ patch: { scoreA: 1, scoreB: 0, liveState: ANGEHALTEN, matchStatus: 'paused' } });
+    expect(screen.getByTestId('hall-zeitbalken')).toHaveAttribute('data-ton', 'grau');
+  });
+
+  it('Abschnitt (@ZM-213): bei zwei Abschnitten steht rechts neben der Restzeit „2. Halbzeit“, klein wie Feld und Gruppe', () => {
+    zeige({ patch: { scoreA: 1, scoreB: 0, liveState: ZWEI_ABSCHNITTE } });
+    expect(screen.getByTestId('hall-section')).toHaveTextContent('2. Halbzeit');
+    expect(screen.getByTestId('hall-side-right')).toContainElement(screen.getByTestId('hall-section'));
+    expect(screen.getByTestId('hall-clock')).toHaveTextContent('3:20');
+  });
+
+  it('Abschnitt: angehalten steht der Abschnitt zusätzlich zum Wort', () => {
+    zeige({ patch: { scoreA: 1, scoreB: 0, liveState: { ...ZWEI_ABSCHNITTE, status: 'paused', anchorAt: null }, matchStatus: 'paused' } });
+    expect(screen.getByTestId('hall-section')).toHaveTextContent('2. Halbzeit');
+    expect(screen.getByTestId('hall-phase-text')).toHaveTextContent('angehalten');
+  });
+
+  it('Gegenbeispiel: bei einem Abschnitt steht kein Abschnitt', () => {
+    zeige({ patch: laeuft() });
+    expect(screen.queryByTestId('hall-section')).toBeNull();
+  });
+
+  it('Gegenbeispiel: in der Halbzeitpause steht kein Abschnitt (das Abzeichen sagt „Halbzeit“)', () => {
+    zeige({ patch: { scoreA: 1, scoreB: 0, liveState: HALBZEIT } });
+    expect(screen.queryByTestId('hall-section')).toBeNull();
+  });
+
+  it('Bestandsschutz: ohne Profil bleibt der Zeitbalken der bisherigen Folie unverändert (Wort „Restzeit“, Höhe aus dem bisherigen Token)', () => {
+    zeige({ patch: laeuft(), profil: null });
+    expect(screen.getByTestId('live-header')).toBeInTheDocument();
+    expect(screen.queryByTestId('hall-zeitbalken')).toBeNull();
+    expect(screen.getByText('Restzeit')).toBeInTheDocument();
+  });
+});
+
+describe('Texte des Uhrbands und Vorlesetext in Deutsch und Englisch (Sprachwerte, kein fester Text)', () => {
+  const ende = { matchStatus: 'finished' as const, scoreA: 1, scoreB: 1, penaltyScoreA: 4, penaltyScoreB: 3, decidedBy: 'penalty' as const, liveState: undefined };
+
+  it('Deutsch: Strafstoß-Ergebnis in der Kurzform des Glossars „i. E.“', () => {
+    zeige({ patch: ende, pinned: 'match-7' });
+    expect(screen.getByTestId('hall-shootout-result')).toHaveTextContent(/^4 : 3 i\. E\.$/);
+  });
+
+  describe('Englisch', () => {
+    beforeAll(async () => {
+      for (const [ns, res] of [['monitor', enMonitor], ['sport', enSport], ['short', enShort], ['tournament', enTournament]] as const) { i18n.addResourceBundle('en', ns, res, true, true); }
+      await i18n.changeLanguage('en');
+    });
+    afterAll(async () => { await i18n.changeLanguage('de'); });
+
+    it('Strafstoß-Ergebnis „4 : 3 on penalties“, Endstand „Final score“', () => {
+      const lauf = zeige({ patch: ende, pinned: 'match-7' });
+      expect(screen.getByTestId('hall-shootout-result')).toHaveTextContent('4 : 3 on penalties');
+      lauf.unmount();
+      zeige({ patch: { matchStatus: 'finished', scoreA: 2, scoreB: 1, decidedBy: 'regular', liveState: undefined }, pinned: 'match-7' });
+      expect(screen.getByTestId('hall-endstand')).toHaveTextContent('Final score');
+    });
+
+    it('Abschnitt „2nd half“, angehalten „stopped“, Vorlesetext mit Teamname', () => {
+      zeige({ patch: { scoreA: 1, scoreB: 0, liveState: { ...ZWEI_ABSCHNITTE, status: 'paused', anchorAt: null }, matchStatus: 'paused' } });
+      expect(screen.getByTestId('hall-section')).toHaveTextContent('2nd half');
+      expect(screen.getByTestId('hall-phase-text')).toHaveTextContent('stopped');
+      expect(panel('home')).toHaveAttribute('aria-label', 'FC Nord: 1');
+    });
+  });
+
+  it('Vorlesetext: Teamname und Torzahl statt „Heim/Gast“', () => {
+    zeige({ patch: laeuft() });
+    expect(panel('home')).toHaveAttribute('aria-label', 'FC Nord: 1');
+    expect(panel('away')).toHaveAttribute('aria-label', 'SV Süd: 0');
+    expect(panel('home').getAttribute('aria-label')).not.toMatch(/Heim|Gast/);
+  });
+
+  it('Vorlesetext: ohne Trikotfarbe (Streifenmuster) steht „Trikotfarbe unbekannt“ dabei, Gegenbeispiel: mit Farbe nicht', () => {
+    zeige({ patch: { ...laeuft(), kit: { b: BLAU } } });
+    expect(panel('home').getAttribute('aria-label')).toContain('Trikotfarbe unbekannt');
+    expect(panel('away').getAttribute('aria-label')).not.toContain('Trikotfarbe unbekannt');
   });
 });
 

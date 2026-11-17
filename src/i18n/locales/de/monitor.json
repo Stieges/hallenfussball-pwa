@@ -41,7 +41,7 @@
     "bibAria": "Leibchen",
     "afterOvertime": "nach Verlängerung",
     "hall": {
-      "afterShootout": "{{home}} : {{away}} n. E."
+      "afterShootout": "{{home}} : {{away}} $t(short:ergebniszelle.afterPenalties)"
     },
     "winnerLine": "<name>{{name}}</name> gewinnt",
     "penaltyAria": "$t(sport:events.timePenalty) #{{number}}, noch {{rest}}",

@@ -207,13 +207,18 @@ export function useTeamNameFit(
     const el = ref.current;
     if (!aktiv || !el || typeof ResizeObserver === 'undefined') { return; }
     let breite = el.getBoundingClientRect().width;
+    // Mit Höhengrenze (Profil „Halle (sehr fern)“) zählt auch die Höhe des Namensfelds (Elternteil, feste Höhe): eine reine Höhenänderung misst neu
+    const feld = grenzHoehe !== undefined ? el.parentElement : null;
+    let hoehe = feld?.getBoundingClientRect().height ?? 0;
     const beobachter = new ResizeObserver(() => {
       const neu = el.getBoundingClientRect().width;
-      if (Math.abs(neu - breite) > 0.5) { breite = neu; passeAn(); }
+      const neueHoehe = feld?.getBoundingClientRect().height ?? 0;
+      if (Math.abs(neu - breite) > 0.5 || Math.abs(neueHoehe - hoehe) > 0.5) { breite = neu; hoehe = neueHoehe; passeAn(); }
     });
     beobachter.observe(el);
+    if (feld) { beobachter.observe(feld); }
     return () => beobachter.disconnect();
-  }, [ref, aktiv, passeAn]);
+  }, [ref, aktiv, passeAn, grenzHoehe]);
 
   useLayoutEffect(() => { passeAn(); }, [passeAn]);
 

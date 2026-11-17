@@ -32,6 +32,9 @@ export interface MonitorUhrModell {
   schlussphase: boolean;
   /** Die Uhr steht (Tom hat sie angehalten) */
   steht: boolean;
+  /** Abschnitt (1-basiert) und Zahl der regulären Abschnitte, sofern bekannt (Profil „Halle (sehr fern)“ zeigt den Abschnitt bei mehr als einem) */
+  abschnitt?: number;
+  abschnitte?: number;
   /** Uhr-Anker: gleich, solange die Uhr ohne Eingriff weiterläuft */
   anker: string;
   /** Millisekunden bis zum nächsten Wechsel der Anzeige; `null` = die Anzeige steht */
@@ -78,7 +81,7 @@ function laufend(rules: SpectatorClockRules, lauf: Lauf): MonitorUhrModell {
   const text: MonitorUhrText = abgelaufen ? 'zeitAbgelaufen' : lauf.steht ? 'angehalten' : lauf.verlaengerung ? 'verlaengerung' : 'restzeit';
   const tickt = !lauf.steht && !abgelaufen;
   return {
-    restSekunden: anzeige.restSekunden, text, schlussphase, steht: lauf.steht, anker: lauf.anker,
+    restSekunden: anzeige.restSekunden, text, schlussphase, steht: lauf.steht, anker: lauf.anker, abschnitt: lauf.abschnitt, abschnitte: lauf.abschnitte,
     balken: zeitBalkenLaufend(anzeige.restSekunden, lauf.laenge, lauf.steht, schlussphase),
     msBisWechsel: !tickt ? null : lauf.genau ? MS_PER_SECOND - (lauf.gespieltMs % MS_PER_SECOND) : ZEITFELDER_TAKT_MS,
   };
@@ -94,7 +97,7 @@ function ausFeinstatus(rules: SpectatorClockRules, d: MatchBadgeEngineDetail, an
     const vergangen = d.breakElapsedMs ?? 0;
     const rest = lang === undefined ? null : Math.max(0, lang - Math.floor(vergangen / MS_PER_SECOND));
     return {
-      restSekunden: rest, text: pauseText(d.phase, d.section, d.sections), schlussphase: false, steht: false, anker,
+      restSekunden: rest, text: pauseText(d.phase, d.section, d.sections), schlussphase: false, steht: false, anker, abschnitt: d.section, abschnitte: d.sections,
       balken: rest === null ? null : zeitBalkenPause(rest, lang),
       msBisWechsel: rest === null || rest === 0 ? null : MS_PER_SECOND - (vergangen % MS_PER_SECOND),
     };
@@ -124,7 +127,7 @@ function ausZeitfeldern(rules: SpectatorClockRules, gesamt: number, steht: boole
     // Abschnittsende ohne Pausen-Daten: keine Ziffern, nie „abgelaufen“ (@OB-066)
     const nach = total / abschnittSek;
     return {
-      restSekunden: null, text: pauseText('regular', nach, sections), balken: null, schlussphase: false, steht: false, anker,
+      restSekunden: null, text: pauseText('regular', nach, sections), balken: null, schlussphase: false, steht: false, anker, abschnitt: nach, abschnitte: sections,
       msBisWechsel: null,
     };
   }

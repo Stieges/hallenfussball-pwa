@@ -1,7 +1,7 @@
 /**
  * Welches Spiel die Live-Folie zeigt (@ZM-074, @ZM-075, @ZM-195): gepinntes Spiel, sonst das laufende Spiel auf dem Feld der Folie
  * (Halbzeit zählt mit), sonst das nächste offene Spiel des Feldes in Anpfiff-Reihenfolge – nie ein laufendes oder unterbrochenes
- * (@ZM-041). Eine Quelle für die Live-Folie (`LiveSlide`) und für das Profil „Halle (sehr fern)“ (`HallLiveSlide`).
+ * (@ZM-041). Eine Quelle für die Live-Folie (`LiveSlide`), auch im Profil „Halle (sehr fern)“.
  */
 import type { TFunction } from 'i18next';
 import type { Tournament, Match } from '../../../types/tournament';

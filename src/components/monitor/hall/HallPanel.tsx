@@ -6,7 +6,7 @@
  */
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { SideBox } from '../../../core/models/scoreBoxColors';
+import { fillColorUnknown, type SideBox } from '../../../core/models/scoreBoxColors';
 import type { OeffentlicheZeitstrafen } from '../../../core/view';
 import type { MonitorThemeColors } from '../../../design-tokens';
 import { Icons } from '../../ui/Icons';
@@ -36,8 +36,14 @@ export interface HallPanelProps {
 
 export function HallPanel({ side, name, score, box, outcome, cup, frame, colors, sizePx, onFitPx, zeitstrafen }: HallPanelProps): ReactElement {
   const { t } = useTranslation('monitor');
-  const aria = [`${side === 'home' ? 'Heim' : 'Gast'}: ${score === null ? '' : String(score)}`, cup ? t('liveMatch.winnerAria') : null, box.bib ? t('liveMatch.bibAria') : null]
-    .filter((part) => part !== null).join(', ');
+  const { t: tTournament } = useTranslation('tournament');
+  // Vorgelesen wird der Teamname mit seiner Torzahl (nicht „Heim/Gast“), dazu Pokal, Leibchen und bei unbekannter Trikotfarbe (Streifenmuster) dieser Hinweis
+  const aria = [
+    t('scoreBlock.scoreAria', { position: name, score: score === null ? '' : String(score) }),
+    cup ? t('liveMatch.winnerAria') : null,
+    box.bib ? t('liveMatch.bibAria') : null,
+    fillColorUnknown(box.fill) ? tTournament('matchCard.shirtUnknown') : null,
+  ].filter((part) => part !== null).join(', ');
   return (
     <div
       role="group"

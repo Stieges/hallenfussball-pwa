@@ -55,6 +55,10 @@ export function LiveSlide({ slide, tournament, view, theme, style, pinnedMatchId
   const hall = profile === 'hall-very-far';
   // Beide Anordnungen nehmen dieselben Daten; die Fassung für die Hallentiefe braucht kein `fullscreen`
   const Display = hall ? HallMatchDisplay : FullscreenLiveMatchDisplay;
+  // @ZM-215 (nur Profil „Halle (sehr fern)“): Feld und Gruppe stehen im Band nur, wenn das Turnier mehr als eins davon hat
+  const hallAngaben = hall
+    ? { showField: (tournament.fields?.length ?? tournament.numberOfFields) > 1, showGroup: (tournament.groups?.length ?? tournament.numberOfGroups ?? 1) > 1 }
+    : {};
 
   // Delegate to LiveMatchDisplay (bzw. im Profil „Halle (sehr fern)“ an HallMatchDisplay) for running matches
   if (runningMatch && shown) {
@@ -63,6 +67,7 @@ export function LiveSlide({ slide, tournament, view, theme, style, pinnedMatchId
     return (
       <div style={{ ...style, containerType: 'size' }} data-testid="live-slide-area">
         <Display
+          {...hallAngaben}
           match={liveMatch}
           group={runningMatch.group}
           theme={theme}
@@ -94,6 +99,7 @@ export function LiveSlide({ slide, tournament, view, theme, style, pinnedMatchId
     return (
       <div style={{ ...style, containerType: 'size' }} data-testid="next-slide-area">
         <Display
+          {...hallAngaben}
           match={toLiveMatch(nextMatch, nextRaw, teams, tournament)}
           group={nextRaw.group}
           theme={theme}

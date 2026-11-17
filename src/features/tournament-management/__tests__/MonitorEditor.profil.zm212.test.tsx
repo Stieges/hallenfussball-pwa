@@ -59,6 +59,29 @@ describe('@ZM-212 Monitor-Editor: Profil „Halle (sehr fern)“', () => {
     expect(hinweis).toHaveTextContent('2 Folien der Liste werden nicht gezeigt');
   });
 
+  it('Der Hinweis zählt auch weitere Live-Folien: Live Feld 1 + Live Feld 2 → „1 Folie der Liste wird nicht gezeigt“', () => {
+    const vorher = hoisted.monitor.slides;
+    hoisted.monitor.slides = [
+      { id: 's1', type: 'live', config: { fieldId: 'field-1' }, duration: null, order: 0 },
+      { id: 's2', type: 'live', config: { fieldId: 'field-2' }, duration: null, order: 1 },
+    ];
+    try {
+      rendere();
+      fireEvent.change(auswahl(), { target: { value: 'hall-very-far' } });
+      expect(screen.getByTestId('monitor-profile-hint')).toHaveTextContent('1 Folie der Liste wird nicht gezeigt');
+    } finally { hoisted.monitor.slides = vorher; }
+  });
+
+  it('Gegenbeispiel: nur eine Live-Folie – kein Zähler im Hinweis', () => {
+    const vorher = hoisted.monitor.slides;
+    hoisted.monitor.slides = [{ id: 's1', type: 'live', config: { fieldId: 'field-1' }, duration: null, order: 0 }];
+    try {
+      rendere();
+      fireEvent.change(auswahl(), { target: { value: 'hall-very-far' } });
+      expect(screen.getByTestId('monitor-profile-hint')).not.toHaveTextContent(/\d Folien? der Liste/);
+    } finally { hoisted.monitor.slides = vorher; }
+  });
+
   it('Speichern legt das Profil im Monitor ab und behält alle drei Folien (nichts wird gelöscht)', () => {
     rendere();
     fireEvent.change(auswahl(), { target: { value: 'hall-very-far' } });

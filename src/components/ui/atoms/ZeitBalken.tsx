@@ -16,6 +16,8 @@ export interface ZeitBalkenProps extends ScoreboardBalken {
   hoehe?: string;
   /** Farbe der Spur als Token (Monitor-Thema); ohne Angabe die Trennlinie der Tafel */
   spur?: string;
+  /** Umrandung der Bahn (Hallenmonitor, Profil „Halle (sehr fern)“: die abgelaufene Strecke bleibt als Bahn deutlich sichtbar, auch neben grauer Füllung); ohne Angabe keine */
+  rand?: { farbe: string; breite: string };
 }
 
 const FARBE: Record<ScoreboardBalken['ton'], string> = {
@@ -25,11 +27,12 @@ const FARBE: Record<ScoreboardBalken['ton'], string> = {
   violett: cssVars.colors.scoreboardFinalPhase,
 };
 
-export function ZeitBalken({ anteil, ton, testId, hoehe, spur: spurFarbe }: ZeitBalkenProps): ReactElement {
+export function ZeitBalken({ anteil, ton, testId, hoehe, spur: spurFarbe, rand }: ZeitBalkenProps): ReactElement {
   const gefuellt = Math.max(0, Math.min(1, anteil));
   const spur: CSSProperties = {
     height: hoehe ?? 'var(--cockpit-balken, var(--spacing-sm))', borderRadius: cssVars.borderRadius.full, overflow: 'hidden',
     background: spurFarbe ?? cssVars.colors.scoreboardDivider,
+    ...(rand === undefined ? {} : { boxSizing: 'border-box', borderStyle: 'solid', borderWidth: rand.breite, borderColor: rand.farbe }),
   };
   const fuellung: CSSProperties = { height: '100%', width: `${(gefuellt * 100).toFixed(2)}%`, borderRadius: cssVars.borderRadius.full, background: FARBE[ton] };
   return (

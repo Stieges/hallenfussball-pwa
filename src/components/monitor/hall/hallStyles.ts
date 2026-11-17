@@ -16,6 +16,8 @@ export const rootStyle = (colors: MonitorThemeColors): CSSProperties => ({
   width: '100%',
   height: '100%',
   display: 'grid',
+  // Die Spalte nimmt höchstens die Breite der Folie: ein breiter Text im Uhrband (englisch „on penalties“) weitet weder Flächen noch Band
+  gridTemplateColumns: 'minmax(0, 1fr)',
   gridTemplateRows: `${panel.height} auto minmax(0, 1fr)`,
   background: colors.backgroundGradient,
   color: colors.text,
@@ -195,6 +197,6 @@ export const slotFontSize = (kind: 'clock' | 'word' | 'shootout'): string => {
   switch (kind) {
     case 'clock': return displayHall.clock.font;
     case 'shootout': return displayHall.shootout.font;
-    case 'word': return `min(${displayHall.word.font}, ${displayHall.word.maxWidthShare})`;
+    case 'word': return displayHall.word.font;
   }
 };

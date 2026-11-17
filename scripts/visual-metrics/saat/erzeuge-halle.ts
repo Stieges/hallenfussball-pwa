@@ -40,6 +40,12 @@ export interface HalleFall {
   farben?: { heim?: string; gast?: string }
   /** Heim trägt bestätigte Leibchen (Orange) */
   leibchen?: boolean
+  /** Zahl der Felder des Turniers (Vorgabe 1); mehr als eines zeigt „Feld N“ im Band (@ZM-215) */
+  felder?: number
+  /** Zwei Abschnitte (Halbzeiten) statt einem (@ZM-213 Abschnitt, @ZM-215) */
+  abschnitte?: 2
+  /** Gezeigt wird ein Gruppenspiel (Gruppe A) statt des Halbfinales; die übrigen Gruppenspiele bleiben offen (@ZM-215: Gruppe nur bei mehr als einer Gruppe) */
+  gruppenspiel?: boolean
 }
 
 const LANG_A = 'SG Kirchanschöring/Fridol'
@@ -60,6 +66,8 @@ export const FAELLE: readonly HalleFall[] = [
   { id: 'halle-weiss', code: 'HAL012', titel: 'Läuft: Heim in Weiß, 1:0', zustand: 'laeuft', heim: 'TSV Fridolfing', gast: 'SG Taching/Tengling', stand: [1, 0], farben: { heim: WEISS } },
   { id: 'halle-gelb', code: 'HAL013', titel: 'Läuft: Gast in Gelb, 1:0', zustand: 'laeuft', heim: 'TSV Fridolfing', gast: 'SG Taching/Tengling', stand: [1, 0], farben: { gast: GELB } },
   { id: 'halle-leibchen', code: 'HAL014', titel: 'Läuft: Heim trägt Leibchen, 1:0', zustand: 'laeuft', heim: 'TSV Fridolfing', gast: 'SG Taching/Tengling', stand: [1, 0], leibchen: true },
+  { id: 'halle-zwei-felder', code: 'HAL016', titel: 'Läuft: Gruppenspiel in Gruppe A, zwei Felder und zwei Gruppen, 1:0', zustand: 'laeuft', heim: 'TSV Fridolfing', gast: 'SG Taching/Tengling', stand: [1, 0], felder: 2, gruppenspiel: true },
+  { id: 'halle-abschnitt', code: 'HAL017', titel: 'Läuft: zwei Halbzeiten, 2. Halbzeit, 1:0', zustand: 'laeuft', heim: 'TSV Fridolfing', gast: 'SG Taching/Tengling', stand: [1, 0], abschnitte: 2 },
   { id: 'halle-ohne-farbe', code: 'HAL015', titel: 'Läuft: Gast ohne Trikotfarbe (Fallback-Muster), 1:0', zustand: 'laeuft', heim: 'TSV Fridolfing', gast: 'SG Taching/Tengling', stand: [1, 0], farben: { gast: '' } },
 ]
 
@@ -102,11 +110,11 @@ export async function erzeugeFall(fall: HalleFall): Promise<{ turnier: Tournamen
   const t = await new TournamentCreationService(keinSpeicher).publish({
     id: fall.id, title: 'Monitor Halle (sehr fern)', ageClass: 'U11', date: '2026-12-06', startDate: '2026-12-06',
     startTime: '09:00', timeSlot: '09:00 - 16:00', location: { name: 'Sporthalle Fridolfing' },
-    numberOfTeams: 4, numberOfGroups: 2, numberOfFields: 1, groupSystem: 'groupsAndFinals',
+    numberOfTeams: 4, numberOfGroups: 2, numberOfFields: fall.felder ?? 1, groupSystem: 'groupsAndFinals',
     groupPhaseGameDuration: 20, groupPhaseBreakDuration: 2, finalRoundGameDuration: 20, finalRoundBreakDuration: 2,
-    breakBetweenPhases: 5, resultMode: 'goals', gamePeriods: fall.zustand === 'halbzeit' ? 2 : 1, halftimeBreak: 1,
+    breakBetweenPhases: 5, resultMode: 'goals', gamePeriods: fall.zustand === 'halbzeit' || fall.abschnitte === 2 ? 2 : 1, halftimeBreak: 1,
     teams, groups: [{ id: 'A', customName: 'Gruppe A' }, { id: 'B', customName: 'Gruppe B' }],
-    fields: [{ id: 'field-1', defaultName: 'Feld 1' }] as Tournament['fields'],
+    fields: [{ id: 'field-1', defaultName: 'Feld 1' }, ...(fall.felder === 2 ? [{ id: 'field-2', defaultName: 'Feld 2' }] : [])] as Tournament['fields'],
     finalsConfig: { preset: 'top-4', tiebreaker: 'overtime-then-shootout', tiebreakerDuration: 5 },
     finals: { final: true, thirdPlace: true, fifthSixth: false, seventhEighth: false },
     isPublic: true, shareCode: fall.code, shareCodeCreatedAt: ZEIT, lastVisitedStep: 6,
@@ -129,15 +137,24 @@ export async function erzeugeFall(fall: HalleFall): Promise<{ turnier: Tournamen
     if (sl.kind !== 'team') { throw new Error(`Seite ${s} von ${m.id} ist nicht besetzt`) }
     return sl.teamId
   }
-  // Gruppenspiele beenden (Heim-Kandidat gewinnt je Gruppe), danach die Gruppen abschließen
-  t.matches.filter((m) => !m.isFinal).forEach((m, i) => {
-    const e = wendeEngineAn(t, m, seite(m, 'slotA'), seite(m, 'slotB'), { tore: [seite(m, 'slotA')], bis: 'ende' }, start - 6_000_000 + i * 900_000)
-    ersetze(m, { ...e.match, scheduledTime: marke(-4000 + i * 900) }, e.kopie)
-  })
-  schliesseGruppenAb(t)
-  // feste Zeit: der Abschluss liest die Uhr des Rechners, die Datei muss bei jeder Erzeugung gleich sein
-  t.groupCompletions = t.groupCompletions?.map((c) => ({ ...c, completedAt: ZEIT }))
-  const [hf1, hf2] = halbfinaleVon(t)
+  // Gruppenspiele beenden (Heim-Kandidat gewinnt je Gruppe), danach die Gruppen abschließen; im Fall „Gruppenspiel“ bleibt alles offen, das erste Spiel der Gruppe A wird gezeigt
+  let hf1: Match
+  let hf2: Match | undefined
+  if (fall.gruppenspiel === true) {
+    const erstes = t.matches.find((m) => !m.isFinal && m.group === 'A')
+    if (erstes === undefined) { throw new Error('Kein Spiel der Gruppe A') }
+    hf1 = erstes
+    hf2 = undefined
+  } else {
+    t.matches.filter((m) => !m.isFinal).forEach((m, i) => {
+      const e = wendeEngineAn(t, m, seite(m, 'slotA'), seite(m, 'slotB'), { tore: [seite(m, 'slotA')], bis: 'ende' }, start - 6_000_000 + i * 900_000)
+      ersetze(m, { ...e.match, scheduledTime: marke(-4000 + i * 900) }, e.kopie)
+    })
+    schliesseGruppenAb(t)
+    // feste Zeit: der Abschluss liest die Uhr des Rechners, die Datei muss bei jeder Erzeugung gleich sein
+    t.groupCompletions = t.groupCompletions?.map((c) => ({ ...c, completedAt: ZEIT }))
+    ;[hf1, hf2] = halbfinaleVon(t)
+  }
   const [heimId, gastId] = [seite(hf1, 'slotA'), seite(hf1, 'slotB')]
   const restTeams = teams.filter((x) => x.id !== heimId && x.id !== gastId)
   const bekannt = new Map<string, string>([[heimId, fall.heim], [gastId, fall.gast], [restTeams[0].id, 'SV Gegner 1'], [restTeams[1].id, 'SV Gegner 2']])
@@ -179,7 +196,7 @@ export async function erzeugeFall(fall: HalleFall): Promise<{ turnier: Tournamen
     ersetze(hf1, neu, e.kopie)
   }
   // Halbfinale 2, Platz 3 und Finale bleiben ungespielt, später am Tag
-  t.matches = t.matches.map((m) => (m.id === hf2.id || (m.isFinal === true && m.id !== hf1.id) ? { ...m, scheduledTime: marke(1500) } : m))
+  t.matches = t.matches.map((m) => (m.id === hf2?.id || (m.isFinal === true && m.id !== hf1.id) ? { ...m, scheduledTime: marke(1500) } : m))
   Object.assign(t, { createdAt: ZEIT, updatedAt: ZEIT, publishedAt: ZEIT, date: '@heute', startDate: '@heute' })
   if (fall.leibchen === true) { Object.assign(t, { bibColor: LEIBCHEN, bibColors: [LEIBCHEN], bibRule: 'home' }) }
   return { turnier: t, kopien }
