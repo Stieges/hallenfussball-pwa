@@ -30,7 +30,7 @@ import { LiveViewScreen } from '../../../screens/LiveViewScreen';
 import { RepositoryProvider } from '../../../core/contexts/RepositoryContext';
 
 const letzte = () => zaehlung.mock.calls.at(-1);
-const ausfaelle = (): UsePublicViewCountOptions['outages'] => letzte()?.[2]?.outages ?? [];
+const ausfall = (): UsePublicViewCountOptions['outage'] => letzte()?.[2]?.outage ?? null;
 const netzZurueck = async () => { await act(async () => { window.dispatchEvent(new Event('online')); await Promise.resolve(); }); };
 
 describe('@RZ-033 Die Zuschauer-Seite reicht überstandene Störungen an die Zählung weiter', () => {
@@ -52,17 +52,17 @@ describe('@RZ-033 Die Zuschauer-Seite reicht überstandene Störungen an die Zä
     supabaseGet.mockResolvedValue(buildLiveViewTournament());
     zeige();
     await waitFor(() => { expect(letzte()?.[1]).toBe(true); });
-    expect(ausfaelle()).toEqual([]);
+    expect(ausfall()).toBeNull();
 
     supabaseGet.mockRejectedValue(new Error('Netz weg'));
     await netzZurueck();
     await waitFor(() => { expect(supabaseGet).toHaveBeenCalledTimes(2); });
-    expect(ausfaelle()).toEqual([]);
+    expect(ausfall()).toBeNull();
 
     supabaseGet.mockResolvedValue({ ...buildLiveViewTournament(), title: 'Nikolaus-Turnier neu' });
     await netzZurueck();
-    await waitFor(() => { expect(ausfaelle()).toHaveLength(1); });
-    expect(ausfaelle()).toEqual([{ id: 1, shareCode: SHARE_CODE, kind: 'stoerung_kurz' }]);
+    await waitFor(() => { expect(ausfall()).not.toBeNull(); });
+    expect(ausfall()).toEqual({ id: 1, shareCode: SHARE_CODE, kind: 'stoerung_kurz' });
   });
 
   it('Gegenbeispiel: gelingen alle Abrufe, bekommt die Zählung nie eine Störung', async () => {
@@ -71,6 +71,6 @@ describe('@RZ-033 Die Zuschauer-Seite reicht überstandene Störungen an die Zä
     await waitFor(() => { expect(letzte()?.[1]).toBe(true); });
     await netzZurueck();
     await waitFor(() => { expect(supabaseGet).toHaveBeenCalledTimes(2); });
-    expect(zaehlung.mock.calls.every(([, , optionen]) => (optionen?.outages ?? []).length === 0)).toBe(true);
+    expect(zaehlung.mock.calls.every(([, , optionen]) => (optionen?.outage ?? null) === null)).toBe(true);
   });
 });

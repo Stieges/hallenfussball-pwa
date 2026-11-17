@@ -22,14 +22,14 @@ const kurz = (id: number, code = 'NIKO26'): RecoveredOutage => ({ id, shareCode:
 const lang = (id: number, code = 'NIKO26'): RecoveredOutage => ({ id, shareCode: code, kind: 'stoerung_lang' });
 const stoerungen = (): ViewCountArgs[] => gesendet.filter((a) => a.p_art === 'stoerung_kurz' || a.p_art === 'stoerung_lang');
 
-function Sonde({ outages, via = transport, adresse }: { outages: readonly RecoveredOutage[]; via?: ViewCountTransport | null; adresse?: string }) {
-  usePublicViewCount('NIKO26', true, { transport: via, outages });
+function Sonde({ outage, via = transport, adresse }: { outage: RecoveredOutage | null; via?: ViewCountTransport | null; adresse?: string }) {
+  usePublicViewCount('NIKO26', true, { transport: via, outage });
   return <span data-adresse={adresse} />;
 }
-const zeige = (outages: readonly RecoveredOutage[], adresse = '/live/NIKO26?k=q', via: ViewCountTransport | null = transport, strict = false) => {
-  const baum = (o: readonly RecoveredOutage[]) => <MemoryRouter initialEntries={[adresse]}><Sonde outages={o} via={via} /></MemoryRouter>;
-  const r = render(strict ? <StrictMode>{baum(outages)}</StrictMode> : baum(outages));
-  return { ...r, setze: (o: readonly RecoveredOutage[]) => r.rerender(strict ? <StrictMode>{baum(o)}</StrictMode> : baum(o)) };
+const zeige = (outage: RecoveredOutage | null, adresse = '/live/NIKO26?k=q', via: ViewCountTransport | null = transport, strict = false) => {
+  const baum = (o: RecoveredOutage | null) => <MemoryRouter initialEntries={[adresse]}><Sonde outage={o} via={via} /></MemoryRouter>;
+  const r = render(strict ? <StrictMode>{baum(outage)}</StrictMode> : baum(outage));
+  return { ...r, setze: (o: RecoveredOutage | null) => r.rerender(strict ? <StrictMode>{baum(o)}</StrictMode> : baum(o)) };
 };
 
 beforeEach(() => {
@@ -43,9 +43,10 @@ afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe('@RZ-033 Die überstandene Störung wird genau einmal gesendet', () => {
   it('kurze und lange Störung gehen mit den fünf Feldern der übrigen Meldungen (Kanal und Gerät des Öffnens) hinaus', () => {
-    const { setze } = zeige([]);
-    setze([kurz(1)]);
-    setze([kurz(1), lang(2)]);
+    const { setze } = zeige(null);
+    setze(kurz(1));
+    setze(kurz(1));
+    setze(lang(2));
     expect(stoerungen()).toEqual([
       { p_share_code: 'NIKO26', p_art: 'stoerung_kurz', p_kanal: 'qr', p_geraet: 'handy', p_installiert: false },
       { p_share_code: 'NIKO26', p_art: 'stoerung_lang', p_kanal: 'qr', p_geraet: 'handy', p_installiert: false },
@@ -53,27 +54,27 @@ describe('@RZ-033 Die überstandene Störung wird genau einmal gesendet', () => 
   });
 
   it('genau einmal: erneutes Rendern, gleiche Liste, StrictMode-Doppelaufruf senden nicht noch einmal', async () => {
-    const { setze } = zeige([kurz(1)], '/live/NIKO26', transport, true);
-    setze([kurz(1)]);
-    setze([kurz(1)]);
+    const { setze } = zeige(kurz(1), '/live/NIKO26', transport, true);
+    setze(kurz(1));
+    setze(kurz(1));
     await vergehen(0);
     expect(stoerungen()).toHaveLength(1);
   });
 
   it('eine Störung, die schon beim Rendern in der Liste steht, wird gesendet; eine zweite später ebenfalls (zwei Störungen = zwei Meldungen)', () => {
-    const { setze } = zeige([kurz(1)]);
+    const { setze } = zeige(kurz(1));
     expect(stoerungen().map((a) => a.p_art)).toEqual(['stoerung_kurz']);
-    setze([kurz(1), kurz(2)]);
+    setze(kurz(2));
     expect(stoerungen().map((a) => a.p_art)).toEqual(['stoerung_kurz', 'stoerung_kurz']);
   });
 
   it('die Meldung geht für das Turnier hinaus, in dem die Störung stattfand (Wechsel des Codes)', () => {
-    zeige([kurz(1, 'ALT111')]);
+    zeige(kurz(1, 'ALT111'));
     expect(stoerungen().map((a) => a.p_share_code)).toEqual(['ALT111']);
   });
 
   it('die Störungsmeldung ersetzt weder den Aufruf noch das Lebenszeichen', async () => {
-    zeige([lang(1)]);
+    zeige(lang(1));
     await vergehen(60_000);
     expect(gesendet.map((a) => a.p_art)).toEqual(['aufruf', 'stoerung_lang', 'lebenszeichen']);
   });
@@ -81,7 +82,7 @@ describe('@RZ-033 Die überstandene Störung wird genau einmal gesendet', () => 
 
 describe('@RZ-034 Ohne gescheiterten Abruf wird keine Störung gesendet', () => {
   it('keine Störung in der Liste: Aufruf und Lebenszeichen wie bisher, nie eine Störungsmeldung', async () => {
-    zeige([]);
+    zeige(null);
     await vergehen(3 * 60_000);
     expect(stoerungen()).toEqual([]);
     expect(gesendet.map((a) => a.p_art)).toEqual(['aufruf', 'lebenszeichen', 'lebenszeichen', 'lebenszeichen']);
@@ -92,23 +93,24 @@ describe('@RZ-035 Die Störungsmeldung stört die Seite nie', () => {
   it('Server antwortet nicht oder lehnt ab: kein Fehler, keine Ausgabe, kein Wiederholen, auch beim erneuten Rendern', async () => {
     const aus = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const hängt = vi.fn<ViewCountTransport>(() => new Promise(() => undefined));
-    const a = zeige([kurz(1)], '/live/NIKO26', hängt);
+    const a = zeige(kurz(1), '/live/NIKO26', hängt);
     await vergehen(15_000);
-    a.setze([kurz(1)]);
+    a.setze(kurz(1));
     await vergehen(15_000);
     expect(hängt.mock.calls.filter(([args]) => args.p_art === 'stoerung_kurz')).toHaveLength(1);
     const lehntAb = vi.fn<ViewCountTransport>(() => Promise.reject(new Error('404')));
-    const b = zeige([lang(1)], '/live/NIKO26', lehntAb);
+    const b = zeige(lang(1), '/live/NIKO26', lehntAb);
     await vergehen(15_000);
-    b.setze([lang(1)]);
+    b.setze(lang(1));
     await vergehen(15_000);
     expect(lehntAb.mock.calls.filter(([args]) => args.p_art === 'stoerung_lang')).toHaveLength(1);
     expect(aus).not.toHaveBeenCalled();
   });
 
   it('ohne Versandweg (lokaler Modus ohne Supabase) tut die Störungsmeldung nichts und stört nicht', async () => {
-    const { setze } = zeige([kurz(1)], '/live/NIKO26', null);
-    setze([kurz(1), lang(2)]);
+    const { setze } = zeige(kurz(1), '/live/NIKO26', null);
+    setze(kurz(1));
+    setze(lang(2));
     await vergehen(2 * 60_000);
     expect(gesendet).toEqual([]);
   });
@@ -119,8 +121,9 @@ describe('@RZ-035 Die Störungsmeldung stört die Seite nie', () => {
     const speicher = [vi.spyOn(Storage.prototype, 'getItem'), vi.spyOn(Storage.prototype, 'setItem'), vi.spyOn(Storage.prototype, 'removeItem')];
     const idb = { open: vi.fn() };
     vi.stubGlobal('indexedDB', idb);
-    const { setze, unmount } = zeige([]);
-    setze([kurz(1), lang(2)]);
+    const { setze, unmount } = zeige(null);
+    setze(kurz(1));
+    setze(lang(2));
     await vergehen(60_000);
     unmount();
     for (const s of speicher) { expect(s).not.toHaveBeenCalled(); }
@@ -130,7 +133,7 @@ describe('@RZ-035 Die Störungsmeldung stört die Seite nie', () => {
   });
 
   it('die Meldung trägt nur die fünf bekannten Felder, keine Dauer, keine Zeit, keine Kennung', () => {
-    zeige([lang(7)]);
+    zeige(lang(7));
     const felder = Object.keys(stoerungen()[0]).sort();
     expect(felder).toEqual(['p_art', 'p_geraet', 'p_installiert', 'p_kanal', 'p_share_code']);
     expect(JSON.stringify(stoerungen()[0])).not.toMatch(/Mozilla|userAgent|\d{4}-\d{2}-\d{2}T|\b7\b/);
@@ -161,7 +164,7 @@ describe('@RZ-033 @RZ-035 Zusammenspiel wie in der Zuschauer-Seite: Laden und Z�
     const store = speicher();
     return renderHook(() => {
       const zustand = usePublicTournament(SHARE_CODE, source, { storage: store });
-      usePublicViewCount(SHARE_CODE, zustand.loadingState === 'success', { transport: via, outages: zustand.recoveredOutages });
+      usePublicViewCount(SHARE_CODE, zustand.loadingState === 'success', { transport: via, outage: zustand.recoveredOutage });
       return zustand;
     }, { wrapper });
   }
@@ -174,7 +177,8 @@ describe('@RZ-033 @RZ-035 Zusammenspiel wie in der Zuschauer-Seite: Laden und Z�
     netz.an = false;
     await vergehen(10_000);
     netz.an = true;
-    await vergehen(10_000);
+    await vergehen(5_000);
+    await act(async () => { await result.current.refresh(); });
     expect(result.current.loadingState).toBe('success');
     expect(gesendet.map((a) => [a.p_art, a.p_kanal])).toEqual([['aufruf', 'link'], ['stoerung_kurz', 'link']]);
     await vergehen(30_000);

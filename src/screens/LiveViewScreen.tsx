@@ -52,7 +52,7 @@ export interface LiveViewScreenProps {
 
 const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => {
   const { t } = useTranslation('publicView');
-  const { tournament, schedule, standings: currentStandings, loadingState, errorMessage, refresh, connectionHint, fetchedAtMs, nowMs, recoveredOutages } =
+  const { tournament, schedule, standings: currentStandings, loadingState, errorMessage, refresh, connectionHint, fetchedAtMs, nowMs, recoveredOutage } =
     usePublicTournament(shareCode);
 
   // Theme hook
@@ -77,7 +77,7 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
   } = usePublicViewFilters(shareCode);
 
   // Zählt sich selbst (intern, @RZ-024..028): erst nach erfolgreichem Laden, eigener Aufruf, Fehler bleiben still
-  usePublicViewCount(shareCode, loadingState === 'success', { outages: recoveredOutages });
+  usePublicViewCount(shareCode, loadingState === 'success', { outage: recoveredOutage });
 
 
   // Die gemeinsame Ansicht der Zuschauer (A-36c): Status, Seitentexte, Endstand und Sichtbarkeit nur von hier

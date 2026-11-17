@@ -818,7 +818,7 @@ run_ns_checks() {
   # ---- Schema: nur ergaenzend ----
   check N "1c Spalten: genau die elf (die neun der Stufe 1b, dazu outages_short und outages_long)" "tournament_id,window_start,channel,device_class,installed,views,heartbeats,os_family,browser_family,outages_short,outages_long" \
     "$(q "SELECT string_agg(column_name, ',' ORDER BY ordinal_position) FROM information_schema.columns WHERE table_schema='public' AND table_name='public_view_counts';")"
-  check N "1c die zwei Spalten: integer, NOT NULL, Vorgabe 0 (wie views und heartbeats: Pruefregel >= 0)" "outages_long:integer:NO:0,outages_short:integer:NO:0" \
+  check N "1c die zwei Spalten: integer, NOT NULL, Vorgabe 0 (Vorgabe und Pruefregel >= 0 wie bei views und heartbeats; der Typ ist integer, dort bigint)" "outages_long:integer:NO:0,outages_short:integer:NO:0" \
     "$(q "SELECT string_agg(column_name || ':' || data_type || ':' || is_nullable || ':' || column_default, ',' ORDER BY column_name) FROM information_schema.columns WHERE table_schema='public' AND table_name='public_view_counts' AND column_name LIKE 'outages_%';")"
   check N "1c Primaerschluessel unveraendert (dieselben sieben Spalten wie in Stufe 1b)" "tournament_id,window_start,channel,device_class,installed,os_family,browser_family" \
     "$(q "SELECT string_agg(a.attname, ',' ORDER BY k.ord) FROM pg_constraint c CROSS JOIN LATERAL unnest(c.conkey) WITH ORDINALITY AS k(attnum, ord) JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum WHERE c.conrelid = 'public.public_view_counts'::regclass AND c.contype = 'p';")"

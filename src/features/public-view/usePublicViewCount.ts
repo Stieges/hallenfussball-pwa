@@ -22,11 +22,9 @@ import { defaultViewCountTransport } from './viewCountTransport';
 export interface UsePublicViewCountOptions {
   /** Versandweg (nur für Tests); Vorgabe: der Weg dieser App, `null` = Zählung aus */
   transport?: ViewCountTransport | null;
-  /** Überstandene Netzstörungen (aus `usePublicTournament`); jede wird genau einmal gesendet (@RZ-033) */
-  outages?: readonly RecoveredOutage[];
+  /** Die zuletzt überstandene Netzstörung (aus `usePublicTournament`); jede Kennung wird genau einmal gesendet (@RZ-033) */
+  outage?: RecoveredOutage | null;
 }
-
-const NO_OUTAGES: readonly RecoveredOutage[] = [];
 
 interface DeviceFacts { device: DeviceClass; installed: boolean }
 
@@ -59,7 +57,7 @@ export function usePublicViewCount(shareCode: string, loaded: boolean, options: 
     }
   }, [searchParams, setSearchParams]);
 
-  const outages = options.outages ?? NO_OUTAGES;
+  const outage = options.outage ?? null;
   const countedCodeRef = useRef<string | null>(null);
   const sentOutageIdRef = useRef(0);
   const transportRef = useRef(transport);
@@ -91,20 +89,18 @@ export function usePublicViewCount(shareCode: string, loaded: boolean, options: 
     return () => { clearInterval(timer); };
   }, [loaded, shareCode]);
 
-  // Überstandene Störungen: jede Meldung genau einmal (Kennung merken), ohne Warten, Fehler verschluckt, nie wiederholt (@RZ-035)
+  // Überstandene Störung: jede Meldung genau einmal (Kennung merken), ohne Warten, Fehler verschluckt, nie wiederholt (@RZ-035)
   useEffect(() => {
     const facts = factsRef.current;
-    for (const outage of outages) {
-      if (outage.id <= sentOutageIdRef.current) {
-        continue;
-      }
-      sentOutageIdRef.current = outage.id;
-      const via = transportRef.current;
-      if (via !== null && facts !== null) {
-        void sendViewCount(via, {
-          p_share_code: outage.shareCode, p_art: outage.kind, p_kanal: facts.channel, p_geraet: facts.device, p_installiert: facts.installed,
-        });
-      }
+    if (outage === null || outage.id <= sentOutageIdRef.current) {
+      return;
     }
-  }, [outages]);
+    sentOutageIdRef.current = outage.id;
+    const via = transportRef.current;
+    if (via !== null && facts !== null) {
+      void sendViewCount(via, {
+        p_share_code: outage.shareCode, p_art: outage.kind, p_kanal: facts.channel, p_geraet: facts.device, p_installiert: facts.installed,
+      });
+    }
+  }, [outage]);
 }
