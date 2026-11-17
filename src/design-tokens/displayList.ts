@@ -58,8 +58,8 @@ export const displayList = {
   },
   /** Zeitspalte der schmalen Aufteilung in em der Zeilenschrift: breit genug für „(war 10:40)“ (5,6 em) */
   timeColumnWidth: '5.9em',
-  /** Zeitspalte, wenn die Zeile ein Zustandsabzeichen tragen kann (Spielplan): breit genug für „Strafstoßschießen“ (8,2 em) */
-  timeColumnStateWidth: '8.5em',
+  /** Zeitspalte, wenn die Zeile ein Zustandsabzeichen tragen kann (Spielplan): breit genug für „Strafstoßschießen“ (gemessen 8,63 em mit Polster) */
+  timeColumnStateWidth: '8.8em',
   /**
    * Tabelle (Gesamttabelle, Gruppentabelle): Die Zeilenschrift richtet sich nach der freien Höhe und der Zahl der Zeilen (`standingsFit.ts`);
    * alle Abstände stehen in em dieser Schrift, damit sie mitwachsen. Die Zeilenschrift liegt zwischen `fontMin` (HART 3 % der Bildhöhe,
