@@ -432,7 +432,11 @@ test.describe('Hallenton Störungen (zwei Geräte, lokaler Stack)', () => {
       await richteLautsprecherEin(b.page, cup.id, LAUTSPRECHER);
       await oeffneVerwaltung(a.page, cup.id);
       await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('bereit', { timeout: 30_000 });
-      // „Hallenton“ war einmal offen (sein Teil ist geladen), dann Dashboard, dann Netz weg
+      // Weg wie beim Befund (CI-Lauf 43874890182): Hallenton, Dashboard, wieder Hallenton (online, „bereit“), dann Dashboard, dann Netz weg, dann Hallenton
+      await a.page.getByRole('button', { name: /Dashboard/ }).first().click();
+      await expect(a.page.getByTestId('hallenton-status-zeile')).toContainText('Lautsprecher Feld 1 bereit', { timeout: 20_000 });
+      await a.page.getByRole('button', { name: /Hallenton/ }).first().click();
+      await expect(a.page.getByTestId('lautsprecher-feld-1-zustand')).toHaveText('bereit', { timeout: 30_000 });
       await a.page.getByRole('button', { name: /Dashboard/ }).first().click();
       await expect(a.page.getByTestId('hallenton-status-zeile')).toContainText('Lautsprecher Feld 1 bereit', { timeout: 20_000 });
       await a.context.setOffline(true);
