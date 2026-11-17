@@ -133,7 +133,10 @@
         "saveFailed": "The graphic could not be saved on this device. Storage is full or blocked. The current graphic stays."
       },
       "format": "PNG, JPG or SVG, up to {{maxMb}} MB",
+      "drop": "Drop here",
       "error": {
+        "multiple": "No file was accepted. Please drop only one file at a time.",
+        "none": "No file was accepted. Please drop an image file (PNG, JPG or SVG).",
         "type": "This file was not accepted. Allowed are PNG, JPG and SVG.",
         "size": "This file was not accepted. It is larger than {{maxMb}} MB or has too many pixels (more than {{maxSide, number}} on one side).",
         "unreadable": "This file was not accepted. It cannot be read or is damaged."
