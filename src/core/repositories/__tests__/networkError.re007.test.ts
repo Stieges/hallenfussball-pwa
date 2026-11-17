@@ -20,6 +20,8 @@ describe('@RE-007 isPureNetworkError', () => {
     ['Zeitüberschreitung (TimeoutError)', Object.assign(new Error('The operation timed out.'), { name: 'TimeoutError' })],
     ['Abbruch', Object.assign(new Error('The user aborted a request.'), { name: 'AbortError' })],
     ['eigene Zeitgrenze der Liste', new Error('Cloud fetch timeout')],
+    ['Zeitüberschreitung als einfaches Objekt ohne name (postgrest-js, Signal)', postgrest('TimeoutError: signal timed out')],
+    ['dasselbe, in RepositoryError verpackt', new RepositoryError('get', 'TimeoutError: signal timed out', postgrest('TimeoutError: signal timed out'))],
     ['NetworkError der App', new NetworkError('offline', true)],
   ])('Netz: %s', (_name, error) => {
     expect(isPureNetworkError(error)).toBe(true);
@@ -34,6 +36,8 @@ describe('@RE-007 isPureNetworkError', () => {
     ['Meldung nennt „fetch“ nur als Teilstück', new RepositoryError('get', 'Could not fetch tournament row', postgrest('Could not fetch tournament row'))],
     ['Netz-Text, aber Server-Code in der Ursache', new RepositoryError('get', 'TypeError: Failed to fetch', postgrest('TypeError: Failed to fetch', 'PGRST301'))],
     ['Programmierfehler (TypeError)', new TypeError("Cannot read properties of undefined (reading 'id')")],
+    ['Zeitüberschreitung mit Server-Code schlägt Netz', postgrest('TimeoutError: signal timed out', '57014')],
+    ['„TimeoutError“ nur mitten im Text', new Error('upstream said TimeoutError: slow')],
     ['SyncError', new SyncError('Abgleich fehlgeschlagen', 't1')],
     ['kein Fehlerobjekt', 'Failed to fetch'],
     ['leer', undefined],

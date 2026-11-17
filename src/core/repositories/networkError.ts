@@ -18,6 +18,9 @@ import { NetworkError, isAbortError } from '../errors';
 const NETWORK_MESSAGE =
     /^(?:(?:TypeError|FetchError): )?(?:Failed to fetch|Load failed|NetworkError when attempting to fetch resource\.?|Network request failed|fetch failed)$/i;
 
+/** Zeitueberschreitung des Abrufs, so verpackt `postgrest-js` sie ohne `name`: „TimeoutError: …“ mit leerem Code. */
+const TIMEOUT_PREFIX = 'TimeoutError: ';
+
 const MAX_DEPTH = 4;
 
 function layers(error: unknown): object[] {
@@ -36,5 +39,5 @@ export function isPureNetworkError(error: unknown): boolean {
     const chain = layers(error) as { name?: unknown; message?: unknown; code?: unknown }[];
     const hasServerCode = chain.some((layer) => typeof layer.code === 'string' && layer.code !== '');
     if (hasServerCode) { return false; }
-    return chain.some((layer) => layer.name === 'TimeoutError' || (typeof layer.message === 'string' && NETWORK_MESSAGE.test(layer.message)));
+    return chain.some((layer) => layer.name === 'TimeoutError' || (typeof layer.message === 'string' && (NETWORK_MESSAGE.test(layer.message) || layer.message.startsWith(TIMEOUT_PREFIX))));
 }

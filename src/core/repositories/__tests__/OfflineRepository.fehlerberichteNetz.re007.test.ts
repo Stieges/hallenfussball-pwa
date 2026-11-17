@@ -34,6 +34,7 @@ vi.mock('../../../lib/supabase', () => ({ isSupabaseConfigured: true, supabase: 
 import { OfflineRepository } from '../OfflineRepository';
 import { LocalStorageRepository } from '../LocalStorageRepository';
 import { resetReportedOnceForTest } from '../reportOnce';
+import { withCloudReadTimeout } from '../cloudAdoption';
 import type { SupabaseRepository } from '../SupabaseRepository';
 import { createMockTournament } from '../../../test/factories';
 
@@ -63,8 +64,8 @@ function fakeCloud(failWith: () => Error) {
 }
 
 const created: OfflineRepository[] = [];
-function device(cloud: ReturnType<typeof fakeCloud>): OfflineRepository {
-  const repo = new OfflineRepository(new LocalStorageRepository(), cloud.fake as unknown as SupabaseRepository, OLLI);
+function device(cloud: ReturnType<typeof fakeCloud>, account: string = OLLI): OfflineRepository {
+  const repo = new OfflineRepository(new LocalStorageRepository(), cloud.fake as unknown as SupabaseRepository, account);
   created.push(repo);
   return repo;
 }
@@ -181,5 +182,71 @@ describe('@RE-007 Stelle 3b: Liste der Startseite bei jedem Online-Wechsel (list
     const repo = device(fakeCloud(() => new Error('Cloud fetch timeout')));
     for (let i = 0; i < 20; i++) { await repo.listForCurrentUser(); }
     expect(SERVER_REPORTS('list')).toHaveLength(0);
+  });
+});
+
+describe('@RE-007 Stelle 1b: `get` für Geräte ohne Eigentümer-Kopie (Co-Admin, Kopie ohne Markierung) im 5-s-Takt', () => {
+  const MARIA = 'maria';
+  const ohneMarkierung = (id: string): Tournament => ({ ...turnier(id), ownerId: undefined });
+  const Fall: [string, () => void][] = [
+    ['Co-Admin: Kopie gehört Olli', () => undefined],
+    ['lokale Kopie ohne Besitzer-Markierung', () => stores.raw.set('tournaments', [ohneMarkierung('T1'), ohneMarkierung('T2')])],
+  ];
+
+  it.each(Fall)('@RE-007 %s – eine Stunde Netzfehler: 0 Berichte, Rückgabe jedes Mal null (wie vor dem Fix), Cloud wird weiter abgefragt', async (_name, prepare) => {
+    prepare();
+    const cloud = fakeCloud(networkError);
+    const repo = device(cloud, MARIA);
+    for (let tick = 0; tick < HOUR_IN_5S_TICKS; tick++) { expect(await repo.get('T1', { fresh: true })).toBeNull(); }
+    expect(cloud.fail).toHaveBeenCalledTimes(HOUR_IN_5S_TICKS);
+    expect(SERVER_REPORTS('get')).toHaveLength(0);
+  });
+
+  it.each(Fall)('@RE-007 %s – Zeitgrenze des Abrufs: 0 Berichte, Rückgabe null', async (_name, prepare) => {
+    prepare();
+    const cloud = fakeCloud(networkError);
+    const hangs = vi.fn(() => withCloudReadTimeout(new Promise<never>(() => undefined))); // echte Zeitgrenze des Abrufs
+    cloud.fake.getWithMatchRevisions = hangs;
+    cloud.fake.get = hangs;
+    const repo = device(cloud, MARIA);
+    vi.useFakeTimers();
+    try {
+      for (let i = 0; i < 50; i++) {
+        const pending = repo.get('T1', { fresh: true });
+        await vi.advanceTimersByTimeAsync(60_000);
+        expect(await pending).toBeNull();
+      }
+    } finally { vi.useRealTimers(); }
+    expect(hangs).toHaveBeenCalled();
+    expect(SERVER_REPORTS('get')).toHaveLength(0);
+  });
+
+  it.each(Fall)('@RE-007 %s – echter Server-Fehler 100-mal: genau 1 Bericht, zweites Turnier eigener, nach Neuladen wieder einer', async (_name, prepare) => {
+    prepare();
+    const repo = device(fakeCloud(serverError), MARIA);
+    for (let i = 0; i < 100; i++) { expect(await repo.get('T1', { fresh: true })).toBeNull(); }
+    expect(SERVER_REPORTS('get')).toHaveLength(1);
+    for (let i = 0; i < 20; i++) { await repo.get('T2', { fresh: true }); }
+    expect(SERVER_REPORTS('get').map((c) => (c[3] as { tournamentId: string }).tournamentId).sort()).toEqual(['T1', 'T2']);
+    resetReportedOnceForTest();
+    await repo.get('T1', { fresh: true });
+    expect(SERVER_REPORTS('get')).toHaveLength(3);
+  });
+});
+
+describe('@RE-007 Stelle 3c: Teilfehler der Liste (Mitgliedschaften, begonnene Turniere)', () => {
+  function listWith(error: Error, kind: 'membershipError' | 'startedError') {
+    const cloud = fakeCloud(networkError);
+    cloud.fake.listWithMemberships = vi.fn(async () => ({ tournaments: [], ownIds: new Set<string>(), memberships: 'unknown', [kind]: error })) as never;
+    return cloud;
+  }
+  it.each([['listMemberships', 'membershipError'], ['listStarted', 'startedError']] as const)('@RE-007 %s: Netzfehler 0 Berichte, echter Server-Fehler 100-mal genau 1', async (feature, kind) => {
+    const netz = device(listWith(new TypeError('Failed to fetch'), kind));
+    for (let i = 0; i < 100; i++) { await netz.listForCurrentUser(); }
+    expect(SERVER_REPORTS(feature)).toHaveLength(0);
+
+    const server = device(listWith(new RepositoryError('list', 'permission denied', { message: 'permission denied', code: '42501' }), kind));
+    for (let i = 0; i < 100; i++) { await server.listForCurrentUser(); }
+    expect(SERVER_REPORTS(feature)).toHaveLength(1);
   });
 });
