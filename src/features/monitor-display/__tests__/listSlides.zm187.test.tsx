@@ -423,13 +423,36 @@ describe('@ZM-151 @ZM-187 VISUAL-DESIGN § 8: der Stand ist mindestens 1,5 × Na
       const stand = z.zeile.querySelector<HTMLElement>('[data-testid="monitor-match-score"]')!;
       const name = z.zeile.querySelector<HTMLElement>('[data-teamname]')!;
       const uhr = z.zeile.querySelector<HTMLElement>('[data-testid="monitor-match-clock"]')!;
-      expect(vh(stand.style.fontSize), `${z.id}: Stand ≥ 1,5 × Namensschrift`).toBeGreaterThanOrEqual(1.5 * vh(name.style.fontSize));
-      expect(vh(stand.style.fontSize), `${z.id}: Stand ≥ Uhrzeit`).toBeGreaterThanOrEqual(vh(uhr.style.fontSize));
+      // Gleitkomma: die Schriften wachsen mit einem Maßstab (5,4 × s gegen 1,5 × 3,6 × s), die Werte sind auf Tausendstel gerundet; Toleranz ein Tausendstel vh
+      expect(vh(stand.style.fontSize) + 0.001, `${z.id}: Stand ≥ 1,5 × Namensschrift`).toBeGreaterThanOrEqual(1.5 * vh(name.style.fontSize));
+      expect(vh(stand.style.fontSize) + 0.001, `${z.id}: Stand ≥ Uhrzeit`).toBeGreaterThanOrEqual(vh(uhr.style.fontSize));
       expect(spalte.style.flex, `${z.id}: feste Breite`).toBe(`0 0 ${displayList.separatorWidth}`);
       expect(spalte.style.fontSize, `${z.id}: die Breite in em gilt für die Namensschrift, nicht für die Standschrift`).toBe(name.style.fontSize);
     }
     // geplante Spiele („-:-“) und beendete tragen dieselbe Größe und Breite
     expect(new Set(zeilen.map(z => z.zeile.querySelector<HTMLElement>('[data-testid="monitor-match-score"]')!.style.fontSize)).size).toBe(1);
+  });
+
+  it('Stand ≥ 1,5 × Teamname in jedem Maßstab der Folie (Rand 0 bis 10 %, echte Namen des Nikolaus-Turniers: Maßstab 1,22 bei Rand 5 %)', () => {
+    const echt = ['SV Kirchanschöring', 'SpVgg Fridolfing', 'TSV Waging 2', 'TSV Freilassing', 'TSV Waging 1', 'SG Taching/Tengling'];
+    const basis = listenTurnier({ beendet: 5 });
+    const t = { ...basis, teams: basis.teams.map((tm, i) => ({ ...tm, name: echt[i] })) };
+    const massstaebe = new Set<number>();
+    for (const rand of [0, 2.5, 5, 7.5, 10]) {
+      for (const art of ['plan', 'naechste'] as const) {
+        const { unmount } = render(art === 'plan'
+          ? <ScheduleFieldSlide slide={plan} {...withView(t)} theme="dark" style={{}} overscanPercent={rand} />
+          : <NextMatchesSlide slide={slide('next-matches', { matchCount: 5 })} {...withView(t)} theme="dark" style={{}} overscanPercent={rand} />);
+        for (const zeile of screen.getAllByTestId('monitor-match-row')) {
+          const name = parseFloat(zeile.querySelector<HTMLElement>('[data-teamname]')!.style.fontSize);
+          massstaebe.add(Math.round(name / parseFloat(displayList.fontSizes.team) * 100) / 100);
+          const stand = parseFloat(zeile.querySelector<HTMLElement>('[data-testid="monitor-match-score"]')!.style.fontSize);
+          expect(stand + 0.001, `Rand ${String(rand)} %`).toBeGreaterThanOrEqual(1.5 * name);
+        }
+        unmount();
+      }
+    }
+    expect(massstaebe.size, 'mehrere verschiedene Maßstäbe geprüft').toBeGreaterThan(2);
   });
 
   it('fett wie die Uhrzeit: Stand mit Ergebnis ist bold, die Uhrzeit semibold – der Stand nie dünner', () => {

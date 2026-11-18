@@ -13,8 +13,8 @@
  */
 import { displayList } from '../../design-tokens';
 import type { MatchView } from '../../core/view';
-import { FALLBACK_EM, INTER_BREITE_EM, SICHERHEIT } from './interWidths';
-import { availableHeight, LINE, num, ROW_BORDER, type ListColumns, type ListFrame } from './listRows';
+import { FALLBACK_EM, FALLBACK_SCHMAL_EM, INTER_BREITE_EM, SICHERHEIT } from './interWidths';
+import { availableHeight, hyphenWordStaysTogether, LINE, nameCharsPerLine, num, ROW_BORDER, type ListColumns, type ListFrame } from './listRows';
 import { monitorSideLabel } from './matchSides';
 
 /** Tokens der Zeilen im Maßstab: nur die Schriftstufen wachsen, Abstände und Polster bleiben; die Zeitspalte ist die schmale. */
@@ -38,35 +38,40 @@ export function compactTokens(scale: number, cols: ListColumns): ListTokens {
 const SPACE_EM = INTER_BREITE_EM[' '];
 
 /** Breite eines Textes in em der Schrift (Normalschnitt); `faktor` > 1 vorsichtig, < 1 bewusst knapp. */
-export function textBreiteEm(text: string, faktor: number = SICHERHEIT): number {
+export function textBreiteEm(text: string, faktor: number = SICHERHEIT, unbekannt: number = FALLBACK_EM): number {
   let breite = 0;
-  for (const zeichen of text) { breite += INTER_BREITE_EM[zeichen] ?? FALLBACK_EM; }
+  for (const zeichen of text) { breite += INTER_BREITE_EM[zeichen] ?? unbekannt; }
   return breite * faktor;
 }
 
 interface Teil { breite: number; leerzeichen: boolean }
 
+/** Wie ein Name umbricht: `zusammen` entscheidet, ob ein Bindestrich-Stück zusammenbleibt (Vorgabe: wenn es in die Zeile passt), `unbekannt` die Breite fremder Zeichen. */
+export interface UmbruchRegel { zusammen?: (stueck: string) => boolean; unbekannt?: number }
+
 /** Teile, an denen der Browser umbrechen darf: nach Leerzeichen und nach „/“; Bindestrich-Wörter bleiben zusammen, solange sie in eine Zeile passen. */
-function teile(text: string, breiteEm: number, faktor: number): Teil[] {
+function teile(text: string, breiteEm: number, faktor: number, regel: UmbruchRegel): Teil[] {
+  const unbekannt = regel.unbekannt ?? FALLBACK_EM;
+  const zusammen = regel.zusammen ?? ((stueck: string) => textBreiteEm(stueck, faktor, unbekannt) <= breiteEm);
   const ergebnis: Teil[] = [];
   let leerzeichen = false;
   for (const m of text.matchAll(/(\s+)|([^\s]+)/g)) {
     if (m[1] !== undefined) { leerzeichen = true; continue; }
     const wort = m[2];
     const stuecke = (wort.match(/[^/]+\/?|\//g) ?? [wort]).flatMap((stueck) => (
-      stueck.includes('-') && textBreiteEm(stueck, faktor) <= breiteEm ? [stueck] : stueck.match(/[^-]+-?|-/g) ?? []
+      stueck.includes('-') && zusammen(stueck) ? [stueck] : stueck.match(/[^-]+-?|-/g) ?? []
     ));
-    stuecke.forEach((stueck, i) => { ergebnis.push({ breite: textBreiteEm(stueck, faktor), leerzeichen: i === 0 && leerzeichen && ergebnis.length > 0 }); });
+    stuecke.forEach((stueck, i) => { ergebnis.push({ breite: textBreiteEm(stueck, faktor, unbekannt), leerzeichen: i === 0 && leerzeichen && ergebnis.length > 0 }); });
     leerzeichen = false;
   }
   return ergebnis;
 }
 
 /** Zeilen, die ein Name bei der Breite `breiteEm` belegt (Umbruch an Leerzeichen und nach „/“, überlange Wörter brechen). */
-export function nameZeilen(text: string, breiteEm: number, faktor: number = SICHERHEIT): number {
+export function nameZeilen(text: string, breiteEm: number, faktor: number = SICHERHEIT, regel: UmbruchRegel = {}): number {
   let zeilen = 1;
   let belegt = 0;
-  for (const teil of teile(text, breiteEm, faktor)) {
+  for (const teil of teile(text, breiteEm, faktor, regel)) {
     const leer = teil.leerzeichen ? SPACE_EM * faktor : 0;
     if (belegt !== 0 && belegt + leer + teil.breite > breiteEm) {
       zeilen += 1;
@@ -132,15 +137,27 @@ function seitenHoehe(seite: readonly MatchView[], cols: ListColumns, frame: List
 /** Wie viel Faktor auf die Breiten der bisherigen Aufteilung: knapp gerechnet, damit „vorher einzeilig“ nie zu pessimistisch gilt. */
 const KNAPP = 0.95;
 
+/** Zuschlag für das Feld unter der Uhrzeit: halbfett gesetzt, also breiter als der Normalschnitt der Tabelle. */
+const FELD_FETT = 1.1;
+
+/** Passt der Feldname in einer Zeile in die schmale Zeitspalte (Schrift `note`, halbfett, in em der Zeilenschrift)? */
+export function feldPasst(name: string): boolean {
+  return textBreiteEm(name, SICHERHEIT * FELD_FETT) * (num(displayList.fontSizes.note) / num(displayList.fontSizes.team)) <= num(displayList.timeColumnWidth);
+}
+
 /**
  * Größter Maßstab (1 bis `displayList.fit.maxScale`) der schmalen Aufteilung, bei dem jede Seite in die freie Höhe passt und kein Name mehr Zeilen
  * belegt als in der bisherigen Aufteilung; `null`, wenn schon der Maßstab 1 nicht passt (dann bleibt die Folie, wie sie war).
  */
-export function compactScale(pages: readonly (readonly MatchView[])[], cols: ListColumns, frame: ListFrame): number | null {
+export function compactScale(pages: readonly (readonly MatchView[])[], cols: ListColumns, frame: ListFrame, feldNamen: readonly string[] = []): number | null {
+  // Ein Feldname, der nicht in eine Zeile der schmalen Zeitspalte passt, bräche um, und das Höhenmodell rechnet nur eine Zeile: dann bleibt die Folie, wie sie war
+  if (cols.field && !feldNamen.every(feldPasst)) { return null; }
   const spiele = pages.flat();
   const namen = [...new Set(spiele.flatMap(m => [monitorSideLabel(m.home), monitorSideLabel(m.away)]))];
   const bisherBreite = namenBreiteEm(frame, null, 1);
-  const bisher = new Map(namen.map(name => [name, nameZeilen(name, bisherBreite, KNAPP)]));
+  // Die bisherigen Zeilen nach der Regel von main (Bindestrich-Wort nach Zeichenzahl) und mit schmalen fremden Zeichen: nie mehr, als main wirklich setzt
+  const bisherRegel: UmbruchRegel = { zusammen: stueck => hyphenWordStaysTogether(stueck, nameCharsPerLine({ overscan: frame.overscan, notice: frame.notice })), unbekannt: FALLBACK_SCHMAL_EM };
+  const bisher = new Map(namen.map(name => [name, nameZeilen(name, bisherBreite, KNAPP, bisherRegel)]));
   const frei = availableHeight({ overscan: frame.overscan, notice: frame.notice });
   for (let s = displayList.fit.maxScale; s >= 1 - 1e-9; s -= displayList.fit.scaleStep) {
     const scale = Math.max(1, Math.round(s * 100) / 100);
@@ -153,7 +170,7 @@ export function compactScale(pages: readonly (readonly MatchView[])[], cols: Lis
 }
 
 /** Der Rahmen für die Zeilen einer Folie: schmale Aufteilung im größten passenden Maßstab, sonst der Rahmen von bisher. */
-export function compactFrame(pages: readonly (readonly MatchView[])[], cols: ListColumns, frame: ListFrame): ListFrame {
-  const scale = compactScale(pages, cols, frame);
+export function compactFrame(pages: readonly (readonly MatchView[])[], cols: ListColumns, frame: ListFrame, feldNamen: readonly string[] = []): ListFrame {
+  const scale = compactScale(pages, cols, frame, feldNamen);
   return scale === null ? frame : { ...frame, compact: true, scale };
 }

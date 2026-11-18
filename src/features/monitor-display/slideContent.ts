@@ -135,11 +135,13 @@ export function scheduleFieldLayout(view: TournamentView, field: number, frame: 
 }
 
 /** „Nächste Spiele“: die nächsten offenen Spiele, nach Höhe auf Seiten verteilt; jede Paarung auf genau einer Seite (@ZM-150, @ZM-188); bei mehreren Feldern mit dem Feld in jeder Zeile (@ZM-189). */
-export function nextMatchesLayout(view: TournamentView, matchCount: number | undefined, frame: ListFrame = DEFAULT_FRAME): ListLayout {
+export function nextMatchesLayout(view: TournamentView, matchCount: number | undefined, frame: ListFrame = DEFAULT_FRAME, feldName?: (feld: number) => string): ListLayout {
   const list = nextMatchList(view, matchCount);
   const columns = listColumns(false, true, view.matches);
   const pages = listPages(list, columns, undefined, seitenRahmen(frame));
-  return { pages, columns, frame: compactFrame(pages, columns, frame) };
+  // Bei mehreren Feldern steht der Feldname unter der Uhrzeit; ein zu langer Name hält die Folie in der bisherigen Aufteilung (@ZM-211)
+  const feldNamen = feldName === undefined || !columns.field ? [] : [...new Set(list.map(m => m.field))].map(feldName);
+  return { pages, columns, frame: compactFrame(pages, columns, frame, feldNamen) };
 }
 
 /**

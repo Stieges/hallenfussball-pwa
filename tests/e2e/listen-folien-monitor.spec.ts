@@ -14,6 +14,8 @@ import type { Page } from '@playwright/test';
 import { test, expect } from '@playwright/test';
 
 const PROFILE = [{ name: '1080', width: 1920, height: 1080 }, { name: '720', width: 1280, height: 720 }] as const;
+/** Namen mit Umlauten, ß, Ziffern, Schrägstrich und Bindestrich (Review PR #559, S4) */
+const UMLAUTNAMEN = 'SG Müller-Süd 1/2|Straße-Ost 1921|TSV Weiß 2|Höhenkirchen-Siegertsbrunn|SG Taching/Tengling|FC Groß-Gerau 09';
 const SZENEN = [
   { id: 'plan', namen: 'kurz', kennung: '@ZM-187 @ZM-188 Spielplan Feld 1, verschoben und gewertet', zusatz: '&verschoben=1&gewertet=1&strafstoss=1' },
   { id: 'plan', namen: 'lang', kennung: '@ZM-188 @ZM-087 Spielplan Feld 1, Namen mit 45–50 Zeichen, verschoben und gewertet', zusatz: '&verschoben=1&gewertet=1&strafstoss=1' },
@@ -22,6 +24,8 @@ const SZENEN = [
   { id: 'naechste', namen: 'kurz', kennung: '@ZM-189 Nächste Spiele, zwei Felder (Feld in jeder Zeile) mit Finalspielen', zusatz: '&felder=2&finale=3&anzahl=8' },
   { id: 'naechste', namen: 'kurz', kennung: '@ZM-188 @ZP-046 Nächste Spiele, verschoben', zusatz: '&verschoben=1&anzahl=10' },
   { id: 'naechste', namen: 'lang', kennung: '@ZM-150 @ZM-188 Nächste Spiele, acht Spiele mit Namen von 45–50 Zeichen, verschoben', zusatz: '&verschoben=1&anzahl=8' },
+  { id: 'plan', namen: 'kurz', kennung: '@ZM-211 Spielplan Feld 1, Namen mit Umlauten, ß, Ziffern, Schrägstrich und Bindestrich, verschoben', zusatz: `&verschoben=1&namenliste=${encodeURIComponent(UMLAUTNAMEN)}` },
+  { id: 'naechste', namen: 'kurz', kennung: '@ZM-211 Nächste Spiele, zehn Spiele mit Namen mit Umlauten, ß, Ziffern, Schrägstrich und Bindestrich, verschoben', zusatz: `&verschoben=1&anzahl=10&namenliste=${encodeURIComponent(UMLAUTNAMEN)}` },
 ] as const;
 
 /** Bildrand in Prozent der Folie (@ME-067: 0 bis 10): die Seitenzahl richtet sich nach dem wirksamen Rand. */
@@ -134,6 +138,21 @@ async function namensplatz(page: Page): Promise<{ breite: number; modell: number
   });
 }
 
+/**
+ * Namensplatz der schmalen Aufteilung: Die gemessene Breite jeder Namensspalte ist mindestens die Breite, die das Modell (`namenBreiteEm`) annimmt
+ * (Toleranz 1 px). `modell` ist `null`, wenn die Folie in der bisherigen Aufteilung steht.
+ */
+async function schmalerNamensplatz(page: Page): Promise<{ modell: number | null; breiten: { breite: number; modellPx: number }[] }> {
+  return page.evaluate(() => {
+    const attr = document.querySelector('[data-testid="monitor-slide"]')!.getAttribute('data-namebreite-em');
+    const modell = attr === null ? null : Number(attr);
+    return {
+      modell,
+      breiten: [...document.querySelectorAll<HTMLElement>('[data-teamname]')].map((el) => ({ breite: el.getBoundingClientRect().width, modellPx: (modell ?? 0) * parseFloat(getComputedStyle(el).fontSize) })),
+    };
+  });
+}
+
 /** Passt das längste Zustandswort („Strafstoßschießen“) ganz in die Zeitspalte? Gemessen mit der Schrift der Zustandszeile. */
 async function zustandswortPasst(page: Page): Promise<{ wort: number; spalte: number }> {
   return page.evaluate(() => {
@@ -225,7 +244,12 @@ test.describe('Monitor Listen-Folien (T2-UI)', () => {
           if (szene.id === 'plan' && szene.namen === 'kurz' && szene.zusatz.includes('strafstoss')) {
             expect(new Set(achsen.map((g) => Math.round(g.zeile))).size, 'Zeilenhöhe fest: auch die Zeile mit „(4:3 i. E.)“ ist gleich hoch').toBe(1);
           }
-          // das Seitenmodell rechnet mit den Schriftstufen von bisher; in der schmalen Aufteilung (größere Schrift) prüft listen-folien-umbruch.spec.ts, dass kein Name neu umbricht
+          // schmale Aufteilung: das Namensmodell (`namenBreiteEm`) nimmt nie mehr Platz an, als gemessen da ist; das Seitenmodell dagegen rechnet mit der Schrift von bisher
+          const platz = await schmalerNamensplatz(page);
+          expect(platz.modell !== null, `Seite ${String(seite + 1)}: das Modell kennt die schmale Aufteilung genau dann, wenn sie gerendert ist`).toBe(schmal);
+          for (const n of platz.breiten) {
+            if (schmal) { expect(n.breite + 1, `Seite ${String(seite + 1)}: gemessene Namensbreite mindestens so groß wie die des Modells (schmale Aufteilung)`).toBeGreaterThanOrEqual(n.modellPx); }
+          }
           if (!schmal) {
             for (const n of await namensplatz(page)) {
               expect(n.breite, `Seite ${String(seite + 1)}: das Modell nimmt nie mehr Namensplatz an, als real da ist`).toBeGreaterThanOrEqual(n.modell);
@@ -273,6 +297,51 @@ test.describe('@ZM-211 Auf „Nächste Spiele“ gehört der Platz neben der Uhr
         expect(kaesten.some((k) => k.war !== null), verschoben ? 'verschobene Spiele tragen „(war …)“' : '').toBe(verschoben);
         await ctx.close();
       });
+    }
+  }
+});
+
+test.describe('@ZM-211 @ZM-188 Ein eigener Feldname schiebt nichts aus dem Bild (mehrere Felder, Review PR #559 R2)', () => {
+  test.skip(imGebautenStand, 'Prüfstand nur am Dev-Server (gehört nicht in den Build)');
+
+  for (const feldname of ['Feld 2', 'Dreifachhalle', 'Dreifachhalle Nord', 'Dreifachhalle Nord Ost 12']) {
+    for (const p of PROFILE) {
+      for (const rand of [0, 5, 10]) {
+        test(`Feldname „${feldname}“ (${String(feldname.length)} Zeichen), ${p.name}, Rand ${String(rand)} %: jede Zeile, der Feldname und „Seite x / y“ ganz im Bild, der Feldname läuft nicht aus der Spalte`, async ({ browser }, testInfo) => {
+          test.skip(testInfo.project.name !== 'desktop', 'nur Projekt desktop (setzt das Fenster selbst)');
+          const ctx = await browser.newContext({ viewport: { width: p.width, height: p.height }, colorScheme: 'dark', serviceWorkers: 'block', locale: 'de-DE' });
+          const page = await ctx.newPage();
+          await page.goto(`/tests/e2e/harness/listen-folien-monitor.html?szene=naechste&seite=0&anzahl=3&felder=2&rand=${String(rand)}&feldname=${encodeURIComponent(feldname)}`);
+          await expect(page.getByTestId('monitor-slide')).toBeVisible();
+          await page.evaluate(() => document.fonts.ready.then(() => new Promise((res) => { requestAnimationFrame(() => { requestAnimationFrame(res); }); })));
+          const kaesten = await zeilen(page);
+          expect(kaesten).toHaveLength(3);
+          const felder = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>('[data-testid="monitor-match-field"]')].map((el) => ({
+            text: el.textContent ?? '', ueber: el.scrollWidth > el.clientWidth + 1, zeilen: Math.round(el.getBoundingClientRect().height / (parseFloat(getComputedStyle(el).fontSize) * 1.15)),
+            unten: el.getBoundingClientRect().bottom, zeileUnten: el.closest('[data-testid="monitor-match-row"]')!.getBoundingClientRect().bottom,
+          })));
+          expect(felder.length, 'bei mehreren Feldern steht in jeder Zeile das Feld').toBe(3);
+          for (const f of felder) {
+            expect(f.ueber, `${f.text}: läuft nicht seitlich aus der Spalte`).toBe(false);
+            // Ein Feldname von 25 Zeichen bricht schon in der bisherigen Spalte (9,6 em) um, und das Zeilenmodell von main rechnet nur eine Zeile: das ist ein
+            // Befund von main, kein Verhalten dieses PR (gilt für `Feld liegt ganz in der Zeile` und `Zusätze ganz in der Zeile`) (die Folie bleibt dann in der bisherigen Aufteilung); bis 18 Zeichen muss das Feld ganz in der Zeile liegen
+            if (feldname.length <= 18) { expect(f.unten, `${f.text}: Feld liegt ganz in der Zeile`).toBeLessThanOrEqual(f.zeileUnten + 0.5); }
+          }
+          for (const k of kaesten) {
+            expect(k.unten, `${k.id}: Unterkante im Bild`).toBeLessThanOrEqual(p.height);
+            if (feldname.length <= 18) { expect(k.zusatzUnten, `${k.id}: Zusätze ganz in der Zeile`).toBeLessThanOrEqual(k.unten + 0.5); }
+            expect(k.blockAbweichung, `${k.id}: Zeilenhöhe wie im Modell (± 1 px)`).toBeLessThanOrEqual(1);
+          }
+          const hinweis = page.getByText(/^Seite \d+ \/ \d+$/);
+          if (await hinweis.count() > 0) {
+            const h = await hinweis.first().boundingBox();
+            expect(h!.y + h!.height, '„Seite x / y“ im Bild').toBeLessThanOrEqual(p.height);
+          }
+          // ein Feldname, der nicht in eine Zeile der schmalen Spalte passt, hält die Folie in der bisherigen Aufteilung
+          if (feldname.length >= 18) { expect(kaesten.every((k) => !k.schmal), 'bisherige Aufteilung').toBe(true); }
+          await ctx.close();
+        });
+      }
     }
   }
 });
