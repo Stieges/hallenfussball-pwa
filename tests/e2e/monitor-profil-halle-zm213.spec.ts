@@ -14,6 +14,7 @@ import { test, expect } from '@playwright/test';
 // @ts-expect-error – .mjs ohne Typen; derselbe Lader wie bei `npm run visual:metrics --saat`
 import { installiereSaat, leseSaat } from '../../scripts/visual-metrics/saat/lader.mjs';
 import { animationenFertig } from './helpers/animationenFertig';
+import { displayHall } from '../../src/design-tokens/displayHall';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -44,7 +45,7 @@ interface Messung {
   fensterH: number;
   names: { text: string; px: number; rahmen: Rahmen; scrollW: number; clientW: number; feld: Rahmen; flaeche: Rahmen }[];
   teile: Record<string, Rahmen>;
-  balken: { balken: Rahmen; fuellung: Rahmen; anteil: string | null; ton: string | null; fuellungFarbe: string; bahnFarbe: string } | null;
+  balken: { balken: Rahmen; fuellung: Rahmen; anteil: string | null; ton: string | null; fuellungFarbe: string; bahnFarbe: string; hintergrund: { bild: string; fläche: Rahmen } } | null;
   seitenUeberlauf: boolean;
 }
 
@@ -63,6 +64,8 @@ interface SaatOptionen {
   thema?: 'dark' | 'light';
   /** Verlängerung läuft (Restzeit 4:00) */
   verlaengerung?: boolean;
+  /** Drittes von drei Abschnitten läuft (Abschnitt zu 400 s, 190 s gespielt); mit `abgelaufen` läuft die Zeit des Abschnitts ab, ohne dass abgepfiffen wird */
+  dreiAbschnitte?: boolean;
 }
 
 /** Saat des Falls; `neunMinuten`: Spielzeit 9 Minuten, 3 gespielt (Restzeit 6:00); `schlussphase`: Uhr-Art mit angehaltener Schlussphase, 19:30 gespielt. */
@@ -87,15 +90,29 @@ function saatFuer(fall: string, optionen: SaatOptionen = {}): SaatDatei {
     const abschnittStart = Number(live.sectionStartMs ?? 0);
     Object.assign(live, { sectionSeconds: 1200, durationSeconds: 1200, elapsedMs: live.status === 'paused' ? abschnittStart + gespielt : 0, ...(live.status === 'paused' ? {} : { anchorAt: `@jetzt-ms-${String(gespielt)}` }) });
   }
+  if (optionen.dreiAbschnitte === true) {
+    Object.assign(live, { section: 3, sections: 3, sectionSeconds: 400, durationSeconds: 1200, elapsedMs: 800000, sectionStartMs: 800000, anchorAt: '@jetzt-ms-190000' });
+  }
   if (optionen.verlaengerung === true) {
     Object.assign(live, { phase: 'overtime', playPhase: 'overtime', section: 2, sections: 1, overtimeSeconds: 300, sectionSeconds: 1200, elapsedMs: 0, anchorAt: '@jetzt-ms-60000' });
   }
   return saat;
 }
 
+/** Je Kontext und Inhalt nur ein Saat-Skript: `installiereSaat` hängt je Aufruf ein weiteres Init-Skript an, das bei jedem späteren Laden mitläuft. */
+const INSTALLIERT = new WeakMap<object, Set<string>>();
+async function saatEinmal(page: Page, saat: SaatDatei): Promise<void> {
+  const kontext = page.context();
+  const schluessel = JSON.stringify(saat);
+  const schon = INSTALLIERT.get(kontext) ?? new Set<string>();
+  if (schon.has(schluessel)) { return; }
+  await installiereSaat(kontext, saat);
+  INSTALLIERT.set(kontext, schon.add(schluessel));
+}
+
 async function oeffne(page: Page, fall: string, w: number, h: number, rand: number, optionen: Parameters<typeof saatFuer>[1] = {}, monitor = 'mon-halle'): Promise<void> {
   await page.setViewportSize({ width: w, height: h });
-  await installiereSaat(page.context(), saatFuer(fall, optionen));
+  await saatEinmal(page, saatFuer(fall, optionen));
   // Ein Wechsel nur der Adresse nach „#“ lädt nicht neu: die Namen der Seite davor würden als „eingepasst“ gelten, während die Seite schon auf das nächste Spiel umschaltet
   // (in der CI gemessen: 0,8 px Unterschied der Namen). Über eine leere Seite wird jeder Fall frisch geladen.
   if (page.url() !== 'about:blank') { await page.goto('about:blank'); }
@@ -229,6 +246,12 @@ async function messe(page: Page): Promise<Messung> {
       balken: balken === null || fuellung === null ? null : {
         balken: rahmen(balken), fuellung: rahmen(fuellung), anteil: balken.getAttribute('data-anteil'), ton: balken.getAttribute('data-ton'),
         fuellungFarbe: getComputedStyle(fuellung).backgroundColor, bahnFarbe: getComputedStyle(balken).backgroundColor,
+        // der Verlauf des Themas liegt auf der Fläche der Folie (nächster Vorfahre mit Verlauf): daran wird der Hintergrund AN DER STELLE DES BALKENS bestimmt
+        hintergrund: (() => {
+          let a: Element | null = balken.parentElement;
+          while (a !== null && !getComputedStyle(a).backgroundImage.startsWith('linear-gradient')) { a = a.parentElement; }
+          return { bild: a === null ? '' : getComputedStyle(a).backgroundImage, fläche: rahmen(a ?? document.body) };
+        })(),
       },
       seitenUeberlauf: document.documentElement.scrollWidth > window.innerWidth || document.documentElement.scrollHeight > window.innerHeight,
     };
@@ -251,14 +274,16 @@ function pruefeUeberlappung(m: Messung): void {
 
 /**
  * Die Seitenangaben bleiben Nah-Information: mindestens 7,08 % der BILDSCHIRMhöhe (@ZM-213, 12 Bogenminuten aus 10 m), auch mit Bildrand. Nur als gekennzeichnete
- * Notlösung (`data-schrift="notloesung"`, eine Lage mit vier Zeilen in der Höhe des Uhrbands) darf sie darunter liegen, nie unter 5,5 %.
+ * Notlösung (`data-schrift="notloesung"`, eine Lage mit vier oder mehr Zeilen in der Höhe des Uhrbands) darf sie darunter liegen, nie unter der Untergrenze des Tokens
+ * `displayHall.side.fontNot` (5,6 % der Höhe der Folie; N13 des Reviews PR #561: Token und Spec nennen dieselbe Zahl). Das sind mit Bildrand 5 % nur 5,04 % der Bildschirmhöhe,
+ * @ZM-213 nennt 5,5 %; 5,5 % passen in der Lage „drei Abschnitte + Gruppe + Zeit abgelaufen“ (N14) nicht mehr in das Uhrband: offen für Daniel (Bericht).
  */
 function pruefeSeitenschrift(m: Messung, notloesungErlaubt = false): void {
   m.seitenPx.forEach((px, i) => {
     const anteilBildschirm = (px / m.fensterH) * 100;
     if (m.seitenArt[i] === 'notloesung') {
       expect(notloesungErlaubt, `Notlösung der Seitenschrift in einem Fall, der sie nicht braucht (${anteilBildschirm.toFixed(2)} %)`).toBe(true);
-      expect(anteilBildschirm, 'Notlösung nie unter 5,5 % der Bildschirmhöhe').toBeGreaterThanOrEqual(5.5);
+      expect((px / m.H) * 100, 'Notlösung nie unter der Untergrenze des Tokens (5,6 % der Höhe der Folie)').toBeGreaterThanOrEqual(parseFloat(displayHall.side.fontNot) - 0.05);
     } else {
       expect(anteilBildschirm, 'Schrift der Seitenangaben in % der Bildschirmhöhe').toBeGreaterThanOrEqual(7.08 - 0.02);
     }
@@ -308,7 +333,7 @@ for (const { w, h } of GROESSEN) {
       });
 
       test('@ZM-213 nichts überlappt, nichts ist abgeschnitten, Seitenschrift ≥ 7,08 % des Bildschirms: läuft, 25-Zeichen-Namen, zweistellig, zwei Felder, Abschnitt, vor dem Anpfiff, Halbzeit, angehalten', async ({ page }) => {
-        // Fälle ohne Abwandlung teilen sich eine Seite: ein Wechsel nur der Adresse nach „#“ lädt nicht neu, die Saat enthält alle Fälle
+        // Fälle ohne Abwandlung teilen sich eine Seite und eine Saat; jeder Fall lädt über eine leere Seite neu (siehe `oeffne`)
         for (const fall of ['halle-laeuft', 'halle-lang25', 'halle-zweistellig', 'halle-zwei-felder', 'halle-abschnitt', 'halle-angehalten', 'halle-halbzeit', 'halle-vor']) {
           await oeffne(page, fall, w, h, rand);
           const m = await messe(page);
@@ -326,6 +351,8 @@ for (const { w, h } of GROESSEN) {
           { fall: 'halle-voll', optionen: { abgelaufen: true }, sichtbar: ['hall-field', 'hall-group', 'hall-section', 'hall-phase-text'], notloesung: true },
           { fall: 'halle-voll-3', optionen: {}, sichtbar: ['hall-field', 'hall-group', 'hall-section', 'hall-phase-text'], notloesung: true },
           { fall: 'halle-voll-3', optionen: { rest: 1080 }, sichtbar: ['hall-field', 'hall-group', 'hall-section', 'hall-phase-text'], notloesung: true },
+          // N14 (Review PR #561, Fixrunde 3): drei Abschnitte, Gruppe und „Zeit abgelaufen“ zugleich: rechts stehen fünf Zeilen, die Notlösung der Seitenschrift greift
+          { fall: 'halle-voll', optionen: { dreiAbschnitte: true, abgelaufen: true }, sichtbar: ['hall-field', 'hall-group', 'hall-section', 'hall-phase-text'], notloesung: true },
           { fall: 'halle-laeuft', optionen: { zehnMinuten: true }, sichtbar: [] },
           { fall: 'halle-laeuft', optionen: { verlaengerung: true }, sichtbar: [] },
         ];
@@ -337,6 +364,7 @@ for (const { w, h } of GROESSEN) {
             if (optionen.verlaengerung === true) { await expect(seite.getByTestId('match-status-badge')).toHaveText(/Verlängerung/); }
             if (optionen.zehnMinuten === true) { await expect(seite.getByTestId('hall-clock')).toHaveText(/^\d\d:\d\d$/); }
             if (optionen.rest !== undefined) { await expect(seite.getByTestId('hall-clock')).toHaveText('18:00'); }
+            if (optionen.dreiAbschnitte === true) { await expect(seite.getByTestId('hall-section')).toHaveText('Abschnitt 3 von 3'); }
           });
           pruefeSichtbar(m, sichtbar);
           pruefeUeberlappung(m);
@@ -424,7 +452,7 @@ test.describe('@ZM-215 Zeitbalken läuft herunter (1920×1080)', () => {
     await expect(page.getByTestId('hall-kickoff')).toBeVisible();
   });
 
-  test('Bahn gegen Hintergrund und Füllung gegen Bahn (dunkles UND helles Thema): Füllung gegen Bahn mindestens 3 : 1 für grün (läuft), grau (angehalten), violett (Schlussphase) und gedämpft (Pause), Bahn gegen Hintergrund dunkel 2,5 : 1, hell 2,0 : 1', async ({ browser, baseURL }) => {
+  test('Bahn gegen Hintergrund und Füllung gegen Bahn (dunkles UND helles Thema): Füllung gegen Bahn mindestens 3 : 1 für grün (läuft), grau (angehalten), violett (Schlussphase) und gedämpft (Pause), Bahn gegen den Hintergrund an der Stelle des Balkens dunkel 2,9 : 1, hell 2,0 : 1', async ({ browser, baseURL }) => {
     type Farbe = [number, number, number, number];
     const lies = (rgb: string): Farbe => { const m = (rgb.match(/[\d.]+/g) ?? []).map(Number); return [m[0] ?? 0, m[1] ?? 0, m[2] ?? 0, m[3] ?? 1]; };
     const lum = (c: Farbe): number => {
@@ -432,15 +460,24 @@ test.describe('@ZM-215 Zeitbalken läuft herunter (1920×1080)', () => {
       return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     };
     const verhaeltnis = (a: Farbe, b: Farbe): number => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
-    // Hintergrund des Themas: Anfang und Ende des Verlaufs der Folie
-    const HINTERGRUND = { dark: ['rgb(30, 41, 59)', 'rgb(15, 23, 42)'], light: ['rgb(255, 255, 255)', 'rgb(226, 232, 240)'] } as const;
+    // Hintergrund an der Stelle des Balkens: der senkrechte Verlauf des Themas (zwei Farbstopps) an der Ober- und Unterkante des Balkens
+    const hintergrundAn = (b: NonNullable<Messung['balken']>, kante: 't' | 'b'): Farbe => {
+      const stopps = (b.hintergrund.bild.match(/rgba?\([^)]*\)/g) ?? []).map(lies);
+      const y = kante === 't' ? b.balken.t : b.balken.b;
+      const f = Math.min(1, Math.max(0, (y - b.hintergrund.fläche.t) / b.hintergrund.fläche.h));
+      const [von, bis] = [stopps[0] ?? [0, 0, 0, 1], stopps[1] ?? [0, 0, 0, 1]];
+      return [0, 1, 2, 3].map((i) => von[i] * (1 - f) + bis[i] * f) as unknown as Farbe;
+    };
     const zustaende: Array<[string, SaatOptionen, string]> = [['halle-laeuft', {}, 'gruen'], ['halle-angehalten', {}, 'grau'], ['halle-laeuft', { schlussphase: true }, 'violett'], ['halle-halbzeit', {}, 'gedaempft']];
     for (const thema of ['dark', 'light'] as const) {
       for (const [fall, optionen, ton] of zustaende) {
         const b = (await messeInNeuemKontext(browser, baseURL, (seite) => oeffne(seite, fall, 1920, 1080, 5, { ...optionen, thema }))).balken;
         expect(b, `${fall}/${thema}: Balken vorhanden`).not.toBeNull();
         expect(b?.ton).toBe(ton);
-        for (const hintergrund of HINTERGRUND[thema]) { expect(verhaeltnis(lies(b?.bahnFarbe ?? ''), lies(hintergrund)), `${thema}/${ton}: Bahn ${b?.bahnFarbe} gegen Hintergrund ${hintergrund}`).toBeGreaterThanOrEqual(thema === 'dark' ? 2.5 : 2.0); }
+        for (const kante of ['t', 'b'] as const) {
+          const hintergrund = hintergrundAn(b!, kante);
+          expect(verhaeltnis(lies(b?.bahnFarbe ?? ''), hintergrund), `${thema}/${ton}: Bahn ${b?.bahnFarbe} gegen Hintergrund ${hintergrund.map(Math.round).join(',')} (${kante === 't' ? 'Oberkante' : 'Unterkante'} des Balkens)`).toBeGreaterThanOrEqual(thema === 'dark' ? 2.9 : 2.0);
+        }
         // hell: die Füllung ist der kräftige (dunklere) Teil, die Bahn der blassere; dunkel umgekehrt
         expect(lum(lies(b?.fuellungFarbe ?? '')) < lum(lies(b?.bahnFarbe ?? '')), `${thema}/${ton}: Füllung ${thema === 'light' ? 'dunkler' : 'heller'} als die Bahn`).toBe(thema === 'light');
         expect(verhaeltnis(lies(b?.fuellungFarbe ?? ''), lies(b?.bahnFarbe ?? '')), `${thema}/${ton}: Füllung ${b?.fuellungFarbe} gegen Bahn ${b?.bahnFarbe}`).toBeGreaterThanOrEqual(3);

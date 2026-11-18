@@ -29,4 +29,9 @@ describe('@ZM-213 displayHall', () => {
     expect(band).toBeGreaterThanOrEqual(cqh(displayHall.clock.font) * displayHall.clock.lineHeight);
   });
   it('Nah-Angaben (Feld, Gruppe, Abzeichen) mindestens 7,08 % (12 Bogenminuten aus 10 m)', () => { expect(cqh(displayHall.side.font)).toBeGreaterThanOrEqual(7.08); });
+  it('Seitenschrift: Nah-Grenze 7,08 % der BILDSCHIRMhöhe; die Notlösung geht bis 5,6 % der Höhe der Folie (die Spec prüft genau diese Grenze, N13)', () => {
+    expect(displayHall.side.fontMin).toBe('7.08vh');
+    expect(cqh(displayHall.side.fontNot)).toBe(5.6);
+    expect(cqh(displayHall.side.fontNot)).toBeLessThan(cqh(displayHall.side.font));
+  });
 });
