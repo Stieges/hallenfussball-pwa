@@ -10,7 +10,7 @@ import { generateSlideId } from '../../../../hooks/useMonitors';
 export type MonitorSettingsUpdate = Partial<
   Pick<
     TournamentMonitor,
-    'name' | 'defaultSlideDuration' | 'transition' | 'transitionDuration' | 'performanceMode' | 'theme' | 'overscanPercent'
+    'name' | 'defaultSlideDuration' | 'transition' | 'transitionDuration' | 'performanceMode' | 'theme' | 'overscanPercent' | 'profile'
   >
 >;
 

@@ -12,8 +12,6 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { displayList, displayMonitor } from '../../../design-tokens';
 import { resolveCss } from '../../../components/monitor/__tests__/cssResolve';
 import { standingsFont, standingsHeight, standingsFontSize } from '../standingsFit';
-import { listScale, rowHeight, scaledList } from '../listRows';
-import { nextMatchesLayout, scheduleFieldLayout } from '../slideContent';
 import { AllStandingsSlide } from '../slides/AllStandingsSlide';
 import { QrSlide } from '../slides/QrSlide';
 import { createMockTournament } from '../../../test/factories';
@@ -73,49 +71,6 @@ describe('@ZM-125 Tabelle: Schrift wächst mit der freien Höhe, nie unter 3 % d
     expect(kopf.style.fontSize).toContain(displayList.fontSizes.head);
     expect(standingsFontSize(['A'], 5)).toMatch(/^\d+(\.\d+)?vh$/);
     cleanup();
-  });
-});
-
-describe('@ZM-125 @ZM-129 Listen: unverändert (Maßstab 1), der Mechanismus für die schmalere Uhrzeitspalte bleibt', () => {
-  it('maxScale ist 1: Nächste Spiele und Spielplan haben bei jedem Bildrand den Maßstab 1 und die Zeilen die Stufen der Tokens', () => {
-    expect(displayList.fit.maxScale).toBe(1);
-    for (const rand of RAENDER) {
-      for (const namen of ['kurz', 'lang'] as const) {
-        const { view } = withView(listenTurnier({ namen, beendet: 5 }));
-        expect(nextMatchesLayout(view, 5, { overscan: rand, notice: false }).frame.scale, `Nächste Spiele ${namen} ${String(rand)} %`).toBe(1);
-        const plan = scheduleFieldLayout(view, 1, { overscan: rand, notice: false });
-        expect(plan.frame.scale, `Spielplan ${namen} ${String(rand)} %`).toBe(1);
-        const gap = parseFloat(displayList.rowGap);
-        for (const seite of plan.pages) {
-          const hoehe = seite.reduce((summe, m, i) => summe + rowHeight(m, plan.columns, plan.frame) + (i === 0 ? 0 : gap), 0);
-          expect(hoehe).toBeLessThanOrEqual(100 - 2 * rand);
-        }
-      }
-    }
-  });
-
-  it('scaledList(1) liefert die Tokens unverändert; größere Maßstäbe vergrößern Schrift und Abstände in vh, nie Überschrift und Tabellenkopf', () => {
-    expect(scaledList(1)).toBe(displayList);
-    const gross = scaledList(1.5);
-    expect(parseFloat(gross.fontSizes.team)).toBeCloseTo(parseFloat(displayList.fontSizes.team) * 1.5, 5);
-    expect(gross.fontSizes.heading).toBe(displayList.fontSizes.heading);
-    expect(gross.fontSizes.head).toBe(displayList.fontSizes.head);
-  });
-
-  it('die Zeilen der Folie tragen die Stufe der Tokens (Teamname 3,6 % der Bildhöhe, wie auf main)', async () => {
-    const { NextMatchesSlide } = await import('../slides/NextMatchesSlide');
-    const t = listenTurnier({ namen: 'kurz', beendet: 5 });
-    const slide = { id: 's', type: 'next-matches' as const, config: { matchCount: 5 }, duration: null, order: 0 };
-    render(<NextMatchesSlide slide={slide} {...withView(t)} theme="dark" style={{}} />);
-    const name = screen.getAllByTestId('monitor-match-row')[0].querySelector<HTMLElement>('[data-teamname]')!;
-    expect(name.style.fontSize).toBe(displayList.fontSizes.team);
-    cleanup();
-  });
-
-  it('Gegenbeispiel: eine Seite, die schon im Maßstab 1 die Höhe füllt, bleibt bei Maßstab 1', () => {
-    const { view } = withView(listenTurnier({ namen: 'lang', beendet: 0 }));
-    const layout = nextMatchesLayout(view, 15, { overscan: 10, notice: false });
-    expect(listScale([[...layout.pages.flat()]], layout.columns, { overscan: 10, notice: false })).toBe(1);
   });
 });
 

@@ -237,7 +237,7 @@ const ConflictTooltip: React.FC<ConflictTooltipProps> = ({ conflicts }) => {
     transform: 'translateX(-50%)',
     marginTop: cssVars.spacing.xs,
     padding: cssVars.spacing.sm,
-    backgroundColor: cssVars.colors.surface,
+    backgroundColor: cssVars.colors.surfaceSolid, // @AN-058: schwebende Fläche deckend
     border: `1px solid ${cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.md,
     boxShadow: cssVars.shadows.lg,

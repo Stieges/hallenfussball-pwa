@@ -161,7 +161,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
     marginTop: cssVars.spacing.xs,
     maxHeight: '240px',
     overflowY: 'auto',
-    background: cssVars.colors.surface,
+    background: cssVars.colors.surfaceSolid, // @AN-058: schwebende Fläche deckend
     border: `1px solid ${cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.md,
     boxShadow: `0 4px 12px ${cssVars.colors.shadowMedium}`,

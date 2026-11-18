@@ -27,7 +27,7 @@ const styles = {
         right: 0,
         zIndex: cssVars.zIndex.dropdown,
         maxWidth: '90vw',
-        background: cssVars.colors.surface,
+        background: cssVars.colors.surfaceSolid, // @AN-058: schwebende Fläche deckend
         border: `1px solid ${cssVars.colors.border}`,
         borderRadius: cssVars.borderRadius.md,
         boxShadow: cssVars.shadows.lg,

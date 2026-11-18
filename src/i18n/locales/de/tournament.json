@@ -899,6 +899,14 @@
       "transition": "Übergang",
       "performanceLabel": "Performance",
       "themeLabel": "Farbschema",
+      "profileLabel": "Leseabstand",
+      "profiles": {
+        "standard": "Spielfeld (fern)",
+        "hallVeryFar": "Halle (sehr fern)"
+      },
+      "profileHallHint": "Dieser Monitor zeigt nur die Live-Folie, in großer Schrift für die Hallentiefe. Die übrigen Folien aus der Liste (z. B. Nächste Spiele, Tabellen) bleiben gespeichert, werden aber nicht gezeigt: aus dieser Entfernung sind sie nicht lesbar.",
+      "profileHallHiddenCount_one": "{{count}} Folie der Liste wird nicht gezeigt.",
+      "profileHallHiddenCount_other": "{{count}} Folien der Liste werden nicht gezeigt.",
       "overscan": "Bildrand ({{prozent}})",
       "overscanValue": "{{prozent}} %",
       "overscanHint": "Vorbelegung {{prozent}} % passt für die meisten Fernseher",

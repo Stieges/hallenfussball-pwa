@@ -13,6 +13,7 @@ import { cssVars } from '../../../design-tokens';
 import { useTranslation } from 'react-i18next';
 import { Icons } from '../Icons';
 import { VestPieces } from './VestPieces';
+import { VestGlyph } from './VestGlyph';
 import {
   boxStyle,
   digitAreaStyle,
@@ -64,15 +65,6 @@ export interface ScoreBoxProps {
   role?: 'img' | 'group';
   /** Kennung des Pokals, wenn sie von `${testId}-cup` abweichen soll (Monitor: `live-cup-home`) */
   cupTestId?: string;
-}
-
-/** Leibchen-Zeichen (Weste, Mockup `#i-vest`). */
-function VestGlyph(): ReactElement {
-  return (
-    <svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" aria-hidden="true" focusable="false">
-      <path d="M9 3a3 3 0 0 0 6 0l6 3-2 5-3-1.2V21H8V9.8L5 11 3 6z" />
-    </svg>
-  );
 }
 
 export function ScoreBox({

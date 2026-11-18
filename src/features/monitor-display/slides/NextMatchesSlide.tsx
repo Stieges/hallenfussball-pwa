@@ -4,8 +4,10 @@ import { displayList, monitorThemes } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { TournamentView } from '../../../core/view';
 import type { MonitorSlide, MonitorTheme } from '../../../types/monitor';
+import { getFieldDisplayName } from '../../../utils/displayNames';
 import { wirksamerRand } from '../overscan';
 import { resolveTheme } from '../monitorDisplayHelpers';
+import { useBildAspekt } from '../useBildAspekt';
 import { listFrame, nextMatchesLayout } from '../slideContent';
 import { MonitorMatchRow } from '../components/MonitorMatchRow';
 import { SlidePageHint } from '../components/SlidePageHint';
@@ -27,9 +29,10 @@ interface NextMatchesSlideProps {
 /** Folie „Nächste Spiele“ (@ZM-071, @ZM-078): die nächsten offenen Spiele über alle Felder, nie ein Ergebnis. */
 export function NextMatchesSlide({ slide, tournament, view, theme, style, page = 0, overscanPercent }: NextMatchesSlideProps) {
   const { t } = useTranslation('monitor');
-  const frame = listFrame(slide, wirksamerRand(overscanPercent, null));
+  // @ZM-211: das Bildschirmverhältnis fließt nur in die schmale Aufteilung ein, nie in die Seitenaufteilung
+  const frame = { ...listFrame(slide, wirksamerRand(overscanPercent, null)), aspect: useBildAspekt() };
   const colors = monitorThemes[resolveTheme(theme)];
-  const { pages: allPages, columns, frame: rowFrame } = nextMatchesLayout(view, slide.config.matchCount, frame);
+  const { pages: allPages, columns, frame: rowFrame } = nextMatchesLayout(view, slide.config.matchCount, frame, (feld) => getFieldDisplayName(feld, tournament));
   const pages = allPages.length;
   const rows = allPages[Math.min(Math.max(page, 0), pages - 1)];
 

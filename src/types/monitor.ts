@@ -249,6 +249,20 @@ export interface MonitorSlide {
 export type MonitorTheme = 'light' | 'dark' | 'auto';
 
 /**
+ * Darstellungsprofil eines Monitors (@ZM-171, @ZM-212). Ohne Angabe gilt die bisherige Darstellung („Spielfeld (fern)“).
+ * - `hall-very-far`: „Halle (sehr fern)“ – nur die Live-Folie in der Anordnung „Farbseiten“ (Leseabstand rund 22 m).
+ * Ein unbekannter gespeicherter Wert (z. B. aus einer neueren Fassung) gilt als „nicht gesetzt“ (`monitorProfileOf`).
+ */
+export const MONITOR_PROFILES = ['hall-very-far'] as const;
+export type MonitorProfile = (typeof MONITOR_PROFILES)[number];
+
+/** Das Profil eines Monitors; fehlt es oder ist der Wert unbekannt, `undefined` (bisherige Darstellung). */
+export function monitorProfileOf(monitor: { profile?: unknown } | null | undefined): MonitorProfile | undefined {
+  const value: unknown = monitor?.profile;
+  return MONITOR_PROFILES.find((profile) => profile === value);
+}
+
+/**
  * Monitor-Konfiguration - eine Display-Einrichtung
  */
 export interface TournamentMonitor {
@@ -269,6 +283,9 @@ export interface TournamentMonitor {
 
   // Stabilität (Phase 1)
   performanceMode: PerformanceMode;       // 'auto' | 'high' | 'low'
+
+  // Darstellungsprofil (@ZM-212); fehlt = bisherige Darstellung, liegt im selben JSON wie die übrigen Einstellungen
+  profile?: MonitorProfile;
 
   // TV-Kalibrierung
   overscanPercent?: number;               // 0-10 % je Seite, Schritt 0,5, Default: 5 (@ME-067)
