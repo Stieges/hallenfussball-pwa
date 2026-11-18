@@ -542,7 +542,8 @@ const styles: Record<string, CSSProperties> = {
     right: 0,
     marginTop: cssVars.spacing.xs,
     minWidth: 240,
-    background: cssVars.colors.surface,
+    // @AN-058: deckend (surface ist im dunklen Thema Weiß mit 5 % Deckkraft, der Seiteninhalt schien durch)
+    background: cssVars.colors.surfaceSolid,
     borderRadius: cssVars.borderRadius.md,
     boxShadow: cssVars.shadows.lg,
     border: `1px solid ${cssVars.colors.border}`,
@@ -602,6 +603,7 @@ const styles: Record<string, CSSProperties> = {
     alignItems: 'center',
     gap: cssVars.spacing.sm,
     width: '100%',
+    minHeight: cssVars.touchTargets.minimum, // @AN-058: Tippfläche ≥ 44 px
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
     background: 'transparent',
     border: 'none',

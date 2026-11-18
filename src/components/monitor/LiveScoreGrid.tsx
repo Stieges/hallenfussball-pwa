@@ -15,6 +15,7 @@ import { TeamNameDisplay } from './TeamNameDisplay';
 import { LivePenaltyResult } from './LiveFinalScore';
 import { LivePenaltyCircles } from './LivePenaltyCircles';
 import { TEAM_NAME_ZEILENHOEHE, gemeinsameNamenGroesse } from './teamNameFit';
+import { outcomeOfSide, winnerOf } from './matchOutcome';
 
 export interface LiveScoreGridProps {
   match: LiveMatch;
@@ -45,8 +46,8 @@ export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, boxe
   const sharedNamePx = gemeinsameNamenGroesse(namePx.home, namePx.away);
 
   // Sieger/Verlierer nur nach dem Abpfiff und mit Entscheidung; ein Unentschieden in der Gruppe hat weder Ring noch Pokal; der Pokal nur in der Finalrunde
-  const winner = !hideScore && match.status === 'FINISHED' ? finalScore?.winner ?? null : null;
-  const outcomeOf = (side: 'a' | 'b') => (winner === null ? undefined : winner === side ? 'winner' : 'loser');
+  const winner = winnerOf(match.status, hideScore, finalScore);
+  const outcomeOf = (side: 'a' | 'b') => outcomeOfSide(winner, side);
   const withPenalty = winner !== null && finalScore?.penalty !== undefined;
 
   // @ZM-140 Raster: Kasten (Zeile 1) und Namen (Zeile 2) teilen sich ein Raster, Spalten 1 | 2 | 3

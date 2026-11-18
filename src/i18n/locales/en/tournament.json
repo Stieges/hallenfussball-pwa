@@ -899,6 +899,14 @@
       "transition": "Transition",
       "performanceLabel": "Performance",
       "themeLabel": "Color Scheme",
+      "profileLabel": "Viewing distance",
+      "profiles": {
+        "standard": "Pitch (far)",
+        "hallVeryFar": "Hall (very far)"
+      },
+      "profileHallHint": "This monitor shows only the live slide, in large type for the depth of the hall. The other slides in the list (e.g. Next matches, tables) stay saved but are not shown: they are not legible from this distance.",
+      "profileHallHiddenCount_one": "{{count}} slide in the list is not shown.",
+      "profileHallHiddenCount_other": "{{count}} slides in the list are not shown.",
       "overscan": "Screen margin ({{prozent}})",
       "overscanValue": "{{prozent}}%",
       "overscanHint": "The preset of {{prozent}}% suits most TVs",

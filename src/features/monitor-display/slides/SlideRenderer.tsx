@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react';
 import { monitorThemes, cssVars } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { TournamentView } from '../../../core/view';
-import type { MonitorSlide, MonitorTheme, PerformanceSettings } from '../../../types/monitor';
+import type { MonitorProfile, MonitorSlide, MonitorTheme, PerformanceSettings } from '../../../types/monitor';
 import type { EndFolie, QrRueckfallFolie } from '../slideProgramme';
 import type { MonitorEnd } from '../monitorEnd';
 import { resolveTheme } from '../monitorDisplayHelpers';
@@ -31,6 +31,8 @@ interface SlideRendererProps {
   hinweisHoehe?: string;
   /** Gepinntes Spiel der Live-Folie (B-16e1): die Folie zeigt es auch nach Abpfiff. */
   pinnedMatchId?: string | null;
+  /** Darstellungsprofil des Monitors (@ZM-212): ändert nur die Live-Folie */
+  profile?: MonitorProfile;
   /** Seite der Folie (B-16f1, ausgewertet ab f3). */
   page?: number;
   /** Startseite des Spielplans (@ZM-190): beim Eintritt festgehalten, die Folie beginnt mit dieser Seite. */
@@ -40,7 +42,7 @@ interface SlideRendererProps {
 }
 
 /** Wählt die Folien-Komponente nach Typ; unbekannte Typen fallen auf die Zuschauer-QR-Folie. */
-export function SlideRenderer({ slide, tournament, view, performanceSettings, theme, overscanPercent, hinweisHoehe, pinnedMatchId, page = 0, pageStart = 0, end = { kind: 'none' } }: SlideRendererProps) {
+export function SlideRenderer({ slide, tournament, view, performanceSettings, theme, overscanPercent, hinweisHoehe, pinnedMatchId, profile, page = 0, pageStart = 0, end = { kind: 'none' } }: SlideRendererProps) {
   const resolvedTheme = resolveTheme(theme);
   const themeColors = monitorThemes[resolvedTheme];
 
@@ -67,7 +69,7 @@ export function SlideRenderer({ slide, tournament, view, performanceSettings, th
       return <FinalScorersSlide tournament={tournament} end={end} theme={theme} style={slideStyle} page={page} />;
 
     case 'live':
-      return <LiveSlide slide={slide} tournament={tournament} view={view} performanceSettings={performanceSettings} theme={theme} style={slideStyle} pinnedMatchId={pinnedMatchId} />;
+      return <LiveSlide slide={slide} tournament={tournament} view={view} performanceSettings={performanceSettings} theme={theme} style={slideStyle} pinnedMatchId={pinnedMatchId} profile={profile} />;
 
     case 'standings':
       return <StandingsSlide slide={slide} tournament={tournament} theme={theme} style={slideStyle} overscanPercent={overscanPercent} />;

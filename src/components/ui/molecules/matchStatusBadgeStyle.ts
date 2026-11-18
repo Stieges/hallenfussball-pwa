@@ -4,11 +4,11 @@
  * Rahmen, Ende und ausgefallen gedämpft. Das Wort trägt die Bedeutung, nie die Farbe allein.
  */
 import type { CSSProperties } from 'react';
-import { cssVars, displayFontSizes, displayLayout, type MonitorThemeColors } from '../../../design-tokens';
+import { cssVars, displayFontSizes, displayHall, displayLayout, type MonitorThemeColors } from '../../../design-tokens';
 import type { MatchBadgeState } from '../../../core/view/badge';
 
 /** `tafel`: Kopfzeile der Laptop-Tafel (@SL-180), größer als die Spielkarte (`card`), damit „Live“ aus 1 bis 2 m zu lesen ist. */
-export type MatchStatusBadgeSize = 'card' | 'row' | 'display' | 'tafel' | 'zeile';
+export type MatchStatusBadgeSize = 'card' | 'row' | 'display' | 'tafel' | 'zeile' | 'halle';
 
 /**
  * Fläche, auf der das Abzeichen steht. `app`: Spielkarte, Verwaltung, Zuschauer (Standard). `scoreboard`: die immer
@@ -102,6 +102,21 @@ export function badgeStyle(state: MatchBadgeState, size: MatchStatusBadgeSize, t
       lineHeight: 1.2,
     };
   }
+  if (size === 'halle') {
+    // Uhrband des Profils „Halle (sehr fern)“ (@ZM-213): Schrift der Seitenangaben, Maße in em der Schrift
+    return {
+      ...base,
+      gap: displayHall.side.badgeGap,
+      padding: `${displayHall.side.badgePadY} ${displayHall.side.badgePadX}`,
+      borderRadius: cssVars.borderRadius.md,
+      fontSize: state === 'overtime' ? displayHall.side.fontLong : displayHall.side.font,
+      lineHeight: displayHall.side.lineHeight,
+      // „Nächstes Spiel“ bricht in der schmalen Seitenspalte zweizeilig um (Mockup `.badge` bei kleiner Seitenspalte); nie breiter als die Spalte
+      whiteSpace: 'normal',
+      maxWidth: '100%',
+      textAlign: 'left',
+    };
+  }
   if (size === 'display') {
     return {
       ...base,
@@ -125,8 +140,8 @@ export function badgeStyle(state: MatchBadgeState, size: MatchStatusBadgeSize, t
 /** Puls-Punkt des Live-Abzeichens (Farbe der Schrift, damit er auf jeder Fläche sichtbar bleibt). */
 export function dotStyle(size: MatchStatusBadgeSize, fg: string): CSSProperties {
   return {
-    width: size === 'display' ? scoreArea.badgeDot : size === 'zeile' ? '0.6em' : cssVars.spacing.sm,
-    height: size === 'display' ? scoreArea.badgeDot : size === 'zeile' ? '0.6em' : cssVars.spacing.sm,
+    width: size === 'display' ? scoreArea.badgeDot : size === 'halle' ? displayHall.side.badgeDot : size === 'zeile' ? '0.6em' : cssVars.spacing.sm,
+    height: size === 'display' ? scoreArea.badgeDot : size === 'halle' ? displayHall.side.badgeDot : size === 'zeile' ? '0.6em' : cssVars.spacing.sm,
     borderRadius: cssVars.borderRadius.full,
     background: fg,
     flexShrink: 0,
