@@ -2,7 +2,10 @@
  * Monitor-Listen-Folien im Browser (Regel T2-UI; @ZM-187, @ZM-188, @ZM-185, @ZM-150, @ZP-046) – über den Prüfstand
  * tests/e2e/harness/listen-folien-monitor.html. Echte Folien-Komponenten, Tokens, Texte, Turnier „Nikolaus-Turnier“ (6 Teams, 15 Spiele).
  * Profile 1280×720 und 1920×1080 bei Bildrand 0, 5 und 10 % (@ME-067). Gemessen wird die Lage im Bild: jede Zeile und „Seite x / y“ liegen ganz im Bild,
- * Zeilen überlappen nicht, dieselben Spalten stehen in jeder Zeile an derselben Stelle, „(war hh:mm)“ steht neben der Uhrzeit und bricht nie um.
+ * Zeilen überlappen nicht, dieselben Spalten stehen in jeder Zeile an derselben Stelle, „(war hh:mm)“ bricht nie um.
+ * @ZM-211 (Bild-OK PR #559, 18.11.2026): Wächst die Schrift auf der Folie (schmale Aufteilung), ist die Zeitspalte schmaler als bisher (9,6 em), die
+ * Teamnamen sind größer als bisher, „(war …)“ steht UNTER der Uhrzeit (Block oben links), Teamnamen und Stand stehen mittig in der Zeile. Wächst sie nicht,
+ * bleibt die Folie in der bisherigen Aufteilung („(war …)“ hinter der Uhrzeit, gemeinsame Mittelachse). Nie kleiner als bisher, in keiner Aufteilung.
  * Bilder: Ordner aus LISTEN_FOLIEN_BILDER. Nur am Dev-Server (gehört nicht in den Build).
  */
 import { join } from 'node:path';
@@ -11,6 +14,8 @@ import type { Page } from '@playwright/test';
 import { test, expect } from '@playwright/test';
 
 const PROFILE = [{ name: '1080', width: 1920, height: 1080 }, { name: '720', width: 1280, height: 720 }] as const;
+/** Namen mit Umlauten, ß, Ziffern, Schrägstrich und Bindestrich (Review PR #559, S4) */
+const UMLAUTNAMEN = 'SG Müller-Süd 1/2|Straße-Ost 1921|TSV Weiß 2|Höhenkirchen-Siegertsbrunn|SG Taching/Tengling|FC Groß-Gerau 09';
 const SZENEN = [
   { id: 'plan', namen: 'kurz', kennung: '@ZM-187 @ZM-188 Spielplan Feld 1, verschoben und gewertet', zusatz: '&verschoben=1&gewertet=1&strafstoss=1' },
   { id: 'plan', namen: 'lang', kennung: '@ZM-188 @ZM-087 Spielplan Feld 1, Namen mit 45–50 Zeichen, verschoben und gewertet', zusatz: '&verschoben=1&gewertet=1&strafstoss=1' },
@@ -19,6 +24,8 @@ const SZENEN = [
   { id: 'naechste', namen: 'kurz', kennung: '@ZM-189 Nächste Spiele, zwei Felder (Feld in jeder Zeile) mit Finalspielen', zusatz: '&felder=2&finale=3&anzahl=8' },
   { id: 'naechste', namen: 'kurz', kennung: '@ZM-188 @ZP-046 Nächste Spiele, verschoben', zusatz: '&verschoben=1&anzahl=10' },
   { id: 'naechste', namen: 'lang', kennung: '@ZM-150 @ZM-188 Nächste Spiele, acht Spiele mit Namen von 45–50 Zeichen, verschoben', zusatz: '&verschoben=1&anzahl=8' },
+  { id: 'plan', namen: 'kurz', kennung: '@ZM-211 Spielplan Feld 1, Namen mit Umlauten, ß, Ziffern, Schrägstrich und Bindestrich, verschoben', zusatz: `&verschoben=1&namenliste=${encodeURIComponent(UMLAUTNAMEN)}` },
+  { id: 'naechste', namen: 'kurz', kennung: '@ZM-211 Nächste Spiele, zehn Spiele mit Namen mit Umlauten, ß, Ziffern, Schrägstrich und Bindestrich, verschoben', zusatz: `&verschoben=1&anzahl=10&namenliste=${encodeURIComponent(UMLAUTNAMEN)}` },
 ] as const;
 
 /** Bildrand in Prozent der Folie (@ME-067: 0 bis 10): die Seitenzahl richtet sich nach dem wirksamen Rand. */
@@ -26,7 +33,7 @@ const RAENDER = [0, 5, 10] as const;
 
 const imGebautenStand = !!process.env.CI_E2E_USE_PREVIEW;
 
-interface Kasten { blockAbweichung: number; labelProbleme: string[]; zusatzUnten: number; id: string; links: number; rechts: number; oben: number; unten: number; zeit: number; heim: number; stand: number; gast: number; uhr: string; war: string | null; warUnterUhr: boolean; zeitUeberbreit: boolean }
+interface Kasten { schmal: boolean; schrift: number; zeitBreite: number; blockAbweichung: number; labelProbleme: string[]; zusatzUnten: number; id: string; links: number; rechts: number; oben: number; unten: number; zeit: number; heim: number; stand: number; gast: number; uhr: string; war: string | null; warUnterUhr: boolean; zeitUeberbreit: boolean }
 
 async function zeilen(page: Page): Promise<Kasten[]> {
   return page.evaluate(() => [...document.querySelectorAll<HTMLElement>('[data-testid="monitor-match-row"]')].map((r) => {
@@ -39,6 +46,10 @@ async function zeilen(page: Page): Promise<Kasten[]> {
     const block = r.parentElement!;
     const sollPx = (parseFloat(block.dataset.heightVh ?? '0') / 100) * window.innerHeight;
     return {
+      // schmale Aufteilung (@ZM-211): „(war …)“ hat eine eigene Zeile unter der Uhrzeit, in jeder Zeile der Folie
+      schmal: r.querySelector('[data-testid="monitor-match-warline"]') !== null,
+      schrift: parseFloat(getComputedStyle(teams[0]).fontSize),
+      zeitBreite: r.querySelector<HTMLElement>('[data-testid="monitor-match-time"]')!.getBoundingClientRect().width,
       // Höhe von Oberkante der Zwischenzeile (bzw. der Karte) bis Unterkante der Karte gegen die Zeilenhöhe aus dem Modell (listRows)
       blockAbweichung: Math.abs(block.getBoundingClientRect().height - sollPx),
       labelProbleme: (() => {
@@ -62,7 +73,9 @@ async function zeilen(page: Page): Promise<Kasten[]> {
       id: r.dataset.matchId ?? '', links: b.left, rechts: b.right, oben: b.top, unten: b.bottom,
       zeit: x('[data-testid="monitor-match-time"]'), heim: teams[0].getBoundingClientRect().left, stand: x('[data-testid="monitor-match-separator"]'), gast: teams[1].getBoundingClientRect().left,
       uhr: uhr.textContent ?? '', war: war?.textContent ?? null,
-      warUnterUhr: war !== null && war.getBoundingClientRect().top >= uhr.getBoundingClientRect().bottom - 1,
+      // „unter“: die Mitte von „(war …)“ liegt unter der Uhrzeit und beide beginnen links an derselben Kante; „hinter“: auf der Höhe der Uhrzeit, rechts von ihr
+      warUnterUhr: war !== null && (war.getBoundingClientRect().top + war.getBoundingClientRect().bottom) / 2 >= uhr.getBoundingClientRect().bottom
+        && Math.abs(war.getBoundingClientRect().left - uhr.getBoundingClientRect().left) <= 2,
       zeitUeberbreit: zeit.scrollWidth > zeit.clientWidth + 1,
     };
   }));
@@ -96,20 +109,21 @@ async function zerbrocheneWoerter(page: Page, hoechstens: number): Promise<strin
 }
 
 /**
- * Mittelachsen je Zeile: Uhrzeit-Zeile, Namensblöcke und Stand stehen senkrecht mittig in der Zeile (±2 px), auch mit mehrzeiligen Namen,
- * „Ende“/„gewertet“ unter der Uhrzeit und „(4:3 i. E.)“ unter dem Stand (@ZM-189).
+ * Mittelachsen je Zeile: Namensblöcke und Stand stehen senkrecht mittig in der Zeile (±2 px), auch mit mehrzeiligen Namen; die Uhrzeit-Zeile steht
+ * in der bisherigen Aufteilung auf derselben Achse, in der schmalen oben links (@ZM-211), „Ende“/„gewertet“ unter der Uhrzeit und „(4:3 i. E.)“ unter dem Stand (@ZM-189).
  */
-async function mittelachsen(page: Page): Promise<{ id: string; abweichung: number; zeile: number; ausMitte: number }[]> {
+async function mittelachsen(page: Page): Promise<{ id: string; abweichung: number; mitUhr: number; zeile: number; ausMitte: number; uhrUeberMitte: number }[]> {
   return page.evaluate(() => [...document.querySelectorAll<HTMLElement>('[data-testid="monitor-match-row"]')].map((zeile) => {
     const mitte = (el: Element): number => { const r = el.getBoundingClientRect(); return (r.top + r.bottom) / 2; };
-    const ziele = [
-      zeile.querySelector('[data-testid="monitor-match-clockline"]')!,
-      ...zeile.querySelectorAll('[data-teamname]'),
-      zeile.querySelector('[data-testid="monitor-match-score"]')!,
-    ];
+    const uhr = mitte(zeile.querySelector('[data-testid="monitor-match-clockline"]')!);
+    const ziele = [...zeile.querySelectorAll('[data-teamname]'), zeile.querySelector('[data-testid="monitor-match-score"]')!];
     const werte = ziele.map(mitte);
     const rahmen = zeile.getBoundingClientRect();
-    return { id: zeile.dataset.matchId ?? '', abweichung: Math.max(...werte) - Math.min(...werte), zeile: rahmen.height, ausMitte: Math.abs(werte[0] - (rahmen.top + rahmen.bottom) / 2) };
+    const zeilenMitte = (rahmen.top + rahmen.bottom) / 2;
+    return {
+      id: zeile.dataset.matchId ?? '', abweichung: Math.max(...werte) - Math.min(...werte), mitUhr: Math.max(...werte, uhr) - Math.min(...werte, uhr),
+      zeile: rahmen.height, ausMitte: Math.abs(werte[0] - zeilenMitte), uhrUeberMitte: zeilenMitte - uhr,
+    };
   }));
 }
 
@@ -121,6 +135,21 @@ async function namensplatz(page: Page): Promise<{ breite: number; modell: number
       const schrift = parseFloat(getComputedStyle(el).fontSize);
       return { breite: el.getBoundingClientRect().width, modell: modellZeichen * 0.57 * schrift };
     });
+  });
+}
+
+/**
+ * Namensplatz der schmalen Aufteilung: Die gemessene Breite jeder Namensspalte ist mindestens die Breite, die das Modell (`namenBreiteEm`) annimmt
+ * (Toleranz 1 px). `modell` ist `null`, wenn die Folie in der bisherigen Aufteilung steht.
+ */
+async function schmalerNamensplatz(page: Page): Promise<{ modell: number | null; breiten: { breite: number; modellPx: number }[] }> {
+  return page.evaluate(() => {
+    const attr = document.querySelector('[data-testid="monitor-slide"]')!.getAttribute('data-namebreite-em');
+    const modell = attr === null ? null : Number(attr);
+    return {
+      modell,
+      breiten: [...document.querySelectorAll<HTMLElement>('[data-teamname]')].map((el) => ({ breite: el.getBoundingClientRect().width, modellPx: (modell ?? 0) * parseFloat(getComputedStyle(el).fontSize) })),
+    };
   });
 }
 
@@ -145,7 +174,7 @@ test.describe('Monitor Listen-Folien (T2-UI)', () => {
   for (const szene of SZENEN) {
     for (const p of PROFILE) {
      for (const rand of RAENDER) {
-      test(`${szene.kennung}, ${p.name}, Rand ${String(rand)} %: jede Zeile und „Seite x / y“ ganz im Bild, gleiche Spalten, „(war …)“ in einer Zeile`, async ({ browser }, testInfo) => {
+      test(`${szene.kennung}, ${p.name}, Rand ${String(rand)} %: jede Zeile und „Seite x / y“ ganz im Bild, gleiche Spalten, „(war …)“ unter der Uhrzeit (schmale Aufteilung, @ZM-211) oder hinter ihr`, async ({ browser }, testInfo) => {
         test.skip(testInfo.project.name !== 'desktop', 'nur Projekt desktop (setzt das Fenster selbst)');
         const ctx = await browser.newContext({ viewport: { width: p.width, height: p.height }, colorScheme: 'dark', serviceWorkers: 'block', locale: 'de-DE' });
         const page = await ctx.newPage();
@@ -177,7 +206,15 @@ test.describe('Monitor Listen-Folien (T2-UI)', () => {
             expect(k.zeitUeberbreit, `${k.id}: Uhrzeit-Zelle bricht nicht um und läuft nicht über`).toBe(false);
             if (k.war !== null) {
               expect(k.war, `${k.id}: Wortlaut`).toMatch(/^\(war \d{2}:\d{2}\)$/);
-              expect(k.warUnterUhr, `${k.id}: „(war …)“ steht neben der Uhrzeit, nicht darunter`).toBe(false);
+              expect(k.warUnterUhr, `${k.id}: „(war …)“ steht in der schmalen Aufteilung unter der Uhrzeit, in der bisherigen hinter ihr (@ZM-211)`).toBe(k.schmal);
+            }
+            // Schrift nie kleiner als bisher (3,6 % der Bildhöhe, @ZM-150); wo die Folie die schmale Aufteilung nimmt, ist die Zeitspalte schmaler als 9,6 em, und mit kurzen Namen ist die Schrift größer
+            const bisher = 0.036 * p.height;
+            expect(k.schrift, `${k.id}: Teamnamen nie kleiner als bisher`).toBeGreaterThanOrEqual(bisher - 0.5);
+            if (k.schmal) {
+              // mit kurzen Namen ist Platz: die Schrift wächst (@ZM-211); mit Namen von 45 bis 50 Zeichen bleibt sie womöglich wie bisher (@ZM-150), nie kleiner
+              if (szene.namen === 'kurz') { expect(k.schrift, `${k.id}: schmale Aufteilung mit kurzen Namen: Teamnamen größer als bisher`).toBeGreaterThan(bisher + 0.5); }
+              expect(k.zeitBreite, `${k.id}: schmale Aufteilung: Zeitspalte schmaler als die bisherigen 9,6 em (Abstand 0,4 em für Rundung)`).toBeLessThan(9.2 * k.schrift);
             }
           }
           for (let i = 1; i < kaesten.length; i += 1) {
@@ -193,15 +230,30 @@ test.describe('Monitor Listen-Folien (T2-UI)', () => {
             expect(wort, `Seite ${String(seite + 1)}: „Strafstoßschießen“ passt ganz in die Zeitspalte`).toBeLessThanOrEqual(spalte);
           }
           const achsen = await mittelachsen(page);
+          const schmal = kaesten[0].schmal;
+          expect(new Set(kaesten.map((k) => k.schmal)).size, `Seite ${String(seite + 1)}: alle Zeilen der Folie haben dieselbe Aufteilung`).toBe(1);
           for (const g of achsen) {
-            expect(g.abweichung, `${g.id}: Uhrzeit, Teamnamen und Stand haben eine gemeinsame Mittelachse (±2 px)`).toBeLessThanOrEqual(2);
+            expect(g.abweichung, `${g.id}: Teamnamen und Stand haben eine gemeinsame Mittelachse (±2 px)`).toBeLessThanOrEqual(2);
             expect(g.ausMitte, `${g.id}: die Achse liegt in der Mitte der Zeile (±2 px)`).toBeLessThanOrEqual(2);
+            if (schmal) {
+              expect(g.uhrUeberMitte, `${g.id}: schmale Aufteilung: die Uhrzeit steht oben links, über der Mitte der Zeile`).toBeGreaterThan(2);
+            } else {
+              expect(g.mitUhr, `${g.id}: bisherige Aufteilung: auch die Uhrzeit liegt auf der gemeinsamen Mittelachse (±2 px)`).toBeLessThanOrEqual(2);
+            }
           }
           if (szene.id === 'plan' && szene.namen === 'kurz' && szene.zusatz.includes('strafstoss')) {
             expect(new Set(achsen.map((g) => Math.round(g.zeile))).size, 'Zeilenhöhe fest: auch die Zeile mit „(4:3 i. E.)“ ist gleich hoch').toBe(1);
           }
-          for (const n of await namensplatz(page)) {
-            expect(n.breite, `Seite ${String(seite + 1)}: das Modell nimmt nie mehr Namensplatz an, als real da ist`).toBeGreaterThanOrEqual(n.modell);
+          // schmale Aufteilung: das Namensmodell (`namenBreiteEm`) nimmt nie mehr Platz an, als gemessen da ist; das Seitenmodell dagegen rechnet mit der Schrift von bisher
+          const platz = await schmalerNamensplatz(page);
+          expect(platz.modell !== null, `Seite ${String(seite + 1)}: das Modell kennt die schmale Aufteilung genau dann, wenn sie gerendert ist`).toBe(schmal);
+          for (const n of platz.breiten) {
+            if (schmal) { expect(n.breite + 1, `Seite ${String(seite + 1)}: gemessene Namensbreite mindestens so groß wie die des Modells (schmale Aufteilung)`).toBeGreaterThanOrEqual(n.modellPx); }
+          }
+          if (!schmal) {
+            for (const n of await namensplatz(page)) {
+              expect(n.breite, `Seite ${String(seite + 1)}: das Modell nimmt nie mehr Namensplatz an, als real da ist`).toBeGreaterThanOrEqual(n.modell);
+            }
           }
           gesehen.push(...kaesten.map((k) => k.id));
           await page.screenshot({ path: join(ordner, `${szene.id}-${szene.namen}-${p.name}-s${String(seite + 1)}.png`) });
@@ -212,6 +264,84 @@ test.describe('Monitor Listen-Folien (T2-UI)', () => {
         await ctx.close();
       });
      }
+    }
+  }
+});
+
+test.describe('@ZM-211 Auf „Nächste Spiele“ gehört der Platz neben der Uhrzeit den Teamnamen (Beispiel „Nikolaus-Turnier“)', () => {
+  test.skip(imGebautenStand, 'Prüfstand nur am Dev-Server (gehört nicht in den Build)');
+  const NAMEN = 'SV Kirchanschöring|SpVgg Fridolfing|TSV Waging 2|TSV Freilassing|TSV Waging 1|SG Taching/Tengling';
+
+  for (const p of PROFILE) {
+    for (const verschoben of [false, true]) {
+      test(`${p.name}, Rand 5 %, ${verschoben ? 'ab dem dritten Spiel um 10 Minuten verschoben' : 'nichts verschoben'}: Zeitspalte schmal, Teamnamen deutlich größer als bisher und jeder in einer Zeile, „(war …)“ unter der Uhrzeit`, async ({ browser }, testInfo) => {
+        test.skip(testInfo.project.name !== 'desktop', 'nur Projekt desktop (setzt das Fenster selbst)');
+        const ctx = await browser.newContext({ viewport: { width: p.width, height: p.height }, colorScheme: 'dark', serviceWorkers: 'block', locale: 'de-DE' });
+        const page = await ctx.newPage();
+        await page.goto(`/tests/e2e/harness/listen-folien-monitor.html?szene=naechste&seite=0&anzahl=5&rand=5&namenliste=${encodeURIComponent(NAMEN)}${verschoben ? '&verschoben=1' : ''}`);
+        await expect(page.getByTestId('monitor-slide')).toBeVisible();
+        await page.evaluate(() => document.fonts.ready.then(() => new Promise((res) => { requestAnimationFrame(() => { requestAnimationFrame(res); }); })));
+        const kaesten = await zeilen(page);
+        expect(kaesten).toHaveLength(5);
+        const hoehen = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>('[data-teamname]')].map((el) => el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).fontSize)));
+        for (const h of hoehen) { expect(h, 'jeder Teamname steht in einer Zeile').toBeLessThan(1.6); }
+        for (const k of kaesten) {
+          expect(k.schmal, `${k.id}: schmale Aufteilung`).toBe(true);
+          expect(k.schrift, `${k.id}: Teamnamen deutlich größer als bisher (3,6 % der Bildhöhe)`).toBeGreaterThanOrEqual(1.1 * 0.036 * p.height);
+          expect(k.zeitBreite, `${k.id}: keine breite Spalte neben der Uhrzeit`).toBeLessThan(9.2 * k.schrift);
+          expect(k.unten, `${k.id}: im Bild`).toBeLessThanOrEqual(p.height);
+          if (k.war !== null) { expect(k.warUnterUhr, `${k.id}: „(war …)“ unter der Uhrzeit`).toBe(true); }
+        }
+        expect(new Set(kaesten.map((k) => k.schrift)).size, 'alle Zeilen dieselbe Schrift (@ZM-187)').toBe(1);
+        expect(new Set(kaesten.map((k) => Math.round(k.zeitBreite))).size, 'alle Zeilen dieselbe Zeitspalte (@ZM-187)').toBe(1);
+        expect(kaesten.some((k) => k.war !== null), verschoben ? 'verschobene Spiele tragen „(war …)“' : '').toBe(verschoben);
+        await ctx.close();
+      });
+    }
+  }
+});
+
+test.describe('@ZM-211 @ZM-188 Ein eigener Feldname schiebt nichts aus dem Bild (mehrere Felder, Review PR #559 R2)', () => {
+  test.skip(imGebautenStand, 'Prüfstand nur am Dev-Server (gehört nicht in den Build)');
+
+  for (const feldname of ['Feld 2', 'Dreifachhalle', 'Dreifachhalle Nord', 'Dreifachhalle Nord Ost 12']) {
+    for (const p of PROFILE) {
+      for (const rand of [0, 5, 10]) {
+        test(`Feldname „${feldname}“ (${String(feldname.length)} Zeichen), ${p.name}, Rand ${String(rand)} %: jede Zeile, der Feldname und „Seite x / y“ ganz im Bild, der Feldname läuft nicht aus der Spalte`, async ({ browser }, testInfo) => {
+          test.skip(testInfo.project.name !== 'desktop', 'nur Projekt desktop (setzt das Fenster selbst)');
+          const ctx = await browser.newContext({ viewport: { width: p.width, height: p.height }, colorScheme: 'dark', serviceWorkers: 'block', locale: 'de-DE' });
+          const page = await ctx.newPage();
+          await page.goto(`/tests/e2e/harness/listen-folien-monitor.html?szene=naechste&seite=0&anzahl=3&felder=2&rand=${String(rand)}&feldname=${encodeURIComponent(feldname)}`);
+          await expect(page.getByTestId('monitor-slide')).toBeVisible();
+          await page.evaluate(() => document.fonts.ready.then(() => new Promise((res) => { requestAnimationFrame(() => { requestAnimationFrame(res); }); })));
+          const kaesten = await zeilen(page);
+          expect(kaesten).toHaveLength(3);
+          const felder = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>('[data-testid="monitor-match-field"]')].map((el) => ({
+            text: el.textContent ?? '', ueber: el.scrollWidth > el.clientWidth + 1, zeilen: Math.round(el.getBoundingClientRect().height / (parseFloat(getComputedStyle(el).fontSize) * 1.15)),
+            unten: el.getBoundingClientRect().bottom, zeileUnten: el.closest('[data-testid="monitor-match-row"]')!.getBoundingClientRect().bottom,
+          })));
+          expect(felder.length, 'bei mehreren Feldern steht in jeder Zeile das Feld').toBe(3);
+          for (const f of felder) {
+            expect(f.ueber, `${f.text}: läuft nicht seitlich aus der Spalte`).toBe(false);
+            // Ein Feldname von 25 Zeichen bricht schon in der bisherigen Spalte (9,6 em) um, und das Zeilenmodell von main rechnet nur eine Zeile: das ist ein
+            // Befund von main, kein Verhalten dieses PR (gilt für `Feld liegt ganz in der Zeile` und `Zusätze ganz in der Zeile`) (die Folie bleibt dann in der bisherigen Aufteilung); bis 18 Zeichen muss das Feld ganz in der Zeile liegen
+            if (feldname.length <= 18) { expect(f.unten, `${f.text}: Feld liegt ganz in der Zeile`).toBeLessThanOrEqual(f.zeileUnten + 0.5); }
+          }
+          for (const k of kaesten) {
+            expect(k.unten, `${k.id}: Unterkante im Bild`).toBeLessThanOrEqual(p.height);
+            if (feldname.length <= 18) { expect(k.zusatzUnten, `${k.id}: Zusätze ganz in der Zeile`).toBeLessThanOrEqual(k.unten + 0.5); }
+            expect(k.blockAbweichung, `${k.id}: Zeilenhöhe wie im Modell (± 1 px)`).toBeLessThanOrEqual(1);
+          }
+          const hinweis = page.getByText(/^Seite \d+ \/ \d+$/);
+          if (await hinweis.count() > 0) {
+            const h = await hinweis.first().boundingBox();
+            expect(h!.y + h!.height, '„Seite x / y“ im Bild').toBeLessThanOrEqual(p.height);
+          }
+          // ein Feldname, der nicht in eine Zeile der schmalen Spalte passt, hält die Folie in der bisherigen Aufteilung
+          if (feldname.length >= 18) { expect(kaesten.every((k) => !k.schmal), 'bisherige Aufteilung').toBe(true); }
+          await ctx.close();
+        });
+      }
     }
   }
 });

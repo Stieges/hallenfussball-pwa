@@ -6,6 +6,7 @@ import type { TournamentView } from '../../../core/view';
 import type { MonitorSlide, MonitorTheme } from '../../../types/monitor';
 import { wirksamerRand } from '../overscan';
 import { fieldIdToNumber, resolveTheme } from '../monitorDisplayHelpers';
+import { useBildAspekt } from '../useBildAspekt';
 import { listFrame, scheduleFieldLayout } from '../slideContent';
 import { MonitorMatchRow } from '../components/MonitorMatchRow';
 import { SlidePageHint } from '../components/SlidePageHint';
@@ -29,7 +30,8 @@ interface ScheduleFieldSlideProps {
 /** Spielplan eines Feldes (@ZM-071): alle Spiele in Anpfiff-Reihenfolge mit Uhrzeit, Seiten nach Höhe, höchstens 4 Spiele je Seite (@ZM-129, @ZM-185, @ZM-188). */
 export function ScheduleFieldSlide({ slide, tournament, view, theme, style, page = 0, pageStart = 0, overscanPercent }: ScheduleFieldSlideProps) {
   const { t } = useTranslation('monitor');
-  const frame = listFrame(slide, wirksamerRand(overscanPercent, null));
+  // @ZM-211: das Bildschirmverhältnis fließt nur in die schmale Aufteilung ein, nie in die Seitenaufteilung
+  const frame = { ...listFrame(slide, wirksamerRand(overscanPercent, null)), aspect: useBildAspekt() };
   const themeColors = monitorThemes[resolveTheme(theme)];
 
   const fieldNumber = fieldIdToNumber(slide.config.fieldId);
