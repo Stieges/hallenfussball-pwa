@@ -59,4 +59,61 @@ describe('@ZM-213 useBandFit', () => {
     rerender(<Harness schluessel="b" />);
     expect(messungen.mock.calls.length).toBeGreaterThan(nachErstem);
   });
+
+  describe('Höhe der Seitenspalten (nichts fällt weg)', () => {
+    function Hoehe({ schluessel = 'a' }: { schluessel?: string }) {
+      const refs = { band: useRef<HTMLDivElement>(null), slot: useRef<HTMLDivElement>(null), text: useRef<HTMLSpanElement>(null), links: useRef<HTMLDivElement>(null), rechts: useRef<HTMLDivElement>(null) };
+      useBandFit(refs, schluessel);
+      return (
+        <div ref={refs.band} data-testid="band">
+          <div ref={refs.links}><span>Live</span></div>
+          <div ref={refs.slot}><span ref={refs.text}>5:50</span></div>
+          <div ref={refs.rechts} style={{ fontSize: '8cqh' }} data-testid="rechts"><span>Gruppe A</span><span>2. Halbzeit</span><span>angehalten</span></div>
+        </div>
+      );
+    }
+
+    /** Vier Zeilen zu 80 px = 320 px in einem Band von 263 px; die Schrift in Pixel folgt dem Inline-Stil der Spalte, Tokens lösen sich zu Pixeln auf. */
+    function stelleHoehe(zeilenHoehe: number): void {
+      vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockImplementation(function (this: HTMLElement) { return this.getAttribute('data-testid') === 'band' ? 263 : 0; });
+      vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+        const schrift = this.parentElement?.style.fontSize ?? '';
+        return this.parentElement?.getAttribute('data-testid') === 'rechts' ? (schrift.endsWith('px') ? (parseFloat(schrift) / 78) * zeilenHoehe : zeilenHoehe) : 0;
+      });
+      // die beiden Messelemente (zuerst die Nah-Grenze, dann die Notgrenze) lösen sich zu 76 px und 54 px auf; die Spalte hat die Schrift ihres Inline-Stils
+      const messer = [76, 54];
+      let nr = 0;
+      vi.spyOn(window, 'getComputedStyle').mockImplementation((el: Element) => {
+        const stil = (el as HTMLElement).style;
+        const px = stil.position === 'absolute' ? `${String(messer[nr++ % 2])}px` : stil.fontSize.endsWith('px') ? stil.fontSize : '78px';
+        return { fontSize: px, paddingLeft: '0px', paddingRight: '0px', paddingTop: '0px', paddingBottom: '0px', rowGap: '0px' } as unknown as CSSStyleDeclaration;
+      });
+    }
+
+    it('zu hohe Spalte: die Schrift wird kleiner (nie unter der Nah-Grenze 76 px), keine Zeile wird ausgeblendet; die Notlösung geht darunter, markiert', () => {
+      stelleHoehe(80); // 3 Zeilen zu 80 px = 240 passen (Band 263): nichts ändert sich
+      const { getByTestId, rerender } = render(<Hoehe />);
+      expect(getByTestId('rechts').style.fontSize).toBe('8cqh');
+      expect(getByTestId('rechts').hasAttribute('data-schrift')).toBe(false);
+      vi.restoreAllMocks();
+      stelleHoehe(100); // 300 px > 263 px: verkleinern, bis zur Nah-Grenze 76 px, dann Notlösung
+      rerender(<Hoehe schluessel="b" />);
+      const spalte = getByTestId('rechts');
+      expect(spalte.style.fontSize).toMatch(/px$/);
+      expect(parseFloat(spalte.style.fontSize)).toBeLessThan(78);
+      expect(spalte.getAttribute('data-schrift')).toBe('notloesung');
+      for (const zeile of Array.from(spalte.children) as HTMLElement[]) { expect(zeile.style.display, 'nichts wird ausgeblendet').toBe(''); }
+    });
+
+    it('Gegenbeispiel Wiederherstellen: passt es danach wieder, steht die Schrift aus den Tokens wieder da (nicht auf 16 px oder verkleinert)', () => {
+      stelleHoehe(100);
+      const { getByTestId, rerender } = render(<Hoehe />);
+      expect(getByTestId('rechts').style.fontSize).toMatch(/px$/);
+      vi.restoreAllMocks();
+      stelleHoehe(60); // 3 × 60 = 180 passen
+      rerender(<Hoehe schluessel="c" />);
+      expect(getByTestId('rechts').style.fontSize).toBe('8cqh');
+      expect(getByTestId('rechts').hasAttribute('data-schrift')).toBe(false);
+    });
+  });
 });

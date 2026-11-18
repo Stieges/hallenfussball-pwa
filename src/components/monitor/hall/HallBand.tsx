@@ -3,7 +3,7 @@
  * nimmt wie die Restzeit ab, die abgelaufene Strecke bleibt als Bahn sichtbar; darunter steht die Restzeit so groß wie möglich in der Mitte, klein links das Live-Abzeichen
  * (mit dem Feld nur bei mehr als einem Feld) und rechts die Gruppe (nur bei mehr als einer Gruppe), der Abschnitt (nur bei mehr als einem Abschnitt)
  * und ein Wort nur bei Abweichung vom laufenden Spiel („angehalten“, „Pause“, „Zeit abgelaufen“); das Wort „Restzeit“ gibt es nicht. Eine Kopfzeile gibt es nicht. Beide Zeilen liegen in jedem Zustand an derselben Stelle (@ZM-151):
- * - läuft das Spiel: Restzeit (Themenfarbe, auch bei angehaltener Uhr; nur der Balken wird grau); bei zu wenig Höhe in den Seitenspalten rücken die Zeilen zusammen, im Zweifel fällt die Gruppe vor dem Abschnitt vor dem Wort weg (`useBandFit`)
+ * - läuft das Spiel: Restzeit (Themenfarbe, auch bei angehaltener Uhr; nur der Balken wird grau); bei zu wenig Höhe in den Seitenspalten rücken die Zeilen zusammen (Schrift kleiner, nie weggelassen, `useBandFit`)
  * - vor dem Anpfiff: Anstoßzeit an der Stelle der Restzeit, daneben „Nächstes Spiel“ (Abzeichen der Live-Folie)
  * - Halbzeitpause: die Pausenzeit an der Stelle der Restzeit, daneben „Pause“ (das Abzeichen links sagt „Halbzeit“)
  * - Strafstoßschießen: Zwischenstand an der Stelle der Restzeit, daneben „Strafstoßschießen“, kein Balken
@@ -57,6 +57,8 @@ interface BandInhalt {
   right: ReactNode;
   /** Abschnitt („1. Halbzeit“), nur bei mehr als einem Abschnitt */
   section?: string;
+  /** „Verlängerung“ neben dem Wort „angehalten“: das Abzeichen links sagt dann „Pause“ (angehaltene Uhr), die Verlängerung muss irgendwo stehen */
+  overtime?: string;
 }
 
 function HallLayout({ props, inhalt }: { props: HallBandProps; inhalt: BandInhalt }): ReactElement {
@@ -70,7 +72,7 @@ function HallLayout({ props, inhalt }: { props: HallBandProps; inhalt: BandInhal
   const slot = inhalt.slot;
   const slotText = slot?.text ?? null;
   // Neu messen nur, wenn sich Text oder Aufbau ändern, nicht bei jedem Uhrtakt: die Ziffern der Uhr zählen nicht (tabellarische Ziffern, gleiche Breite)
-  const schluessel = [slot?.kind, slotText?.replace(/\d/g, '0'), showField, showGroup, group, inhalt.section, String(inhalt.right ?? ''), JSON.stringify(badge)].join('|');
+  const schluessel = [slot?.kind, slotText?.replace(/\d/g, '0'), showField, showGroup, group, inhalt.section, inhalt.overtime, typeof inhalt.right === 'string' ? inhalt.right : 'knoten', JSON.stringify(badge)].join('|');
   useBandFit({ band: bandRef, slot: slotRef, text: textRef, links: linksRef, rechts: rechtsRef }, schluessel);
   // Strafstoßschießen: das Wort steht über dem Zwischenstand in der Mitte (Mockup „schiessen“), nicht links (es ist breiter als die Seitenspalte)
   const mitteAbzeichen = slot?.kind === 'shootout';
@@ -82,7 +84,7 @@ function HallLayout({ props, inhalt }: { props: HallBandProps; inhalt: BandInhal
         {/* Nah-Information: Live-Abzeichen und Feld (8 % der Höhe, @ZM-213); das Feld nur bei mehr als einem Feld (@ZM-215) */}
         <div ref={linksRef} style={sideColumnStyle('start')} data-monitor="nah" data-testid="hall-side-left">
           {!mitteAbzeichen && abzeichen}
-          {showField && <span style={{ color: colors.textSecondary }} data-prio="1" data-testid="hall-field">{t('fieldSelector.field', { field: match.field ?? 1 })}</span>}
+          {showField && <span style={{ color: colors.textSecondary }} data-testid="hall-field">{t('fieldSelector.field', { field: match.field ?? 1 })}</span>}
         </div>
         <div ref={slotRef} style={{ ...slotStyle, fontSize: slot ? slotFontSize(slot.kind) : undefined, color: slot?.schlussphase === true ? cssVars.colors.scoreboardFinalPhase : colors.timerNormal }} data-testid="hall-slot">
           {mitteAbzeichen && <div style={slotBadgeStyle} data-monitor="nah" data-testid="hall-slot-badge">{abzeichen}</div>}
@@ -91,9 +93,10 @@ function HallLayout({ props, inhalt }: { props: HallBandProps; inhalt: BandInhal
           )}
         </div>
         <div ref={rechtsRef} style={sideColumnStyle('end')} data-monitor="nah" data-testid="hall-side-right">
-          {showGroup && group !== undefined && !isSingleGroupId(group) && <span style={{ whiteSpace: 'nowrap' }} data-prio="1" data-testid="hall-group">{t('liveMatch.group', { group })}</span>}
-          {inhalt.section !== undefined && <span style={{ color: colors.textSecondary }} data-prio="2" data-testid="hall-section">{inhalt.section}</span>}
-          {inhalt.right !== null && inhalt.right !== undefined && <span style={{ color: colors.textSecondary }} data-prio="3" data-testid="hall-phase-text">{inhalt.right}</span>}
+          {showGroup && group !== undefined && !isSingleGroupId(group) && <span style={{ whiteSpace: 'nowrap' }} data-testid="hall-group">{t('liveMatch.group', { group })}</span>}
+          {inhalt.section !== undefined && <span style={{ color: colors.textSecondary }} data-testid="hall-section">{inhalt.section}</span>}
+          {inhalt.overtime !== undefined && <span style={{ color: colors.textSecondary }} data-testid="hall-overtime-text">{inhalt.overtime}</span>}
+          {inhalt.right !== null && inhalt.right !== undefined && <span style={{ color: colors.textSecondary }} data-testid="hall-phase-text">{inhalt.right}</span>}
         </div>
       </div>
     </>
@@ -139,7 +142,7 @@ function HallTimedBand(props: HallBandProps): ReactElement {
   return (
     <HallLayout
       props={props}
-      inhalt={{ bar, right: abweichung, section: abschnitt, slot: { kind: 'clock', text: formatRemaining(modell.restSekunden), testId: 'hall-clock', phase, schlussphase: modell.schlussphase } }}
+      inhalt={{ bar, right: abweichung, section: abschnitt, overtime: modell.verlaengerung === true && modell.text === 'angehalten' ? t('liveMatch.clock.overtime') : undefined, slot: { kind: 'clock', text: formatRemaining(modell.restSekunden), testId: 'hall-clock', phase, schlussphase: modell.schlussphase } }}
     />
   );
 }

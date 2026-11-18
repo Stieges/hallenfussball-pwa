@@ -7,6 +7,8 @@
  * Restzeit 26 % (jetzt 34 %), Namen je nach Länge 7,5 bis 20 %. Die Werte stammen aus der Mockup-Messung des Reviews (1080 px = 100 cqh).
  * Ausgabe der übrigen Folien und der Profile „Spielfeld (fern)“ und „Info (nah)“ bleibt unberührt: nichts hier wird dort gelesen.
  */
+import { palette } from './colors/palette';
+
 export const displayHall = {
   /** Zwei Farbflächen oben bis an den Rand der Folienfläche: Höhe (64,5 %: Namensfeld und Torzahl füllen sie, der Rest geht an Zeitbalken und Restzeit, @ZM-215), Lücke dazwischen, Rundung der unteren Ecken */
   panel: { height: '64.5cqh', gap: '3cqh', radius: '1.7cqh', ringWidth: '1.5cqh' },
@@ -21,13 +23,16 @@ export const displayHall = {
   /** Zeitbalken über die ganze Breite: Abstand zur Fläche darüber, Höhe (6 %, @ZM-215), seitlicher Abstand, Umrandung der Bahn */
   bar: { gapTop: '1.2cqh', height: '6cqh', padX: '2.2cqh' },
   /**
-   * Farben des Zeitbalkens je Thema (@ZM-215): die abgelaufene Strecke ist eine gefüllte Bahn, die sich vom Hintergrund und von jeder Füllung abhebt.
-   * Kontrast Bahn gegen Hintergrund mindestens 3 : 1 (dunkel gegen #1E293B/#0F172A 3,3 : 1, hell gegen #FFFFFF/#E2E8F0 6,2 : 1),
-   * Füllung gegen Bahn mindestens 3 : 1 (Test `displayHall.zm213.test.ts`). Grün läuft, grau angehalten, violett in der Schlussphase, gedämpft in der Pause.
+   * Farben des Zeitbalkens je Thema (@ZM-215): die Füllung ist der kräftige Teil und läuft mit der Restzeit herunter, die abgelaufene Strecke ist die blassere Bahn.
+   * Dunkel (das einzige Thema am Monitor im MVP, helles Design @ZM-173): Füllung heller als die Bahn; hell: Füllung dunkler als die Bahn.
+   * Füllung gegen Bahn jeweils mindestens 3 : 1, Bahn gegen Hintergrund dunkel mindestens 2,6 : 1, hell mindestens 2,0 : 1 (Test `displayHall.zm213.test.ts`).
+   * Grün läuft, grau angehalten, violett in der Schlussphase (dunkel: dasselbe Violett wie die Uhr), gedämpft in der Pause. Aus der Palette; neu sind nur
+   * `dark.track` (#586880: die Bahn muss gegen #1E293B/#0F172A mindestens 2,6 : 1 haben, `neutral.500` hat nur 2,3 : 1 am oberen Ende des Verlaufs) und
+   * `light.violett` (#5B21B6: dunkles Violett, `purple.600` hat gegen die Bahn nur 2,4 : 1).
    */
   barColors: {
-    dark: { track: '#6A788D', gruen: '#2BF2A0', grau: '#E2E8F0', violett: '#EDE9FE', gedaempft: '#C9D8EE' },
-    light: { track: '#475569', gruen: '#00E676', grau: '#CBD5E1', violett: '#C4B5FD', gedaempft: '#9FB3CE' },
+    dark: { track: '#586880', gruen: palette.green[400], grau: palette.neutral[50], violett: palette.purple[300], gedaempft: palette.neutral[300] },
+    light: { track: palette.neutral[400], gruen: palette.green[800], grau: palette.neutral[700], violett: '#5B21B6', gedaempft: palette.blue[900] },
   },
   /** Uhrband unten: Innenabstand seitlich und unten, Abstand zwischen den Zeilen der Seitenangaben */
   band: { padX: '3.7cqh', padBottom: '1.2cqh', sideGap: '0.6cqh' },
@@ -37,8 +42,8 @@ export const displayHall = {
   word: { font: '26cqh' },
   /** Zwischenstand im Strafstoßschießen an der Stelle der Restzeit */
   shootout: { font: '23cqh' },
-  /** Angaben links und rechts neben der Uhr (Live-Abzeichen, Feld, Gruppe, Abschnitt): 8 % der Höhe (mit der Vorbelegung des Bildrands von 5 % noch 7,2 % des Bildschirms, mindestens 7,08 %), Nah-Information, bei zu vielen Zeilen im Uhrband höchstens bis `fontMin` (7,1 %, über der Nah-Grenze 7,08 %) verkleinert, danach fällt die Angabe mit der niedrigsten Rangfolge weg (`data-prio`); das lange Wort „Verlängerung“ im Abzeichen (12 Zeichen) in `fontLong`, damit es neben die Restzeit passt */
-  side: { font: '8cqh', fontMin: '7.1cqh', fontLong: '6cqh', lineHeight: 1, badgePadY: '0.04em', badgePadX: '0.4em', badgeGap: '0.35em', badgeDot: '0.38em' },
+  /** Angaben links und rechts neben der Uhr (Live-Abzeichen, Feld, Gruppe, Abschnitt): 8 % der Höhe (mit der Vorbelegung des Bildrands von 5 % noch 7,2 % des Bildschirms, mindestens 7,08 %), Nah-Information, bei zu vielen Zeilen im Uhrband höchstens bis `fontMin` verkleinert (nie unter 7,08 % der BILDSCHIRMhöhe, auch mit Bildrand: `max(…cqh, …vh)`), nie ausgeblendet; reicht auch das nicht, als Notlösung bis `fontNot` (sichtbar vor klein); das lange Wort „Verlängerung“ im Abzeichen (12 Zeichen) in `fontLong`, damit es neben die Restzeit passt */
+  side: { font: '8cqh', fontMin: 'max(7cqh, 7.08vh)', fontNot: '5.6cqh', fontLong: '6cqh', lineHeight: 1, badgePadY: '0.04em', badgePadX: '0.4em', badgeGap: '0.35em', badgeDot: '0.38em' },
   /** Kein Spiel mehr auf dem Feld: Satz mittig, Schrift 9 % der Höhe */
   noMatch: { font: '9cqh', padX: '6cqh' },
 } as const;

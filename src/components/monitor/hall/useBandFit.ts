@@ -7,7 +7,7 @@
  * längsten Worts (die Seitentexte brechen an Leerzeichen um); beide Seiten bekommen dieselbe Breite, die Mitte bleibt mittig.
  * Misst im Browser am Layout (ohne Transformationen); ohne Layout (jsdom) bleibt die Vorgabe.
  */
-import { useCallback, useEffect, useLayoutEffect, type RefObject } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
 import { displayHall } from '../../../design-tokens';
 
 /**
@@ -64,13 +64,14 @@ function bandHoehe(band: HTMLElement): number {
   return band.clientHeight - (parseFloat(stil.paddingTop) || 0) - (parseFloat(stil.paddingBottom) || 0);
 }
 
-/** Kleinste Schrift der Seitenangaben im Verhältnis zur Schrift aus den Tokens (Nah-Information bleibt über 7,08 % der Höhe) */
-const SEITEN_UNTERGRENZE = parseFloat(displayHall.side.fontMin) / parseFloat(displayHall.side.font);
-
-/** Zeilen mit Rangfolge (`data-prio`), niedrigste zuerst: bei zu wenig Höhe fällt zuerst die Gruppe weg, dann der Abschnitt, das Wort zuletzt. */
-function rangfolge(spalte: HTMLElement): HTMLElement[] {
-  return Array.from(spalte.children).filter((k): k is HTMLElement => k instanceof HTMLElement && k.dataset.prio !== undefined)
-    .sort((a, b) => Number(a.dataset.prio) - Number(b.dataset.prio));
+/** Eine CSS-Länge (auch `max(…cqh, …vh)`) in Pixel, aufgelöst an einem unsichtbaren Messelement im Elternteil (dort gelten die Container-Einheiten der Folie). */
+function pxVon(laenge: string, elternteil: HTMLElement): number {
+  const messer = document.createElement('span');
+  Object.assign(messer.style, { position: 'absolute', visibility: 'hidden', pointerEvents: 'none', fontSize: laenge });
+  elternteil.appendChild(messer);
+  const px = parseFloat(getComputedStyle(messer).fontSize);
+  messer.remove();
+  return px;
 }
 
 /** Höchstens so viele Schritte, eine zu hohe Seitenspalte zu verkleinern (der Umbruch ändert sich mit der Schrift). */
@@ -80,17 +81,18 @@ const HOEHEN_RESERVE = 0.98;
 
 /**
  * Setzt die Schrift des Mittentexts (Pixel am Element) so, dass er zwischen die Seitenspalten passt, und verkleinert eine Seitenspalte, deren Zeilen
- * (Gruppe, Abschnitt, Wort, nach dem Umbruch auch mehrzeilig) höher wären als das Uhrband: dann ragt nichts in den Zeitbalken oder aus der Folie.
+ * (Gruppe, Abschnitt, Wort, nach dem Umbruch auch mehrzeilig) höher wären als das Uhrband: dann ragt nichts in den Zeitbalken oder aus der Folie, und keine Angabe fällt weg.
  * Läuft, wenn sich `schluessel` (Texte und Aufbau) ändert, und bei Größenänderung, nicht bei jedem Uhrtakt.
  */
 export function useBandFit({ band, slot, text, links, rechts }: BandFitRefs, schluessel: string): void {
-  const passeAn = useCallback(() => {
+  const inhalte = useRef<MutationObserver | null>(null);
+  const messeUndPasseAn = useCallback(() => {
     const [b, s, t, l, r] = [band.current, slot.current, text.current, links.current, rechts.current];
     if (!b || !s || !l || !r) { return; }
     // Seitenspalten auf ihre Schrift aus den Tokens zurücksetzen (die Vorgabe steht als Inline-Stil, sie wird beim ersten Mal gemerkt)
     for (const spalte of [l, r]) {
       spalte.style.fontSize = grundSchrift(spalte);
-      for (const zeile of rangfolge(spalte)) { zeile.style.removeProperty('display'); }
+      spalte.removeAttribute('data-schrift');
     }
     if (t) {
       t.style.removeProperty('font-size');
@@ -107,22 +109,26 @@ export function useBandFit({ band, slot, text, links, rechts }: BandFitRefs, sch
     }
     const hoehe = bandHoehe(b);
     if (!(hoehe > 0)) { return; }
+    // Nichts fällt weg (@ZM-213: Feld, Gruppe und Abschnitt stehen neben der Restzeit): zu hohe Spalten werden kleiner, zuerst bis zur Nah-Grenze am Bildschirm
+    // (`fontMin`, auch mit Bildrand mindestens 7,08 % der Bildschirmhöhe), nur als Notlösung bis `fontNot`
+    const untergrenze = pxVon(displayHall.side.fontMin, b);
+    const notgrenze = pxVon(displayHall.side.fontNot, b);
     for (const spalte of [l, r]) {
-      const grundPx = parseFloat(getComputedStyle(spalte).fontSize);
-      const untergrenze = grundPx * SEITEN_UNTERGRENZE;
-      for (let schritt = 0; schritt < HOEHEN_SCHRITTE; schritt++) {
-        const noetig = spaltenHoehe(spalte);
-        const px = parseFloat(getComputedStyle(spalte).fontSize);
-        if (noetig <= hoehe || !Number.isFinite(px) || px <= untergrenze) { break; }
-        spalte.style.fontSize = `${String(Math.max(untergrenze, Math.floor((px * hoehe * HOEHEN_RESERVE) / noetig)))}px`;
-      }
-      // reicht auch die kleinste Schrift nicht, fällt die Angabe mit der niedrigsten Rangfolge weg (Gruppe vor Abschnitt vor Wort)
-      for (const zeile of rangfolge(spalte)) {
+      for (const [grenze, art] of [[untergrenze, 'min'], [notgrenze, 'not']] as const) {
+        for (let schritt = 0; schritt < HOEHEN_SCHRITTE; schritt++) {
+          const noetig = spaltenHoehe(spalte);
+          const px = parseFloat(getComputedStyle(spalte).fontSize);
+          if (noetig <= hoehe || !Number.isFinite(px) || px <= grenze) { break; }
+          spalte.style.fontSize = `${String(Math.max(grenze, Math.floor((px * hoehe * HOEHEN_RESERVE) / noetig)))}px`;
+          spalte.setAttribute('data-schrift', art === 'min' ? 'verkleinert' : 'notloesung');
+        }
         if (spaltenHoehe(spalte) <= hoehe) { break; }
-        zeile.style.display = 'none';
       }
     }
   }, [band, slot, text, links, rechts]);
+  const passeAn = useCallback(() => {
+    try { messeUndPasseAn(); } finally { inhalte.current?.takeRecords(); } // die eigenen Messklone lösen keine neue Messung aus
+  }, [messeUndPasseAn]);
 
   // nach jeder Darstellung, deren Texte oder Aufbau sich geändert haben: sofort messen, noch vor dem nächsten Bild
   useLayoutEffect(() => { passeAn(); }, [passeAn, schluessel]);
@@ -143,10 +149,18 @@ export function useBandFit({ band, slot, text, links, rechts }: BandFitRefs, sch
       });
       beobachter.observe(el);
     }
+    // Inhalt der Seitenspalten ändert sich außerhalb des Schlüssels (z. B. Hinweis „ursprünglich 14:00“ vor dem Anpfiff): neu einpassen
+    const spalten = [links.current, rechts.current].filter((e): e is HTMLElement => e !== null);
+    if (typeof MutationObserver !== 'undefined') {
+      inhalte.current = new MutationObserver(passeAn);
+      for (const spalte of spalten) { inhalte.current.observe(spalte, { childList: true, characterData: true, subtree: true }); }
+    }
     return () => {
+      inhalte.current?.disconnect();
+      inhalte.current = null;
       window.removeEventListener('resize', passeAn);
       schrift?.removeEventListener('loadingdone', passeAn);
       beobachter?.disconnect();
     };
-  }, [passeAn, band]);
+  }, [passeAn, band, links, rechts]);
 }

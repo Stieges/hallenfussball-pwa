@@ -12112,7 +12112,7 @@
       {
         "turnierId": "halle-voll",
         "shareCode": "HAL018",
-        "titel": "Läuft: Gruppe A, zwei Felder, zwei Halbzeiten (Gruppe, Abschnitt und Wort zugleich, mit Zeit abgelaufen in der Spec)"
+        "titel": "Läuft: Gruppe A, zwei Felder, zwei Halbzeiten, Feld, Gruppe und Abschnitt zugleich (die Spec lässt die Zeit mit `page.clock` ablaufen: „Zeit abgelaufen“)"
       },
       {
         "turnierId": "halle-voll-3",

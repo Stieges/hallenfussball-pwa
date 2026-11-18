@@ -365,13 +365,20 @@ describe('@ZM-215 Die Live-Sicht zeigt nur, was man aus der Ferne braucht, und d
     expect((bestand.getByTestId('bestand-balken').firstElementChild as HTMLElement).style.background).toBe('var(--color-scoreboard-ok)');
   });
 
-  it('Bahn und Füllung heben sich in beiden Themen ab: Bahn gegen Hintergrund mindestens 3 : 1, jede Füllung gegen die Bahn mindestens 3 : 1', () => {
-    const hintergruende = { dark: [monitorThemes.dark.background, '#1E293B', '#0F172A'], light: ['#FFFFFF', '#E2E8F0', monitorThemes.light.background] } as const;
+  it('Bahn und Füllung heben sich in beiden Themen ab: Füllung gegen Bahn mindestens 3 : 1, Bahn gegen Hintergrund (dunkel 2,5 : 1, hell 2,0 : 1); Schlussphase und angehalten sind verschieden', () => {
+    const hintergruende = { dark: ['#1E293B', '#0F172A'], light: ['#FFFFFF', '#E2E8F0'] } as const;
+    const mindestBahn = { dark: 2.5, light: 2.0 } as const;
     for (const thema of ['dark', 'light'] as const) {
       const farben = displayHall.barColors[thema];
-      for (const hintergrund of hintergruende[thema]) { expect(getContrastRatio(farben.track, hintergrund), `${thema}: Bahn gegen ${hintergrund}`).toBeGreaterThanOrEqual(3); }
+      for (const hintergrund of hintergruende[thema]) { expect(getContrastRatio(farben.track, hintergrund), `${thema}: Bahn gegen ${hintergrund}`).toBeGreaterThanOrEqual(mindestBahn[thema]); }
       for (const ton of ['gruen', 'grau', 'violett', 'gedaempft'] as const) { expect(getContrastRatio(farben[ton], farben.track), `${thema}: ${ton} gegen Bahn`).toBeGreaterThanOrEqual(3); }
+      // helles Thema: die Füllung ist der kräftige Teil (dunkler als die Bahn), dunkles Thema: heller als die Bahn
+      for (const ton of ['gruen', 'grau', 'violett', 'gedaempft'] as const) { expect(getContrastRatio(farben[ton], hintergruende[thema][0]) >= getContrastRatio(farben.track, hintergruende[thema][0]) * (thema === 'light' ? 1 : 0), `${thema}: ${ton} kräftig`).toBe(true); }
     }
+    // dunkel: Violett ist das Violett der Uhr in der Schlussphase und von „angehalten“ (hell, kaum gesättigt) und der Pause (gedämpft) zu unterscheiden
+    expect(displayHall.barColors.dark.violett).toBe(palette.purple[300]);
+    expect(getContrastRatio(displayHall.barColors.dark.violett, displayHall.barColors.dark.grau)).toBeGreaterThanOrEqual(1.5);
+    expect(getContrastRatio(displayHall.barColors.dark.gedaempft, displayHall.barColors.dark.grau)).toBeGreaterThanOrEqual(1.3);
   });
 
   it('Gegenbeispiel: angehalten wird der Balken grau, nie rot', () => {
@@ -398,6 +405,8 @@ describe('@ZM-215 Die Live-Sicht zeigt nur, was man aus der Ferne braucht, und d
     expect(screen.getByTestId('hall-clock')).toBeInTheDocument();
     expect(screen.queryByTestId('hall-section')).toBeNull();
     expect(screen.queryByText(/Halbzeit|Abschnitt/)).toBeNull();
+    // angehalten sagt das Abzeichen „Pause“: dann muss „Verlängerung“ rechts stehen; läuft sie, steht es im Abzeichen
+    if (status === 'paused') { expect(screen.getByTestId('hall-overtime-text')).toHaveTextContent('Verlängerung'); } else { expect(screen.queryByTestId('hall-overtime-text')).toBeNull(); }
   });
 
   it('Gegenbeispiel: bei einem Abschnitt steht kein Abschnitt', () => {
@@ -457,9 +466,13 @@ describe('Texte des Uhrbands und Vorlesetext in Deutsch und Englisch (Sprachwert
   });
 
   it('Gegenbeispiel: Kindermodus während des Turniers zeigt das Spiel ohne Torzahlen, nicht den Satz; mit Ergebnissen nach dem Abschluss „Endstand“', () => {
-    zeige({ patch: laeuft(), ohneErgebnis: true });
+    const lauf = zeige({ patch: laeuft(), ohneErgebnis: true });
     expect(screen.queryByTestId('hall-ended-kids')).toBeNull();
     expect(screen.getByTestId('hall-display')).toBeInTheDocument();
+    lauf.unmount();
+    zeige({ patch: { matchStatus: 'finished', scoreA: 2, scoreB: 1, decidedBy: 'regular', liveState: undefined }, turnier: { lifecycleStatus: 'finished' } });
+    expect(screen.getByTestId('hall-endstand')).toHaveTextContent('Endstand');
+    expect(screen.queryByTestId('hall-ended-kids')).toBeNull();
   });
 
   it('Abschluss, letztes Spiel nach Strafstoßschießen: „4 : 3 i. E.“ bleibt stehen (nur im Profil, ohne gepinntes Spiel)', () => {

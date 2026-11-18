@@ -39,6 +39,9 @@ interface Messung {
   clockPx: number | null;
   /** Schrift der beiden Seitenspalten (links, rechts) */
   seitenPx: number[];
+  /** `data-schrift` der Seitenspalten (verkleinert | notloesung | leer) und Höhe des Fensters */
+  seitenArt: Array<string | null>;
+  fensterH: number;
   names: { text: string; px: number; rahmen: Rahmen; scrollW: number; clientW: number; feld: Rahmen; flaeche: Rahmen }[];
   teile: Record<string, Rahmen>;
   balken: { balken: Rahmen; fuellung: Rahmen; anteil: string | null; ton: string | null; fuellungFarbe: string; bahnFarbe: string } | null;
@@ -54,6 +57,8 @@ interface SaatOptionen {
   zehnMinuten?: boolean;
   /** Restzeit in Sekunden bei Abschnittslänge 20 Minuten (z. B. 1080 = „18:00“: vierstellige Zeit macht die Seitenspalten schmal) */
   rest?: number;
+  /** Zeit abgelaufen: nach dem Laden läuft die Uhr der Seite (`page.clock`) über das Ende des Abschnitts hinaus, ohne dass abgepfiffen wird */
+  abgelaufen?: boolean;
   /** Thema des Monitors */
   thema?: 'dark' | 'light';
   /** Verlängerung läuft (Restzeit 4:00) */
@@ -77,8 +82,10 @@ function saatFuer(fall: string, optionen: SaatOptionen = {}): SaatDatei {
   if (optionen.thema !== undefined) { (turnier.monitors as Array<{ theme?: string }>).forEach((m) => { m.theme = optionen.thema; }); }
   if (optionen.zehnMinuten === true) { live.anchorAt = '@jetzt-ms-300000'; spiel.timerStartTime = '@jetzt-300s'; }
   if (optionen.rest !== undefined) {
+    // angehalten steht die gespielte Zeit des Spiels in `elapsedMs`, der aktuelle Abschnitt beginnt bei `sectionStartMs`
     const gespielt = (1200 - optionen.rest) * 1000;
-    Object.assign(live, { sectionSeconds: 1200, durationSeconds: 1200, elapsedMs: live.status === 'paused' ? gespielt : 0, ...(live.status === 'paused' ? {} : { anchorAt: `@jetzt-ms-${String(gespielt)}` }) });
+    const abschnittStart = Number(live.sectionStartMs ?? 0);
+    Object.assign(live, { sectionSeconds: 1200, durationSeconds: 1200, elapsedMs: live.status === 'paused' ? abschnittStart + gespielt : 0, ...(live.status === 'paused' ? {} : { anchorAt: `@jetzt-ms-${String(gespielt)}` }) });
   }
   if (optionen.verlaengerung === true) {
     Object.assign(live, { phase: 'overtime', playPhase: 'overtime', section: 2, sections: 1, overtimeSeconds: 300, sectionSeconds: 1200, elapsedMs: 0, anchorAt: '@jetzt-ms-60000' });
@@ -93,6 +100,13 @@ async function oeffne(page: Page, fall: string, w: number, h: number, rand: numb
   await expect(page.locator('[data-testid="hall-display"], [data-testid="live-slide-area"]').first()).toBeVisible({ timeout: 25000 });
   await animationenFertig(page);
   await namenEingepasst(page);
+  if (optionen.abgelaufen === true) {
+    // Die Uhr der Seite folgt der Rechnerzeit: nach dem Einpassen der Namen läuft sie (nur die Seitenuhr, `page.clock`) über das Ende des Abschnitts hinaus
+    await page.clock.install({ time: await page.evaluate(() => Date.now()) });
+    await page.clock.fastForward(8 * 60 * 1000);
+    await page.clock.runFor(3000);
+    await expect(page.getByTestId('hall-phase-text'), 'Zeit abgelaufen steht wirklich am Bild').toHaveText('Zeit abgelaufen');
+  }
 }
 
 /**
@@ -201,6 +215,8 @@ async function messe(page: Page): Promise<Messung> {
       digits: ['hall-digits-home', 'hall-digits-away'].map((id) => px(q(id))).filter((v): v is number => v !== null),
       clockPx: px(q('hall-clock') ?? q('hall-kickoff')),
       seitenPx: ['hall-side-left', 'hall-side-right'].map((id) => px(q(id)) ?? 0),
+      seitenArt: ['hall-side-left', 'hall-side-right'].map((id) => q(id)?.getAttribute('data-schrift') ?? null),
+      fensterH: window.innerHeight,
       names: ['home', 'away'].map((s) => {
         const e = q(`hall-teamname-${s}`);
         if (e === null) { throw new Error('Name fehlt'); }
@@ -230,9 +246,30 @@ function pruefeUeberlappung(m: Messung): void {
   }
 }
 
-/** Die Seitenangaben bleiben Nah-Information: mindestens 7,08 % der Höhe (@ZM-213), auch wenn die Zeilen in der Höhe zusammenrücken müssen. */
-function pruefeSeitenschrift(m: Messung): void {
-  for (const px of m.seitenPx) { expect(anteil(px, m.H), 'Schrift der Seitenangaben in % der Höhe').toBeGreaterThanOrEqual(7.08); }
+/**
+ * Die Seitenangaben bleiben Nah-Information: mindestens 7,08 % der BILDSCHIRMhöhe (@ZM-213, 12 Bogenminuten aus 10 m), auch mit Bildrand. Nur als gekennzeichnete
+ * Notlösung (`data-schrift="notloesung"`, eine Lage mit vier Zeilen in der Höhe des Uhrbands) darf sie darunter liegen, nie unter 5,5 %.
+ */
+function pruefeSeitenschrift(m: Messung, notloesungErlaubt = false): void {
+  m.seitenPx.forEach((px, i) => {
+    const anteilBildschirm = (px / m.fensterH) * 100;
+    if (m.seitenArt[i] === 'notloesung') {
+      expect(notloesungErlaubt, `Notlösung der Seitenschrift in einem Fall, der sie nicht braucht (${anteilBildschirm.toFixed(2)} %)`).toBe(true);
+      expect(anteilBildschirm, 'Notlösung nie unter 5,5 % der Bildschirmhöhe').toBeGreaterThanOrEqual(5.5);
+    } else {
+      expect(anteilBildschirm, 'Schrift der Seitenangaben in % der Bildschirmhöhe').toBeGreaterThanOrEqual(7.08 - 0.02);
+    }
+  });
+}
+
+/** Alle erwarteten Angaben stehen sichtbar da (nichts fällt still weg, nichts hat die Fläche 0). */
+function pruefeSichtbar(m: Messung, erwartet: readonly string[]): void {
+  for (const id of erwartet) {
+    const schluessel = Object.keys(m.teile).find((k) => k.endsWith(id));
+    expect(schluessel, `„${id}“ ist sichtbar (nicht ausgeblendet)`).toBeDefined();
+    const r = m.teile[schluessel ?? ''];
+    expect(r.w * r.h, `„${id}“ hat eine Fläche`).toBeGreaterThan(0);
+  }
 }
 
 /** Nichts abgeschnitten: Namen in ihrer Fläche und ihrem Namensfeld, Uhrband-Teile innerhalb der Folie, kein Scrollen. */
@@ -267,23 +304,41 @@ for (const { w, h } of GROESSEN) {
         }
       });
 
-      test('@ZM-213 nichts überlappt und nichts ist abgeschnitten: läuft, 25-Zeichen-Namen, zweistellig, zwei Felder, Abschnitt, Gruppe + Abschnitt, „Abschnitt 3 von 3“ angehalten mit Gruppe und breiter Uhr, zweistellige Minuten („14:5x“), Verlängerung, vor dem Anpfiff, Halbzeit, angehalten', async ({ browser, baseURL }) => {
+      test('@ZM-213 nichts überlappt, nichts ist abgeschnitten, Seitenschrift ≥ 7,08 % des Bildschirms: läuft, 25-Zeichen-Namen, zweistellig, zwei Felder, Abschnitt, vor dem Anpfiff, Halbzeit, angehalten', async ({ page }) => {
+        // Fälle ohne Abwandlung teilen sich eine Seite: ein Wechsel nur der Adresse nach „#“ lädt nicht neu, die Saat enthält alle Fälle
+        for (const fall of ['halle-laeuft', 'halle-lang25', 'halle-zweistellig', 'halle-zwei-felder', 'halle-abschnitt', 'halle-angehalten', 'halle-halbzeit', 'halle-vor']) {
+          await oeffne(page, fall, w, h, rand);
+          const m = await messe(page);
+          pruefeUeberlappung(m);
+          pruefeAbgeschnitten(m);
+          pruefeSeitenschrift(m);
+        }
+      });
+
+      test('@ZM-213 Lagen mit Feld, Gruppe, Abschnitt und Wort: alle Angaben sichtbar, nichts überlappt; „Zeit abgelaufen“, „Abschnitt 3 von 3“ angehalten, zweistellige Minuten, Verlängerung', async ({ browser, baseURL }) => {
         test.setTimeout(120000);
-        const faelle: Array<[string, SaatOptionen]> = [
-          ['halle-laeuft', {}], ['halle-lang25', {}], ['halle-zweistellig', {}], ['halle-zwei-felder', {}], ['halle-abschnitt', {}], ['halle-angehalten', {}], ['halle-halbzeit', {}], ['halle-vor', {}],
-          ['halle-voll', {}], ['halle-voll-3', {}], ['halle-voll-3', { rest: 1080 }], ['halle-laeuft', { zehnMinuten: true }], ['halle-laeuft', { verlaengerung: true }],
+        interface Lage { fall: string; optionen: SaatOptionen; sichtbar: string[]; notloesung?: boolean }
+        const lagen: Lage[] = [
+          { fall: 'halle-voll', optionen: {}, sichtbar: ['hall-field', 'hall-group', 'hall-section'] },
+          { fall: 'halle-voll', optionen: { abgelaufen: true }, sichtbar: ['hall-field', 'hall-group', 'hall-section', 'hall-phase-text'], notloesung: true },
+          { fall: 'halle-voll-3', optionen: {}, sichtbar: ['hall-field', 'hall-group', 'hall-section', 'hall-phase-text'], notloesung: true },
+          { fall: 'halle-voll-3', optionen: { rest: 1080 }, sichtbar: ['hall-field', 'hall-group', 'hall-section', 'hall-phase-text'], notloesung: true },
+          { fall: 'halle-laeuft', optionen: { zehnMinuten: true }, sichtbar: [] },
+          { fall: 'halle-laeuft', optionen: { verlaengerung: true }, sichtbar: [] },
         ];
-        // je Fall ein eigener Kontext: ein Wechsel nur der Adresse nach „#“ lädt die Seite nicht neu, die Saat-Skripte (und damit die Abwandlung des Falls) liefen sonst nicht
-        for (const [fall, optionen] of faelle) {
+        // je Lage ein eigener Kontext: eine Abwandlung der Saat greift nur beim Neuladen
+        for (const { fall, optionen, sichtbar, notloesung } of lagen) {
           const m = await messeInNeuemKontext(browser, baseURL ?? undefined, async (seite) => {
             await oeffne(seite, fall, w, h, rand, optionen);
             // die Zustände sind wirklich da (kein stilles Ausweichen auf „läuft“)
             if (optionen.verlaengerung === true) { await expect(seite.getByTestId('match-status-badge')).toHaveText(/Verlängerung/); }
-            if (optionen.zehnMinuten === true || optionen.rest !== undefined) { await expect(seite.getByTestId('hall-clock')).toHaveText(/^\d\d:\d\d$/); }
+            if (optionen.zehnMinuten === true) { await expect(seite.getByTestId('hall-clock')).toHaveText(/^\d\d:\d\d$/); }
+            if (optionen.rest !== undefined) { await expect(seite.getByTestId('hall-clock')).toHaveText('18:00'); }
           });
+          pruefeSichtbar(m, sichtbar);
           pruefeUeberlappung(m);
           pruefeAbgeschnitten(m);
-          pruefeSeitenschrift(m);
+          pruefeSeitenschrift(m, notloesung === true);
         }
       });
 
@@ -366,7 +421,7 @@ test.describe('@ZM-215 Zeitbalken läuft herunter (1920×1080)', () => {
     await expect(page.getByTestId('hall-kickoff')).toBeVisible();
   });
 
-  test('Bahn gegen Hintergrund und Füllung gegen Bahn (dunkles UND helles Thema): jeweils mindestens 3 : 1 für grün (läuft), grau (angehalten), violett (Schlussphase) und gedämpft (Pause)', async ({ browser, baseURL }) => {
+  test('Bahn gegen Hintergrund und Füllung gegen Bahn (dunkles UND helles Thema): Füllung gegen Bahn mindestens 3 : 1 für grün (läuft), grau (angehalten), violett (Schlussphase) und gedämpft (Pause), Bahn gegen Hintergrund dunkel 2,5 : 1, hell 2,0 : 1', async ({ browser, baseURL }) => {
     type Farbe = [number, number, number, number];
     const lies = (rgb: string): Farbe => { const m = (rgb.match(/[\d.]+/g) ?? []).map(Number); return [m[0] ?? 0, m[1] ?? 0, m[2] ?? 0, m[3] ?? 1]; };
     const lum = (c: Farbe): number => {
@@ -382,7 +437,9 @@ test.describe('@ZM-215 Zeitbalken läuft herunter (1920×1080)', () => {
         const b = (await messeInNeuemKontext(browser, baseURL, (seite) => oeffne(seite, fall, 1920, 1080, 5, { ...optionen, thema }))).balken;
         expect(b, `${fall}/${thema}: Balken vorhanden`).not.toBeNull();
         expect(b?.ton).toBe(ton);
-        for (const hintergrund of HINTERGRUND[thema]) { expect(verhaeltnis(lies(b?.bahnFarbe ?? ''), lies(hintergrund)), `${thema}/${ton}: Bahn ${b?.bahnFarbe} gegen Hintergrund ${hintergrund}`).toBeGreaterThanOrEqual(3); }
+        for (const hintergrund of HINTERGRUND[thema]) { expect(verhaeltnis(lies(b?.bahnFarbe ?? ''), lies(hintergrund)), `${thema}/${ton}: Bahn ${b?.bahnFarbe} gegen Hintergrund ${hintergrund}`).toBeGreaterThanOrEqual(thema === 'dark' ? 2.5 : 2.0); }
+        // hell: die Füllung ist der kräftige (dunklere) Teil, die Bahn der blassere; dunkel umgekehrt
+        expect(lum(lies(b?.fuellungFarbe ?? '')) < lum(lies(b?.bahnFarbe ?? '')), `${thema}/${ton}: Füllung ${thema === 'light' ? 'dunkler' : 'heller'} als die Bahn`).toBe(thema === 'light');
         expect(verhaeltnis(lies(b?.fuellungFarbe ?? ''), lies(b?.bahnFarbe ?? '')), `${thema}/${ton}: Füllung ${b?.fuellungFarbe} gegen Bahn ${b?.bahnFarbe}`).toBeGreaterThanOrEqual(3);
       }
     }
@@ -391,13 +448,17 @@ test.describe('@ZM-215 Zeitbalken läuft herunter (1920×1080)', () => {
 
 /** Setzt die englischen Sprachwerte in die laufende Seite ein und löst das Einpassen aus (die Monitor-Sprache ist heute fest Deutsch). */
 async function englisch(page: Page, texte: Record<string, string>): Promise<void> {
-  await page.evaluate((t) => {
+  const fehlend = await page.evaluate((t) => {
+    const fehlt: string[] = [];
     for (const [id, text] of Object.entries(t)) {
       const e = document.querySelector(`[data-testid="${id}"]`);
-      if (e !== null) { e.textContent = text; }
+      if (e === null) { fehlt.push(id); } else { e.textContent = text; }
     }
     window.dispatchEvent(new Event('resize'));
+    return fehlt;
   }, texte);
+  // kein stilles Überspringen: ein Text für ein Element, das es im Fall nicht gibt, ist ein Fehler der Spec
+  expect(fehlend, 'alle Elemente, deren Text ersetzt wird, stehen im Fall da').toEqual([]);
   await animationenFertig(page);
 }
 
@@ -444,17 +505,24 @@ for (const { w, h } of GROESSEN) {
         pruefeAbgeschnitten(abschnitt);
       });
 
-      test('englisch mit Gruppe, Abschnitt und Wort zugleich („Group A“, „2nd half“, „Time up“; „Period 3 of 3“, „stopped“): nichts ragt in den Balken oder aus der Folie', async ({ page }) => {
-        await oeffne(page, 'halle-voll', w, h, rand);
-        await englisch(page, { 'hall-field': 'Field 1', 'hall-group': 'Group A', 'hall-section': enTournament.matchClock.section.secondHalf, 'hall-phase-text': enMonitor.liveMatch.clock.ended });
-        const abgelaufen = await messe(page);
+      test('englisch mit Gruppe, Abschnitt und Wort zugleich („Group A“, „2nd half“, „Time up“; „Period 3 of 3“, „stopped“): alle Angaben sichtbar, nichts ragt in den Balken oder aus der Folie', async ({ browser, baseURL }) => {
+        const erwartet = ['hall-field', 'hall-group', 'hall-section', 'hall-phase-text'];
+        const abgelaufen = await messeInNeuemKontext(browser, baseURL ?? undefined, async (seite) => {
+          await oeffne(seite, 'halle-voll', w, h, rand, { abgelaufen: true });
+          await englisch(seite, { 'hall-field': 'Field 1', 'hall-group': 'Group A', 'hall-section': enTournament.matchClock.section.secondHalf, 'hall-phase-text': enMonitor.liveMatch.clock.ended });
+        });
+        pruefeSichtbar(abgelaufen, erwartet);
         pruefeUeberlappung(abgelaufen);
         pruefeAbgeschnitten(abgelaufen);
-        await oeffne(page, 'halle-voll-3', w, h, rand);
-        await englisch(page, { 'hall-field': 'Field 1', 'hall-group': 'Group A', 'hall-section': enTournament.matchClock.section.sectionOfN.replace('{{section}}', '3').replace('{{sections}}', '3'), 'hall-phase-text': enMonitor.liveMatch.clock.stopped });
-        const angehalten = await messe(page);
+        pruefeSeitenschrift(abgelaufen, true);
+        const angehalten = await messeInNeuemKontext(browser, baseURL ?? undefined, async (seite) => {
+          await oeffne(seite, 'halle-voll-3', w, h, rand);
+          await englisch(seite, { 'hall-field': 'Field 1', 'hall-group': 'Group A', 'hall-section': enTournament.matchClock.section.sectionOfN.replace('{{section}}', '3').replace('{{sections}}', '3'), 'hall-phase-text': enMonitor.liveMatch.clock.stopped });
+        });
+        pruefeSichtbar(angehalten, erwartet);
         pruefeUeberlappung(angehalten);
         pruefeAbgeschnitten(angehalten);
+        pruefeSeitenschrift(angehalten, true);
       });
     });
   }
