@@ -56,7 +56,8 @@ export function formatRemaining(seconds: number): string {
 const NO_CLOCK = (section: number, sections: number, sectionKey: SpectatorSectionKey | null, stopped: boolean): SpectatorClock =>
   ({ remaining: null, sectionKey, section, sections, stopped, expired: false });
 
-function regularKey(section: number, sections: number): SpectatorSectionKey | null {
+/** Schlüssel der Abschnittsbezeichnung im regulären Spiel (`null` bei nur einem Abschnitt). */
+export function regularKey(section: number, sections: number): SpectatorSectionKey | null {
   if (sections <= 1) { return null; }
   if (sections === 2) { return section <= 1 ? 'firstHalf' : 'secondHalf'; }
   return 'sectionOfN';

@@ -40,6 +40,9 @@
     "winnerAria": "Pokal",
     "bibAria": "Leibchen",
     "afterOvertime": "nach Verlängerung",
+    "hall": {
+      "afterShootout": "{{home}} : {{away}} $t(short:ergebniszelle.afterPenalties)"
+    },
     "winnerLine": "<name>{{name}}</name> gewinnt",
     "penaltyAria": "$t(sport:events.timePenalty) #{{number}}, noch {{rest}}",
     "penaltyAriaNoNumber": "$t(sport:events.timePenalty) ohne Rückennummer, noch {{rest}}"
@@ -81,7 +84,8 @@
       "idleSkip": "Warte auf nächstes Spiel...",
       "nextMatch": "Nächstes Spiel",
       "noMatch": "Kein Spiel geplant",
-      "kickoff": "Anstoß"
+      "kickoff": "Anstoß",
+      "hallNoMoreMatch": "Auf {{field}} folgt heute kein Spiel mehr"
     },
     "sponsor": {
       "notFound": "Sponsor nicht gefunden",

@@ -217,7 +217,7 @@
         "en": "pens",
         "context": "ergebniszelle",
         "shortKey": "ergebniszelle.afterPenalties",
-        "usedBy": ["tournament:matchResult.penaltyShort"]
+        "usedBy": ["tournament:matchResult.penaltyShort", "monitor:liveMatch.hall.afterShootout"]
       }
     },
     "rank": {
