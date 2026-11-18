@@ -72,15 +72,18 @@ describe('B-27 Monitor „Nächste Spiele“: ursprüngliche Uhrzeit', () => {
     expect(note.style.color).toBe(within(zeile('match-8')).getByTestId('monitor-match-time').style.color);
   });
 
-  // @ZP-046 (geändert 2026-11-08, Daniel „das war 10:12 brauch ich nicht dick“): die neue Uhrzeit führt, „(war …)“ ist Zusatz
-  it('@ZP-046 „15:25“ groß und fett, dahinter in derselben Zeile „(war 15:15)“ kleiner und nicht fett, nicht unter der kleinsten Monitor-Schrift', () => {
+  // @ZP-046 (geändert 2026-11-08, Daniel „das war 10:12 brauch ich nicht dick“; geändert 2026-11-18, Bild-OK PR #559: darunter statt dahinter): die neue Uhrzeit führt, „(war …)“ ist Zusatz
+  it('@ZP-046 „15:25“ groß und fett, darunter „(war 15:15)“ kleiner und nicht fett, nicht unter der kleinsten Monitor-Schrift', () => {
     naechste(mitZeiten({ shown: '14:30', original: '14:20' }, { shown: '14:40' }));
     const row = within(zeile('match-8'));
     const uhr = row.getByTestId('monitor-match-clock');
     const war = row.getByTestId('monitor-match-original');
     expect(war).toHaveTextContent('(war 14:20)');
-    // in derselben Zeile, die neue Uhrzeit zuerst
-    expect(war.parentElement).toBe(uhr.parentElement);
+    // darunter: nicht in der Zeile der Uhrzeit, aber in derselben Zeitzelle, die neue Uhrzeit zuerst
+    const uhrZeile = uhr.closest<HTMLElement>('[data-testid="monitor-match-clockline"]')!;
+    expect(uhrZeile.contains(war)).toBe(false);
+    expect(uhrZeile.nextElementSibling?.contains(war)).toBe(true);
+    expect(row.getByTestId('monitor-match-time').contains(war)).toBe(true);
     expect(uhr.compareDocumentPosition(war) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     // „(war …)“ kleiner als die Uhrzeit und nicht fett; die Uhrzeit (Zelle) fett
     expect(parseFloat(uhr.style.fontSize)).toBeGreaterThan(parseFloat(war.style.fontSize));
@@ -91,14 +94,16 @@ describe('B-27 Monitor „Nächste Spiele“: ursprüngliche Uhrzeit', () => {
     expect(war.style.textOverflow).toBe('');
   });
 
-  it('@ZM-087 die Uhrzeit-Spalte hat in jeder Zeile dieselbe feste Breite, mit und ohne Hinweis (Namensspalten bleiben)', () => {
+  // @ZM-211 (Bild-OK PR #559): schmale Zeitspalte statt der bisherigen 9,6 em; @ZM-187: in jeder Zeile dieselbe Breite, mit und ohne Hinweis
+  it('@ZM-211 @ZM-187 die Uhrzeit-Spalte ist schmaler als bisher (9,6 em) und hat in jeder Zeile dieselbe Breite, mit und ohne Hinweis', () => {
     const { unmount } = naechste(mitZeiten({ shown: '14:20' }, { shown: '14:40' }));
     const ohne = [...document.querySelectorAll<HTMLElement>('[data-testid="monitor-match-time"]')].map((el) => el.style.flex);
     unmount();
     naechste(mitZeiten({ shown: '14:30', original: '14:20' }, { shown: '14:40' }));
     const mit = [...document.querySelectorAll<HTMLElement>('[data-testid="monitor-match-time"]')].map((el) => el.style.flex);
     expect(ohne.length).toBeGreaterThan(1);
-    expect(ohne[0]).toContain(displayList.timeFieldWidth);
+    expect(new Set(ohne).size, 'jede Zeile dieselbe Breite').toBe(1);
+    expect(parseFloat(/0 0 ([\d.]+)em/.exec(ohne[0])![1]), 'schmaler als bisher').toBeLessThan(parseFloat(displayList.timeFieldWidth));
     expect(mit).toEqual(ohne);
   });
 });

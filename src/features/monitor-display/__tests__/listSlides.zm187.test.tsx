@@ -307,19 +307,30 @@ describe('@ME-067 @ZM-188 Die Seitenteilung richtet sich nach dem wirksamen Bild
 describe('@ZM-188 Jede Zeile einer Listen-Folie liegt ganz im Bild', () => {
   const verschoben = (namen: ListenTurnierOptions['namen']) => listenTurnier({ namen, verschoben: true, gewertet: true });
 
-  it('verschobenes Spiel: groß die neue Uhrzeit, klein „(war hh:mm)“ – in einer Zeile, ohne Umbruch (Nächste Spiele und Spielplan)', () => {
-    const t = verschoben('kurz');
-    for (const art of ['naechste', 'plan'] as const) {
-      const seite = pageIndexOf((art === 'plan' ? scheduleFieldLayout(withView(t).view, 1) : nextMatchesLayout(withView(t).view, 15)).pages, 'liste-07');
-      const zeile = zeigen(t, art, seite).find(z => z.id === 'liste-07')!.zeile;
+  // @ZM-188 (geändert 2026-11-18, Bild-OK PR #559) und @ZM-211: „(war hh:mm)“ steht klein UNTER der großen neuen Uhrzeit, ohne Umbruch
+  it('verschobenes Spiel: groß die neue Uhrzeit, klein „(war hh:mm)“ darunter, ohne Umbruch (Nächste Spiele und Spielplan)', () => {
+    // das Beispiel aus @ZM-211: sechs Teams, „Nächste Spiele“ mit fünf Spielen, Rand 5 %; dort wächst die Schrift, die Zeitspalte ist schmal
+    const t = listenTurnier({ namen: 'kurz', verschoben: true });
+    const folien = [
+      <NextMatchesSlide key="n" slide={slide('next-matches', { matchCount: 5 })} {...withView(t)} theme="dark" style={{}} overscanPercent={5} />,
+      <ScheduleFieldSlide key="p" slide={plan} {...withView(t)} theme="dark" style={{}} page={pageIndexOf(scheduleFieldLayout(withView(t).view, 1, { overscan: 5, notice: false }).pages, 'liste-07')} overscanPercent={5} />,
+    ];
+    for (const folie of folien) {
+      const { unmount } = render(folie);
+      const zeile = screen.getAllByTestId('monitor-match-row').find(r => r.getAttribute('data-match-id') === 'liste-07')!;
       const uhr = zeile.querySelector<HTMLElement>('[data-testid="monitor-match-clock"]')!;
       const war = zeile.querySelector<HTMLElement>('[data-testid="monitor-match-original"]')!;
       expect(uhr).toHaveTextContent('10:22');
       expect(war).toHaveTextContent('(war 10:12)');
-      expect(uhr.parentElement, 'eine Zeile: Uhrzeit und Zusatz teilen sich eine Reihe').toBe(war.parentElement);
-      expect(uhr.parentElement!.style.display).toBe('flex');
-      expect(uhr.parentElement!.style.whiteSpace).toBe('nowrap');
+      const uhrZeile = uhr.closest<HTMLElement>('[data-testid="monitor-match-clockline"]')!;
+      expect(uhrZeile.contains(war), '„(war …)“ steht nicht in der Zeile der Uhrzeit').toBe(false);
+      expect(uhrZeile.nextElementSibling?.contains(war), 'die Zeile mit „(war …)“ folgt der Uhrzeit-Zeile direkt, in derselben Zeitzelle').toBe(true);
+      expect(uhr.closest('[data-testid="monitor-match-time"]')!.contains(war)).toBe(true);
+      expect(uhr.compareDocumentPosition(war) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(uhrZeile.style.whiteSpace).toBe('nowrap');
+      expect(war.style.whiteSpace).toBe('nowrap');
       expect(parseFloat(uhr.style.fontSize)).toBeGreaterThan(parseFloat(war.style.fontSize));
+      unmount();
     }
   });
 
@@ -341,18 +352,26 @@ describe('@ZM-188 Jede Zeile einer Listen-Folie liegt ganz im Bild', () => {
     expect(screen.getByText(`Seite 2 / ${String(pages.length)}`)).toBeInTheDocument();
   });
 
-  it('lange Namen (45–50 Zeichen): nie mehr Spiele je Seite als bei kurzen Namen, die Schrift bleibt gleich', () => {
+  // @ZM-150 (geändert 2026-11-18, Bild-OK PR #559): die Schrift ist nie kleiner als bisher, in allen Zeilen einer Folie gleich, und wächst bei Platz (@ZM-211)
+  it('lange Namen (45–50 Zeichen): nie mehr Spiele je Seite als bei kurzen Namen, die Schrift nie kleiner als bisher und in jeder Zeile gleich', () => {
     const kurz = scheduleFieldLayout(withView(listenTurnier({ namen: 'kurz' })).view, 1).pages;
     const lang = scheduleFieldLayout(withView(listenTurnier({ namen: 'lang' })).view, 1).pages;
     expect(lang.length).toBeGreaterThanOrEqual(kurz.length);
     expect(Math.max(...lang.map(p => p.length))).toBeLessThanOrEqual(Math.max(...kurz.map(p => p.length)));
-    const sizes = new Set<string>();
+    const bisher = parseFloat(displayList.fontSizes.team);
     for (const namen of ['kurz', 'lang'] as const) {
       render(<NextMatchesSlide slide={naechste} {...withView(listenTurnier({ namen }))} theme="dark" style={{}} />);
-      screen.getAllByTestId('monitor-match-row').forEach(r => { sizes.add(r.querySelector<HTMLElement>('[data-teamname]')!.style.fontSize); });
+      const sizes = screen.getAllByTestId('monitor-match-row').map(r => parseFloat(r.querySelector<HTMLElement>('[data-teamname]')!.style.fontSize));
+      expect(new Set(sizes).size, `Namen ${namen}: in jeder Zeile der Folie dieselbe Schrift`).toBe(1);
+      expect(sizes[0], `Namen ${namen}: nie kleiner als bisher`).toBeGreaterThanOrEqual(bisher);
       cleanup();
     }
-    expect(sizes.size).toBe(1);
+  });
+
+  it('Gegenbeispiel: hat die Folie Platz (kurze Namen, wenige Spiele), wächst die Schrift über das Bisherige hinaus (@ZM-211)', () => {
+    render(<NextMatchesSlide slide={slide('next-matches', { matchCount: 5 })} {...withView(listenTurnier({ namen: 'kurz', beendet: 5 }))} theme="dark" style={{}} />);
+    const groesse = parseFloat(screen.getAllByTestId('monitor-match-row')[0].querySelector<HTMLElement>('[data-teamname]')!.style.fontSize);
+    expect(groesse).toBeGreaterThan(parseFloat(displayList.fontSizes.team));
   });
 
   it('„Nächste Spiele“ blättert wie der Spielplan: acht Spiele mit langen Namen ergeben mehrere Seiten, jede Paarung auf genau einer', () => {
@@ -428,11 +447,19 @@ describe('@ZM-151 @ZM-187 VISUAL-DESIGN § 8: der Stand ist mindestens 1,5 × Na
     expect(extra.style.position).toBe('absolute');
   });
 
-  it('Mittelachse: Uhrzeit-Zeile, Namen und Stand sind Teil einer mittig ausgerichteten Zeile; Zusätze hängen absolut darunter', () => {
+  // @ZM-211 (Bild-OK PR #559): Uhrzeit-Block oben links mit „(war …)“ und Zustand im Fluss darunter; Teamnamen und Stand senkrecht mittig in der Zeile
+  it('Mittelachse: Teamnamen und Stand stehen mittig in der Zeile; Uhrzeit, „(war …)“ und Zustand bilden einen Block im Fluss der Zeitspalte, nichts hängt absolut darunter', () => {
     const t = listenTurnier({ beendet: 5, gewertet: true });
     const zeile = zeigen(t, 'plan', 0)[0].zeile;
     expect(zeile.style.alignItems).toBe('center');
-    expect(zeile.querySelector<HTMLElement>('[data-testid="monitor-match-zusatz"]')!.style.position).toBe('absolute');
+    const zeit = zeile.querySelector<HTMLElement>('[data-testid="monitor-match-time"]')!;
+    const zusatz = zeit.querySelector<HTMLElement>('[data-testid="monitor-match-zusatz"]')!;
+    expect(zusatz.style.position, 'der Zustand steht im Fluss unter der Uhrzeit, nicht absolut').not.toBe('absolute');
+    expect(zeit.firstElementChild!.contains(zeit.querySelector('[data-testid="monitor-match-clock"]')), 'die Uhrzeit steht oben im Block').toBe(true);
+    expect(zusatz.compareDocumentPosition(zeit.querySelector('[data-testid="monitor-match-clock"]')!) & Node.DOCUMENT_POSITION_PRECEDING, 'der Zustand folgt der Uhrzeit').toBeTruthy();
+    for (const spalte of ['[data-teamname]', '[data-testid="monitor-match-separator"]']) {
+      expect(zeile.querySelector(spalte)!.closest('[data-testid="monitor-match-time"]'), 'Namen und Stand stehen nicht im Uhrzeit-Block').toBeNull();
+    }
   });
 });
 
