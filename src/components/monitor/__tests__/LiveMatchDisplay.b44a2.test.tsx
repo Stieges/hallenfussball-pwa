@@ -3,7 +3,7 @@
  * @ZM-125 · @ZM-087 · @ZM-137 · @ZM-139 · @ZM-140
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { LiveMatchDisplay } from '../LiveMatchDisplay';
 import { MatchTimer } from '../MatchTimer';
 import { TeamNameDisplay } from '../TeamNameDisplay';
@@ -162,47 +162,53 @@ describe('„ohne Ergebnis“ lesbar und mit Abstand (Kindermodus)', () => {
   });
 });
 
-// @ZM-215 (Daniel 2026-11-18, ersetzt „Text über der Uhr“ aus R5 PR 2 / @ZM-166): ein Wort („angehalten“, „Pause · Halbzeit“, „Zeit abgelaufen“, „Verlängerung“) steht nur bei Abweichung
+// @ZM-215 (Daniel 2026-11-18, ersetzt „Text über der Uhr“ aus R5 PR 2 / @ZM-166; Daniel 2026-11-19: Symbole statt Wörter): ein Symbol (Pause, halber Kreis, Pfeife, Kreis mit Plus) steht nur bei Abweichung
 // vom laufenden Spiel und links neben der Uhr, nie darüber; im laufenden Spiel steht keins, das Wort „Restzeit“ gibt es nicht (@ZM-137: „Uhr hält bei Unterbrechung“ gestrichen
-// 2026-10-16). Das Wort behält die Regeln aus B-44a2: Hinweisgröße, nie umbrechen; die Uhr bleibt mit und ohne Wort an derselben Stelle (Mitte der Zeile).
-describe('Wort neben der Uhr (@ZM-166, @ZM-137, @ZM-215)', () => {
+// 2026-10-16). Das Symbol trägt das bisherige Wort als zugänglichen Namen, steht nie als Wort da, ist fast so hoch wie die Ziffern und bricht nie um; die Uhr bleibt mit und ohne Symbol an derselben Stelle (Mitte der Zeile).
+describe('Symbol neben der Uhr (@ZM-166, @ZM-137, @ZM-215)', () => {
   const props = { elapsedSeconds: 300, durationSeconds: 360, status: 'PAUSED', timerElapsedSeconds: 300, size: 'xl' } as const;
   const laufend = { elapsedSeconds: 10, durationSeconds: 360, status: 'RUNNING', timerStartTime: new Date().toISOString(), timerElapsedSeconds: 10, clockMode: 'immer-durchlaufend', size: 'xl' } as const;
+  const hoehe = (cqh: string): number => parseFloat(cqh.replace('cqh', ''));
 
-  it('angehalten: genau ein Wort in Hinweisgröße (≥ 3 % Bildhöhe), kompakt', () => {
+  it('angehalten: genau ein Symbol (Pause) ohne Wort, zugänglicher Name „angehalten“, fast so hoch wie die Ziffern', () => {
     render(<MatchTimer {...props} />);
     const zeile = screen.getByTestId('clock-row');
-    expect(screen.getByTestId('clock-label')).toHaveTextContent('liveMatch.clock.stopped');
+    const symbol = within(screen.getByTestId('clock-label')).getByRole('img');
+    expect(symbol).toHaveAttribute('aria-label', expect.stringMatching(/liveMatch\.clock\.stopped/));
+    expect(symbol).toHaveAttribute('data-symbol', 'pause');
+    expect(screen.getByTestId('clock-label').textContent).toBe(''); // kein Wort, nur das Symbol
     expect(zeile.querySelectorAll('[data-testid="clock-label"]').length).toBe(1);
-    expect(screen.getByTestId('clock-label').style.fontSize).toBe(displayFontSizes.clockHint);
-    expect(parseFloat(screen.getByTestId('clock-label').style.lineHeight)).toBeLessThanOrEqual(1.3);
+    expect(symbol.style.height).toBe(displayLayout.scoreArea.stateSymbol);
+    expect(hoehe(displayLayout.scoreArea.stateSymbol) / hoehe(displayLayout.scoreArea.clockFont)).toBeGreaterThanOrEqual(0.8);
   });
 
   it('steht neben der Uhr in derselben Zeile (vor ihr im Dokument), nicht darüber', () => {
     render(<MatchTimer {...props} />);
     const zeile = screen.getByTestId('clock-row');
-    const wort = screen.getByTestId('clock-label');
+    const symbole = screen.getByTestId('clock-label');
     const uhr = screen.getByTestId('monitor-clock');
-    expect(zeile).toContainElement(wort);
+    expect(zeile).toContainElement(symbole);
     expect(zeile).toContainElement(uhr);
-    expect(wort.compareDocumentPosition(uhr) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(symbole.compareDocumentPosition(uhr) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(zeile.style.display).toBe('grid');
-    expect(wort.style.gridColumn).toBe('1');
+    expect(symbole.parentElement?.style.gridColumn).toBe('1');
     expect(uhr.style.gridColumn).toBe('2');
   });
 
-  it('abgelaufen ohne Abpfiff: „Zeit abgelaufen“ ebenfalls in Hinweisgröße', () => {
+  it('abgelaufen ohne Abpfiff: die Pfeife mit dem Namen „Zeit abgelaufen“, ebenfalls ohne Wort', () => {
     render(<MatchTimer elapsedSeconds={400} durationSeconds={360} status="RUNNING" timerStartTime={new Date().toISOString()} timerElapsedSeconds={400} size="xl" />);
-    expect(screen.getByTestId('clock-label')).toHaveTextContent('liveMatch.clock.ended');
-    expect(screen.getByTestId('clock-label').style.fontSize).toBe(displayFontSizes.clockHint);
+    const symbol = within(screen.getByTestId('clock-label')).getByRole('img');
+    expect(symbol).toHaveAttribute('aria-label', expect.stringMatching(/liveMatch\.clock\.ended/));
+    expect(symbol).toHaveAttribute('data-symbol', 'pfeife');
+    expect(screen.getByTestId('clock-label').textContent).toBe('');
   });
 
-  it('das Wort darf nie umbrechen (absolut, nicht nur im Vergleich der Zustände)', () => {
+  it('das Symbol darf nie umbrechen (absolut, nicht nur im Vergleich der Zustände)', () => {
     render(<MatchTimer {...props} />);
-    expect(screen.getByTestId('clock-label').style.whiteSpace).toBe('nowrap');
+    expect(screen.getByTestId('clock-label').parentElement?.style.whiteSpace).toBe('nowrap');
   });
 
-  it('Gegenbeispiel: im laufenden Spiel steht kein Wort und nirgends „Restzeit“; die Uhr steht in derselben Spalte wie mit Wort (Lage ändert sich nie)', () => {
+  it('Gegenbeispiel: im laufenden Spiel steht kein Symbol und nirgends „Restzeit“; die Uhr steht in derselben Spalte wie mit Wort (Lage ändert sich nie)', () => {
     const lauf = render(<MatchTimer {...laufend} />);
     expect(screen.queryByTestId('clock-label')).toBeNull();
     expect(lauf.container.textContent ?? '').not.toMatch(/Restzeit|clock\.remaining/);

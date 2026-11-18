@@ -5,7 +5,7 @@
  * nie nach einer Zusage.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { screen, act } from '@testing-library/react';
+import { screen, act, within } from '@testing-library/react';
 import { slide } from './monitorFixture';
 import {
   HINWEIS,
@@ -219,7 +219,7 @@ describe('Live-Folie mit laufendem Spiel (@ME-006, Kopfzeile)', () => {
     seite();
     await vorspulen(0);
     expect(kopfzeile()).toBeInTheDocument();
-    expect(screen.getByTestId('live-info')).toHaveTextContent('Feld 1');
+    expect(within(screen.getByTestId('live-info')).getByRole('img', { name: /fieldSelector\.field/ })).toHaveTextContent('1'); // @ZM-215: Feld als Symbol mit Nummer (Testumgebung: i18n-Schlüssel als Name)
     expect(screen.getByTestId('live-group')).toBeEmptyDOMElement();
   });
 

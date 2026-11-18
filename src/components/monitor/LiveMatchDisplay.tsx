@@ -22,7 +22,7 @@ import type { ClockMode } from '../../core/match/clockDisplay';
 import { LiveScoreGrid } from './LiveScoreGrid';
 import { LiveFinalScore, type LiveFinalScoreProps } from './LiveFinalScore';
 import { LiveHeader } from './LiveHeader';
-import { badgeOfLiveMatch } from './liveBadge';
+import { badgeOfLiveMatch, monitorLiveBadge } from './liveBadge';
 import { useLaufendeZeitstrafen, type ZeitstrafenQuelle } from './useLaufendeZeitstrafen';
 import type { MatchBadgeModel, MatchView } from '../../core/view';
 
@@ -133,7 +133,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     <>
       <div style={containerStyle}>
         <LiveHeader
-          badge={badge ?? badgeOfLiveMatch(match)}
+          badge={monitorLiveBadge(badge ?? badgeOfLiveMatch(match))}
           field={match.field ?? 1}
           matchNumber={match.number}
           group={group ?? match.group}

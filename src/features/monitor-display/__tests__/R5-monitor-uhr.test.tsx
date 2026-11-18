@@ -75,8 +75,16 @@ function zeige(t: Tournament, jetzt: () => number, pinnedMatchId?: string) {
 }
 
 const uhrText = () => screen.getByTestId('monitor-clock').textContent;
-/** Das Wort neben der Uhr (@ZM-215): nur bei Abweichung vom laufenden Spiel, sonst `null`; „Restzeit“ gibt es nicht */
-const wortAnDerUhr = () => screen.queryByTestId('clock-label')?.textContent ?? null;
+/**
+ * Das bisherige Wort neben der Uhr (@ZM-215): nur bei Abweichung vom laufenden Spiel, sonst `null`; „Restzeit“ gibt es nicht. Seit Daniel 2026-11-19 (Symbole statt Text) steht dort
+ * ein Symbol: gelesen wird sein zugänglicher Name (`aria-label`), und es steht nie ein Wort als Text da.
+ */
+const wortAnDerUhr = (): string | null => {
+  const el = screen.queryByTestId('clock-label');
+  if (el === null) { return null; }
+  expect(el.textContent, 'an der Uhr steht kein Wort, nur ein Symbol').toBe('');
+  return Array.from(el.querySelectorAll('[aria-label]')).map((e) => e.getAttribute('aria-label')).join(' + ');
+};
 
 beforeEach(() => { vi.useFakeTimers(); });
 afterEach(() => { vi.useRealTimers(); });
@@ -101,14 +109,15 @@ describe('@ZM-176 @ME-031 Die Uhr folgt der Serverzeit, nicht der Uhr des Hallen
 });
 
 describe('@ZM-084 Pause und Weiter (Test 3)', () => {
-  it('@ZM-199 Tom drückt bei 6:41 „Pause“: die Uhr steht bei 6:41, neben der Uhr „angehalten“, das Abzeichen sagt „Pause“; „Weiter“ → läuft ab 6:41', () => {
+  it('@ZM-199 Tom drückt bei 6:41 „Pause“: die Uhr steht bei 6:41, neben der Uhr das Symbol „angehalten“, das Abzeichen sagt „Live“; „Weiter“ → läuft ab 6:41', () => {
     vi.setSystemTime(SERVER);
     const lange = { sectionSeconds: 600 };
     const angehalten = spiel7({ status: 'paused', section: 1, gespieltMs: 199_000, anchorAt: null, ...lange });
     const { neu } = zeige(turnier(angehalten, 'immer-durchlaufend', 20), () => Date.now());
     expect(uhrText()).toBe('6:41');
     expect(wortAnDerUhr()).toBe('angehalten');
-    expect(screen.getByTestId('live-badge')).toHaveTextContent('Pause');
+    expect(screen.getByTestId('live-badge')).toHaveTextContent('Live'); // @ZM-215 (Daniel 2026-11-19): oben links bleibt „Live“, „Pause“ steht als Symbol an der Uhr
+    expect(screen.getByTestId('live-badge')).not.toHaveTextContent('Pause');
     act(() => { vi.advanceTimersByTime(5000); });
     expect(uhrText()).toBe('6:41');
 

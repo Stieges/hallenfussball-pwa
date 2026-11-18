@@ -37,9 +37,11 @@ describe('Abzeichen im Kopf der Live-Folie', () => {
     expect(screen.getByTestId('match-status-badge')).toHaveTextContent('Live');
   });
 
-  it('@OB-066 zeigt Abzeichen „Pause“ bei pausiertem Spiel', () => {
+  // Umgestellt wegen @ZM-215 (Daniel 2026-11-19: „jede Angabe nur an einer Stelle“): bei angehaltener Uhr bleibt das Abzeichen oben links „Live“, „Pause“ steht als Symbol an der Uhr
+  it('@ZM-215 Gegenbeispiel: bei pausiertem Spiel steht oben links „Live“, nicht „Pause“', () => {
     render(<LiveMatchDisplay match={createMatch({ status: 'PAUSED' })} />);
-    expect(screen.getByTestId('match-status-badge')).toHaveTextContent('Pause');
+    expect(screen.getByTestId('match-status-badge')).toHaveTextContent('Live');
+    expect(screen.getByTestId('match-status-badge')).not.toHaveTextContent('Pause');
   });
 
   it('@OB-066 zeigt Abzeichen „Ende“ bei abgeschlossenem Spiel', () => {
@@ -53,16 +55,17 @@ describe('Abzeichen im Kopf der Live-Folie', () => {
     expect(screen.getByTestId('match-kickoff')).toHaveTextContent('15:05');
   });
 
-  it('@OB-066 die Ansicht gibt den Feinstatus vor: Abzeichen „Halbzeit“, „Strafstoßschießen“, „Verlängerung“ statt „Pause“', () => {
-    for (const [state, wort] of [['halftime', 'Halbzeit'], ['shootout', 'Strafstoßschießen'], ['overtime', 'Verlängerung']] as const) {
+  // Umgestellt wegen @ZM-215 (Daniel 2026-11-19): Halbzeitpause, Pause und Verlängerung gehören der Uhr (Symbol), das Abzeichen bleibt „Live“; das Strafstoßschießen bleibt im Abzeichen
+  it('@OB-066 @ZM-215 die Ansicht gibt den Feinstatus vor: „Strafstoßschießen“ steht im Abzeichen, Halbzeit, Pause und Verlängerung nicht (dort bleibt „Live“)', () => {
+    for (const [state, wort] of [['halftime', 'Live'], ['pause', 'Live'], ['overtime', 'Live'], ['shootout', 'Strafstoßschießen']] as const) {
       const { unmount } = render(<LiveMatchDisplay match={createMatch({ status: 'PAUSED' })} badge={{ kind: 'badge', state }} />);
       expect(screen.getByTestId('match-status-badge')).toHaveTextContent(wort);
-      expect(screen.getByTestId('match-status-badge')).not.toHaveTextContent('Pause');
+      for (const gemieden of ['Halbzeit', 'Pause', 'Verlängerung']) { expect(screen.getByTestId('match-status-badge')).not.toHaveTextContent(gemieden); }
       unmount();
     }
   });
 
-  it('@OB-066 @ZM-167 Marke: Live, Pause und Ende stehen links, jedes nur so breit wie sein Wort (keine feste Spaltenbreite)', () => {
+  it('@OB-066 @ZM-167 Marke: Live (auch bei angehaltener Uhr) und Ende stehen links, jedes nur so breit wie sein Wort (keine feste Spaltenbreite)', () => {
     const marken = (['RUNNING', 'PAUSED', 'FINISHED'] as const).map((status) => {
       const { unmount } = render(<LiveMatchDisplay match={createMatch({ status })} />);
       const slot = screen.getByTestId('live-badge');
@@ -71,7 +74,7 @@ describe('Abzeichen im Kopf der Live-Folie', () => {
       unmount();
       return marke;
     });
-    expect(marken.map((m) => m.wort)).toEqual(['Live', 'Pause', 'Ende']);
+    expect(marken.map((m) => m.wort)).toEqual(['Live', 'Live', 'Ende']);
     expect(marken.every((m) => m.slotBreite === '' && m.badgeBreite === '' && m.ausrichtung === 'start')).toBe(true);
   });
 

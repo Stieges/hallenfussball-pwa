@@ -1,12 +1,13 @@
 /**
  * KickoffClock – Anstoßzeit der Live-Folie vor dem Anpfiff (@ZM-195, @ZM-215): steht genau an der Stelle der Uhr, in Größe und Schrift der Uhr
- * (`matchTimerStyles`), mit „Anstoß“ links daneben (wie die Wörter der laufenden Uhr). Kästen, Namen und Uhr-Bereich liegen so wie nach dem Anpfiff; nichts rückt.
+ * (`matchTimerStyles`), mit dem Uhr-Symbol (zugänglicher Name „Anstoß“) links daneben statt des Worts. Kästen, Namen und Uhr-Bereich liegen so wie nach dem Anpfiff; nichts rückt.
  */
 import type { ReactElement, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { MonitorTheme } from '../../types/monitor';
 import { useMonitorTheme } from '../../hooks';
-import { STUFEN, clockBoxStyle, clockRowStyle, containerStyle, timeStyle, wordStyle, type MatchTimerSize } from './matchTimerStyles';
+import { MonitorSymbol } from '../ui/atoms/MonitorSymbole';
+import { STUFEN, clockBoxStyle, clockRowStyle, containerStyle, symbolColumnStyle, timeStyle, type MatchTimerSize } from './matchTimerStyles';
 
 export interface KickoffClockProps {
   /** „hh:mm“ in der Wanduhr des Turniers */
@@ -24,7 +25,9 @@ export function KickoffClock({ time, size = 'xl', theme = 'dark', notes }: Kicko
   return (
     <div style={containerStyle(stufe)} data-testid="monitor-kickoff">
       <div style={clockRowStyle(size)}>
-        <div style={wordStyle(stufe, themeColors)} data-testid="kickoff-label">{t('slides.live.kickoff')}</div>
+        <div style={symbolColumnStyle(themeColors)}>
+          <span data-testid="kickoff-label" data-text="anstoss"><MonitorSymbol kind="uhr" size={stufe.symbol} label={t('slides.live.kickoff')} /></span>
+        </div>
         <div style={clockBoxStyle(size)} data-testid="monitor-clock" data-phase="anstoss">
           <span style={timeStyle(stufe, themeColors, false)} data-monitor="uhr" data-testid="kickoff-time">{time}</span>
         </div>

@@ -84,7 +84,7 @@ describe('@W2A-031 Monitor im Kindermodus: Live-Folie ohne Stand', () => {
     await renderMonitor(buildTournament({ hideScoresForPublic: true }), [slide('live', { fieldId: 'field-1' })]);
     expect(screen.getAllByText('FC Nord').length).toBeGreaterThan(0);
     expect(screen.getAllByText('SV Süd').length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Feld 1/).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('img', { name: /fieldSelector\.field/ }).length).toBeGreaterThan(0); // @ZM-215: Feld als Symbol mit Namen (Testumgebung: i18n-Schlüssel)
     expect(screen.queryByLabelText('Heim: 1')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Gast: 0')).not.toBeInTheDocument();
     expect(screen.queryByText('1:0')).not.toBeInTheDocument();

@@ -92,15 +92,16 @@ describe('LiveMatchDisplay', () => {
       const match = createMockMatch({ field: 2, number: 5 });
       render(<LiveMatchDisplay match={match} />);
 
-      expect(screen.getByText(/Feld 2/)).toBeInTheDocument();
-      expect(screen.getByText(/Spiel 5/)).toBeInTheDocument();
+      // @ZM-215 (Daniel 2026-11-19): das Feld steht als Spielfeld-Symbol mit Nummer, „Feld 2“ ist der zugängliche Name (Testumgebung: Schlüssel)
+      expect(screen.getByRole('img', { name: /fieldSelector\.field/ })).toHaveTextContent('2');
+      expect(screen.getByTestId('live-info')).toHaveTextContent('liveMatch.matchOnly'); // „Spiel 5“ bleibt Text (Testumgebung: Schlüssel)
     });
 
     it('zeigt Gruppeninfo wenn vorhanden', () => {
       const match = createMockMatch({ group: 'A' });
       render(<LiveMatchDisplay match={match} group="A" />);
 
-      expect(screen.getByText(/liveMatch\.group/)).toBeInTheDocument(); // Gruppe läuft über i18n (@ZM-140-Raster)
+      expect(screen.getByRole('img', { name: /liveMatch\.group/ })).toHaveTextContent('A'); // Gruppe als Buchstabe im Kasten, Wort aus i18n als Name (@ZM-215)
     });
 
     it('zeigt Schiedsrichter-Info wenn vorhanden', () => {

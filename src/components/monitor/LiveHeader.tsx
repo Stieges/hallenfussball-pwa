@@ -1,6 +1,7 @@
 /**
  * Kopfzeile der Live-Folie (B-44a2): LIVE-Marke links, Feld/Spiel in der Mitte, Gruppe rechts. Das Feld steht nur, wenn das Turnier mehr als ein Feld hat,
- * die Gruppe nur bei mehr als einer Gruppe (@ZM-215); das Spiel steht immer.
+ * die Gruppe nur bei mehr als einer Gruppe (@ZM-215); das Spiel steht immer als Text („Spiel 3“). Feld und Gruppe stehen als Symbole in Kopfzeilenhöhe
+ * (Spielfeld mit Nummer, Buchstabe im Kasten; zugängliche Namen „Feld 1“, „Gruppe A“, @ZM-215 Daniel 2026-11-19).
  * Der Wachhalten-Hinweis steht nicht hier, sondern als Ecke der Monitor-Seite (B-48a, `WakeLockNotice`).
  */
 import type { CSSProperties } from 'react';
@@ -10,6 +11,7 @@ import type { MatchBadgeModel } from '../../core/view';
 import { isSingleGroupId } from '../../core/models/standingsGroups';
 import { MatchStatusBadge } from '../ui/molecules/MatchStatusBadge';
 import { monitorBadgeTone } from '../ui/molecules/matchStatusBadgeStyle';
+import { FeldSymbol, GruppenKasten } from '../ui/atoms/MonitorSymbole';
 
 const layout = displayLayout.scoreArea;
 
@@ -53,16 +55,27 @@ export function LiveHeader({ badge, field, matchNumber, group, size, themeColors
     color: themeColors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: layout.headerSymbolGap,
   };
+  // Feld und Gruppe in Kopfzeilenhöhe (xl); die kleineren Stufen nehmen die Schrift als Maß
+  const symbolSize = xl ? layout.headerSymbol : displayFontSizes.bodyMD;
 
   return (
     <div style={headerStyle} data-testid="live-header">
       <div style={badgeSlotStyle} data-testid="live-badge">
         <MatchStatusBadge model={badge} size={xl ? 'display' : 'card'} tone={monitorBadgeTone(themeColors)} />
       </div>
-      <div style={infoStyle} data-testid="live-info">{showField ? `Feld ${String(field)} — Spiel ${String(matchNumber)}` : t('liveMatch.matchOnly', { number: matchNumber })}</div>
+      <div style={infoStyle} data-testid="live-info">
+        {showField && <FeldSymbol number={field} label={t('fieldSelector.field', { field })} size={symbolSize} testId="live-field" />}
+        <span>{t('liveMatch.matchOnly', { number: matchNumber })}</span>
+      </div>
       <div style={{ ...infoStyle, color: themeColors.text, justifySelf: 'end' }} data-testid="live-group">
-        {showGroup && group !== undefined && !isSingleGroupId(group) ? t('liveMatch.group', { group }) : null}
+        {showGroup && group !== undefined && !isSingleGroupId(group) && (
+          <GruppenKasten group={group} label={t('liveMatch.group', { group })} size={symbolSize} border={layout.groupBoxBorder} radius={layout.groupBoxRadius} testId="live-group-box" />
+        )}
       </div>
     </div>
   );

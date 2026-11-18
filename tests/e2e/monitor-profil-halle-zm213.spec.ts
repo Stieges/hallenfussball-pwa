@@ -5,6 +5,7 @@
  * - nichts überlappt (Begrenzungsrahmen von Namen, Torzahlen, Uhrband-Teilen), nichts abgeschnitten (Namen, Uhrband innerhalb der Folie)
  * - Torzahl in jedem Zustand an derselben Stelle (@ZM-151)
  * - Zeitbalken mindestens 6 % der Höhe, läuft wie die Restzeit herunter (links verankert: 3 von 9 Minuten gespielt → zwei Drittel gefüllt), Bahn sichtbar
+ * - Symbole statt Wörter im Uhrband (Daniel 2026-11-19, @ZM-215); Seitenschrift in jeder Lage mindestens 7,08 % der Bildschirmhöhe, die Notlösung nie unter 5,5 % (@ZM-213)
  * - Englisch: der Text in der Mitte („4 : 3 on penalties“, „Final score“) verdrängt die Seitenspalten nie. Die Monitor-Sprache ist heute fest Deutsch (@ZM-126 später);
  *   die Spec setzt deshalb die echten englischen Sprachwerte in die laufende Seite ein und löst das Einpassen über die Fenstergröße aus.
  * Keine festen Wartezeiten: gewartet wird auf Zustände (Namen eingepasst, Animationen fertig). Nur Profil `desktop` (setzt das Fenster selbst).
@@ -14,14 +15,12 @@ import { test, expect } from '@playwright/test';
 // @ts-expect-error – .mjs ohne Typen; derselbe Lader wie bei `npm run visual:metrics --saat`
 import { installiereSaat, leseSaat } from '../../scripts/visual-metrics/saat/lader.mjs';
 import { animationenFertig } from './helpers/animationenFertig';
-import { displayHall } from '../../src/design-tokens/displayHall';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 /** Echte englische Sprachwerte der App (Datei der Sprachdateien, kein eingebauter Text). */
 const lies = <T,>(datei: string): T => JSON.parse(readFileSync(join(process.cwd(), 'src/i18n/locales/en', datei), 'utf8')) as T;
-const enMonitor = lies<{ liveMatch: { finalScore: string; hall: { afterShootout: string }; clock: { ended: string; stopped: string } } }>('monitor.json');
-const enTournament = lies<{ matchClock: { section: { secondHalf: string; sectionOfN: string } } }>('tournament.json');
+const enMonitor = lies<{ liveMatch: { finalScore: string; hall: { afterShootout: string } } }>('monitor.json');
 const enSport = lies<{ phases: { afterPenalties: string } }>('sport.json');
 
 test.beforeEach(() => {
@@ -125,7 +124,8 @@ async function oeffne(page: Page, fall: string, w: number, h: number, rand: numb
     await page.clock.install({ time: await page.evaluate(() => Date.now()) });
     await page.clock.fastForward(8 * 60 * 1000);
     await page.clock.runFor(3000);
-    await expect(page.getByTestId('hall-phase-text'), 'Zeit abgelaufen steht wirklich am Bild').toHaveText('Zeit abgelaufen');
+    // @ZM-215 (Daniel 2026-11-19): „Zeit abgelaufen“ steht als Pfeife mit dem Wort als zugänglichem Namen
+    await expect(page.getByTestId('hall-phase-text').getByRole('img', { name: 'Zeit abgelaufen' }), 'Zeit abgelaufen steht wirklich am Bild').toBeVisible();
   }
 }
 
@@ -274,16 +274,16 @@ function pruefeUeberlappung(m: Messung): void {
 
 /**
  * Die Seitenangaben bleiben Nah-Information: mindestens 7,08 % der BILDSCHIRMhöhe (@ZM-213, 12 Bogenminuten aus 10 m), auch mit Bildrand. Nur als gekennzeichnete
- * Notlösung (`data-schrift="notloesung"`, eine Lage mit vier oder mehr Zeilen in der Höhe des Uhrbands) darf sie darunter liegen, nie unter der Untergrenze des Tokens
- * `displayHall.side.fontNot` (5,6 % der Höhe der Folie; N13 des Reviews PR #561: Token und Spec nennen dieselbe Zahl). Das sind mit Bildrand 5 % nur 5,04 % der Bildschirmhöhe,
- * @ZM-213 nennt 5,5 %; 5,5 % passen in der Lage „drei Abschnitte + Gruppe + Zeit abgelaufen“ (N14) nicht mehr in das Uhrband: offen für Daniel (Bericht).
+ * Notlösung (`data-schrift="notloesung"`, eine Lage, in der die Zeilen auch verkleinert nicht in das Uhrband passen) darf sie darunter liegen, nie unter der Zahl aus dem
+ * Gherkin von @ZM-213: 5,5 % der BILDSCHIRMhöhe (Review PR #563 B1: bisher prüfte die Spec die 5,6 % der Folie aus dem Token). Mit den Symbolen statt Text (@ZM-215, Daniel 2026-11-19)
+ * braucht keine Lage die Notlösung mehr; `notloesungErlaubt` ist deshalb in allen Aufrufen aus.
  */
 function pruefeSeitenschrift(m: Messung, notloesungErlaubt = false): void {
   m.seitenPx.forEach((px, i) => {
     const anteilBildschirm = (px / m.fensterH) * 100;
     if (m.seitenArt[i] === 'notloesung') {
       expect(notloesungErlaubt, `Notlösung der Seitenschrift in einem Fall, der sie nicht braucht (${anteilBildschirm.toFixed(2)} %)`).toBe(true);
-      expect((px / m.H) * 100, 'Notlösung nie unter der Untergrenze des Tokens (5,6 % der Höhe der Folie)').toBeGreaterThanOrEqual(parseFloat(displayHall.side.fontNot) - 0.05);
+      expect(anteilBildschirm, 'Notlösung nie unter 5,5 % der Bildschirmhöhe (@ZM-213)').toBeGreaterThanOrEqual(5.5 - 0.02);
     } else {
       expect(anteilBildschirm, 'Schrift der Seitenangaben in % der Bildschirmhöhe').toBeGreaterThanOrEqual(7.08 - 0.02);
     }
@@ -343,33 +343,37 @@ for (const { w, h } of GROESSEN) {
         }
       });
 
-      test('@ZM-213 Lagen mit Feld, Gruppe, Abschnitt und Wort: alle Angaben sichtbar, nichts überlappt; „Zeit abgelaufen“, „Abschnitt 3 von 3“ angehalten, zweistellige Minuten, Verlängerung', async ({ browser, baseURL }) => {
+      test('@ZM-213 Lagen mit Feld, Gruppe, Abschnitt und Symbol: alle Angaben sichtbar, nichts überlappt, Seitenschrift ohne Notlösung (≥ 7,08 %); „Zeit abgelaufen“, „Abschnitt 3 von 3“, zweistellige Minuten, Verlängerung', async ({ browser, baseURL }) => {
         test.setTimeout(120000);
-        interface Lage { fall: string; optionen: SaatOptionen; sichtbar: string[]; notloesung?: boolean }
+        interface Lage { fall: string; optionen: SaatOptionen; sichtbar: string[] }
         const lagen: Lage[] = [
           { fall: 'halle-voll', optionen: {}, sichtbar: ['hall-field', 'hall-group', 'hall-section'] },
-          { fall: 'halle-voll', optionen: { abgelaufen: true }, sichtbar: ['hall-field', 'hall-group', 'hall-section', 'hall-phase-text'], notloesung: true },
-          { fall: 'halle-voll-3', optionen: {}, sichtbar: ['hall-field', 'hall-group', 'hall-section', 'hall-phase-text'], notloesung: true },
-          { fall: 'halle-voll-3', optionen: { rest: 1080 }, sichtbar: ['hall-field', 'hall-group', 'hall-section', 'hall-phase-text'], notloesung: true },
-          // N14 (Review PR #561, Fixrunde 3): drei Abschnitte, Gruppe und „Zeit abgelaufen“ zugleich: rechts stehen fünf Zeilen, die Notlösung der Seitenschrift greift
-          { fall: 'halle-voll', optionen: { dreiAbschnitte: true, abgelaufen: true }, sichtbar: ['hall-field', 'hall-group', 'hall-section', 'hall-phase-text'], notloesung: true },
+          { fall: 'halle-voll', optionen: { abgelaufen: true }, sichtbar: ['hall-field', 'hall-group', 'hall-section', 'hall-phase-text'] },
+          { fall: 'halle-voll-3', optionen: {}, sichtbar: ['hall-field', 'hall-group', 'hall-section', 'hall-phase-text'] },
+          { fall: 'halle-voll-3', optionen: { rest: 1080 }, sichtbar: ['hall-field', 'hall-group', 'hall-section', 'hall-phase-text'] },
+          // N14 (Review PR #563 B1): drei Abschnitte, Gruppe, Feld und „Zeit abgelaufen“ zugleich – mit Symbolen steht jede Angabe in einer Zeile, die Untergrenze 5,5 % aus @ZM-213 gilt ohne Notlösung
+          { fall: 'halle-voll', optionen: { dreiAbschnitte: true, abgelaufen: true }, sichtbar: ['hall-field', 'hall-group', 'hall-section', 'hall-phase-text'] },
           { fall: 'halle-laeuft', optionen: { zehnMinuten: true }, sichtbar: [] },
-          { fall: 'halle-laeuft', optionen: { verlaengerung: true }, sichtbar: [] },
+          { fall: 'halle-laeuft', optionen: { verlaengerung: true }, sichtbar: ['hall-phase-text'] },
         ];
         // je Lage ein eigener Kontext: eine Abwandlung der Saat greift nur beim Neuladen
-        for (const { fall, optionen, sichtbar, notloesung } of lagen) {
+        for (const { fall, optionen, sichtbar } of lagen) {
           const m = await messeInNeuemKontext(browser, baseURL ?? undefined, async (seite) => {
             await oeffne(seite, fall, w, h, rand, optionen);
             // die Zustände sind wirklich da (kein stilles Ausweichen auf „läuft“)
-            if (optionen.verlaengerung === true) { await expect(seite.getByTestId('match-status-badge')).toHaveText(/Verlängerung/); }
+            // @ZM-215 (Daniel 2026-11-19): die Verlängerung steht nur an der Uhr (Kreis mit Plus), das Abzeichen bleibt „Live“
+            if (optionen.verlaengerung === true) {
+              await expect(seite.getByTestId('hall-phase-text').getByRole('img', { name: 'Verlängerung' })).toBeVisible();
+              await expect(seite.getByTestId('match-status-badge')).toHaveText('Live');
+            }
             if (optionen.zehnMinuten === true) { await expect(seite.getByTestId('hall-clock')).toHaveText(/^\d\d:\d\d$/); }
             if (optionen.rest !== undefined) { await expect(seite.getByTestId('hall-clock')).toHaveText('18:00'); }
-            if (optionen.dreiAbschnitte === true) { await expect(seite.getByTestId('hall-section')).toHaveText('Abschnitt 3 von 3'); }
+            if (optionen.dreiAbschnitte === true) { await expect(seite.getByTestId('hall-section')).toHaveAttribute('aria-label', 'Abschnitt 3 von 3'); }
           });
           pruefeSichtbar(m, sichtbar);
           pruefeUeberlappung(m);
           pruefeAbgeschnitten(m);
-          pruefeSeitenschrift(m, notloesung === true);
+          pruefeSeitenschrift(m);
         }
       });
 
@@ -532,46 +536,34 @@ for (const { w, h } of GROESSEN) {
         pruefeAbgeschnitten(ende);
       });
 
-      test('englisches Uhrband (Field, Group, 2nd half): nichts überlappt, nichts abgeschnitten', async ({ page }) => {
-        await oeffne(page, 'halle-zwei-felder', w, h, rand);
-        await englisch(page, { 'hall-field': 'Field 1', 'hall-group': 'Group A' });
-        const laeuft = await messe(page);
-        pruefeUeberlappung(laeuft);
-        pruefeAbgeschnitten(laeuft);
-        await oeffne(page, 'halle-abschnitt', w, h, rand);
-        await englisch(page, { 'hall-section': '2nd half' });
-        const abschnitt = await messe(page);
-        pruefeUeberlappung(abschnitt);
-        pruefeAbgeschnitten(abschnitt);
-      });
-
-      test('englisch mit Gruppe, Abschnitt und Wort zugleich („Group A“, „2nd half“, „Time up“; „Period 3 of 3“, „stopped“): alle Angaben sichtbar, nichts ragt in den Balken oder aus der Folie', async ({ browser, baseURL }) => {
+      // Seit @ZM-215 (Daniel 2026-11-19: Symbole statt Text) stehen im Uhrband keine Wörter mehr: Feld, Gruppe, Abschnitt und Uhr-Zustand sind Symbole, die Sprache ändert ihre Größe nicht.
+      // Die englischen Wörter stehen nur noch in den zugänglichen Namen (Vorlesetext), nicht im Bild.
+      test('Uhrband mit Symbolen (Feld, Gruppe, Abschnitt, Zustand): sprachunabhängig, nichts überlappt, nichts abgeschnitten, Seitenschrift ≥ 7,08 %', async ({ browser, baseURL }) => {
         const erwartet = ['hall-field', 'hall-group', 'hall-section', 'hall-phase-text'];
         const abgelaufen = await messeInNeuemKontext(browser, baseURL ?? undefined, async (seite) => {
           await oeffne(seite, 'halle-voll', w, h, rand, { abgelaufen: true });
-          await englisch(seite, { 'hall-field': 'Field 1', 'hall-group': 'Group A', 'hall-section': enTournament.matchClock.section.secondHalf, 'hall-phase-text': enMonitor.liveMatch.clock.ended });
+          await expect(seite.getByTestId('hall-side-right').getByText(/Group|Gruppe|half|Halbzeit|Zeit abgelaufen/)).toHaveCount(0); // kein Wort im Bild
         });
         pruefeSichtbar(abgelaufen, erwartet);
         pruefeUeberlappung(abgelaufen);
         pruefeAbgeschnitten(abgelaufen);
-        pruefeSeitenschrift(abgelaufen, true);
-        const angehalten = await messeInNeuemKontext(browser, baseURL ?? undefined, async (seite) => {
-          await oeffne(seite, 'halle-voll-3', w, h, rand);
-          await englisch(seite, { 'hall-field': 'Field 1', 'hall-group': 'Group A', 'hall-section': enTournament.matchClock.section.sectionOfN.replace('{{section}}', '3').replace('{{sections}}', '3'), 'hall-phase-text': enMonitor.liveMatch.clock.stopped });
-        });
+        pruefeSeitenschrift(abgelaufen);
+        const angehalten = await messeInNeuemKontext(browser, baseURL ?? undefined, async (seite) => { await oeffne(seite, 'halle-voll-3', w, h, rand); });
         pruefeSichtbar(angehalten, erwartet);
         pruefeUeberlappung(angehalten);
         pruefeAbgeschnitten(angehalten);
-        pruefeSeitenschrift(angehalten, true);
+        pruefeSeitenschrift(angehalten);
       });
     });
   }
 }
 
 test.describe('@ZM-213 Abschnitt und @ZM-215 Wort/Feld/Gruppe am fertigen Bild (1920×1080)', () => {
-  test('zwei Halbzeiten: rechts neben der Restzeit „2. Halbzeit“; ein Feld und eine Gruppe: weder Feld noch Gruppe, kein „Restzeit“', async ({ page }) => {
+  test('zwei Halbzeiten: rechts neben der Restzeit zwei gefüllte Punkte („2. Halbzeit“ als Name); ein Feld und eine Gruppe: weder Feld noch Gruppe, kein „Restzeit“', async ({ page }) => {
     await oeffne(page, 'halle-abschnitt', 1920, 1080, 5);
-    await expect(page.getByTestId('hall-section')).toHaveText('2. Halbzeit');
+    await expect(page.getByTestId('hall-section')).toHaveAttribute('aria-label', '2. Halbzeit');
+    await expect(page.getByTestId('hall-section')).toHaveText('');
+    await expect(page.getByTestId('hall-section').locator('[data-gefuellt="ja"]')).toHaveCount(2);
     await expect(page.getByTestId('hall-field')).toHaveCount(0);
     await expect(page.getByText('Restzeit')).toHaveCount(0);
     const m = await messe(page);
@@ -584,7 +576,9 @@ test.describe('@ZM-213 Abschnitt und @ZM-215 Wort/Feld/Gruppe am fertigen Bild (
     await oeffne(page, 'halle-laeuft', 1920, 1080, 5);
     await expect(page.getByTestId('hall-section')).toHaveCount(0);
     await oeffne(page, 'halle-zwei-felder', 1920, 1080, 5);
-    await expect(page.getByTestId('hall-field')).toHaveText('Feld 1');
-    await expect(page.getByTestId('hall-group')).toHaveText('Gruppe A');
+    await expect(page.getByTestId('hall-field')).toHaveAttribute('aria-label', 'Feld 1'); // @ZM-215: Spielfeld-Symbol mit der Nummer 1
+    await expect(page.getByTestId('hall-field')).toHaveText('1');
+    await expect(page.getByTestId('hall-group')).toHaveAttribute('aria-label', 'Gruppe A'); // Buchstabe im Kasten
+    await expect(page.getByTestId('hall-group')).toHaveText('A');
   });
 });

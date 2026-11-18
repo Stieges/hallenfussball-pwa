@@ -26,8 +26,9 @@ test.beforeEach(({ browserName }, testInfo) => {
 });
 
 test.describe('@ZM-177 Kopfzeile der Live-Folie', () => {
-  for (const [gruppe, erwartet] of [['all', ''], ['A', 'Gruppe A']] as const) {
-    test(`Spiel in Gruppe „${gruppe}“: Gruppenangabe „${erwartet}“`, async ({ page }) => {
+  for (const [gruppe, erwartet] of [['all', ''], ['A', 'A']] as const) {
+    // @ZM-215 (Daniel 2026-11-19): die Gruppe steht als Buchstabe im Kasten (Name „Gruppe A“), das Feld als Spielfeld-Symbol mit Nummer (Name „Feld 1“)
+    test(`Spiel in Gruppe „${gruppe}“: Gruppenkasten „${erwartet}“`, async ({ page }) => {
       await page.setViewportSize({ width: 1920, height: 1080 });
       const saat = leseSaat('hallencup-messlauf') as Saat;
       const spiel = turnierIn(saat, 'hallencup-messlauf')?.matches?.find((m) => m.matchStatus === 'running');
@@ -38,7 +39,9 @@ test.describe('@ZM-177 Kopfzeile der Live-Folie', () => {
       await expect(page.getByTestId('live-header')).toBeVisible({ timeout: 25000 });
       await expect(page.getByTestId('live-group')).toHaveText(erwartet);
       await expect(page.getByTestId('live-header')).not.toContainText(/\ball\b/);
-      await expect(page.getByTestId('live-info')).toHaveText('Feld 1 — Spiel 16'); // @ZM-177 „Feld 1 — Spiel n“ bleibt
+      await expect(page.getByTestId('live-field')).toHaveAttribute('aria-label', 'Feld 1'); // @ZM-177 / @ZM-215: Feld 1 als Symbol, daneben „Spiel n“ als Text
+      await expect(page.getByTestId('live-info')).toContainText('Spiel 16');
+      if (gruppe === 'A') { await expect(page.getByRole('img', { name: 'Gruppe A' })).toBeVisible(); } else { await expect(page.getByRole('img', { name: /^Gruppe / })).toHaveCount(0); }
       await bild(page, `monitor-kopfzeile-${gruppe}-1920`);
     });
   }

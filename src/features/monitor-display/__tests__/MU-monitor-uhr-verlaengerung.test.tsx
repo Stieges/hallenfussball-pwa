@@ -175,6 +175,6 @@ describe('@ZM-039 @ZM-139 Monitor-Uhr in der Verlängerung (Paket MU)', () => {
     const tournament = turnier(match);
 
     renderLive(tournament);
-    expect(screen.getByText(/Zeit abgelaufen/)).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Zeit abgelaufen' })).toBeInTheDocument(); // @ZM-215: Pfeife mit dem Namen statt Wort
   });
 });

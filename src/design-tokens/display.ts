@@ -273,6 +273,18 @@ export const displayLayout = {
     clockPadX: '2cqh',
     clockInnerGap: '1cqh',
     clockLineHeight: 1,
+    // @ZM-215 (Daniel 2026-11-19: Symbole statt Text, Entwurf „Live-Folie mit Symbolen“): Symbol des Uhr-Zustands an der Uhr fast so hoch wie die Ziffern (12 % bei 14 % Uhr),
+    // Abstand zwischen zwei Symbolen, Feld und Gruppe in Kopfzeilenhöhe, Punkte des Abschnitts (Größe, Abstand, Randbreite)
+    stateSymbol: '12cqh',
+    stateSymbolGap: '1.6cqh',
+    headerSymbol: '5.8cqh',
+    headerSymbolGap: '1.4cqh',
+    sectionDot: '4.4cqh',
+    sectionDotGap: '1cqh',
+    sectionDotBorder: '0.6cqh',
+    // Kasten der Gruppe: Randbreite und Rundung (Buchstabe in einem Kasten)
+    groupBoxBorder: '0.35cqh',
+    groupBoxRadius: '0.8cqh',
     hintLineHeight: 1.2,
     hintColumnGap: '3cqh',
     // B-44a3: Statusmarke (vorher feste Pixel)

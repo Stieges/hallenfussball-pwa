@@ -32,8 +32,13 @@ export const displayHall = {
   word: { font: '26cqh' },
   /** Zwischenstand im Strafstoßschießen an der Stelle der Restzeit */
   shootout: { font: '23cqh' },
-  /** Angaben links und rechts neben der Uhr (Live-Abzeichen, Feld, Gruppe, Abschnitt): 8 % der Höhe (mit der Vorbelegung des Bildrands von 5 % noch 7,2 % des Bildschirms, mindestens 7,08 %), Nah-Information, bei zu vielen Zeilen im Uhrband höchstens bis `fontMin` verkleinert (nie unter 7,08 % der BILDSCHIRMhöhe, auch mit Bildrand: die Folie ist nie höher als das Fenster, also liegt 7 cqh nie darüber), nie ausgeblendet; reicht auch das nicht, als Notlösung bis `fontNot` (sichtbar vor klein; 5,6 % der Höhe der Folie, mit Bildrand 5 % also 5,04 % der Bildschirmhöhe, die Spec prüft genau diese Grenze; @ZM-213 nennt 5,5 % der Bildschirmhöhe, das passt in der Lage „drei Abschnitte + Gruppe + Zeit abgelaufen“ nicht mehr in das Uhrband, siehe Review PR #561 N13/N14); das lange Wort „Verlängerung“ im Abzeichen (12 Zeichen) in `fontLong`, damit es neben die Restzeit passt */
-  side: { font: '8cqh', fontMin: '7.08vh', fontNot: '5.6cqh', fontLong: '6cqh', lineHeight: 1, badgePadY: '0.04em', badgePadX: '0.4em', badgeGap: '0.35em', badgeDot: '0.38em' },
+  /** Angaben links und rechts neben der Uhr (Live-Abzeichen, Feld, Gruppe, Abschnitt): 8 % der Höhe (mit der Vorbelegung des Bildrands von 5 % noch 7,2 % des Bildschirms, mindestens 7,08 %), Nah-Information, bei zu vielen Zeilen im Uhrband höchstens bis `fontMin` verkleinert (nie unter 7,08 % der BILDSCHIRMhöhe, auch mit Bildrand: die Folie ist nie höher als das Fenster, also liegt 7 cqh nie darüber), nie ausgeblendet; reicht auch das nicht, als Notlösung bis `fontNot` (5,5 % der Bildschirmhöhe, die Grenze aus @ZM-213; mit den Symbolen statt Text von @ZM-215 steht jede Angabe in einer Zeile, die Lage „drei Abschnitte + Gruppe + Feld + Zeit abgelaufen“ braucht keine Verkleinerung mehr, Review PR #563 B1); das lange Wort „Verlängerung“ im Abzeichen (12 Zeichen) in `fontLong`, damit es neben die Restzeit passt */
+  side: { font: '8cqh', fontMin: '7.08vh', fontNot: '5.5vh', fontLong: '6cqh', lineHeight: 1, badgePadY: '0.04em', badgePadX: '0.4em', badgeGap: '0.35em', badgeDot: '0.38em' },
+  /**
+   * Symbole neben der Restzeit (@ZM-215, Daniel 2026-11-19: Symbole statt Text): alle Maße in `em` der Seitenspalte, damit sie mit `useBandFit` zusammen kleiner werden.
+   * Zustand der Uhr (angehalten, Pause, Pfeife, Verlängerung, Anstoß), Feld und Gruppe in Zeilenhöhe, Punkte des Abschnitts (Größe, Abstand, Randbreite), Abstand zweier Symbole
+   */
+  symbols: { state: '1.25em', stateGap: '0.3em', field: '1em', group: '1.1em', dot: '0.55em', dotGap: '0.2em', dotBorder: '0.09em', groupBorder: '0.07em', groupRadius: '0.15em' },
   /** Kein Spiel mehr auf dem Feld: Satz mittig, Schrift 9 % der Höhe */
   noMatch: { font: '9cqh', padX: '6cqh' },
 } as const;

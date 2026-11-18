@@ -95,8 +95,11 @@ describe('@OB-066 Live-Folie des Monitors (Kopf der Live-Anzeige)', () => {
     expect(screen.getByTestId('live-badge')).not.toHaveTextContent('Pause');
   });
 
-  it('@ZM-115 Spiel 7 in der Halbzeit: der Kopf der Live-Folie trägt „Halbzeit“', async () => {
+  // Umgestellt wegen @ZM-215 (Daniel 2026-11-19: jede Angabe nur an einer Stelle): oben links bleibt „Live“, die Halbzeit steht als halber Kreis an der Uhr
+  it('@ZM-115 @ZM-215 Spiel 7 in der Halbzeit: der Kopf der Live-Folie trägt „Live“ (nicht „Halbzeit“), die Uhr zeigt den halben Kreis', async () => {
     zeigeLiveFolie(withCloudColumns(await fPAUSE(), GAME[7], { match_status: 'paused', live_state: HALBZEIT }));
-    expect(screen.getByTestId('live-badge')).toHaveTextContent('Halbzeit');
+    expect(screen.getByTestId('live-badge')).toHaveTextContent('Live');
+    expect(screen.getByTestId('live-badge')).not.toHaveTextContent('Halbzeit');
+    expect(screen.getByTestId('clock-label-halbzeit')).toHaveAttribute('aria-label', expect.stringMatching(/Halbzeit/));
   });
 });

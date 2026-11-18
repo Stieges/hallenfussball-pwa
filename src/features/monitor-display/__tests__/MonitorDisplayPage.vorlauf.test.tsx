@@ -6,7 +6,7 @@
  * Die Uhr ist fest (Europe/Berlin, Dezember = UTC+1); nur `Date` ist gefälscht, damit die Abfrage der Seite normal läuft.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 
 vi.mock('qrcode.react', () => ({
   QRCodeSVG: (props: { value: string }) => <div data-testid="qr-code" data-value={props.value} />,
@@ -72,14 +72,14 @@ describe('Monitor mit nur der Live-Folie vor dem Anpfiff (@ZM-138, @ZP-090)', ()
   it('@ZP-090: 16:10, erster Anstoß 16:15 → „Nächstes Spiel“ mit Anstoß 16:15, nicht die Zuschauer-QR-Folie', async () => {
     await zeigeUm(um(16, 10), turnier({ spiele: [spiel('m1', 1, 1, 16, 15)], folien: [slide('live', { fieldId: 'field-1' })] }));
     await waitFor(() => expect(screen.getByText('Nächstes Spiel')).toBeInTheDocument());
-    expect(screen.getByTestId('monitor-kickoff').textContent).toMatch(/Anstoß\s*16:15/); // @ZM-195: Anstoßzeit an der Stelle der Uhr
+    expect(screen.getByTestId('monitor-kickoff').textContent).toMatch(/^16:15$/); expect(within(screen.getByTestId('kickoff-label')).getByRole('img', { name: 'Anstoß' })).toBeInTheDocument(); // @ZM-215: Uhr-Symbol mit dem Namen „Anstoß“ statt Wort // @ZM-195: Anstoßzeit an der Stelle der Uhr
     expect(screen.queryByTestId('qr-code')).not.toBeInTheDocument();
   });
 
   it('@ZM-138: Pause 3 Minuten, um 15:30 SV Süd gegen FC Nord → um 15:26 „Nächstes Spiel“ mit Anstoßzeit und beiden Namen in den Kästen „0 : 0“ (@ZM-195)', async () => {
     await zeigeUm(um(15, 26), turnier({ spiele: [spiel('m1', 1, 1, 15, 30)], folien: [slide('live', { fieldId: 'field-1' })] }));
     await waitFor(() => expect(screen.getByText('Nächstes Spiel')).toBeInTheDocument());
-    expect(screen.getByTestId('monitor-kickoff').textContent).toMatch(/Anstoß\s*15:30/);
+    expect(screen.getByTestId('monitor-kickoff').textContent).toMatch(/^15:30$/); expect(within(screen.getByTestId('kickoff-label')).getByRole('img', { name: 'Anstoß' })).toBeInTheDocument(); // @ZM-215: Uhr-Symbol mit dem Namen „Anstoß“ statt Wort
     expect(screen.getByText('SV Süd')).toBeInTheDocument();
     expect(screen.getByText('FC Nord')).toBeInTheDocument();
     expect(screen.getByTestId('live-box-home')).toHaveTextContent('0');
@@ -152,7 +152,7 @@ describe('Monitor mit mehreren Folien: die Live-Folie nur in der Vorlaufzeit (@Z
   it('@ZM-138: 12:55 (Vorlaufzeit begonnen) → die Live-Folie kommt in der Folge dran und zeigt „Nächstes Spiel“', async () => {
     await zeigeUm(um(12, 55), turnier({ spiele: [spiel('m1', 1, 1, 13, 0)], folien: folien() }));
     await waitFor(() => expect(screen.getByText('Nächstes Spiel')).toBeInTheDocument());
-    expect(screen.getByTestId('monitor-kickoff').textContent).toMatch(/Anstoß\s*13:00/); // @ZM-195: Anstoßzeit an der Stelle der Uhr
+    expect(screen.getByTestId('monitor-kickoff').textContent).toMatch(/^13:00$/); expect(within(screen.getByTestId('kickoff-label')).getByRole('img', { name: 'Anstoß' })).toBeInTheDocument(); // @ZM-215: Uhr-Symbol mit dem Namen „Anstoß“ statt Wort // @ZM-195: Anstoßzeit an der Stelle der Uhr
   });
 });
 
@@ -170,6 +170,6 @@ describe('Der Beginn der Vorlaufzeit erreicht den laufenden Monitor ohne Neulade
     expect(screen.queryByText('Nächstes Spiel')).not.toBeInTheDocument();
     await act(async () => { await vi.advanceTimersByTimeAsync(15_000); }); // ein Abruf alle 10 s (Profil „low“)
     expect(screen.getByText('Nächstes Spiel')).toBeInTheDocument();
-    expect(screen.getByTestId('monitor-kickoff').textContent).toMatch(/Anstoß\s*15:30/); // @ZM-195: Anstoßzeit an der Stelle der Uhr
+    expect(screen.getByTestId('monitor-kickoff').textContent).toMatch(/^15:30$/); expect(within(screen.getByTestId('kickoff-label')).getByRole('img', { name: 'Anstoß' })).toBeInTheDocument(); // @ZM-215: Uhr-Symbol mit dem Namen „Anstoß“ statt Wort // @ZM-195: Anstoßzeit an der Stelle der Uhr
   });
 });

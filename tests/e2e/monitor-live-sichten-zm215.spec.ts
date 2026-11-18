@@ -1,8 +1,10 @@
 /**
  * Live-Folie der Monitore ohne Profil („Spielfeld (fern)“) am fertigen Bild (@ZM-215, @ZM-151; Regel T2-UI): gemessen an der echten Monitor-Seite (lokaler Stand,
  * Saat `monitor-halle`, Monitor `mon-fern`, keine Produktion) bei 1920×1080 und 1280×720, je mit Bildrand 0 und 5 %.
- * - kein Wort „Restzeit“; ein Wort neben der Uhr nur bei Abweichung („angehalten“, „Pause · Halbzeit“, „Zeit abgelaufen“)
- * - Feld und Gruppe nur, wenn das Turnier mehr als eins davon hat
+ * - kein Wort „Restzeit“; neben der Uhr nur bei Abweichung ein Symbol (Daniel 2026-11-19: Symbole statt Text; Pause-Symbol, halber Kreis, Pfeife, Kreis mit Plus, Uhr vor dem Anpfiff),
+ *   fast so hoch wie die Ziffern, mit dem bisherigen Wort als zugänglichem Namen und nie als Text; oben links bleibt das Abzeichen „Live“ (jede Angabe nur an einer Stelle)
+ * - Feld (Spielfeld-Symbol mit Nummer) und Gruppe (Buchstabe im Kasten) nur, wenn das Turnier mehr als eins davon hat; Abschnitt als Punkte nur bei mehr als einem Abschnitt
+ * - Teamnamen mit 50 Zeichen überlappen weder Uhr noch Symbol noch Schiedsrichter-Zeile (Review PR #563 B3)
  * - Zeitbalken mindestens 5 % der Höhe der Folie, läuft wie die Restzeit herunter (links verankert, 3 von 9 Minuten gespielt: zwei Drittel gefüllt), die abgelaufene
  *   Strecke bleibt als Bahn sichtbar, nie rot, angehalten grau, Schlussphase violett
  * - Uhr größer als vorher (Schrift der Uhr mindestens 13,9 % der Höhe statt 11 %), Torzahlen nicht kleiner (mindestens 22,4 %)
@@ -31,14 +33,22 @@ interface Messung {
   uhrPx: number;
   teile: Record<string, Rahmen>;
   balken: { balken: Rahmen; fuellung: Rahmen; anteil: string | null; ton: string | null; fuellungFarbe: string; bahnFarbe: string; hintergrund: { bild: string; flaeche: Rahmen } } | null;
-  wort: string | null;
-  kopfInfo: string | null;
-  kopfGruppe: string | null;
+  /** zugängliche Namen der Symbole neben der Uhr (leer: im laufenden Spiel kein Symbol) und ihr Text (muss leer sein: kein Wort) */
+  symbole: string[];
+  symbolText: string | null;
+  symbolHoehe: number;
+  abschnitt: { name: string | null; gefuellt: number; gesamt: number } | null;
+  abzeichen: string | null;
+  spielText: string | null;
+  feldName: string | null;
+  feldNummer: string | null;
+  gruppeName: string | null;
+  gruppeText: string | null;
   seiteText: string;
   seitenUeberlauf: boolean;
 }
 
-interface Opt { neunMinuten?: boolean; schlussphase?: boolean; abgelaufen?: boolean; thema?: 'dark' | 'light' }
+interface Opt { neunMinuten?: boolean; schlussphase?: boolean; abgelaufen?: boolean; thema?: 'dark' | 'light'; verlaengerung?: boolean; zweiVonDrei?: boolean; namen50?: boolean; schiedsrichter?: boolean }
 type SaatDatei = { datenbanken: { store: string; eintraege: { tournaments?: Array<Record<string, unknown> & { id: string; matches: Array<Record<string, unknown>> }> } }[] };
 
 /** Saat des Falls; `neunMinuten`: Spielzeit 9 Minuten, 3 gespielt (Restzeit 6:00); `schlussphase`: Uhr-Art mit angehaltener Schlussphase, 19:30 gespielt. */
@@ -52,6 +62,18 @@ function saatFuer(fall: string, o: Opt): SaatDatei {
   if (o.schlussphase === true) {
     turnier.matchCockpitSettings = { clockMode: 'durchlaufend-letzte-minute-angehalten', finalPhaseMinutes: 1 };
     live.anchorAt = '@jetzt-ms-1170000'; spiel.timerStartTime = '@jetzt-1170s';
+  }
+  if (o.verlaengerung === true) { Object.assign(live, { phase: 'overtime', playPhase: 'overtime', elapsedMs: 1200000, sectionStartMs: 1200000, anchorAt: '@jetzt-ms-170000', overtimeSeconds: 300 }); }
+  if (o.zweiVonDrei === true) { Object.assign(live, { section: 2, sections: 3, sectionSeconds: 400, durationSeconds: 1200, elapsedMs: 560000, sectionStartMs: 400000, anchorAt: '@jetzt-ms-160000' }); }
+  if (o.namen50 === true) {
+    const namen: Record<string, string> = { 'TSV Fridolfing': 'Freiwillige Feuerwehr Kirchanschöring Hinterwaldkirch', 'SG Taching/Tengling': 'Kegelclub Oberndorfer Schiffsleute Fridolfing Nord' };
+    for (const t of turnier.teams as Array<{ name: string }>) { t.name = namen[t.name] ?? t.name; }
+  }
+  if (o.schiedsrichter === true) {
+    // die Schiedsrichter-Zeile hängt an einem Team „Schiedsrichter 1“ (Standardbezeichnung, @OB-076)
+    const vorlage = (turnier.teams as Array<Record<string, unknown>>)[0];
+    (turnier.teams as Array<Record<string, unknown>>).push({ ...vorlage, id: 'schiri-1', name: 'Schiedsrichter 1' });
+    spiel.referee = 1;
   }
   if (o.thema !== undefined) { (turnier.monitors as Array<{ theme?: string }>).forEach((m) => { m.theme = o.thema; }); }
   return saat;
@@ -72,7 +94,7 @@ async function messeFall(browser: Browser, baseURL: string | undefined, fall: st
     if (o.abgelaufen === true) {
       // Die Seitenzeit springt über das Ende des Abschnitts hinaus, ohne dass abgepfiffen wird
       await page.clock.setFixedTime(start + 8 * 60 * 1000);
-      await expect(page.getByTestId('clock-label'), 'Zeit abgelaufen steht wirklich am Bild').toHaveText('Zeit abgelaufen');
+      await expect(page.getByTestId('clock-label').getByRole('img', { name: 'Zeit abgelaufen' }), 'Zeit abgelaufen steht wirklich am Bild (Pfeife mit Namen)').toBeVisible();
     }
     await namenEingepasst(page);
     return await messe(page);
@@ -112,7 +134,11 @@ async function messe(page: Page): Promise<Messung> {
     const folie = { getBoundingClientRect: () => ({ left: fb.left + pl, right: fb.right - pr, top: fb.top + pt, bottom: fb.bottom - pb, width: fb.width - pl - pr, height: fb.height - pt - pb }) } as unknown as Element;
     const uhr = q('monitor-clock')?.querySelector('span') ?? q('kickoff-time');
     const teile: Record<string, Rahmen> = {};
-    for (const [name, e] of Object.entries({ 'live-box-home': q('live-box-home'), 'live-box-away': q('live-box-away'), 'live-header': q('live-header'), uhr, 'clock-label': q('clock-label') ?? q('kickoff-label'), balken: q('monitor-zeitbalken') })) {
+    const namenEl = [...document.querySelectorAll('[data-teamname]')];
+    for (const [name, e] of Object.entries({
+      'live-box-home': q('live-box-home'), 'live-box-away': q('live-box-away'), 'live-header': q('live-header'), uhr, 'clock-label': q('clock-label') ?? q('kickoff-label'), 'clock-section': q('clock-section'),
+      balken: q('monitor-zeitbalken'), 'name-home': namenEl[0] ?? null, 'name-away': namenEl[1] ?? null, 'live-referee': q('live-referee'), 'live-field': q('live-field'), 'live-group-box': q('live-group-box'),
+    })) {
       if (e !== null && e !== undefined) { teile[name] = rahmen(e, name); }
     }
     const balken = q('monitor-zeitbalken');
@@ -133,9 +159,16 @@ async function messe(page: Page): Promise<Messung> {
           return { bild: a === null ? '' : getComputedStyle(a).backgroundImage, flaeche: rahmen(a ?? document.body) };
         })(),
       },
-      wort: q('clock-label')?.textContent ?? null,
-      kopfInfo: q('live-info')?.textContent ?? null,
-      kopfGruppe: q('live-group')?.textContent ?? null,
+      symbole: [...(q('clock-label') ?? q('kickoff-label'))?.querySelectorAll('[aria-label]') ?? []].map((e) => e.getAttribute('aria-label') ?? ''),
+      symbolText: (q('clock-label') ?? q('kickoff-label'))?.textContent ?? null,
+      symbolHoehe: ((q('clock-label') ?? q('kickoff-label'))?.querySelector('[aria-label]')?.getBoundingClientRect().height) ?? 0,
+      abschnitt: q('clock-section') === null ? null : { name: q('clock-section')?.getAttribute('aria-label') ?? null, gefuellt: q('clock-section')?.querySelectorAll('[data-gefuellt="ja"]').length ?? 0, gesamt: q('clock-section')?.children.length ?? 0 },
+      abzeichen: q('live-badge')?.textContent ?? null,
+      spielText: q('live-info')?.lastElementChild?.textContent ?? null, // das Spiel steht als Text hinter dem Feld-Symbol
+      feldName: q('live-field')?.getAttribute('aria-label') ?? null,
+      feldNummer: q('live-field')?.textContent ?? null,
+      gruppeName: q('live-group-box')?.getAttribute('aria-label') ?? null,
+      gruppeText: q('live-group-box')?.textContent ?? null,
       seiteText: document.body.innerText,
       seitenUeberlauf: document.documentElement.scrollWidth > window.innerWidth || document.documentElement.scrollHeight > window.innerHeight,
     };
@@ -159,24 +192,30 @@ function pruefeLage(m: Messung): void {
 for (const { w, h } of GROESSEN) {
   for (const rand of RAENDER) {
     test.describe(`@ZM-215 Live-Folie „Spielfeld (fern)“, ${String(w)}×${String(h)}, Bildrand ${String(rand)} %`, () => {
-      test('läuft: Uhr groß (≥ 13,9 % der Höhe), Torzahl nicht kleiner (≥ 22,4 %), Balken ≥ 5 %, kein Wort „Restzeit“, kein Wort neben der Uhr', async ({ browser, baseURL }) => {
+      test('läuft: Uhr groß (≥ 13,9 % der Höhe), Torzahl nicht kleiner (≥ 22,4 %), Balken ≥ 5 %, kein Wort „Restzeit“, kein Symbol neben der Uhr, oben links „Live“', async ({ browser, baseURL }) => {
         const m = await messeFall(browser, baseURL, 'halle-laeuft', w, h, rand);
         expect(anteil(m.uhrPx, m.H), 'Uhr in % der Höhe').toBeGreaterThanOrEqual(13.9);
         expect(anteil(m.digitPx, m.H), 'Torzahl in % der Höhe').toBeGreaterThanOrEqual(22.4);
         expect(anteil(m.balken!.balken.h, m.H), 'Balken in % der Höhe').toBeGreaterThanOrEqual(4.95);
         expect(m.seiteText, 'kein Wort „Restzeit“').not.toContain('Restzeit');
-        expect(m.wort, 'läuft: kein Wort neben der Uhr').toBeNull();
+        expect(m.symbole, 'läuft: kein Symbol neben der Uhr').toEqual([]);
+        expect(m.abzeichen).toBe('Live');
         pruefeLage(m);
       });
 
-      test('Gegenbeispiel Feld und Gruppe: ein Feld und eine Gruppe → nur „Spiel 3“; zwei Felder und zwei Gruppen → „Feld 1 — Spiel 1“ und „Gruppe A“', async ({ browser, baseURL }) => {
+      test('Gegenbeispiel Feld und Gruppe: ein Feld und eine Gruppe → nur „Spiel 3“; zwei Felder und zwei Gruppen → Spielfeld-Symbol mit 1, „Spiel 1“ und Buchstabe A im Kasten (Namen „Feld 1“, „Gruppe A“), kein Wort im Bild', async ({ browser, baseURL }) => {
         const eins = await messeFall(browser, baseURL, 'halle-laeuft', w, h, rand);
-        expect(eins.kopfInfo).toBe('Spiel 3');
-        expect(eins.kopfGruppe).toBe('');
-        expect(eins.seiteText).not.toMatch(/Feld \d/i);
+        expect(eins.spielText).toBe('Spiel 3');
+        expect(eins.feldName).toBeNull();
+        expect(eins.gruppeName).toBeNull();
+        expect(eins.seiteText).not.toMatch(/Feld \d|Gruppe/i);
         const zwei = await messeFall(browser, baseURL, 'halle-zwei-felder', w, h, rand);
-        expect(zwei.kopfInfo).toBe('Feld 1 — Spiel 1');
-        expect(zwei.kopfGruppe).toBe('Gruppe A');
+        expect(zwei.spielText).toBe('Spiel 1');
+        expect(zwei.feldName).toBe('Feld 1');
+        expect(zwei.feldNummer).toBe('1');
+        expect(zwei.gruppeName).toBe('Gruppe A');
+        expect(zwei.gruppeText).toBe('A');
+        expect(zwei.seiteText, 'Feld und Gruppe stehen nicht als Wort da').not.toMatch(/Feld \d|Gruppe/i);
         pruefeLage(zwei);
       });
 
@@ -196,14 +235,42 @@ for (const { w, h } of GROESSEN) {
         }
       });
 
-      test('Wort neben der Uhr nur bei Abweichung: angehalten, Pause · Halbzeit, Zeit abgelaufen; links neben der Uhr, nie ein „Restzeit“', async ({ browser, baseURL }) => {
-        const faelle: Array<[string, string, Opt, string]> = [['angehalten', 'halle-angehalten', {}, 'angehalten'], ['Pause', 'halle-halbzeit', {}, 'Pause · Halbzeit'], ['Zeit abgelaufen', 'halle-laeuft', { abgelaufen: true }, 'Zeit abgelaufen']];
-        for (const [name, fall, o, wort] of faelle) {
+      test('Symbol neben der Uhr nur bei Abweichung: angehalten (Pause), Halbzeitpause (halber Kreis), Zeit abgelaufen (Pfeife), Verlängerung (Plus); links neben der Uhr, fast so hoch wie die Ziffern, kein Wort, oben links „Live“', async ({ browser, baseURL }) => {
+        const faelle: Array<[string, string, Opt, string[]]> = [
+          ['angehalten', 'halle-angehalten', {}, ['angehalten']], ['Halbzeitpause', 'halle-halbzeit', {}, ['Pause · Halbzeit']],
+          ['Zeit abgelaufen', 'halle-laeuft', { abgelaufen: true }, ['Zeit abgelaufen']], ['Verlängerung', 'halle-laeuft', { verlaengerung: true }, ['Verlängerung']],
+        ];
+        for (const [name, fall, o, namen] of faelle) {
           const m = await messeFall(browser, baseURL, fall, w, h, rand, o);
-          expect(m.wort, `Wort im Zustand „${name}“`).toBe(wort);
-          expect(m.teile['clock-label'].r, `Wort „${wort}“ steht links neben der Uhr`).toBeLessThanOrEqual(m.teile.uhr.l + 1);
+          expect(m.symbole, `Symbole im Zustand „${name}“`).toEqual(namen);
+          expect(m.symbolText, `im Zustand „${name}“ steht kein Wort neben der Uhr`).toBe('');
+          expect(m.teile['clock-label'].r, `Symbol „${name}“ steht links neben der Uhr`).toBeLessThanOrEqual(m.teile.uhr.l + 1);
+          expect(m.symbolHoehe / m.uhrPx, `Symbol „${name}“ fast so hoch wie die Ziffern (Symbolhöhe / Schrift der Uhr)`).toBeGreaterThanOrEqual(0.8);
+          expect(m.abzeichen, `oben links „Live“ im Zustand „${name}“ (nie „Pause“, „Halbzeit“, „Verlängerung“)`).toBe('Live');
           expect(m.seiteText).not.toContain('Restzeit');
+          pruefeLage(m);
         }
+        const vor = await messeFall(browser, baseURL, 'halle-vor', w, h, rand);
+        expect(vor.symbole, 'vor dem Anpfiff: Uhr-Symbol „Anstoß“').toEqual(['Anstoß']);
+        expect(vor.symbolText).toBe('');
+        expect(vor.abzeichen).toBe('Nächstes Spiel');
+      });
+
+      test('Abschnitt als Punkte: zwei Felder, Gruppen, 2. von 3 Abschnitten → zwei Punkte gefüllt, einer leer, rechts neben der Uhr; bei einem Abschnitt keine Punkte', async ({ browser, baseURL }) => {
+        const drei = await messeFall(browser, baseURL, 'halle-zwei-felder', w, h, rand, { zweiVonDrei: true });
+        expect(drei.abschnitt).toEqual({ name: 'Abschnitt 2 von 3', gefuellt: 2, gesamt: 3 });
+        expect(drei.teile['clock-section'].l, 'die Punkte stehen rechts neben der Uhr').toBeGreaterThanOrEqual(drei.teile.uhr.r - 1);
+        pruefeLage(drei);
+        const eins = await messeFall(browser, baseURL, 'halle-laeuft', w, h, rand);
+        expect(eins.abschnitt).toBeNull();
+      });
+
+      // Review PR #563 B3: die Namen mit 50 Zeichen (zweizeilig) berühren weder Uhr noch Symbol noch Schiedsrichter-Zeile
+      test('Namen mit 50 Zeichen: keine Überlappung von Namen, Uhr, Symbol (Zeit abgelaufen), Schiedsrichter-Zeile und Balken', async ({ browser, baseURL }) => {
+        const m = await messeFall(browser, baseURL, 'halle-laeuft', w, h, rand, { namen50: true, abgelaufen: true, schiedsrichter: true });
+        expect(Object.keys(m.teile)).toEqual(expect.arrayContaining(['name-home', 'name-away', 'uhr', 'clock-label', 'live-referee', 'balken']));
+        expect(m.symbole).toEqual(['Zeit abgelaufen']);
+        pruefeLage(m);
       });
 
       test('@ZM-215 Zeitbalken: mindestens 5 % der Höhe, die Uhr läuft mit 3 von 9 Minuten gespielt bei zwei Dritteln, links verankert, die abgelaufene Strecke bleibt als Bahn', async ({ browser, baseURL }) => {
