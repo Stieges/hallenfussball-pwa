@@ -10,9 +10,9 @@ import { useBandFit } from '../useBandFit';
 
 interface Breiten { band: number; text: number; links: number; rechts: number }
 
-function Harness() {
+function Harness({ schluessel = 'a' }: { schluessel?: string }) {
   const refs = { band: useRef<HTMLDivElement>(null), slot: useRef<HTMLDivElement>(null), text: useRef<HTMLSpanElement>(null), links: useRef<HTMLDivElement>(null), rechts: useRef<HTMLDivElement>(null) };
-  useBandFit(refs);
+  useBandFit(refs, schluessel);
   return (
     <div ref={refs.band} data-testid="band">
       <div ref={refs.links}><span data-testid="l">Live</span></div>
@@ -47,5 +47,16 @@ describe('@ZM-213 useBandFit', () => {
     stelle({ band: 1600, text: 700, links: 150, rechts: 400 });
     const { getByTestId } = render(<Harness />);
     expect(getByTestId('text').style.fontSize).toBe('');
+  });
+
+  it('N4: bei gleichem Schlüssel (Uhr tickt, Text und Aufbau gleich) wird nicht neu gemessen, bei neuem Schlüssel schon', () => {
+    stelle({ band: 1600, text: 700, links: 150, rechts: 400 });
+    const messungen = vi.spyOn(window, 'getComputedStyle');
+    const { rerender } = render(<Harness schluessel="a" />);
+    const nachErstem = messungen.mock.calls.length;
+    rerender(<Harness schluessel="a" />);
+    expect(messungen.mock.calls.length).toBe(nachErstem);
+    rerender(<Harness schluessel="b" />);
+    expect(messungen.mock.calls.length).toBeGreaterThan(nachErstem);
   });
 });

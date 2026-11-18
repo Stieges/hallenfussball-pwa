@@ -4,7 +4,7 @@
  *
  * Alle Maße in Container-Einheiten der Folienfläche innerhalb des Bildrands (`cqh`, `cqw` nur dort, wo die Breite die Grenze ist): bei
  * 1920×1080, 1280×720 und 1920×940 gilt dasselbe Verhältnis zur Höhe. Mindestwerte nach @ZM-213 (Anteil der Höhe): Torzahl 34 %,
- * Restzeit 26 % (jetzt 36 %), Namen je nach Länge 11 bis 20 %. Die Werte stammen aus der Mockup-Messung des Reviews (1080 px = 100 cqh).
+ * Restzeit 26 % (jetzt 34 %), Namen je nach Länge 7,5 bis 20 %. Die Werte stammen aus der Mockup-Messung des Reviews (1080 px = 100 cqh).
  * Ausgabe der übrigen Folien und der Profile „Spielfeld (fern)“ und „Info (nah)“ bleibt unberührt: nichts hier wird dort gelesen.
  */
 export const displayHall = {
@@ -19,7 +19,16 @@ export const displayHall = {
   /** Leibchen-Zeichen (oben links) und Pokal (oben rechts), klein in der Ecke der Fläche */
   mark: { size: '4.4cqh', inset: '0.8cqh', border: '0.3cqh', iconShare: 0.6 },
   /** Zeitbalken über die ganze Breite: Abstand zur Fläche darüber, Höhe (6 %, @ZM-215), seitlicher Abstand, Umrandung der Bahn */
-  bar: { gapTop: '1.2cqh', height: '6cqh', padX: '2.2cqh', border: '0.5cqh' },
+  bar: { gapTop: '1.2cqh', height: '6cqh', padX: '2.2cqh' },
+  /**
+   * Farben des Zeitbalkens je Thema (@ZM-215): die abgelaufene Strecke ist eine gefüllte Bahn, die sich vom Hintergrund und von jeder Füllung abhebt.
+   * Kontrast Bahn gegen Hintergrund mindestens 3 : 1 (dunkel gegen #1E293B/#0F172A 3,3 : 1, hell gegen #FFFFFF/#E2E8F0 6,2 : 1),
+   * Füllung gegen Bahn mindestens 3 : 1 (Test `displayHall.zm213.test.ts`). Grün läuft, grau angehalten, violett in der Schlussphase, gedämpft in der Pause.
+   */
+  barColors: {
+    dark: { track: '#6A788D', gruen: '#2BF2A0', grau: '#E2E8F0', violett: '#EDE9FE', gedaempft: '#C9D8EE' },
+    light: { track: '#475569', gruen: '#00E676', grau: '#CBD5E1', violett: '#C4B5FD', gedaempft: '#9FB3CE' },
+  },
   /** Uhrband unten: Innenabstand seitlich und unten, Abstand zwischen den Zeilen der Seitenangaben */
   band: { padX: '3.7cqh', padBottom: '1.2cqh', sideGap: '0.6cqh' },
   /** Restzeit bzw. Anstoßzeit: 34 % der Höhe (größtmöglich im Uhrband, @ZM-215; bei vierstelligen Zeiten passt `useBandFit` sie der Breite an); Zeilenhöhe so, dass die Ziffern den Platz ausfüllen */
@@ -28,8 +37,8 @@ export const displayHall = {
   word: { font: '26cqh' },
   /** Zwischenstand im Strafstoßschießen an der Stelle der Restzeit */
   shootout: { font: '23cqh' },
-  /** Angaben links und rechts neben der Uhr (Live-Abzeichen, Feld, Gruppe, Abschnitt): 8 % der Höhe (mit der Vorbelegung des Bildrands von 5 % noch 7,2 % des Bildschirms, mindestens 7,08 %), Nah-Information; das lange Wort „Verlängerung“ im Abzeichen (12 Zeichen) in `fontLong`, damit es neben die Restzeit passt */
-  side: { font: '8cqh', fontLong: '6cqh', lineHeight: 1, badgePadY: '0.04em', badgePadX: '0.4em', badgeGap: '0.35em', badgeDot: '0.38em' },
+  /** Angaben links und rechts neben der Uhr (Live-Abzeichen, Feld, Gruppe, Abschnitt): 8 % der Höhe (mit der Vorbelegung des Bildrands von 5 % noch 7,2 % des Bildschirms, mindestens 7,08 %), Nah-Information, bei zu vielen Zeilen im Uhrband höchstens bis `fontMin` (7,1 %, über der Nah-Grenze 7,08 %) verkleinert, danach fällt die Angabe mit der niedrigsten Rangfolge weg (`data-prio`); das lange Wort „Verlängerung“ im Abzeichen (12 Zeichen) in `fontLong`, damit es neben die Restzeit passt */
+  side: { font: '8cqh', fontMin: '7.1cqh', fontLong: '6cqh', lineHeight: 1, badgePadY: '0.04em', badgePadX: '0.4em', badgeGap: '0.35em', badgeDot: '0.38em' },
   /** Kein Spiel mehr auf dem Feld: Satz mittig, Schrift 9 % der Höhe */
   noMatch: { font: '9cqh', padX: '6cqh' },
 } as const;

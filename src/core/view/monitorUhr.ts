@@ -35,6 +35,8 @@ export interface MonitorUhrModell {
   /** Abschnitt (1-basiert) und Zahl der regulären Abschnitte, sofern bekannt (Profil „Halle (sehr fern)“ zeigt den Abschnitt bei mehr als einem) */
   abschnitt?: number;
   abschnitte?: number;
+  /** Die Uhr zählt die Verlängerung (dort gibt es keinen regulären Abschnitt mehr) */
+  verlaengerung?: boolean;
   /** Uhr-Anker: gleich, solange die Uhr ohne Eingriff weiterläuft */
   anker: string;
   /** Millisekunden bis zum nächsten Wechsel der Anzeige; `null` = die Anzeige steht */
@@ -81,7 +83,7 @@ function laufend(rules: SpectatorClockRules, lauf: Lauf): MonitorUhrModell {
   const text: MonitorUhrText = abgelaufen ? 'zeitAbgelaufen' : lauf.steht ? 'angehalten' : lauf.verlaengerung ? 'verlaengerung' : 'restzeit';
   const tickt = !lauf.steht && !abgelaufen;
   return {
-    restSekunden: anzeige.restSekunden, text, schlussphase, steht: lauf.steht, anker: lauf.anker, abschnitt: lauf.abschnitt, abschnitte: lauf.abschnitte,
+    restSekunden: anzeige.restSekunden, text, schlussphase, steht: lauf.steht, anker: lauf.anker, abschnitt: lauf.abschnitt, abschnitte: lauf.abschnitte, verlaengerung: lauf.verlaengerung,
     balken: zeitBalkenLaufend(anzeige.restSekunden, lauf.laenge, lauf.steht, schlussphase),
     msBisWechsel: !tickt ? null : lauf.genau ? MS_PER_SECOND - (lauf.gespieltMs % MS_PER_SECOND) : ZEITFELDER_TAKT_MS,
   };

@@ -47,7 +47,7 @@ interface Zeige { patch?: Partial<Match>; farben?: Record<string, string | undef
 /** Live-Folie des Felds im Profil (Vorgabe „Halle (sehr fern)“); `patch` ändert Spiel 7, `farben` die Trikotfarben, `namen` die Teamnamen. */
 function zeige({ patch = {}, farben = {}, namen = {}, ohneErgebnis = false, profil = HALLE, feld = 'field-1', pinned, turnier = {} }: Zeige = {}) {
   const teams = FIXTURE_TEAMS.map((t) => ({ ...t, name: namen[t.id] ?? t.name, ...(farben[t.id] === undefined ? {} : { colors: { primary: farben[t.id]! } }) }));
-  const tournament = buildTournament({ teams, matches: withMatch('match-7', patch), hideScoresForPublic: ohneErgebnis, ...turnier });
+  const tournament = buildTournament({ teams, matches: withMatch('match-7', patch), hideScoresForPublic: ohneErgebnis, numberOfGroups: 2, groupSystem: 'groupsAndFinals', ...turnier });
   return render(
     <NowSourceContext.Provider value={() => T0}>
       <LiveSlide slide={slide('live', { fieldId: feld })} {...withView(tournament)} performanceSettings={performanceSettings} theme="dark" style={{}} pinnedMatchId={pinned} profile={profil ?? undefined} />
@@ -354,15 +354,24 @@ describe('@ZM-215 Die Live-Sicht zeigt nur, was man aus der Ferne braucht, und d
     expect((balken.firstElementChild as HTMLElement).style.width).toBe('66.67%'); // links verankert, die abgelaufene Strecke bleibt als Bahn
   });
 
-  it('Die abgelaufene Strecke bleibt als umrandete Bahn sichtbar (auch neben grauer Füllung); die Bahn des Bestands hat keine Umrandung', () => {
+  it('Die abgelaufene Strecke ist eine gefüllte Bahn in der Farbe des Tokens (dunkles Thema); die Bahn des Bestands bleibt wie sie war', () => {
     zeige({ patch: { scoreA: 1, scoreB: 0, liveState: ANGEHALTEN, matchStatus: 'paused' } });
     const balken = screen.getByTestId('hall-zeitbalken');
-    expect(balken.style.borderStyle).toBe('solid');
-    expect(balken.style.borderWidth).toBe(displayHall.bar.border);
-    expect(balken.style.borderColor).not.toBe('');
+    expect(balken.style.background).toBe(rgbVon(displayHall.barColors.dark.track));
+    expect((balken.firstElementChild as HTMLElement).style.background).toBe(rgbVon(displayHall.barColors.dark.grau));
+    expect(balken.style.borderStyle).toBe('');
     const bestand = render(<ZeitBalken anteil={0.5} ton="gruen" testId="bestand-balken" />);
     expect(bestand.getByTestId('bestand-balken').style.borderStyle).toBe('');
-    expect(bestand.getByTestId('bestand-balken').style.borderWidth).toBe('');
+    expect((bestand.getByTestId('bestand-balken').firstElementChild as HTMLElement).style.background).toBe('var(--color-scoreboard-ok)');
+  });
+
+  it('Bahn und Füllung heben sich in beiden Themen ab: Bahn gegen Hintergrund mindestens 3 : 1, jede Füllung gegen die Bahn mindestens 3 : 1', () => {
+    const hintergruende = { dark: [monitorThemes.dark.background, '#1E293B', '#0F172A'], light: ['#FFFFFF', '#E2E8F0', monitorThemes.light.background] } as const;
+    for (const thema of ['dark', 'light'] as const) {
+      const farben = displayHall.barColors[thema];
+      for (const hintergrund of hintergruende[thema]) { expect(getContrastRatio(farben.track, hintergrund), `${thema}: Bahn gegen ${hintergrund}`).toBeGreaterThanOrEqual(3); }
+      for (const ton of ['gruen', 'grau', 'violett', 'gedaempft'] as const) { expect(getContrastRatio(farben[ton], farben.track), `${thema}: ${ton} gegen Bahn`).toBeGreaterThanOrEqual(3); }
+    }
   });
 
   it('Gegenbeispiel: angehalten wird der Balken grau, nie rot', () => {
@@ -381,6 +390,14 @@ describe('@ZM-215 Die Live-Sicht zeigt nur, was man aus der Ferne braucht, und d
     zeige({ patch: { scoreA: 1, scoreB: 0, liveState: { ...ZWEI_ABSCHNITTE, status: 'paused', anchorAt: null }, matchStatus: 'paused' } });
     expect(screen.getByTestId('hall-section')).toHaveTextContent('2. Halbzeit');
     expect(screen.getByTestId('hall-phase-text')).toHaveTextContent('angehalten');
+  });
+
+  it.each([['läuft', 'running', T0], ['angehalten', 'paused', null]] as const)('Gegenbeispiel: in der Verlängerung (%s) steht kein „2. Halbzeit“ und kein „Abschnitt 3 von 2“', (_n, status, anker) => {
+    const verlaengerung = { ...ZWEI_ABSCHNITTE, phase: 'overtime', section: 3, sections: 2, overtimeSeconds: 300, sectionSeconds: 300, status, anchorAt: anker, elapsedMs: 60_000 };
+    zeige({ patch: { scoreA: 1, scoreB: 1, liveState: verlaengerung, matchStatus: status } });
+    expect(screen.getByTestId('hall-clock')).toBeInTheDocument();
+    expect(screen.queryByTestId('hall-section')).toBeNull();
+    expect(screen.queryByText(/Halbzeit|Abschnitt/)).toBeNull();
   });
 
   it('Gegenbeispiel: bei einem Abschnitt steht kein Abschnitt', () => {
@@ -430,6 +447,25 @@ describe('Texte des Uhrbands und Vorlesetext in Deutsch und Englisch (Sprachwert
       expect(screen.getByTestId('hall-phase-text')).toHaveTextContent('stopped');
       expect(panel('home')).toHaveAttribute('aria-label', 'FC Nord: 1');
     });
+  });
+
+  it('Kindermodus nach dem Abschluss (@ZM-121): im Profil steht der Satz „Turnier beendet – danke fürs Mitspielen“, nicht „Endstand“ über Flächen ohne Torzahlen', () => {
+    zeige({ patch: { matchStatus: 'finished', scoreA: 2, scoreB: 1, decidedBy: 'regular', liveState: undefined }, ohneErgebnis: true, turnier: { lifecycleStatus: 'finished' } });
+    expect(screen.getByTestId('hall-ended-kids')).toHaveTextContent('Turnier beendet – danke fürs Mitspielen');
+    expect(screen.queryByTestId('hall-endstand')).toBeNull();
+    expect(screen.queryByTestId('hall-digits-home')).toBeNull();
+  });
+
+  it('Gegenbeispiel: Kindermodus während des Turniers zeigt das Spiel ohne Torzahlen, nicht den Satz; mit Ergebnissen nach dem Abschluss „Endstand“', () => {
+    zeige({ patch: laeuft(), ohneErgebnis: true });
+    expect(screen.queryByTestId('hall-ended-kids')).toBeNull();
+    expect(screen.getByTestId('hall-display')).toBeInTheDocument();
+  });
+
+  it('Abschluss, letztes Spiel nach Strafstoßschießen: „4 : 3 i. E.“ bleibt stehen (nur im Profil, ohne gepinntes Spiel)', () => {
+    zeige({ patch: { matchStatus: 'finished', scoreA: 1, scoreB: 1, penaltyScoreA: 4, penaltyScoreB: 3, decidedBy: 'penalty', liveState: undefined }, turnier: { lifecycleStatus: 'finished' } });
+    expect(screen.getByTestId('hall-shootout-result')).toHaveTextContent('4 : 3 i. E.');
+    expect(screen.getByTestId('hall-digits-home')).toHaveTextContent('1');
   });
 
   it('Vorlesetext: Teamname und Torzahl statt „Heim/Gast“', () => {

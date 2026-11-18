@@ -3,9 +3,9 @@
  * nimmt wie die Restzeit ab, die abgelaufene Strecke bleibt als Bahn sichtbar; darunter steht die Restzeit so groß wie möglich in der Mitte, klein links das Live-Abzeichen
  * (mit dem Feld nur bei mehr als einem Feld) und rechts die Gruppe (nur bei mehr als einer Gruppe), der Abschnitt (nur bei mehr als einem Abschnitt)
  * und ein Wort nur bei Abweichung vom laufenden Spiel („angehalten“, „Pause“, „Zeit abgelaufen“); das Wort „Restzeit“ gibt es nicht. Eine Kopfzeile gibt es nicht. Beide Zeilen liegen in jedem Zustand an derselben Stelle (@ZM-151):
- * - läuft das Spiel: Restzeit (weiß, auch bei angehaltener Uhr; nur der Balken wird grau, Entscheidung offen @ZM-212)
+ * - läuft das Spiel: Restzeit (Themenfarbe, auch bei angehaltener Uhr; nur der Balken wird grau); bei zu wenig Höhe in den Seitenspalten rücken die Zeilen zusammen, im Zweifel fällt die Gruppe vor dem Abschnitt vor dem Wort weg (`useBandFit`)
  * - vor dem Anpfiff: Anstoßzeit an der Stelle der Restzeit, daneben „Nächstes Spiel“ (Abzeichen der Live-Folie)
- * - Halbzeitpause: die Pausenzeit an der Stelle der Restzeit, daneben „Pause · Halbzeit“
+ * - Halbzeitpause: die Pausenzeit an der Stelle der Restzeit, daneben „Pause“ (das Abzeichen links sagt „Halbzeit“)
  * - Strafstoßschießen: Zwischenstand an der Stelle der Restzeit, daneben „Strafstoßschießen“, kein Balken
  * - Ende: „Endstand“ bzw. „4 : 3 i. E.“ an der Stelle der Restzeit, kein Balken
  * Daten und Zustandsregeln dieselben wie in der übrigen Live-Folie (`useMonitorUhr`, `monitorUhrOf`, Abzeichen der Ansicht).
@@ -32,6 +32,8 @@ export interface HallBandProps {
   badge: MatchBadgeModel;
   theme: MonitorTheme;
   colors: MonitorThemeColors;
+  /** Aufgelöstes Thema (Farben des Zeitbalkens je Thema) */
+  resolvedTheme: 'light' | 'dark';
   clockMode?: ClockMode;
   uhr?: MatchTimerUhrQuelle;
   finalScore?: FinalScore;
@@ -65,9 +67,11 @@ function HallLayout({ props, inhalt }: { props: HallBandProps; inhalt: BandInhal
   const textRef = useRef<HTMLSpanElement>(null);
   const linksRef = useRef<HTMLDivElement>(null);
   const rechtsRef = useRef<HTMLDivElement>(null);
-  useBandFit({ band: bandRef, slot: slotRef, text: textRef, links: linksRef, rechts: rechtsRef });
   const slot = inhalt.slot;
   const slotText = slot?.text ?? null;
+  // Neu messen nur, wenn sich Text oder Aufbau ändern, nicht bei jedem Uhrtakt: die Ziffern der Uhr zählen nicht (tabellarische Ziffern, gleiche Breite)
+  const schluessel = [slot?.kind, slotText?.replace(/\d/g, '0'), showField, showGroup, group, inhalt.section, String(inhalt.right ?? ''), JSON.stringify(badge)].join('|');
+  useBandFit({ band: bandRef, slot: slotRef, text: textRef, links: linksRef, rechts: rechtsRef }, schluessel);
   // Strafstoßschießen: das Wort steht über dem Zwischenstand in der Mitte (Mockup „schiessen“), nicht links (es ist breiter als die Seitenspalte)
   const mitteAbzeichen = slot?.kind === 'shootout';
   const abzeichen = <MatchStatusBadge model={badge} size="halle" tone={monitorBadgeTone(colors)} />;
@@ -78,7 +82,7 @@ function HallLayout({ props, inhalt }: { props: HallBandProps; inhalt: BandInhal
         {/* Nah-Information: Live-Abzeichen und Feld (8 % der Höhe, @ZM-213); das Feld nur bei mehr als einem Feld (@ZM-215) */}
         <div ref={linksRef} style={sideColumnStyle('start')} data-monitor="nah" data-testid="hall-side-left">
           {!mitteAbzeichen && abzeichen}
-          {showField && <span style={{ color: colors.textSecondary }} data-testid="hall-field">{t('fieldSelector.field', { field: match.field ?? 1 })}</span>}
+          {showField && <span style={{ color: colors.textSecondary }} data-prio="1" data-testid="hall-field">{t('fieldSelector.field', { field: match.field ?? 1 })}</span>}
         </div>
         <div ref={slotRef} style={{ ...slotStyle, fontSize: slot ? slotFontSize(slot.kind) : undefined, color: slot?.schlussphase === true ? cssVars.colors.scoreboardFinalPhase : colors.timerNormal }} data-testid="hall-slot">
           {mitteAbzeichen && <div style={slotBadgeStyle} data-monitor="nah" data-testid="hall-slot-badge">{abzeichen}</div>}
@@ -87,9 +91,9 @@ function HallLayout({ props, inhalt }: { props: HallBandProps; inhalt: BandInhal
           )}
         </div>
         <div ref={rechtsRef} style={sideColumnStyle('end')} data-monitor="nah" data-testid="hall-side-right">
-          {showGroup && group !== undefined && !isSingleGroupId(group) && <span data-testid="hall-group">{t('liveMatch.group', { group })}</span>}
-          {inhalt.section !== undefined && <span style={{ color: colors.textSecondary }} data-testid="hall-section">{inhalt.section}</span>}
-          {inhalt.right !== null && inhalt.right !== undefined && <span style={{ color: colors.textSecondary }} data-testid="hall-phase-text">{inhalt.right}</span>}
+          {showGroup && group !== undefined && !isSingleGroupId(group) && <span style={{ whiteSpace: 'nowrap' }} data-prio="1" data-testid="hall-group">{t('liveMatch.group', { group })}</span>}
+          {inhalt.section !== undefined && <span style={{ color: colors.textSecondary }} data-prio="2" data-testid="hall-section">{inhalt.section}</span>}
+          {inhalt.right !== null && inhalt.right !== undefined && <span style={{ color: colors.textSecondary }} data-prio="3" data-testid="hall-phase-text">{inhalt.right}</span>}
         </div>
       </div>
     </>
@@ -100,7 +104,8 @@ function HallLayout({ props, inhalt }: { props: HallBandProps; inhalt: BandInhal
 function HallTimedBand(props: HallBandProps): ReactElement {
   const { t } = useTranslation('monitor');
   const { t: tT } = useTranslation('tournament');
-  const { match, theme, colors, clockMode, uhr, finalScore, badge } = props;
+  const { match, theme, clockMode, uhr, finalScore, badge, resolvedTheme } = props;
+  const barColors = displayHall.barColors[resolvedTheme];
   const modell: MonitorUhrModell | null = useMonitorUhr({
     elapsedSeconds: match.elapsedSeconds, durationSeconds: match.durationSeconds, status: match.status, timerStartTime: match.timerStartTime,
     timerElapsedSeconds: match.timerElapsedSeconds, theme, clockMode, uhr,
@@ -108,7 +113,7 @@ function HallTimedBand(props: HallBandProps): ReactElement {
   const schiessen = badge.kind === 'badge' && badge.state === 'shootout';
   const bar = modell?.balken
     // Der Balken beginnt voll und nimmt mit der Restzeit ab (links verankert); die abgelaufene Strecke bleibt als Bahn sichtbar (@ZM-215)
-    ? <ZeitBalken anteil={modell.balken.anteil} ton={modell.balken.ton} hoehe={displayHall.bar.height} spur={colors.background} rand={{ farbe: colors.textMuted, breite: displayHall.bar.border }} testId="hall-zeitbalken" />
+    ? <ZeitBalken anteil={modell.balken.anteil} ton={modell.balken.ton} hoehe={displayHall.bar.height} spur={barColors.track} farben={barColors} testId="hall-zeitbalken" />
     : null;
   if (schiessen) {
     // Zwischenstand nur, wenn die Ansicht ihn liefert (sonst bleibt der Live-Stand aus, @ZM-194): ohne ihn steht nur das Abzeichen
@@ -124,7 +129,8 @@ function HallTimedBand(props: HallBandProps): ReactElement {
   // Ein Wort nur bei Abweichung vom laufenden Spiel (@ZM-215): „angehalten“, „Pause“, „Zeit abgelaufen“; das Abzeichen links sagt schon „Halbzeit“ bzw. „Verlängerung“
   const abweichung = modell.text === 'restzeit' || modell.text === 'verlaengerung' ? null : t(`liveMatch.clock.${UHR_TEXT_KEY[modell.text === 'pauseHalbzeit' ? 'pause' : modell.text]}`);
   // Abschnitt nur bei mehr als einem Abschnitt und nicht in der Pause oder Verlängerung (dort sagt es das Abzeichen)
-  const imAbschnitt = modell.text === 'restzeit' || modell.text === 'angehalten' || modell.text === 'zeitAbgelaufen';
+  // (auch angehalten oder abgelaufen in der Verlängerung: dort gibt es keinen regulären Abschnitt mehr, wie bei der Zuschauer-Uhr)
+  const imAbschnitt = (modell.text === 'restzeit' || modell.text === 'angehalten' || modell.text === 'zeitAbgelaufen') && modell.verlaengerung !== true;
   const abschnittKey = imAbschnitt && modell.abschnitt !== undefined && modell.abschnitte !== undefined ? regularKey(modell.abschnitt, modell.abschnitte) : null;
   const zaehler = { section: modell.abschnitt ?? 1, sections: modell.abschnitte ?? 1 };
   const abschnitt = abschnittKey === 'firstHalf' ? tT('matchClock.section.firstHalf')

@@ -6,7 +6,7 @@
  * (36 % der Höhe). Darunter Zeitbalken und Uhrband (`HallBand`). Keine Kopfzeile, keine Logos.
  * Dieselben Daten wie `LiveMatchDisplay` (Spiel, Kästen der Ansicht, Endstand, Abzeichen, Uhr, Zeitstrafen); die Zustandsregeln
  * (Sieger, Kindermodus, Uhr, Abzeichen) kommen aus denselben Funktionen, hier nur eine andere Anordnung.
- * Kindermodus (`hideScore`): keine Ziffern, die Flächen und Namen bleiben an ihrer Stelle (offen im Record, nicht festgelegt).
+ * Kindermodus (`hideScore`): keine Ziffern, die Flächen und Namen bleiben an ihrer Stelle; nach dem Abschluss steht stattdessen der Satz „Turnier beendet – danke fürs Mitspielen“ (`LiveSlide`, @ZM-121).
  */
 import { useCallback, useState, type ReactElement, type ReactNode } from 'react';
 import { useMonitorTheme } from '../../../hooks';
@@ -35,7 +35,7 @@ export type HallMatchDisplayProps = Pick<
 export function HallMatchDisplay({
   match, group, theme = 'dark', boxes, hideScore = false, clockMode, finalScore, finalRound = false, badge, uhr, zeitstrafenQuelle, kickoff, showField, showGroup,
 }: HallMatchDisplayProps): ReactElement {
-  const { themeColors } = useMonitorTheme(theme);
+  const { themeColors, resolvedTheme } = useMonitorTheme(theme);
   const shown = boxes ?? standardBoxes();
   const zeitstrafen = useLaufendeZeitstrafen(hideScore ? undefined : zeitstrafenQuelle, match.homeTeam.id, match.awayTeam.id);
 
@@ -72,7 +72,7 @@ export function HallMatchDisplay({
         )}
       </div>
       <HallBand
-        match={match} group={group ?? match.group} badge={badge ?? badgeOfLiveMatch(match)} theme={theme} colors={themeColors}
+        match={match} group={group ?? match.group} badge={badge ?? badgeOfLiveMatch(match)} theme={theme} colors={themeColors} resolvedTheme={resolvedTheme}
         clockMode={clockMode} uhr={uhr} finalScore={finalScore} hideScore={hideScore} kickoff={kickoff} showField={showField} showGroup={showGroup}
       />
     </div>

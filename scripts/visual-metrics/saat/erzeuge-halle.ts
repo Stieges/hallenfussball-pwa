@@ -43,7 +43,7 @@ export interface HalleFall {
   /** Zahl der Felder des Turniers (Vorgabe 1); mehr als eines zeigt „Feld N“ im Band (@ZM-215) */
   felder?: number
   /** Zwei Abschnitte (Halbzeiten) statt einem (@ZM-213 Abschnitt, @ZM-215) */
-  abschnitte?: 2
+  abschnitte?: 2 | 3
   /** Gezeigt wird ein Gruppenspiel (Gruppe A) statt des Halbfinales; die übrigen Gruppenspiele bleiben offen (@ZM-215: Gruppe nur bei mehr als einer Gruppe) */
   gruppenspiel?: boolean
 }
@@ -68,6 +68,8 @@ export const FAELLE: readonly HalleFall[] = [
   { id: 'halle-leibchen', code: 'HAL014', titel: 'Läuft: Heim trägt Leibchen, 1:0', zustand: 'laeuft', heim: 'TSV Fridolfing', gast: 'SG Taching/Tengling', stand: [1, 0], leibchen: true },
   { id: 'halle-zwei-felder', code: 'HAL016', titel: 'Läuft: Gruppenspiel in Gruppe A, zwei Felder und zwei Gruppen, 1:0', zustand: 'laeuft', heim: 'TSV Fridolfing', gast: 'SG Taching/Tengling', stand: [1, 0], felder: 2, gruppenspiel: true },
   { id: 'halle-abschnitt', code: 'HAL017', titel: 'Läuft: zwei Halbzeiten, 2. Halbzeit, 1:0', zustand: 'laeuft', heim: 'TSV Fridolfing', gast: 'SG Taching/Tengling', stand: [1, 0], abschnitte: 2 },
+  { id: 'halle-voll', code: 'HAL018', titel: 'Läuft: Gruppe A, zwei Felder, zwei Halbzeiten (Gruppe, Abschnitt und Wort zugleich, mit Zeit abgelaufen in der Spec)', zustand: 'laeuft', heim: 'TSV Fridolfing', gast: 'SG Taching/Tengling', stand: [1, 0], felder: 2, abschnitte: 2, gruppenspiel: true },
+  { id: 'halle-voll-3', code: 'HAL019', titel: 'Uhr angehalten: Gruppe A, zwei Felder, drei Abschnitte („Abschnitt n von 3“)', zustand: 'angehalten', heim: 'TSV Fridolfing', gast: 'SG Taching/Tengling', stand: [1, 0], felder: 2, abschnitte: 3, gruppenspiel: true },
   { id: 'halle-ohne-farbe', code: 'HAL015', titel: 'Läuft: Gast ohne Trikotfarbe (Fallback-Muster), 1:0', zustand: 'laeuft', heim: 'TSV Fridolfing', gast: 'SG Taching/Tengling', stand: [1, 0], farben: { gast: '' } },
 ]
 
@@ -112,7 +114,7 @@ export async function erzeugeFall(fall: HalleFall): Promise<{ turnier: Tournamen
     startTime: '09:00', timeSlot: '09:00 - 16:00', location: { name: 'Sporthalle Fridolfing' },
     numberOfTeams: 4, numberOfGroups: 2, numberOfFields: fall.felder ?? 1, groupSystem: 'groupsAndFinals',
     groupPhaseGameDuration: 20, groupPhaseBreakDuration: 2, finalRoundGameDuration: 20, finalRoundBreakDuration: 2,
-    breakBetweenPhases: 5, resultMode: 'goals', gamePeriods: fall.zustand === 'halbzeit' || fall.abschnitte === 2 ? 2 : 1, halftimeBreak: 1,
+    breakBetweenPhases: 5, resultMode: 'goals', gamePeriods: fall.abschnitte ?? (fall.zustand === 'halbzeit' ? 2 : 1), halftimeBreak: 1,
     teams, groups: [{ id: 'A', customName: 'Gruppe A' }, { id: 'B', customName: 'Gruppe B' }],
     fields: [{ id: 'field-1', defaultName: 'Feld 1' }, ...(fall.felder === 2 ? [{ id: 'field-2', defaultName: 'Feld 2' }] : [])] as Tournament['fields'],
     finalsConfig: { preset: 'top-4', tiebreaker: 'overtime-then-shootout', tiebreakerDuration: 5 },

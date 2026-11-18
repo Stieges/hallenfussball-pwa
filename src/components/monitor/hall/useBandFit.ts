@@ -8,6 +8,7 @@
  * Misst im Browser am Layout (ohne Transformationen); ohne Layout (jsdom) bleibt die Vorgabe.
  */
 import { useCallback, useEffect, useLayoutEffect, type RefObject } from 'react';
+import { displayHall } from '../../../design-tokens';
 
 /**
  * Breite des längsten Worts in einer Seitenspalte. Gemessen an Kopien der Kinder (unsichtbar, absolut, `min-content`, ohne Breitenbegrenzung): ein Kind, das
@@ -41,25 +42,90 @@ export interface BandFitRefs {
   rechts: RefObject<HTMLElement | null>;
 }
 
-/** Setzt die Schrift des Mittentexts (Pixel am Element) so, dass er zwischen die Seitenspalten passt; läuft nach jeder Darstellung und bei Größenänderung. */
-export function useBandFit({ band, slot, text, links, rechts }: BandFitRefs): void {
+const GRUNDSCHRIFT = new WeakMap<HTMLElement, string>();
+
+/** Die Schrift der Seitenspalte aus den Tokens (Inline-Stil der Darstellung), vor jeder Verkleinerung gemerkt. */
+function grundSchrift(spalte: HTMLElement): string {
+  let wert = GRUNDSCHRIFT.get(spalte);
+  if (wert === undefined) { wert = spalte.style.fontSize; GRUNDSCHRIFT.set(spalte, wert); }
+  return wert;
+}
+
+/** Höhe der Zeilen einer Seitenspalte untereinander (Kinder und Abstand), wie sie nach dem Umbruch tatsächlich stehen. */
+function spaltenHoehe(spalte: HTMLElement): number {
+  const kinder = Array.from(spalte.children).filter((k): k is HTMLElement => k instanceof HTMLElement);
+  const abstand = parseFloat(getComputedStyle(spalte).rowGap) || 0;
+  return kinder.reduce((summe, k) => summe + k.offsetHeight, 0) + abstand * Math.max(0, kinder.length - 1);
+}
+
+/** Höhe des Uhrbands ohne Innenabstand. */
+function bandHoehe(band: HTMLElement): number {
+  const stil = getComputedStyle(band);
+  return band.clientHeight - (parseFloat(stil.paddingTop) || 0) - (parseFloat(stil.paddingBottom) || 0);
+}
+
+/** Kleinste Schrift der Seitenangaben im Verhältnis zur Schrift aus den Tokens (Nah-Information bleibt über 7,08 % der Höhe) */
+const SEITEN_UNTERGRENZE = parseFloat(displayHall.side.fontMin) / parseFloat(displayHall.side.font);
+
+/** Zeilen mit Rangfolge (`data-prio`), niedrigste zuerst: bei zu wenig Höhe fällt zuerst die Gruppe weg, dann der Abschnitt, das Wort zuletzt. */
+function rangfolge(spalte: HTMLElement): HTMLElement[] {
+  return Array.from(spalte.children).filter((k): k is HTMLElement => k instanceof HTMLElement && k.dataset.prio !== undefined)
+    .sort((a, b) => Number(a.dataset.prio) - Number(b.dataset.prio));
+}
+
+/** Höchstens so viele Schritte, eine zu hohe Seitenspalte zu verkleinern (der Umbruch ändert sich mit der Schrift). */
+const HOEHEN_SCHRITTE = 4;
+/** Kleine Reserve, damit die Zeilen nicht genau an die Kante stoßen. */
+const HOEHEN_RESERVE = 0.98;
+
+/**
+ * Setzt die Schrift des Mittentexts (Pixel am Element) so, dass er zwischen die Seitenspalten passt, und verkleinert eine Seitenspalte, deren Zeilen
+ * (Gruppe, Abschnitt, Wort, nach dem Umbruch auch mehrzeilig) höher wären als das Uhrband: dann ragt nichts in den Zeitbalken oder aus der Folie.
+ * Läuft, wenn sich `schluessel` (Texte und Aufbau) ändert, und bei Größenänderung, nicht bei jedem Uhrtakt.
+ */
+export function useBandFit({ band, slot, text, links, rechts }: BandFitRefs, schluessel: string): void {
   const passeAn = useCallback(() => {
     const [b, s, t, l, r] = [band.current, slot.current, text.current, links.current, rechts.current];
-    if (!b || !s || !t || !l || !r) { return; }
-    t.style.removeProperty('font-size');
-    const breite = t.offsetWidth;
-    if (breite <= 0) { return; }
-    const stilSlot = getComputedStyle(s);
-    const slotRand = (parseFloat(stilSlot.paddingLeft) || 0) + (parseFloat(stilSlot.paddingRight) || 0);
-    const verfuegbar = seitenInnenbreite(b) - 2 * Math.max(laengstesWort(l), laengstesWort(r)) - slotRand;
-    if (breite > verfuegbar && verfuegbar > 0) {
-      const px = parseFloat(getComputedStyle(t).fontSize);
-      if (Number.isFinite(px)) { t.style.fontSize = `${String(Math.floor((px * verfuegbar) / breite))}px`; }
+    if (!b || !s || !l || !r) { return; }
+    // Seitenspalten auf ihre Schrift aus den Tokens zurücksetzen (die Vorgabe steht als Inline-Stil, sie wird beim ersten Mal gemerkt)
+    for (const spalte of [l, r]) {
+      spalte.style.fontSize = grundSchrift(spalte);
+      for (const zeile of rangfolge(spalte)) { zeile.style.removeProperty('display'); }
+    }
+    if (t) {
+      t.style.removeProperty('font-size');
+      const breite = t.offsetWidth;
+      if (breite > 0) {
+        const stilSlot = getComputedStyle(s);
+        const slotRand = (parseFloat(stilSlot.paddingLeft) || 0) + (parseFloat(stilSlot.paddingRight) || 0);
+        const verfuegbar = seitenInnenbreite(b) - 2 * Math.max(laengstesWort(l), laengstesWort(r)) - slotRand;
+        if (breite > verfuegbar && verfuegbar > 0) {
+          const px = parseFloat(getComputedStyle(t).fontSize);
+          if (Number.isFinite(px)) { t.style.fontSize = `${String(Math.floor((px * verfuegbar) / breite))}px`; }
+        }
+      }
+    }
+    const hoehe = bandHoehe(b);
+    if (!(hoehe > 0)) { return; }
+    for (const spalte of [l, r]) {
+      const grundPx = parseFloat(getComputedStyle(spalte).fontSize);
+      const untergrenze = grundPx * SEITEN_UNTERGRENZE;
+      for (let schritt = 0; schritt < HOEHEN_SCHRITTE; schritt++) {
+        const noetig = spaltenHoehe(spalte);
+        const px = parseFloat(getComputedStyle(spalte).fontSize);
+        if (noetig <= hoehe || !Number.isFinite(px) || px <= untergrenze) { break; }
+        spalte.style.fontSize = `${String(Math.max(untergrenze, Math.floor((px * hoehe * HOEHEN_RESERVE) / noetig)))}px`;
+      }
+      // reicht auch die kleinste Schrift nicht, fällt die Angabe mit der niedrigsten Rangfolge weg (Gruppe vor Abschnitt vor Wort)
+      for (const zeile of rangfolge(spalte)) {
+        if (spaltenHoehe(spalte) <= hoehe) { break; }
+        zeile.style.display = 'none';
+      }
     }
   }, [band, slot, text, links, rechts]);
 
-  // nach jeder Darstellung (Uhr tickt, Zustand wechselt): sofort messen, noch vor dem nächsten Bild
-  useLayoutEffect(() => { passeAn(); });
+  // nach jeder Darstellung, deren Texte oder Aufbau sich geändert haben: sofort messen, noch vor dem nächsten Bild
+  useLayoutEffect(() => { passeAn(); }, [passeAn, schluessel]);
 
   useEffect(() => {
     const schrift = document.fonts;

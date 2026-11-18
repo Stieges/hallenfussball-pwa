@@ -2,7 +2,8 @@ import type { ComponentProps, CSSProperties, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars, displayFontSizes, displayHall, displaySpacing, monitorThemes } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
-import type { TournamentView } from '../../../core/view';
+import { effectiveFieldCount, effectiveGroupCount, type TournamentView } from '../../../core/view';
+import { showsKidsEnded } from '../../public-view/showsFinalStandings';
 import type { MonitorProfile, MonitorSlide, MonitorTheme, PerformanceSettings } from '../../../types/monitor';
 import { LiveMatchDisplay } from '../../../components/monitor';
 import { HallMatchDisplay } from '../../../components/monitor/hall';
@@ -58,8 +59,17 @@ export function LiveSlide({ slide, tournament, view, theme, style, pinnedMatchId
   const Display = hall ? HallMatchDisplay : FullscreenLiveMatchDisplay;
   // @ZM-215 (nur Profil „Halle (sehr fern)“): Feld und Gruppe stehen im Band nur, wenn das Turnier mehr als eins davon hat
   const hallAngaben = hall
-    ? { showField: (tournament.fields?.length ?? tournament.numberOfFields) > 1, showGroup: (tournament.groups?.length ?? tournament.numberOfGroups ?? 1) > 1 }
+    ? { showField: effectiveFieldCount(tournament) > 1, showGroup: effectiveGroupCount(tournament) > 1 }
     : {};
+
+  // Profil „Halle (sehr fern)“, Kindermodus nach dem Abschluss (@ZM-121): der Satz „Turnier beendet – danke fürs Mitspielen“, nie „Endstand“ über Flächen ohne Torzahlen
+  if (hall && showsKidsEnded(tournament, view)) {
+    return (
+      <div style={{ ...style, containerType: 'size' }} data-testid="hall-ended-kids-area">
+        <div data-testid="hall-ended-kids" data-monitor="uhr" style={hallNoMatchStyle(themeColors.text)}>{t('slides.final.kids')}</div>
+      </div>
+    );
+  }
 
   // Delegate to LiveMatchDisplay (bzw. im Profil „Halle (sehr fern)“ an HallMatchDisplay) for running matches
   if (runningMatch && shown) {

@@ -9,7 +9,7 @@
  *   die Spec setzt deshalb die echten englischen Sprachwerte in die laufende Seite ein und löst das Einpassen über die Fenstergröße aus.
  * Keine festen Wartezeiten: gewartet wird auf Zustände (Namen eingepasst, Animationen fertig). Nur Profil `desktop` (setzt das Fenster selbst).
  */
-import type { Page } from '@playwright/test';
+import type { Browser, Page } from '@playwright/test';
 import { test, expect } from '@playwright/test';
 // @ts-expect-error – .mjs ohne Typen; derselbe Lader wie bei `npm run visual:metrics --saat`
 import { installiereSaat, leseSaat } from '../../scripts/visual-metrics/saat/lader.mjs';
@@ -19,7 +19,8 @@ import { join } from 'node:path';
 
 /** Echte englische Sprachwerte der App (Datei der Sprachdateien, kein eingebauter Text). */
 const lies = <T,>(datei: string): T => JSON.parse(readFileSync(join(process.cwd(), 'src/i18n/locales/en', datei), 'utf8')) as T;
-const enMonitor = lies<{ liveMatch: { finalScore: string; hall: { afterShootout: string } } }>('monitor.json');
+const enMonitor = lies<{ liveMatch: { finalScore: string; hall: { afterShootout: string }; clock: { ended: string; stopped: string } } }>('monitor.json');
+const enTournament = lies<{ matchClock: { section: { secondHalf: string; sectionOfN: string } } }>('tournament.json');
 const enSport = lies<{ phases: { afterPenalties: string } }>('sport.json');
 
 test.beforeEach(() => {
@@ -36,19 +37,34 @@ interface Messung {
   folie: Rahmen;
   digits: number[];
   clockPx: number | null;
+  /** Schrift der beiden Seitenspalten (links, rechts) */
+  seitenPx: number[];
   names: { text: string; px: number; rahmen: Rahmen; scrollW: number; clientW: number; feld: Rahmen; flaeche: Rahmen }[];
   teile: Record<string, Rahmen>;
-  balken: { balken: Rahmen; fuellung: Rahmen; anteil: string | null; ton: string | null; fuellungFarbe: string; bahnFarbe: string; randFarbe: string; randPx: number } | null;
+  balken: { balken: Rahmen; fuellung: Rahmen; anteil: string | null; ton: string | null; fuellungFarbe: string; bahnFarbe: string } | null;
   seitenUeberlauf: boolean;
 }
 
 type SaatDatei = { datenbanken: { store: string; eintraege: { tournaments?: Array<Record<string, unknown> & { id: string; matches: Array<Record<string, unknown>> }> } }[] };
 
+interface SaatOptionen {
+  neunMinuten?: boolean;
+  schlussphase?: boolean;
+  /** Restzeit knapp unter 15:00 (zweistellige Minuten, fünfstellige Uhr) */
+  zehnMinuten?: boolean;
+  /** Restzeit in Sekunden bei Abschnittslänge 20 Minuten (z. B. 1080 = „18:00“: vierstellige Zeit macht die Seitenspalten schmal) */
+  rest?: number;
+  /** Thema des Monitors */
+  thema?: 'dark' | 'light';
+  /** Verlängerung läuft (Restzeit 4:00) */
+  verlaengerung?: boolean;
+}
+
 /** Saat des Falls; `neunMinuten`: Spielzeit 9 Minuten, 3 gespielt (Restzeit 6:00); `schlussphase`: Uhr-Art mit angehaltener Schlussphase, 19:30 gespielt. */
-function saatFuer(fall: string, optionen: { neunMinuten?: boolean; schlussphase?: boolean } = {}): SaatDatei {
+function saatFuer(fall: string, optionen: SaatOptionen = {}): SaatDatei {
   const saat = structuredClone(leseSaat('monitor-halle')) as SaatDatei;
   const turnier = saat.datenbanken.find((d) => d.store === 'cache')?.eintraege.tournaments?.find((t) => t.id === fall);
-  const spiel = turnier?.matches.find((m) => m.matchStatus === 'running');
+  const spiel = turnier?.matches.find((m) => m.matchStatus === 'running' || m.matchStatus === 'paused');
   if (turnier === undefined || spiel === undefined) { return saat; }
   const live = spiel.liveState as Record<string, unknown>;
   if (optionen.neunMinuten === true) {
@@ -57,6 +73,15 @@ function saatFuer(fall: string, optionen: { neunMinuten?: boolean; schlussphase?
   if (optionen.schlussphase === true) {
     turnier.matchCockpitSettings = { clockMode: 'durchlaufend-letzte-minute-angehalten', finalPhaseMinutes: 1 };
     live.anchorAt = '@jetzt-ms-1170000'; spiel.timerStartTime = '@jetzt-1170s';
+  }
+  if (optionen.thema !== undefined) { (turnier.monitors as Array<{ theme?: string }>).forEach((m) => { m.theme = optionen.thema; }); }
+  if (optionen.zehnMinuten === true) { live.anchorAt = '@jetzt-ms-300000'; spiel.timerStartTime = '@jetzt-300s'; }
+  if (optionen.rest !== undefined) {
+    const gespielt = (1200 - optionen.rest) * 1000;
+    Object.assign(live, { sectionSeconds: 1200, durationSeconds: 1200, elapsedMs: live.status === 'paused' ? gespielt : 0, ...(live.status === 'paused' ? {} : { anchorAt: `@jetzt-ms-${String(gespielt)}` }) });
+  }
+  if (optionen.verlaengerung === true) {
+    Object.assign(live, { phase: 'overtime', playPhase: 'overtime', section: 2, sections: 1, overtimeSeconds: 300, sectionSeconds: 1200, elapsedMs: 0, anchorAt: '@jetzt-ms-60000' });
   }
   return saat;
 }
@@ -67,13 +92,22 @@ async function oeffne(page: Page, fall: string, w: number, h: number, rand: numb
   await page.goto(`/#/display/${fall}/${monitor}?rand=${String(rand)}`);
   await expect(page.locator('[data-testid="hall-display"], [data-testid="live-slide-area"]').first()).toBeVisible({ timeout: 25000 });
   await animationenFertig(page);
-  // Namen eingepasst: die Schrift der Namen ist stabil (zwei Messungen mit je zwei Bildern Abstand gleich)
+  await namenEingepasst(page);
+}
+
+/**
+ * Namen eingepasst: die Schriften sind geladen (ein spätes Neumessen nach dem Laden von Inter ist ausgeschlossen) und beide Namen stehen in derselben Größe,
+ * zwei Messungen mit je zwei Bildern Abstand sind gleich. Bleiben die Namen ungleich, läuft die Wartezeit ab und der Fall schlägt fehl (kein Verstecken eines Fehlers).
+ */
+async function namenEingepasst(page: Page): Promise<void> {
   await page.waitForFunction(async () => {
-    const lies = (): string => [...document.querySelectorAll('[data-teamname]')].map((e) => getComputedStyle(e).fontSize).join('|');
+    const lies = (): string[] => [...document.querySelectorAll('[data-teamname]')].map((e) => getComputedStyle(e).fontSize);
+    if (document.fonts.status !== 'loaded') { return false; }
     const a = lies();
     await new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
-    return a === lies() && a !== '';
-  }, null, { timeout: 15000 });
+    const b = lies();
+    return a.length > 0 && a.join('|') === b.join('|') && new Set(b).size === 1;
+  }, null, { timeout: 30000 });
 }
 
 /**
@@ -127,12 +161,17 @@ async function oeffneEnde(page: Page, fall: string, w: number, h: number, rand: 
   // die Tor-Einblendung (bestehende Einblendung über der Folie) ist vorbei, bevor gemessen wird
   await expect(page.locator('[data-testid="goal-icon"]')).toHaveCount(0, { timeout: 15000 });
   await animationenFertig(page);
-  await page.waitForFunction(async () => {
-    const lies = (): string => [...document.querySelectorAll('[data-teamname]')].map((e) => getComputedStyle(e).fontSize).join('|');
-    const a = lies();
-    await new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
-    return a === lies() && a !== '';
-  }, null, { timeout: 15000 });
+  await namenEingepasst(page);
+}
+
+/** Öffnet und misst in einem eigenen Kontext: die Saat-Skripte eines Kontexts gelten für jede Seite darin, ein weiterer Zustand braucht eine eigene Saat. */
+async function messeInNeuemKontext(browser: Browser, baseURL: string | undefined, oeffnen: (seite: Page) => Promise<void>): Promise<Messung> {
+  const kontext = await browser.newContext({ baseURL });
+  try {
+    const seite = await kontext.newPage();
+    await oeffnen(seite);
+    return await messe(seite);
+  } finally { await kontext.close(); }
 }
 
 /** Misst die Folie an der echten Seite (Pixel der Begrenzungsrahmen, Schriftgrößen in px). */
@@ -152,7 +191,8 @@ async function messe(page: Page): Promise<Messung> {
       const e = q(id);
       if (e !== null) { teile[id] = rahmen(e); }
     }
-    [...document.querySelectorAll('[data-testid="hall-side-left"] > *, [data-testid="hall-side-right"] > *')].forEach((e, i) => { teile[`seite-${String(i)}-${e.getAttribute('data-testid') ?? 'abzeichen'}`] = rahmen(e); });
+    // wegfallende Zeilen (`display: none`, niedrigste Rangfolge bei zu wenig Höhe) haben keine Fläche und zählen nicht
+    [...document.querySelectorAll('[data-testid="hall-side-left"] > *, [data-testid="hall-side-right"] > *')].filter((e) => e.getClientRects().length > 0).forEach((e, i) => { teile[`seite-${String(i)}-${e.getAttribute('data-testid') ?? 'abzeichen'}`] = rahmen(e); });
     const balken = q('hall-zeitbalken');
     const fuellung = balken?.firstElementChild ?? null;
     return {
@@ -160,6 +200,7 @@ async function messe(page: Page): Promise<Messung> {
       folie: rahmen(folie, 'hall-display'),
       digits: ['hall-digits-home', 'hall-digits-away'].map((id) => px(q(id))).filter((v): v is number => v !== null),
       clockPx: px(q('hall-clock') ?? q('hall-kickoff')),
+      seitenPx: ['hall-side-left', 'hall-side-right'].map((id) => px(q(id)) ?? 0),
       names: ['home', 'away'].map((s) => {
         const e = q(`hall-teamname-${s}`);
         if (e === null) { throw new Error('Name fehlt'); }
@@ -169,7 +210,6 @@ async function messe(page: Page): Promise<Messung> {
       balken: balken === null || fuellung === null ? null : {
         balken: rahmen(balken), fuellung: rahmen(fuellung), anteil: balken.getAttribute('data-anteil'), ton: balken.getAttribute('data-ton'),
         fuellungFarbe: getComputedStyle(fuellung).backgroundColor, bahnFarbe: getComputedStyle(balken).backgroundColor,
-        randFarbe: getComputedStyle(balken).borderTopColor, randPx: parseFloat(getComputedStyle(balken).borderTopWidth),
       },
       seitenUeberlauf: document.documentElement.scrollWidth > window.innerWidth || document.documentElement.scrollHeight > window.innerHeight,
     };
@@ -188,6 +228,11 @@ function pruefeUeberlappung(m: Messung): void {
       expect(schneiden(m.teile[ids[i]], m.teile[ids[j]]), `${ids[i]} überlappt ${ids[j]}`).toBeLessThanOrEqual(1);
     }
   }
+}
+
+/** Die Seitenangaben bleiben Nah-Information: mindestens 7,08 % der Höhe (@ZM-213), auch wenn die Zeilen in der Höhe zusammenrücken müssen. */
+function pruefeSeitenschrift(m: Messung): void {
+  for (const px of m.seitenPx) { expect(anteil(px, m.H), 'Schrift der Seitenangaben in % der Höhe').toBeGreaterThanOrEqual(7.08); }
 }
 
 /** Nichts abgeschnitten: Namen in ihrer Fläche und ihrem Namensfeld, Uhrband-Teile innerhalb der Folie, kein Scrollen. */
@@ -211,23 +256,47 @@ const NAMEN_FAELLE = [
 for (const { w, h } of GROESSEN) {
   for (const rand of RAENDER) {
     test.describe(`@ZM-213 Halle (sehr fern), ${String(w)}×${String(h)}, Bildrand ${String(rand)} %`, () => {
-      test('@ZM-213 Mindestanteile: Torzahl ≥ 34 %, Restzeit ≥ 26 % (und über 29,3 %), Namen je Beispielzeile; Namen gleich groß', async ({ page }) => {
+      test('@ZM-213 Mindestanteile: Torzahl ≥ 34 %, Restzeit über 29,3 % (@ZM-215, mindestens 26 %), Namen je Beispielzeile; Namen gleich groß', async ({ page }) => {
         for (const { fall, mindest, zeile } of NAMEN_FAELLE) {
           await oeffne(page, fall, w, h, rand);
           const m = await messe(page);
           for (const d of m.digits) { expect(anteil(d, m.H), `Torzahl, ${zeile}`).toBeGreaterThanOrEqual(34); }
-          expect(anteil(m.clockPx ?? 0, m.H), `Restzeit, ${zeile}`).toBeGreaterThanOrEqual(26);
+          expect(anteil(m.clockPx ?? 0, m.H), `Restzeit, ${zeile}`).toBeGreaterThan(29.3);
           for (const n of m.names) { expect(anteil(n.px, m.H), `Namen „${n.text}“, ${zeile}: mindestens ${String(mindest)} %`).toBeGreaterThanOrEqual(mindest - 0.05); }
           expect(Math.abs(m.names[0].px - m.names[1].px), `beide Namen gleich groß, ${zeile}`).toBeLessThanOrEqual(0.6);
         }
       });
 
-      test('@ZM-213 nichts überlappt und nichts ist abgeschnitten (Läuft, 25-Zeichen-Namen, Strafstoß-Ende, Endstand, vor dem Anpfiff, Halbzeit, angehalten)', async ({ page }) => {
-        for (const fall of ['halle-laeuft', 'halle-lang25', 'halle-zweistellig', 'halle-zwei-felder', 'halle-abschnitt', 'halle-angehalten', 'halle-halbzeit', 'halle-vor']) {
-          await oeffne(page, fall, w, h, rand);
-          const m = await messe(page);
+      test('@ZM-213 nichts überlappt und nichts ist abgeschnitten: läuft, 25-Zeichen-Namen, zweistellig, zwei Felder, Abschnitt, Gruppe + Abschnitt, „Abschnitt 3 von 3“ angehalten mit Gruppe und breiter Uhr, zweistellige Minuten („14:5x“), Verlängerung, vor dem Anpfiff, Halbzeit, angehalten', async ({ browser, baseURL }) => {
+        test.setTimeout(120000);
+        const faelle: Array<[string, SaatOptionen]> = [
+          ['halle-laeuft', {}], ['halle-lang25', {}], ['halle-zweistellig', {}], ['halle-zwei-felder', {}], ['halle-abschnitt', {}], ['halle-angehalten', {}], ['halle-halbzeit', {}], ['halle-vor', {}],
+          ['halle-voll', {}], ['halle-voll-3', {}], ['halle-voll-3', { rest: 1080 }], ['halle-laeuft', { zehnMinuten: true }], ['halle-laeuft', { verlaengerung: true }],
+        ];
+        // je Fall ein eigener Kontext: ein Wechsel nur der Adresse nach „#“ lädt die Seite nicht neu, die Saat-Skripte (und damit die Abwandlung des Falls) liefen sonst nicht
+        for (const [fall, optionen] of faelle) {
+          const m = await messeInNeuemKontext(browser, baseURL ?? undefined, async (seite) => {
+            await oeffne(seite, fall, w, h, rand, optionen);
+            // die Zustände sind wirklich da (kein stilles Ausweichen auf „läuft“)
+            if (optionen.verlaengerung === true) { await expect(seite.getByTestId('match-status-badge')).toHaveText(/Verlängerung/); }
+            if (optionen.zehnMinuten === true || optionen.rest !== undefined) { await expect(seite.getByTestId('hall-clock')).toHaveText(/^\d\d:\d\d$/); }
+          });
           pruefeUeberlappung(m);
           pruefeAbgeschnitten(m);
+          pruefeSeitenschrift(m);
+        }
+      });
+
+      test('@ZM-214 nichts überlappt am Ende (deutsch): Endstand und „4 : 3 i. E.“; Torzahl wie im laufenden Spiel an derselben Stelle', async ({ browser, baseURL }) => {
+        const messeIn = (oeffnen: (seite: Page) => Promise<void>): Promise<Messung> => messeInNeuemKontext(browser, baseURL ?? undefined, oeffnen);
+        const lauf = await messeIn((seite) => oeffne(seite, 'halle-laeuft', w, h, rand));
+        for (const fall of ['halle-ende', 'halle-ende-strafstoss']) {
+          const ende = await messeIn((seite) => oeffneEnde(seite, fall, w, h, rand));
+          pruefeUeberlappung(ende);
+          pruefeAbgeschnitten(ende);
+          for (const id of ['hall-digits-home', 'hall-digits-away'] as const) {
+            for (const kante of ['l', 't', 'w', 'h'] as const) { expect(Math.abs(ende.teile[id][kante] - lauf.teile[id][kante]), `${id}.${kante} im Fall ${fall}`).toBeLessThanOrEqual(TOLERANZ_PX); }
+          }
         }
       });
 
@@ -254,7 +323,7 @@ for (const { w, h } of GROESSEN) {
         expect(anteil(b.balken.h, m.H), 'Balkenhöhe in % der Folienhöhe').toBeGreaterThanOrEqual(5.95);
         expect(b.balken.w / m.folie.w, 'Balken über (fast) die ganze Breite').toBeGreaterThan(0.9);
         expect(b.fuellung.w, 'die Füllung ist kürzer als die Bahn: der abgelaufene Rest bleibt als Bahn zu sehen').toBeLessThan(b.balken.w - 20);
-        expect(b.fuellung.l, 'die Füllung ist links verankert').toBeCloseTo(b.balken.l + b.randPx, 0);
+        expect(b.fuellung.l, 'die Füllung ist links verankert').toBeCloseTo(b.balken.l, 0);
       });
     });
   }
@@ -267,10 +336,10 @@ test.describe('@ZM-215 Zeitbalken läuft herunter (1920×1080)', () => {
     await expect(page.getByText('Restzeit')).toHaveCount(0);
     const m = await messe(page);
     const b = m.balken!;
-    const gefuellt = b.fuellung.w / (b.balken.w - 2 * b.randPx);
+    const gefuellt = b.fuellung.w / b.balken.w;
     expect(gefuellt, `Füllanteil ${gefuellt.toFixed(3)} (Soll zwei Drittel, mit Lauf der Uhr etwas darunter)`).toBeGreaterThan(2 / 3 - 0.05);
     expect(gefuellt).toBeLessThan(2 / 3 + 0.01);
-    expect(b.fuellung.l).toBeCloseTo(b.balken.l + b.randPx, 0);
+    expect(b.fuellung.l).toBeCloseTo(b.balken.l, 0);
     expect(b.ton).toBe('gruen');
   });
 
@@ -297,22 +366,25 @@ test.describe('@ZM-215 Zeitbalken läuft herunter (1920×1080)', () => {
     await expect(page.getByTestId('hall-kickoff')).toBeVisible();
   });
 
-  test('Bahn gegen Hintergrund und Füllung gegen Bahn gut zu unterscheiden: Rand der Bahn mindestens 3 : 1 gegen den Hintergrund, grüne und graue Füllung mindestens 3 : 1 gegen die Bahn', async ({ page }) => {
+  test('Bahn gegen Hintergrund und Füllung gegen Bahn (dunkles UND helles Thema): jeweils mindestens 3 : 1 für grün (läuft), grau (angehalten), violett (Schlussphase) und gedämpft (Pause)', async ({ browser, baseURL }) => {
     type Farbe = [number, number, number, number];
     const lies = (rgb: string): Farbe => { const m = (rgb.match(/[\d.]+/g) ?? []).map(Number); return [m[0] ?? 0, m[1] ?? 0, m[2] ?? 0, m[3] ?? 1]; };
-    const ueber = (v: Farbe, h: Farbe): Farbe => [0, 1, 2].map((i) => v[i] * v[3] + h[i] * (1 - v[3])).concat(1) as Farbe;
     const lum = (c: Farbe): number => {
       const [r, g, b] = c.slice(0, 3).map((x) => { const q = x / 255; return q <= 0.03928 ? q / 12.92 : ((q + 0.055) / 1.055) ** 2.4; });
       return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     };
     const verhaeltnis = (a: Farbe, b: Farbe): number => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
-    const HINTERGRUND_UNTEN: Farbe = [15, 23, 42, 1]; // Thema dunkel, unteres Ende des Verlaufs
-    for (const fall of ['halle-laeuft', 'halle-angehalten']) {
-      await oeffne(page, fall, 1920, 1080, 5);
-      const b = (await messe(page)).balken!;
-      const bahn = ueber(lies(b.bahnFarbe), HINTERGRUND_UNTEN);
-      expect(verhaeltnis(lies(b.randFarbe), HINTERGRUND_UNTEN), `Rand ${b.randFarbe} gegen Hintergrund (${fall})`).toBeGreaterThanOrEqual(3);
-      expect(verhaeltnis(lies(b.fuellungFarbe), bahn), `Füllung ${b.fuellungFarbe} gegen Bahn (${fall})`).toBeGreaterThanOrEqual(3);
+    // Hintergrund des Themas: Anfang und Ende des Verlaufs der Folie
+    const HINTERGRUND = { dark: ['rgb(30, 41, 59)', 'rgb(15, 23, 42)'], light: ['rgb(255, 255, 255)', 'rgb(226, 232, 240)'] } as const;
+    const zustaende: Array<[string, SaatOptionen, string]> = [['halle-laeuft', {}, 'gruen'], ['halle-angehalten', {}, 'grau'], ['halle-laeuft', { schlussphase: true }, 'violett'], ['halle-halbzeit', {}, 'gedaempft']];
+    for (const thema of ['dark', 'light'] as const) {
+      for (const [fall, optionen, ton] of zustaende) {
+        const b = (await messeInNeuemKontext(browser, baseURL, (seite) => oeffne(seite, fall, 1920, 1080, 5, { ...optionen, thema }))).balken;
+        expect(b, `${fall}/${thema}: Balken vorhanden`).not.toBeNull();
+        expect(b?.ton).toBe(ton);
+        for (const hintergrund of HINTERGRUND[thema]) { expect(verhaeltnis(lies(b?.bahnFarbe ?? ''), lies(hintergrund)), `${thema}/${ton}: Bahn ${b?.bahnFarbe} gegen Hintergrund ${hintergrund}`).toBeGreaterThanOrEqual(3); }
+        expect(verhaeltnis(lies(b?.fuellungFarbe ?? ''), lies(b?.bahnFarbe ?? '')), `${thema}/${ton}: Füllung ${b?.fuellungFarbe} gegen Bahn ${b?.bahnFarbe}`).toBeGreaterThanOrEqual(3);
+      }
     }
   });
 });
@@ -370,6 +442,19 @@ for (const { w, h } of GROESSEN) {
         const abschnitt = await messe(page);
         pruefeUeberlappung(abschnitt);
         pruefeAbgeschnitten(abschnitt);
+      });
+
+      test('englisch mit Gruppe, Abschnitt und Wort zugleich („Group A“, „2nd half“, „Time up“; „Period 3 of 3“, „stopped“): nichts ragt in den Balken oder aus der Folie', async ({ page }) => {
+        await oeffne(page, 'halle-voll', w, h, rand);
+        await englisch(page, { 'hall-field': 'Field 1', 'hall-group': 'Group A', 'hall-section': enTournament.matchClock.section.secondHalf, 'hall-phase-text': enMonitor.liveMatch.clock.ended });
+        const abgelaufen = await messe(page);
+        pruefeUeberlappung(abgelaufen);
+        pruefeAbgeschnitten(abgelaufen);
+        await oeffne(page, 'halle-voll-3', w, h, rand);
+        await englisch(page, { 'hall-field': 'Field 1', 'hall-group': 'Group A', 'hall-section': enTournament.matchClock.section.sectionOfN.replace('{{section}}', '3').replace('{{sections}}', '3'), 'hall-phase-text': enMonitor.liveMatch.clock.stopped });
+        const angehalten = await messe(page);
+        pruefeUeberlappung(angehalten);
+        pruefeAbgeschnitten(angehalten);
       });
     });
   }
