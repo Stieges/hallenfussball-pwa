@@ -28,16 +28,29 @@
 --      kann NICHT geloescht werden; die Datenbank meldet 23001 "... violates foreign key constraint tournaments_owner_id_fkey".
 --      Erst muss das Turnier bewusst geloescht (Frist der Datenschutzerklaerung: spaetestens 6 Monate nach dem Turnier) werden.
 --   4. Hilfsfunktion public.account_deletion_check(p_user_id uuid) -> jsonb, NUR service_role, nur lesend: sagt dem Betreiber vor dem
---      Loeschen, ob das Konto blockiert ist und was daran haengt (Turniere, Mitgliedschaften, Veranstaltungen, Verweise, die auf NULL gehen
---      oder als Kennung stehen bleiben).
+--      Loeschen, ob das Konto blockiert ist (Turniere des Kontos ODER Spuren in einem abgeschlossenen Turnier) und was daran haengt
+--      (Turniere, Mitgliedschaften, Veranstaltungen samt Bildschirmen, Verweise, die auf NULL gehen oder als Kennung stehen bleiben).
+--      Ohne Titel, Namen und E-Mail: Turniere nur mit Kennung und Datum.
+--   EINSCHRAENKUNG (Entscheidung des Product Owners 18.11.2026, Weg b): Die Abschluss-Sperre (guard_closed_tournament, tournaments_guard_lifecycle)
+--   wird NICHT angefasst. Die Verweis-Aenderung beim Loeschen ist fuer sie ein gewoehnliches UPDATE und wird in einem ABGESCHLOSSENEN
+--   (lifecycle_status finished/cancelled) Turnier abgelehnt (55000 TOURNAMENT_FINISHED; die ganze Loeschung rollt zurueck, nichts geht verloren).
+--   Betroffen sind genau die Verweise in gesperrten Tabellen: matches.last_modified_by, match_corrections.corrected_by,
+--   tournaments.last_modified_by und (schon vor dieser Migration) field_control.holder_user_id. Folge: ein Konto mit Spuren in einem
+--   abgeschlossenen Turnier ist erst loeschbar, nachdem der Betreiber das Turnier wieder geoeffnet hat. account_deletion_check meldet das
+--   VORHER als blocked = true (Feld closed_tournament_refs: Turnier-Kennung und Datum, kein Titel). Spaeter (nach dem Nikolausturnier) kann die
+--   Sperre die Verweis-Aenderung durchlassen (Weg a, geparkt).
 --   Unveraendert (kaskadieren weiter mit dem Konto, gewollt): profiles, sync_queue, tournament_collaborators.user_id (Mitgliedschaft),
 --   tournament_templates, gatherings (+ gathering_members), tournament_join_requests.device_user_id, revoked_device_contacts.
 --   Schon heute SET NULL (unveraendert): match_event_authors, match_reviews, field_control(_log), tournament_join_codes, ...decided_by.
 --
 -- Rueckwaertsvertraeglichkeit:
---   - NUR Regeln an Fremdschluesseln und eine neue, nur lesende Funktion. Keine Zeile wird geloescht oder umgeschrieben, keine Spalte entfernt,
---     keine Pruefregel gelockert ausser den ON DELETE-Regeln selbst (und dem Fremdschluessel invited_by, der nur das Loeschen blockierte).
---     Der Client kennt die Regeln nicht (kein Embed ueber diese Fremdschluessel; invited_by wird nur gelesen, membershipService.ts:53) ->
+--   - NICHT "rein ergaenzend" im Wortsinn: VIER bestehende Fremdschluessel-Regeln werden GEAENDERT (matches.last_modified_by,
+--     tournaments.last_modified_by, match_corrections.corrected_by: NO ACTION -> SET NULL; tournaments.owner_id: CASCADE -> RESTRICT),
+--     EIN Fremdschluessel ENTFAELLT (tournament_collaborators.invited_by; die Datenbank prueft die Kennung dort beim Schreiben nicht mehr,
+--     die Server-Funktionen setzen auth.uid()), dazu EINE neue, nur lesende Funktion. Keine Policy, kein Trigger und keine bestehende
+--     Funktion wird geaendert. Keine Zeile wird geloescht oder umgeschrieben, keine Spalte entfernt. Die Regeln greifen nur beim Loeschen
+--     eines Kontos.
+--   - Der Client kennt die Regeln nicht (kein Embed ueber diese Fremdschluessel; invited_by wird nur gelesen, membershipService.ts:53) ->
 --     kein Client-Update noetig.
 --   - Wer heute ein Turnier ODER Spiel schreibt, merkt nichts: die Regeln greifen nur beim Loeschen eines Kontos.
 --   - Verhaltensaenderung fuer Wartungsskripte: ein Konto mit Turnieren laesst sich nicht mehr "nebenbei" per auth.admin.deleteUser
@@ -52,7 +65,7 @@
 --   blieben die Sperren ohnehin bis zum Ende). Laufende Schreiber (Cockpit, append_match_events) warten dann kurz, sie scheitern nicht.
 --   Bei 55P03 (Sperre nicht erhalten, z. B. mitten in einem Spiel) genau einmal wiederholen, am besten zwischen zwei Spielen.
 -- Voraussetzungen (Fail-fast, ohne Aenderung): die fuenf Fremdschluessel existieren (invited_by darf fehlen = schon umgesetzt), zeigen auf auth.users(id) der erwarteten Spalte und
---   haben entweder die Regel von heute oder schon die neue (dann wird nichts angefasst); auth.users und tournament_has_started existieren.
+--   haben entweder die Regel von heute oder schon die neue (dann wird nichts angefasst); auth.users, tournament_has_started, tournament_is_closed und field_control existieren.
 -- Idempotent: zweimal einspielbar (jeder Schritt prueft die heutige Regel, CREATE OR REPLACE, REVOKE/GRANT).
 --
 -- RUECKWEG: supabase/rollbacks/20261128_001_konto_loeschen_rollback.sql (stellt die Regeln wie vor dieser Migration wieder her, invited_by als NOT VALID, weil
@@ -74,8 +87,10 @@ DECLARE
   v_del "char";
   v_ok boolean;
 BEGIN
-  IF to_regclass('auth.users') IS NULL OR to_regprocedure('public.tournament_has_started(uuid)') IS NULL THEN
-    RAISE EXCEPTION '20261128_001_konto_loeschen: auth.users oder public.tournament_has_started fehlt -- abgebrochen';
+  IF to_regclass('auth.users') IS NULL OR to_regprocedure('public.tournament_has_started(uuid)') IS NULL
+     OR to_regprocedure('public.tournament_is_closed(uuid)') IS NULL OR to_regclass('public.field_control') IS NULL
+     OR to_regclass('public.gathering_screens') IS NULL OR to_regclass('public.gathering_members') IS NULL THEN
+    RAISE EXCEPTION '20261128_001_konto_loeschen: auth.users, tournament_has_started, tournament_is_closed, field_control, gathering_screens oder gathering_members fehlt -- abgebrochen';
   END IF;
   FOR r IN
     SELECT * FROM (VALUES
@@ -167,25 +182,61 @@ AS $$
 DECLARE
   v_tournaments jsonb;
   v_n_owned     integer;
+  v_closed      jsonb;
+  v_n_closed    integer;
 BEGIN
-  SELECT coalesce(jsonb_agg(jsonb_build_object('id', t.id, 'title', t.title, 'in_trash', t.deleted_at IS NOT NULL,
+  -- Turniere des Kontos (RESTRICT). Nur Kennung und Datum, kein Titel: der Titel kann ein Personenname sein (@RE-011 "ohne Namen").
+  SELECT coalesce(jsonb_agg(jsonb_build_object('id', t.id, 'date', t.date::text, 'in_trash', t.deleted_at IS NOT NULL,
                                                 'started', public.tournament_has_started(t.id)) ORDER BY t.created_at), '[]'::jsonb),
          count(*)
     INTO v_tournaments, v_n_owned
     FROM public.tournaments t
    WHERE t.owner_id = p_user_id;
+  -- Abgeschlossene Turniere (finished/cancelled), in denen das Konto eine Spur hat, die beim Loeschen auf NULL gesetzt wuerde: die
+  -- Abschluss-Sperre lehnt dieses UPDATE ab (TOURNAMENT_FINISHED), die Loeschung scheiterte. Der Betreiber oeffnet genau diese Turniere
+  -- vorher wieder. Gleiche Tabellen/Spalten wie die Sperre (guard_closed_tournament, tournaments_guard_lifecycle).
+  SELECT coalesce(jsonb_agg(x.j ORDER BY x.created_at), '[]'::jsonb), count(*)
+    INTO v_closed, v_n_closed
+    FROM (SELECT t.created_at,
+                 jsonb_build_object('id', t.id, 'date', t.date::text, 'lifecycle_status', t.lifecycle_status,
+                   'matches_last_modified_by',       (SELECT count(*) FROM public.matches m WHERE m.tournament_id = t.id AND m.last_modified_by = p_user_id),
+                   'match_corrections_corrected_by', (SELECT count(*) FROM public.match_corrections c JOIN public.matches m ON m.id = c.match_id
+                                                       WHERE m.tournament_id = t.id AND c.corrected_by = p_user_id),
+                   'tournament_last_modified_by',    (t.last_modified_by = p_user_id),
+                   'field_control_holder',           (SELECT count(*) FROM public.field_control f WHERE f.tournament_id = t.id AND f.holder_user_id = p_user_id)) AS j
+            FROM public.tournaments t
+           WHERE public.tournament_is_closed(t.id)
+             AND (t.last_modified_by = p_user_id
+                  OR EXISTS (SELECT 1 FROM public.matches m WHERE m.tournament_id = t.id AND m.last_modified_by = p_user_id)
+                  OR EXISTS (SELECT 1 FROM public.match_corrections c JOIN public.matches m ON m.id = c.match_id
+                              WHERE m.tournament_id = t.id AND c.corrected_by = p_user_id)
+                  OR EXISTS (SELECT 1 FROM public.field_control f WHERE f.tournament_id = t.id AND f.holder_user_id = p_user_id))) x;
   RETURN jsonb_build_object(
     'user_exists',            EXISTS (SELECT 1 FROM auth.users u WHERE u.id = p_user_id),
-    'blocked',                v_n_owned > 0,
+    'blocked',                v_n_owned > 0 OR v_n_closed > 0,
+    'blocked_by', (SELECT coalesce(jsonb_agg(r), '[]'::jsonb)
+                     FROM unnest(ARRAY[CASE WHEN v_n_owned > 0 THEN 'owns_tournaments' END,
+                                       CASE WHEN v_n_closed > 0 THEN 'refs_in_closed_tournaments' END]) AS r WHERE r IS NOT NULL),
     'owned_tournaments',      v_tournaments,
+    'closed_tournament_refs', v_closed,
     'memberships',            (SELECT count(*) FROM public.tournament_collaborators c WHERE c.user_id = p_user_id),
     'owned_gatherings',       (SELECT count(*) FROM public.gatherings g WHERE g.owner_id = p_user_id),
+    'gathering_removal', jsonb_build_object(
+      'screens',              (SELECT count(*) FROM public.gathering_screens s JOIN public.gatherings g ON g.id = s.gathering_id WHERE g.owner_id = p_user_id),
+      'members_of_others',    (SELECT count(*) FROM public.gathering_members gm JOIN public.gatherings g ON g.id = gm.gathering_id
+                                WHERE g.owner_id = p_user_id AND gm.user_id IS DISTINCT FROM p_user_id),
+      'tournaments_assigned', (SELECT count(*) FROM public.tournaments t JOIN public.gatherings g ON g.id = t.gathering_id WHERE g.owner_id = p_user_id)),
     'templates',              (SELECT count(*) FROM public.tournament_templates x WHERE x.owner_id = p_user_id),
     'refs_set_null', jsonb_build_object(
       'matches_last_modified_by',      (SELECT count(*) FROM public.matches m WHERE m.last_modified_by = p_user_id),
       'tournaments_last_modified_by',  (SELECT count(*) FROM public.tournaments t WHERE t.last_modified_by = p_user_id),
       'match_corrections_corrected_by',(SELECT count(*) FROM public.match_corrections x WHERE x.corrected_by = p_user_id),
-      'match_event_authors_user_id',   (SELECT count(*) FROM public.match_event_authors a WHERE a.user_id = p_user_id)),
+      'match_event_authors_user_id',   (SELECT count(*) FROM public.match_event_authors a WHERE a.user_id = p_user_id),
+      'field_control_holder_user_id',  (SELECT count(*) FROM public.field_control f WHERE f.holder_user_id = p_user_id),
+      'field_control_log_holder_user_id', (SELECT count(*) FROM public.field_control_log f WHERE f.holder_user_id = p_user_id),
+      'match_reviews_user_id',         (SELECT count(*) FROM public.match_reviews r WHERE r.user_id = p_user_id),
+      'join_codes_created_or_revoked_by', (SELECT count(*) FROM public.tournament_join_codes j WHERE j.created_by = p_user_id OR j.revoked_by = p_user_id),
+      'join_requests_decided_by',      (SELECT count(*) FROM public.tournament_join_requests j WHERE j.decided_by = p_user_id)),
     'refs_without_fk', jsonb_build_object(
       'collaborators_invited_by',      (SELECT count(*) FROM public.tournament_collaborators c WHERE c.invited_by = p_user_id),
       'device_outbox_reports_user_id', (SELECT count(*) FROM public.device_outbox_reports d WHERE d.user_id = p_user_id),
@@ -196,8 +247,11 @@ $$;
 
 COMMENT ON FUNCTION public.account_deletion_check(uuid) IS
   'Vorpruefung vor dem Loeschen eines Kontos (nur service_role, nur lesend): blocked = true, solange dem Konto ein Turnier gehoert
-   (auch im Papierkorb). refs_set_null: Verweise, die beim Loeschen auf NULL gehen. refs_without_fk: Kennungen ohne Fremdschluessel,
-   die als nicht mehr zuordenbare UUID stehen bleiben. Liefert keine E-Mail und keinen Namen (Konto loeschen, 20261128_001).';
+   (auch im Papierkorb; blocked_by owns_tournaments) ODER es Spuren in einem abgeschlossenen Turnier hat (blocked_by refs_in_closed_tournaments;
+   closed_tournament_refs nennt Kennung und Datum der Turniere, die der Betreiber vorher wieder oeffnen muss). refs_set_null: Verweise, die beim
+   Loeschen auf NULL gehen. refs_without_fk: Kennungen ohne Fremdschluessel, die als nicht mehr zuordenbare UUID stehen bleiben.
+   gathering_removal: was mit den Veranstaltungen des Kontos wegfaellt (Bildschirme, Mitglieder anderer, zugeordnete Turniere) - nur Meldung,
+   blockiert nicht. Liefert keinen Titel, keinen Namen und keine E-Mail (Konto loeschen, 20261128_001).';
 
 REVOKE ALL ON FUNCTION public.account_deletion_check(uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.account_deletion_check(uuid) TO service_role;

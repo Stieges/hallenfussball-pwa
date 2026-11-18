@@ -10,7 +10,9 @@
 #   bash scripts/konto-loeschen-check.sh --gegenprobe          Gegenprobe B: je Mutation (eine zurueckgenommene Regel) ein Lauf; Exit 0 nur, wenn JEDE
 #                                                              die dafuer vorgesehene Kategorie rot macht
 #
-# Kategorien: A Ausgangslage (heutiger Fehler belegt), R @RE-009 (Konto ohne Turnier loeschbar, Zeilen bleiben), S @RE-010 (Konto mit Turnier
+# Kategorien: F abgeschlossenes Turnier (Weg b: Vorpruefung meldet blockiert, Loeschen wird abgelehnt und aendert nichts, nach dem Wiederoeffnen
+# geht es), L weitere Lagen (gehaltenes Feld im laufenden Spiel, Veranstaltung mit Bildschirmen, Beitrittsanfrage, Konto mit eigenem Turnier UND
+# Co-Admin-Mitgliedschaft). A Ausgangslage (heutiger Fehler belegt), R @RE-009 (Konto ohne Turnier loeschbar, Zeilen bleiben), S @RE-010 (Konto mit Turnier
 # abgelehnt, Turniere unveraendert), V @RE-011 (Vorpruefung nur service_role, ohne Namen/E-Mail), H Hin-/Rueckweg, zweimal, Fail-fast, Sperre,
 # naive Reparatur als Beleg der Gefahr.
 #
@@ -56,9 +58,9 @@ priv_run() { { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_read
 rowq() { docker exec -i -e PGOPTIONS="-c client_min_messages=warning" "$C" psql -U postgres -X -q -tA -F'|' -v ON_ERROR_STOP=0 < "$1" 2>&1 | tr '\n' ' ' | sed 's/ *$//'; }
 sum_of() { if command -v md5sum >/dev/null 2>&1; then md5sum | cut -d' ' -f1; else md5 -q; fi; }
 
-CATS=(A R S V H)
-DEVS=(0 0 0 0 0)
-OKS=(0 0 0 0 0)
+CATS=(A R S V H F L)
+DEVS=(0 0 0 0 0 0 0)
+OKS=(0 0 0 0 0 0 0)
 cat_index() { local i; for i in "${!CATS[@]}"; do [[ "${CATS[$i]}" == "$1" ]] && { echo "$i"; return 0; }; done; exit 2; }
 check() { # check <Kategorie> <Name> <erwartet> <erhalten>
   local i; i="$(cat_index "$1")"
@@ -71,10 +73,17 @@ has() { # has <Kategorie> <Name> <Muster> <Text>
   else DEVS[i]=$((DEVS[i] + 1)); echo "ABWEICHUNG  [$1] $2"; echo "    Muster: $3"; echo "    erhalten: ${4:0:400}"; fi
 }
 total_dev() { local s=0 d; for d in "${DEVS[@]}"; do s=$((s + d)); done; echo "$s"; }
-reset_counts() { DEVS=(0 0 0 0 0); OKS=(0 0 0 0 0); }
+reset_counts() { DEVS=(0 0 0 0 0 0 0); OKS=(0 0 0 0 0 0 0); }
 
 uuid_for() { local h; h="$(printf '%s' "konto-loeschen-check:$1" | shasum -a 256 | cut -c1-32)"; echo "${h:0:8}-${h:8:4}-4${h:13:3}-8${h:17:3}-${h:20:12}"; }
 U_OLLI="$(uuid_for user:olli)"; U_MARIA="$(uuid_for user:maria)"; U_TOM="$(uuid_for user:tom)"; U_UDO="$(uuid_for user:udo)"
+U_RITA="$(uuid_for user:rita)"; U_CARLA="$(uuid_for user:carla)"; U_HANS="$(uuid_for user:hans)"; U_NINA="$(uuid_for user:nina)"
+U_P1="$(uuid_for user:probe1)"; U_P2="$(uuid_for user:probe2)"; U_P3="$(uuid_for user:probe3)"; U_P4="$(uuid_for user:probe4)"
+U_FELIX="$(uuid_for user:felix)"; U_GAST="$(uuid_for user:gast)"; U_GOWN="$(uuid_for user:gown)"; U_DUAL="$(uuid_for user:dual)"; U_JR="$(uuid_for user:jr)"; U_DEC="$(uuid_for user:dec)"
+T_FIN="$(uuid_for tournament:abgeschlossen)"; T_DUAL="$(uuid_for tournament:dual)"; T_GOWN="$(uuid_for tournament:gown)"
+FA="$(uuid_for team:fa)"; FB="$(uuid_for team:fb)"; FC="$(uuid_for team:fc)"; DA="$(uuid_for team:da)"; DB="$(uuid_for team:db)"; GA="$(uuid_for team:ga)"; GB="$(uuid_for team:gb)"
+F1="$(uuid_for match:f1)"; F2="$(uuid_for match:f2)"; F3="$(uuid_for match:f3)"; F4="$(uuid_for match:f4)"; S4="$(uuid_for match:s4-felix)"; M_OTHER2="$(uuid_for match:fremd2)"; M_DUAL="$(uuid_for match:dual)"
+G1="$(uuid_for gathering:gast)"; G2="$(uuid_for gathering:gown)"
 U_KIM="$(uuid_for user:kim)"; U_FREI="$(uuid_for user:frei)"; U_STRANGER="$(uuid_for user:stranger)"; U_TRASHONLY="$(uuid_for user:nurpapierkorb)"
 T="$(uuid_for tournament:nikolaus)"; T_TRASH="$(uuid_for tournament:papierkorb)"; T_OTHER="$(uuid_for tournament:fremd)"; T_TRASHONLY="$(uuid_for tournament:nurpapierkorb)"
 TA="$(uuid_for team:a)"; TB="$(uuid_for team:b)"; TC="$(uuid_for team:c)"; TD="$(uuid_for team:d)"
@@ -89,6 +98,7 @@ OUT=""
 send() { local events; events="$(jq -cs '.' <<<"$EVS")"; EVS=""; OUT="$(q "SELECT harness.call('$1'::uuid, '$2'::uuid, \$J\$$events\$J\$::jsonb);")"; }
 statuses_of() { jq -r '[.results[]?.status] | join(",")' <<<"$1"; }
 names() { q "SELECT harness.names('$1'::uuid, '$2'::uuid);"; }
+deluser_raw() { q "DELETE FROM auth.users WHERE id='$1';"; }
 deluser() { q "WITH d AS (DELETE FROM auth.users WHERE id='$1' RETURNING 1) SELECT 'DELETE ' || count(*) FROM d;"; }
 rules() { q "SELECT string_agg(conname||'='||confdeltype::text, ' ' ORDER BY conname) FROM pg_constraint WHERE conname IN ('matches_last_modified_by_fkey','tournaments_last_modified_by_fkey','match_corrections_corrected_by_fkey','tournament_collaborators_invited_by_fkey','tournaments_owner_id_fkey');"; }
 
@@ -151,6 +161,27 @@ BEGIN
   EXECUTE 'SELECT count(*) || ''/'' || coalesce(md5(string_agg((to_jsonb(x) - $2)::text, ''|'' ORDER BY (to_jsonb(x) - $2)::text)), ''-'') FROM public.match_events x WHERE x.match_id IN (SELECT id FROM public.matches WHERE tournament_id = ANY($1))' INTO v USING p_ids, p_ohne;
   RETURN r || 'match_events=' || v;
 END; $fn$;
+-- Wieder oeffnen wie der Betreiber/Eigentuemer es tut: die echte Funktion reopen_tournament, als angemeldeter Nutzer
+CREATE FUNCTION harness.reopen(p_user uuid, p_t uuid) RETURNS text LANGUAGE plpgsql AS $fn$
+DECLARE v text;
+BEGIN
+  PERFORM set_config('request.jwt.claim.sub', p_user::text, true);
+  PERFORM set_config('role', 'authenticated', true);
+  BEGIN v := (public.reopen_tournament(p_t, 'Pruefung Konto loeschen', gen_random_uuid()))::text;
+  EXCEPTION WHEN OTHERS THEN v := 'error:' || SQLSTATE || ':' || SQLERRM; END;
+  PERFORM set_config('role', 'postgres', true);
+  RETURN v;
+END; $fn$;
+CREATE FUNCTION harness.take(p_user uuid, p_t uuid, p_field integer) RETURNS text LANGUAGE plpgsql AS $fn$
+DECLARE v text;
+BEGIN
+  PERFORM set_config('request.jwt.claim.sub', p_user::text, true);
+  PERFORM set_config('role', 'authenticated', true);
+  BEGIN v := (public.take_field_control(p_t, p_field, gen_random_uuid(), 'Geraet Felix', 0))::text;
+  EXCEPTION WHEN OTHERS THEN v := 'error:' || SQLSTATE || ':' || SQLERRM; END;
+  PERFORM set_config('role', 'postgres', true);
+  RETURN v;
+END; $fn$;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA harness TO anon, authenticated, service_role;
 SQL
   psql_stdin <<SQL
@@ -187,6 +218,63 @@ INSERT INTO public.match_corrections (match_id, previous_score_a, previous_score
 UPDATE public.tournaments SET last_modified_by = '$U_TOM' WHERE id = '$T';
 UPDATE public.tournaments SET deleted_at = now() WHERE id IN ('$T_TRASH', '$T_TRASHONLY');
 SQL
+  seed_FL
+}
+
+# Daten fuer F (abgeschlossenes Turnier) und L (weitere Lagen). Laeuft VOR der Migration (nur Schreibwege von heute).
+seed_FL() {
+  psql_stdin <<SQL
+INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, is_anonymous)
+SELECT '00000000-0000-0000-0000-000000000000', u.id, 'authenticated', 'authenticated', u.email, 'x', now(), '{}', '{}', now(), now(), u.anon
+FROM (VALUES ('$U_RITA'::uuid, 'rita@kl.test', false), ('$U_CARLA'::uuid, 'carla@kl.test', false), ('$U_HANS'::uuid, NULL, true), ('$U_NINA'::uuid, 'nina@kl.test', false),
+             ('$U_P1'::uuid, 'p1@kl.test', false), ('$U_P2'::uuid, 'p2@kl.test', false), ('$U_P3'::uuid, 'p3@kl.test', false), ('$U_P4'::uuid, 'p4@kl.test', false),
+             ('$U_FELIX'::uuid, NULL, true), ('$U_GAST'::uuid, 'gast@kl.test', false), ('$U_GOWN'::uuid, 'gown@kl.test', false), ('$U_DUAL'::uuid, 'dual@kl.test', false),
+             ('$U_JR'::uuid, NULL, true), ('$U_DEC'::uuid, 'dec@kl.test', false)) AS u(id, email, anon);
+INSERT INTO public.profiles (id, display_name, email) VALUES
+  ('$U_RITA','Rita','rita@kl.test'), ('$U_CARLA','Carla','carla@kl.test'), ('$U_NINA','Nina','nina@kl.test'), ('$U_GAST','Gast','gast@kl.test'),
+  ('$U_GOWN','Gown','gown@kl.test'), ('$U_DUAL','Dual','dual@kl.test'), ('$U_DEC','Dec','dec@kl.test')
+ON CONFLICT (id) DO UPDATE SET display_name = EXCLUDED.display_name, email = EXCLUDED.email;
+INSERT INTO public.tournaments (id, owner_id, title, date, number_of_teams, group_phase_duration, config, status, is_public, share_code) VALUES
+  ('$T_FIN','$U_RITA','Abschluss-Cup','2026-11-14',3,10,'{"publishedAt":"2026-11-01T00:00:00.000Z"}','published',true,'ABSCHL'),
+  ('$T_DUAL','$U_DUAL','Dual-Eigen','2026-11-28',2,10,'{}','draft',false,NULL),
+  ('$T_GOWN','$U_GOWN','Gown-Cup','2026-11-28',2,10,'{}','draft',false,NULL);
+INSERT INTO public.tournament_collaborators (tournament_id, user_id, role, accepted_at, label, invited_by) VALUES
+  ('$T_FIN','$U_CARLA','co-admin',now(),'Carla','$U_RITA'), ('$T_FIN','$U_HANS','collaborator',now(),'Hans','$U_CARLA'), ('$T_FIN','$U_NINA','co-admin',now(),'Nina','$U_RITA'),
+  ('$T_OTHER','$U_DUAL','co-admin',now(),'Dual',NULL), ('$T_OTHER','$U_FELIX','collaborator',now(),'Felix',NULL);
+INSERT INTO public.teams (id, tournament_id, name) VALUES ('$FA','$T_FIN','FA'),('$FB','$T_FIN','FB'),('$FC','$T_FIN','FC'),
+  ('$DA','$T_DUAL','DA'),('$DB','$T_DUAL','DB'),('$GA','$T_GOWN','GA'),('$GB','$T_GOWN','GB');
+INSERT INTO public.matches (id, tournament_id, round, field, team_a_id, team_b_id, match_number, scheduled_start) VALUES
+  ('$F1','$T_FIN',1,1,'$FA','$FB',1,'14:00'), ('$F2','$T_FIN',1,2,'$FA','$FC',2,'14:00'), ('$F3','$T_FIN',2,1,'$FB','$FC',3,'14:30'), ('$F4','$T_FIN',2,2,'$FB','$FA',4,'14:30'),
+  ('$S4','$T_OTHER',3,3,'$OA','$OB',3,'15:00'), ('$M_OTHER2','$T_OTHER',2,1,'$OB','$OA',2,'14:30'), ('$M_DUAL','$T_DUAL',1,1,'$DA','$DB',1,'14:00');
+-- Veranstaltung mit Bildschirmen und einem Mitglied (Kim); eine zweite, an ein eigenes Turnier gebunden
+INSERT INTO public.gatherings (id, owner_id, name, share_code) VALUES ('$G1','$U_GAST','Halle Gast','GAST01'), ('$G2','$U_GOWN','Halle Gown','GOWN01');
+INSERT INTO public.gathering_screens (gathering_id, name, screen_key) VALUES
+  ('$G1','Eingang','$(printf 'a%.0s' $(seq 1 32))'), ('$G1','Halle 2','$(printf 'b%.0s' $(seq 1 32))'), ('$G2','Foyer','$(printf 'c%.0s' $(seq 1 32))');
+INSERT INTO public.gathering_members (gathering_id, user_id, role, accepted_at) VALUES ('$G1','$U_KIM','co-admin',now());
+UPDATE public.tournaments SET gathering_id = '$G2' WHERE id = '$T_GOWN';
+-- Beitrittsanfrage: ein Geraet wartet (JR), eine Anfrage hat Dec entschieden (Geraet Kim)
+INSERT INTO public.tournament_join_codes (code, tournament_id, created_by) VALUES ('ABCDEFGHJK','$T_OTHER','$U_DEC');
+INSERT INTO public.tournament_join_requests (tournament_id, code, device_user_id, display_name, check_number, status) VALUES ('$T_OTHER','ABCDEFGHJK','$U_JR','Neuer Helfer',42,'pending');
+INSERT INTO public.tournament_join_requests (tournament_id, code, device_user_id, display_name, check_number, status, decided_at, decided_by) VALUES ('$T_OTHER','ABCDEFGHJK','$U_KIM','Kira',43,'accepted',now(),'$U_DEC');
+SQL
+  ev RESULT_ENTRY "$(E f1)" "{\"payload\":{\"scores\":{\"$FA\":1,\"$FB\":0}}}"; send "$U_CARLA" "$F1"; [[ "$(statuses_of "$OUT")" == "accepted" ]] || { echo "::error::Seed F1 (Carla): $OUT" >&2; exit 1; }
+  ev MATCH_START "$(E f2)" '{"clockMs":null}'; send "$U_HANS" "$F2"; [[ "$(statuses_of "$OUT")" == "accepted" ]] || { echo "::error::Seed F2 (Hans, Anpfiff): $OUT" >&2; exit 1; }
+  ev RESULT_ENTRY "$(E f3)" "{\"payload\":{\"scores\":{\"$FB\":0,\"$FC\":3}}}"; send "$U_CARLA" "$F3"; [[ "$(statuses_of "$OUT")" == "accepted" ]] || { echo "::error::Seed F3 (Carla): $OUT" >&2; exit 1; }
+  ev RESULT_ENTRY "$(E o2)" "{\"payload\":{\"scores\":{\"$OB\":2,\"$OA\":2}}}"; send "$U_DUAL" "$M_OTHER2"; [[ "$(statuses_of "$OUT")" == "accepted" ]] || { echo "::error::Seed fremd2 (Dual als Co-Admin): $OUT" >&2; exit 1; }
+  ev MATCH_START "$(E s4)" '{"clockMs":null}'; send "$U_FELIX" "$S4"; [[ "$(statuses_of "$OUT")" == "accepted" ]] || { echo "::error::Seed S4 (Felix, laufendes Spiel): $OUT" >&2; exit 1; }
+  OUT="$(q "SELECT harness.take('$U_FELIX','$T_OTHER',3);")"; [[ "$(q "SELECT holder_user_id FROM public.field_control WHERE tournament_id='$T_OTHER' AND field=3;")" == "$U_FELIX" ]] || { echo "::error::Seed Felix: Feld 3 nicht uebernommen: $OUT" >&2; exit 1; }
+  psql_stdin <<SQL
+-- je Probe-Konto GENAU eine Spur in T_FIN (Verweisspalten, die die Abschluss-Sperre ablehnt); Carla zusaetzlich eine Berichtigung; Hans traegt sich ins Turnier ein
+UPDATE public.matches SET last_modified_by = '$U_P1' WHERE id = '$F4';
+INSERT INTO public.match_corrections (match_id, previous_score_a, previous_score_b, new_score_a, new_score_b, corrected_by) VALUES ('$F3',1,0,0,3,'$U_CARLA'), ('$F1',0,0,1,0,'$U_P2');
+UPDATE public.tournaments SET last_modified_by = '$U_P3' WHERE id = '$T_FIN';
+INSERT INTO public.field_control (tournament_id, field, epoch, holder_user_id, holder_device_id, holder_device_label) VALUES ('$T_FIN', 7, 1, '$U_P4', '$(uuid_for device:p4)', 'Geraet P4');
+-- Turnier abschliessen: genau die Schreibweise von finish_tournament (Schalter app.lifecycle_write, Zustand finished)
+BEGIN;
+SELECT set_config('app.lifecycle_write', 'on', true);
+UPDATE public.tournaments SET lifecycle_status = 'finished', finished_at = now() WHERE id = '$T_FIN';
+COMMIT;
+SQL
 }
 
 apply_target() { psql_stdin < "$TARGET_FILE" >/dev/null; local f; for f in ${AFTER[@]+"${AFTER[@]}"}; do psql_stdin < "$f" >/dev/null; done; }
@@ -203,6 +291,7 @@ run_RSV() {
   check V "@RE-011 service_role: Vorpruefung fuer Olli meldet 'blockiert'" "true" "$(jq -r '.blocked' <<<"$res" 2>/dev/null || echo "$res")"
   check V "@RE-011 sie nennt zwei Turniere (davon eines im Papierkorb), Mitgliedschaften und Eintraege als Zahlen" "2|1|0|2" "$(jq -r '"\(.owned_tournaments|length)|\([.owned_tournaments[]|select(.in_trash)]|length)|\(.memberships)|\(.refs_set_null.match_event_authors_user_id)"' <<<"$res" 2>/dev/null || echo "$res")"
   check V "@RE-011 weder Name noch E-Mail im Ergebnis (0 Treffer auf Anzeigenamen und Adressen)" "0" "$(grep -ciE 'kl\.test|@|Olli|Maria|Udo|Karl|Kira|Frei' <<<"$res" || true)"
+  check V "@RE-011 kein Turniertitel im Ergebnis (Titel koennen Personennamen sein)" "0" "$(grep -ciE 'Nikolaus|Alter Cup' <<<"$res" || true)"
   check V "@RE-011 unbelastetes Konto (Frei): nicht blockiert, keine Turniere" "false|0" "$(jq -r '"\(.blocked)|\(.owned_tournaments|length)"' <<<"$(q "SET ROLE service_role; SELECT public.account_deletion_check('$U_FREI');")" 2>/dev/null || echo "?")"
   has V "@RE-011 angemeldete Nutzer (authenticated) koennen die Vorpruefung nicht aufrufen" "permission denied" "$(q "SET ROLE authenticated; SELECT public.account_deletion_check('$U_FREI');")"
   has V "@RE-011 anon kann die Vorpruefung nicht aufrufen" "permission denied" "$(q "SET ROLE anon; SELECT public.account_deletion_check('$U_FREI');")"
@@ -239,6 +328,93 @@ run_RSV() {
   check S "@RE-010 zuerst beide Turniere bewusst loeschen (Betreiber, postgres): 2 Zeilen" "DELETE 2" "$(q "WITH d AS (DELETE FROM public.tournaments WHERE owner_id='$U_OLLI' RETURNING 1) SELECT 'DELETE ' || count(*) FROM d;")"
   check S "@RE-010 danach laesst sich das Konto loeschen" "DELETE 1" "$(deluser "$U_OLLI")"
   check S "@RE-010 fremde Turniere weiter unveraendert" "$CS_F0" "$(q "SELECT harness.cs($FREMD_IDS);")"
+}
+
+fn() { q "SET ROLE service_role; SELECT public.account_deletion_check('$1');"; }
+fnj() { jq -r "$2" <<<"$(fn "$1")" 2>/dev/null || echo "?"; }
+CLOSED_OHNE="ARRAY['last_modified_by','corrected_by','updated_at']"
+
+# --- F: abgeschlossenes Turnier (Weg b) -----------------------------------------------------------------------------------------------
+# Konten mit Spuren in einem abgeschlossenen Turnier: die Vorpruefung meldet "blockiert" (mit Turnier), das Loeschen wird von der Abschluss-
+# Sperre abgelehnt und aendert nichts; nach dem Wiederoeffnen (echte Funktion reopen_tournament) geht es, die Vorpruefung meldet frei.
+run_F() {
+  local who exp CS0 CS1 CS2 CORR0 sel='"\(.blocked)|\(.blocked_by|join(","))|\(.closed_tournament_refs|length)|\(.closed_tournament_refs[0].id // "-")"'
+  local cols='.closed_tournament_refs[0] | "\(.matches_last_modified_by)|\(.match_corrections_corrected_by)|\(.tournament_last_modified_by)|\(.field_control_holder)"'
+  check F "@RE-009 Turnier ist abgeschlossen (Ausgangslage)" "finished" "$(q "SELECT lifecycle_status FROM public.tournaments WHERE id='$T_FIN';")"
+  for who in CARLA HANS P1 P2 P3 P4; do
+    eval "exp_id=\$U_$who"
+    check F "@RE-011 Vorpruefung $who (Spur im abgeschlossenen Turnier): blockiert, Grund und Turnier genannt" "true|refs_in_closed_tournaments|1|$T_FIN" "$(fnj "$exp_id" "$sel")"
+  done
+  check F "@RE-011 Carla: je Verweisspalte gezaehlt (Spiele 2, Berichtigung 1)" "2|1|false|0" "$(fnj "$U_CARLA" "$cols")"
+  check F "@RE-011 Hans (anonymer Helfer): ein Spiel" "1|0|false|0" "$(fnj "$U_HANS" "$cols")"
+  check F "@RE-011 Spalte matches.last_modified_by allein blockiert (P1)" "1|0|false|0" "$(fnj "$U_P1" "$cols")"
+  check F "@RE-011 Spalte match_corrections.corrected_by allein blockiert (P2)" "0|1|false|0" "$(fnj "$U_P2" "$cols")"
+  check F "@RE-011 Spalte tournaments.last_modified_by allein blockiert (P3)" "0|0|true|0" "$(fnj "$U_P3" "$cols")"
+  check F "@RE-011 Spalte field_control.holder_user_id allein blockiert (P4)" "0|0|false|1" "$(fnj "$U_P4" "$cols")"
+  check F "@RE-011 die Meldung nennt Datum und Zustand des Turniers, das wieder geoeffnet werden muss" "2026-11-14|finished" "$(fnj "$U_CARLA" '.closed_tournament_refs[0] | "\(.date)|\(.lifecycle_status)"')"
+  check F "@RE-011 weder Titel noch Name noch E-Mail in der Meldung" "0" "$(grep -ciE 'Abschluss-Cup|Carla|Rita|@|kl\.test' <<<"$(fn "$U_CARLA")" || true)"
+  check F "@RE-011 Eigentuemer (Rita): blockiert wegen des Turniers, keine Spur im Abschluss-Sinn" "true|owns_tournaments|0|-" "$(fnj "$U_RITA" "$sel")"
+  check F "@RE-011 Co-Admin ohne Spur (Nina): nicht blockiert" "false||0|-" "$(fnj "$U_NINA" "$sel")"
+  CS0="$(q "SELECT harness.cs(ARRAY['$T_FIN']::uuid[]);")"
+  for who in CARLA HANS P1 P2 P3 P4; do
+    eval "exp_id=\$U_$who"
+    has F "@RE-009 $who: Loeschen im abgeschlossenen Turnier wird abgelehnt (TOURNAMENT_FINISHED)" "TOURNAMENT_FINISHED" "$(deluser_raw "$exp_id")"
+  done
+  check F "@RE-009 nach den Ablehnungen: alle sechs Konten bestehen weiter" "6" "$(q "SELECT count(*) FROM auth.users WHERE id IN ('$U_CARLA','$U_HANS','$U_P1','$U_P2','$U_P3','$U_P4');")"
+  check F "@RE-009 nach den Ablehnungen: Turnier mit allen Zeilen unveraendert (Pruefsumme), weiter abgeschlossen" "$CS0|finished" "$(q "SELECT harness.cs(ARRAY['$T_FIN']::uuid[]);")|$(q "SELECT lifecycle_status FROM public.tournaments WHERE id='$T_FIN';")"
+  check F "@RE-009 nach den Ablehnungen: Verweise und Mitgliedschaften unveraendert" "4|2|1|2|$U_P3" "$(q "SELECT (SELECT count(*) FROM public.matches WHERE last_modified_by IN ('$U_CARLA','$U_HANS','$U_P1')) || '|' || (SELECT count(*) FROM public.match_corrections WHERE corrected_by IN ('$U_CARLA','$U_P2')) || '|' || (SELECT count(*) FROM public.field_control WHERE holder_user_id='$U_P4') || '|' || (SELECT count(*) FROM public.tournament_collaborators WHERE user_id IN ('$U_CARLA','$U_HANS') AND tournament_id='$T_FIN') || '|' || (SELECT last_modified_by FROM public.tournaments WHERE id='$T_FIN');")"
+  check F "@RE-009 Co-Admin ohne Spur (Nina) laesst sich im abgeschlossenen Turnier loeschen" "DELETE 1" "$(deluser "$U_NINA")"
+  has F "@RE-010 Eigentuemer (Rita) des abgeschlossenen Turniers wird abgelehnt (RESTRICT)" "tournaments_owner_id_fkey" "$(deluser_raw "$U_RITA")"
+  # Betreiber oeffnet genau dieses Turnier wieder (echte Funktion, als Eigentuemer)
+  has F "@RE-009 Betreiber oeffnet das Turnier wieder (reopen_tournament)" '"status": "ok"' "$(q "SELECT harness.reopen('$U_RITA','$T_FIN');")"
+  for who in CARLA HANS P1 P2 P3 P4; do
+    eval "exp_id=\$U_$who"
+    check F "@RE-011 Vorpruefung $who nach dem Wiederoeffnen: nicht blockiert" "false||0|-" "$(fnj "$exp_id" "$sel")"
+  done
+  CS1="$(q "SELECT harness.cs(ARRAY['$T_FIN']::uuid[], $CLOSED_OHNE);")"
+  CORR0="$(q "SELECT count(*) FROM public.match_corrections WHERE match_id IN (SELECT id FROM public.matches WHERE tournament_id='$T_FIN');")"
+  for who in CARLA HANS P1 P2 P3 P4; do
+    eval "exp_id=\$U_$who"
+    check F "@RE-009 $who: Konto wird nach dem Wiederoeffnen geloescht" "DELETE 1" "$(deluser "$exp_id")"
+  done
+  check F "@RE-009 danach Turnier bis auf die Verweise (und updated_at) unveraendert, Spiele und Ereignisse bleiben" "$CS1" "$(q "SELECT harness.cs(ARRAY['$T_FIN']::uuid[], $CLOSED_OHNE);")"
+  check F "@RE-009 danach: Berichtigungen bleiben, Verweise NULL, Feld bleibt als freies Feld" "$CORR0|0|0|1|NULL" "$(q "SELECT (SELECT count(*) FROM public.match_corrections WHERE match_id IN (SELECT id FROM public.matches WHERE tournament_id='$T_FIN')) || '|' || (SELECT count(*) FROM public.matches WHERE tournament_id='$T_FIN' AND last_modified_by IS NOT NULL) || '|' || (SELECT count(*) FROM public.match_corrections WHERE corrected_by IS NOT NULL AND match_id IN (SELECT id FROM public.matches WHERE tournament_id='$T_FIN')) || '|' || (SELECT count(*) FROM public.field_control WHERE tournament_id='$T_FIN' AND field=7 AND holder_user_id IS NULL) || '|' || coalesce((SELECT last_modified_by::text FROM public.tournaments WHERE id='$T_FIN'), 'NULL');")"
+}
+
+# --- L: weitere Lagen ------------------------------------------------------------------------------------------------------------------
+run_L() {
+  local H0 M0 EV0 V0 R0
+  # gehaltenes Feld im laufenden Spiel (Felix haelt Feld 3 im Fremden Cup, Spiel S4 laeuft)
+  H0="$(q "SELECT holder_user_id || '|' || epoch FROM public.field_control WHERE tournament_id='$T_OTHER' AND field=3;")"
+  M0="$(q "SELECT md5((to_jsonb(m) - 'last_modified_by' - 'updated_at')::text) FROM public.matches m WHERE id='$S4';")"
+  EV0="$(q "SELECT count(*) FROM public.match_events WHERE match_id='$S4';")"
+  check L "@RE-009 Ausgangslage: Felix haelt Feld 3, das Spiel laeuft (ein Ereignis)" "$U_FELIX|1|1" "$H0|$EV0"
+  check L "@RE-011 Vorpruefung Felix: nicht blockiert, gehaltenes Feld wird gemeldet" "false|1" "$(fnj "$U_FELIX" '"\(.blocked)|\(.refs_set_null.field_control_holder_user_id)"')"
+  check L "@RE-009 Felix (haelt Feld im laufenden Spiel): Konto wird geloescht" "DELETE 1" "$(deluser "$U_FELIX")"
+  check L "@RE-009 das Feld ist frei (Halter NULL, Epoche gleich), die Zeile bleibt" "NULL|1|1" "$(q "SELECT coalesce(holder_user_id::text, 'NULL') || '|' || epoch || '|' || count(*) OVER () FROM public.field_control WHERE tournament_id='$T_OTHER' AND field=3;")"
+  check L "@RE-009 das laufende Spiel und seine Ereignisse bleiben unveraendert (bis auf den Verweis)" "$M0|$EV0" "$(q "SELECT md5((to_jsonb(m) - 'last_modified_by' - 'updated_at')::text) FROM public.matches m WHERE id='$S4';")|$(q "SELECT count(*) FROM public.match_events WHERE match_id='$S4';")"
+  # Veranstaltung mit Bildschirmen
+  check L "@RE-011 Vorpruefung Gast (Veranstaltung ohne Turnier): nicht blockiert, meldet Veranstaltung, 2 Bildschirme, 1 Mitglied" "false|1|2|1|0" "$(fnj "$U_GAST" '"\(.blocked)|\(.owned_gatherings)|\(.gathering_removal.screens)|\(.gathering_removal.members_of_others)|\(.gathering_removal.tournaments_assigned)"')"
+  check L "@RE-009 Gast: Konto wird geloescht (Veranstaltung samt ihren Bildschirmen und Mitgliedern faellt mit weg, wie gemeldet)" "DELETE 1" "$(deluser "$U_GAST")"
+  check L "@RE-009 Gasts Veranstaltung, Bildschirme, Mitgliedszeile sind weg; fremde Veranstaltung und ihr Bildschirm bleiben; Kims Konto bleibt" "0|0|0|1|1|1|1" "$(q "SELECT (SELECT count(*) FROM public.gatherings WHERE id='$G1') || '|' || (SELECT count(*) FROM public.gathering_screens WHERE gathering_id='$G1') || '|' || (SELECT count(*) FROM public.gathering_members WHERE gathering_id='$G1') || '|' || (SELECT count(*) FROM public.gatherings WHERE id='$G2') || '|' || (SELECT count(*) FROM public.gathering_screens WHERE gathering_id='$G2') || '|' || (SELECT count(*) FROM auth.users WHERE id='$U_KIM') || '|' || (SELECT count(*) FROM public.profiles WHERE id='$U_KIM');")"
+  check L "@RE-010 Vorpruefung Gown (Veranstaltung mit eigenem Turnier): blockiert wegen des Turniers, meldet 1 Bildschirm und 1 zugeordnetes Turnier" "true|owns_tournaments|1|1" "$(fnj "$U_GOWN" '"\(.blocked)|\(.blocked_by|join(","))|\(.gathering_removal.screens)|\(.gathering_removal.tournaments_assigned)"')"
+  has L "@RE-010 Gown wird abgelehnt (Turnier in einer Veranstaltung)" "tournaments_owner_id_fkey" "$(deluser_raw "$U_GOWN")"
+  check L "@RE-010 danach Veranstaltung, Bildschirm, Turnier und Zuordnung unveraendert" "1|1|$G2" "$(q "SELECT (SELECT count(*) FROM public.gatherings WHERE id='$G2') || '|' || (SELECT count(*) FROM public.gathering_screens WHERE gathering_id='$G2') || '|' || (SELECT gathering_id FROM public.tournaments WHERE id='$T_GOWN');")"
+  # Beitrittsanfrage
+  check L "@RE-011 Vorpruefung Dec (hat Code erstellt und Anfrage entschieden): nicht blockiert, 1 Code-Verweis, 1 Entscheidung" "false|1|1" "$(fnj "$U_DEC" '"\(.blocked)|\(.refs_set_null.join_codes_created_or_revoked_by)|\(.refs_set_null.join_requests_decided_by)"')"
+  check L "@RE-009 JR (anonymes Geraet mit wartender Beitrittsanfrage): Konto wird geloescht" "DELETE 1" "$(deluser "$U_JR")"
+  check L "@RE-009 seine Anfrage ist weg, Code und die andere Anfrage bleiben" "0|1|1" "$(q "SELECT (SELECT count(*) FROM public.tournament_join_requests WHERE device_user_id='$U_JR') || '|' || (SELECT count(*) FROM public.tournament_join_codes WHERE code='ABCDEFGHJK') || '|' || (SELECT count(*) FROM public.tournament_join_requests WHERE device_user_id='$U_KIM');")"
+  check L "@RE-009 Dec (entschied die Anfrage, erstellte den Code): Konto wird geloescht" "DELETE 1" "$(deluser "$U_DEC")"
+  check L "@RE-009 Anfrage (accepted) und Code bleiben, Verweise NULL" "1|accepted|NULL|NULL" "$(q "SELECT (SELECT count(*) FROM public.tournament_join_requests WHERE device_user_id='$U_KIM') || '|' || (SELECT status FROM public.tournament_join_requests WHERE device_user_id='$U_KIM') || '|' || (SELECT coalesce(decided_by::text,'NULL') FROM public.tournament_join_requests WHERE device_user_id='$U_KIM') || '|' || (SELECT coalesce(created_by::text,'NULL') FROM public.tournament_join_codes WHERE code='ABCDEFGHJK');")"
+  # Konto, das Eigentuemer UND Co-Admin ist
+  R0="$(q "SELECT md5((to_jsonb(m) - 'last_modified_by' - 'updated_at')::text) FROM public.matches m WHERE id='$M_OTHER2';")"
+  check L "@RE-011 Vorpruefung Dual (eigenes Turnier und Co-Admin im fremden): blockiert wegen des eigenen Turniers, 1 Mitgliedschaft, 1 Spiel-Verweis" "true|owns_tournaments|1|1" "$(fnj "$U_DUAL" '"\(.blocked)|\(.blocked_by|join(","))|\(.memberships)|\(.refs_set_null.matches_last_modified_by)"')"
+  has L "@RE-010 Dual wird abgelehnt (eigenes Turnier)" "tournaments_owner_id_fkey" "$(deluser_raw "$U_DUAL")"
+  check L "@RE-010 danach bleiben Mitgliedschaft im fremden Turnier, Verweis im Spiel und das eigene Turnier unveraendert" "1|$U_DUAL|1" "$(q "SELECT (SELECT count(*) FROM public.tournament_collaborators WHERE user_id='$U_DUAL' AND tournament_id='$T_OTHER') || '|' || (SELECT last_modified_by FROM public.matches WHERE id='$M_OTHER2') || '|' || (SELECT count(*) FROM public.tournaments WHERE id='$T_DUAL');")"
+  check L "@RE-010 Betreiber loescht das eigene Turnier bewusst (postgres): 1 Zeile" "DELETE 1" "$(q "WITH d AS (DELETE FROM public.tournaments WHERE id='$T_DUAL' RETURNING 1) SELECT 'DELETE ' || count(*) FROM d;")"
+  check L "@RE-011 Vorpruefung Dual danach: nicht blockiert" "false" "$(fnj "$U_DUAL" '.blocked')"
+  check L "@RE-009 Dual: Konto wird geloescht" "DELETE 1" "$(deluser "$U_DUAL")"
+  check L "@RE-009 Mitgliedschaft weg, das fremde Spiel bleibt (bis auf den Verweis unveraendert, Verweis NULL)" "0|$R0|NULL" "$(q "SELECT (SELECT count(*) FROM public.tournament_collaborators WHERE user_id='$U_DUAL') || '|' || (SELECT md5((to_jsonb(m) - 'last_modified_by' - 'updated_at')::text) FROM public.matches m WHERE id='$M_OTHER2') || '|' || (SELECT coalesce(last_modified_by::text,'NULL') FROM public.matches WHERE id='$M_OTHER2');")"
 }
 
 # --- H: Hin- und Rueckweg, Fail-fast, Sperre --------------------------------------------------------------------------------------
@@ -300,6 +476,13 @@ MUTATIONS=(
   "tournaments-no-action|R|ALTER TABLE public.tournaments DROP CONSTRAINT tournaments_last_modified_by_fkey, ADD CONSTRAINT tournaments_last_modified_by_fkey FOREIGN KEY (last_modified_by) REFERENCES auth.users(id);"
   "corrections-no-action|R|ALTER TABLE public.match_corrections DROP CONSTRAINT match_corrections_corrected_by_fkey, ADD CONSTRAINT match_corrections_corrected_by_fkey FOREIGN KEY (corrected_by) REFERENCES auth.users(id);"
   "invited-by-fk-bleibt|R|ALTER TABLE public.tournament_collaborators ADD CONSTRAINT tournament_collaborators_invited_by_fkey FOREIGN KEY (invited_by) REFERENCES auth.users(id);"
+  "fn-abgeschlossene-ignoriert|F|FUNC:s/v_n_owned > 0 OR v_n_closed > 0/v_n_owned > 0/"
+  "fn-field-control-ignoriert|F|FUNC:s/\\n *OR EXISTS \\(SELECT 1 FROM public\\.field_control f WHERE f\\.tournament_id = t\\.id AND f\\.holder_user_id = p_user_id\\)\\)\\) x;/)) x;/"
+  "fn-berichtigung-ignoriert|F|FUNC:s/\\n *OR EXISTS \\(SELECT 1 FROM public\\.match_corrections c JOIN public\\.matches m ON m\\.id = c\\.match_id\\n *WHERE m\\.tournament_id = t\\.id AND c\\.corrected_by = p_user_id\\)//"
+  "fn-turnier-verweis-ignoriert|F|FUNC:s/\\(t\\.last_modified_by = p_user_id\\n *OR EXISTS \\(SELECT 1 FROM public\\.matches m WHERE m\\.tournament_id = t\\.id AND m\\.last_modified_by = p_user_id\\)/(EXISTS (SELECT 1 FROM public.matches m WHERE m.tournament_id = t.id AND m.last_modified_by = p_user_id)/"
+  "fn-mit-titel|V|FUNC:s/'date', t\\.date::text, 'in_trash'/'title', t.title, 'in_trash'/"
+  "fn-ohne-bildschirme|L|FUNC:s/'screens', +\\(SELECT count\\(\\*\\)/'screens', (SELECT 0*count(*)/"
+  "veranstaltung-restrict|L|ALTER TABLE public.gatherings DROP CONSTRAINT gatherings_owner_id_fkey, ADD CONSTRAINT gatherings_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES auth.users(id) ON DELETE RESTRICT;"
   "vorpruefung-fuer-angemeldete|V|GRANT EXECUTE ON FUNCTION public.account_deletion_check(uuid) TO authenticated;"
   "vorpruefung-fuer-anon|V|GRANT EXECUTE ON FUNCTION public.account_deletion_check(uuid) TO anon;"
   "vorpruefung-mit-adresse|V|CREATE OR REPLACE FUNCTION public.account_deletion_check(p_user_id uuid) RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS \$f\$ SELECT jsonb_build_object('blocked', EXISTS (SELECT 1 FROM public.tournaments t WHERE t.owner_id = p_user_id), 'owned_tournaments', (SELECT coalesce(jsonb_agg(jsonb_build_object('id', t.id, 'title', t.title, 'in_trash', t.deleted_at IS NOT NULL)), '[]'::jsonb) FROM public.tournaments t WHERE t.owner_id = p_user_id), 'memberships', 0, 'refs_set_null', jsonb_build_object('match_event_authors_user_id', 2), 'email', (SELECT email FROM public.profiles WHERE id = p_user_id)) \$f\$;"
@@ -310,7 +493,7 @@ run_suite() { # <Mutation|""> <Umfang: rsv|rsvh>
   prepare
   schema_dump > "$WORK/schema_vorher.sql"
   RULES_VORHER="$(rules)"
-  if [[ "$MODE" == "without-migration" ]]; then run_RSV; return 0; fi
+  if [[ "$MODE" == "without-migration" ]]; then run_RSV; run_F; run_L; return 0; fi
   if [[ -z "$mut" ]]; then
     has A "Udo (Co-Admin mit Ergebnis und Berichtigung): Loeschen scheitert heute an einem Fremdschluessel" "ERROR.*violates foreign key constraint" "$(q "DELETE FROM auth.users WHERE id='$U_UDO';")"
     has A "Tom (anonymer Helfer mit Anpfiff): Loeschen scheitert heute an einem Fremdschluessel" "ERROR.*violates foreign key constraint" "$(q "DELETE FROM auth.users WHERE id='$U_TOM';")"
@@ -323,7 +506,9 @@ run_suite() { # <Mutation|""> <Umfang: rsv|rsvh>
   out="$(psql_stdin < "$TARGET_FILE" 2>&1 | tr '\n' ' ')"
   [[ -z "$mut" ]] && check H "Migration spielt ohne Fehler ein (keine Ausgabe)" "" "$out"
   local f; for f in ${AFTER[@]+"${AFTER[@]}"}; do psql_stdin < "$f" >/dev/null; done
-  [[ -n "$mut" ]] && q "$mut" >/dev/null
+  if [[ "$mut" == FUNC:* ]]; then   # Mutation der Vorpruefung: Funktionstext aus der Migration, mit perl umgeschrieben
+    awk '/^CREATE OR REPLACE FUNCTION public.account_deletion_check/{f=1} f{print} f&&/^\$\$;/{exit}' "$TARGET_FILE" | perl -0777 -pe "${mut#FUNC:}" | psql_stdin >/dev/null
+  elif [[ -n "$mut" ]]; then q "$mut" >/dev/null; fi
   if [[ -z "$mut" ]]; then
     PN="$(rowq "$REPO_ROOT/scripts/konto-loeschen-nachher.sql")"
     PRIV1="$(priv_run)"
@@ -335,6 +520,8 @@ run_suite() { # <Mutation|""> <Umfang: rsv|rsvh>
     check H "Pruefabfrage VORHER auf dem Stand NACH der Migration ist ABWEICHUNG (sie erkennt den Zustand)" "ABWEICHUNG" "$(rowq "$REPO_ROOT/scripts/konto-loeschen-vorher.sql" | cut -d'|' -f1)"
   fi
   run_RSV
+  run_F
+  run_L
   if [[ "$full" == "rsvh" ]]; then run_H; fi
   return 0
 }
@@ -350,10 +537,10 @@ case "$MODE" in
   without-migration)
     run_suite "" rsv
     echo; echo "== Gegenprobe A (ohne Migration) =="; summary
-    for k in R S V; do
+    for k in R S V F; do
       [[ "${DEVS[$(cat_index $k)]}" -gt 0 ]] || { echo "::error::Gegenprobe A: Kategorie $k ist ohne die Migration nicht rot -- der Check erkennt den Fehler nicht." >&2; exit 1; }
     done
-    echo "Gegenprobe A bestanden: R, S, V sind ohne Migration rot." ;;
+    echo "Gegenprobe A bestanden: R, S, V, F sind ohne Migration rot." ;;
   gegenprobe)
     fail=0
     for m in "${MUTATIONS[@]}"; do

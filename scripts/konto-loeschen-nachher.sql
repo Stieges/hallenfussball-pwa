@@ -2,6 +2,10 @@
 -- Vorpruefung da sind, und zaehlt/summiert wie konto-loeschen-vorher.sql. Eine Zeile Ausgabe; "urteil" muss OK sein.
 -- Aufruf (Betreiber): im SQL-Editor als Ganzes ausfuehren. "pruefsummen" muss mit der Ausgabe von konto-loeschen-vorher.sql gleich sein
 -- (die Migration aendert und loescht keine Zeile); "urteil" muss OK sein. Der Fremdschluessel invited_by darf nicht mehr vorkommen.
+-- GRENZE: Die Pruefsummen sind nur aussagekraeftig, wenn zwischen "vorher" und "nachher" niemand schreibt (Cockpit, Testturnier, Monitor-Zaehler).
+-- Beide Abfragen und die Migration deshalb direkt hintereinander ausfuehren, wenn kein Turnier laeuft. Weichen die Summen ab, ohne dass sich
+-- "zeilen_je_spalte" aendert: pruefen, in welcher Tabelle (Summen stehen je Tabelle) zwischendurch geschrieben wurde, und beide Abfragen
+-- wiederholen; die Migration selbst loescht und aendert keine Zeile (im Wegwerf-Container belegt).
 -- Rein ASCII.
 SELECT
   CASE WHEN (SELECT string_agg(c.conname || '=' || c.confdeltype::text, ' ' ORDER BY c.conname)
