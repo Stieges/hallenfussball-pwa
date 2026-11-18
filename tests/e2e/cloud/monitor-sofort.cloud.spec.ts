@@ -221,7 +221,7 @@ test.describe('R5 Sofort-Kanal: Monitor ohne Anmeldung folgt dem Cockpit', () =>
 
       // Weiter: der Monitor läuft vom Pausenwert weiter
       await olli.page.getByRole('button', { name: 'Weiter' }).click();
-      await expect(monitor.getByTestId('clock-label')).toHaveText('Restzeit', { timeout: FRIST_MS + 500 });
+      await expect(monitor.getByTestId('clock-label'), 'läuft wieder: kein Wort neben der Uhr (@ZM-215)').toHaveCount(0, { timeout: FRIST_MS + 500 });
       await expect.poll(async () => sekunden(await monitorUhr.textContent()), { timeout: 5_000 }).toBeLessThan(monitorBeiPause);
 
       const daten = {
