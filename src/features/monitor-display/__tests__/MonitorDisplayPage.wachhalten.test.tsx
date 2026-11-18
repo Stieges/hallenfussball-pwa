@@ -212,14 +212,15 @@ describe('Live-Folie mit laufendem Spiel (@ME-006, Kopfzeile)', () => {
     expect(hinweis()).not.toBeInTheDocument();
   });
 
-  it('die Kopfzeile zeigt wie bisher Feld/Spiel und Gruppe, auch ohne Hinweis', async () => {
+  // @ZM-215: Feld nur bei mehr als einem Feld (das Turnier hat zwei), Gruppe nur bei mehr als einer Gruppe (hier eine: keine Gruppenangabe)
+  it('die Kopfzeile zeigt Feld/Spiel (zwei Felder), die Gruppe nur bei mehreren Gruppen, auch ohne Hinweis', async () => {
     wakeLockAbgelehnt();
     localGet.mockResolvedValue(liveTurnier());
     seite();
     await vorspulen(0);
     expect(kopfzeile()).toBeInTheDocument();
     expect(screen.getByTestId('live-info')).toHaveTextContent('Feld 1');
-    expect(screen.getByTestId('live-group')).toHaveTextContent('monitor:liveMatch.group');
+    expect(screen.getByTestId('live-group')).toBeEmptyDOMElement();
   });
 
   it('Spiel startet während der 10 Sekunden: der Hinweis verschwindet sofort, das Folienprogramm läuft weiter', async () => {

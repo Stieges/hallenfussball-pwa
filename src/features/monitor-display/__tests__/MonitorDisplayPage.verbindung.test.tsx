@@ -79,7 +79,7 @@ describe('Paket M: Monitor-Seite bei eingefrorener Verbindung', () => {
     expect(screen.queryByText(/Stand von|keine Verbindung/i)).toBeNull();
     // Der Bildschirm wird nie leer, die Uhr trägt keine Kennzeichnung
     expect(screen.queryByTestId('monitor-waiting-state')).toBeNull();
-    expect(screen.getByTestId('clock-label')).toHaveTextContent(/^Restzeit$/);
+    expect(screen.queryByTestId('clock-label')).toBeNull(); // @ZM-215: im laufenden Spiel steht kein Wort neben der Uhr, nie „Restzeit“
   });
 
   it('@ME-007 @ME-030: kommt wieder eine Antwort, verschwindet das Symbol ohne Neuladen', async () => {

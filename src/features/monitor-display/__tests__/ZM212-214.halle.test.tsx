@@ -12,7 +12,7 @@ import { ZeitBalken } from '../../../components/ui/atoms/ZeitBalken';
 import type { MonitorProfile, PerformanceSettings } from '../../../types/monitor';
 import type { Match, Tournament } from '../../../types/tournament';
 import { NowSourceContext } from '../../../components/schedule/useTickingNow';
-import { displayHall, monitorThemes } from '../../../design-tokens';
+import { displayHall, displayLayout, monitorThemes } from '../../../design-tokens';
 import { getContrastRatio } from '../../../design-tokens/display';
 import { palette } from '../../../design-tokens/colors/palette';
 import { FALLBACK_PATTERN } from '../../../core/models/scoreBoxColors';
@@ -365,15 +365,23 @@ describe('@ZM-215 Die Live-Sicht zeigt nur, was man aus der Ferne braucht, und d
     expect((bestand.getByTestId('bestand-balken').firstElementChild as HTMLElement).style.background).toBe('var(--color-scoreboard-ok)');
   });
 
-  it('Bahn und Füllung heben sich in beiden Themen ab: Füllung gegen Bahn mindestens 3 : 1, Bahn gegen Hintergrund (dunkel 2,5 : 1, hell 2,0 : 1); Schlussphase und angehalten sind verschieden', () => {
+  it('Bahn und Füllung heben sich in beiden Themen ab: Füllung gegen Bahn mindestens 3 : 1, Bahn gegen den Hintergrund AN DER STELLE DES BALKENS (dunkel 2,9 : 1, hell 2,0 : 1); Schlussphase und angehalten sind verschieden', () => {
     const hintergruende = { dark: ['#1E293B', '#0F172A'], light: ['#FFFFFF', '#E2E8F0'] } as const;
-    const mindestBahn = { dark: 2.5, light: 2.0 } as const;
+    const mindestBahn = { dark: 2.9, light: 2.0 } as const;
+    // Der Verlauf läuft senkrecht über die ganze Folie; der Balken liegt bei 65,7 bis 71,7 % der Höhe, mit Bildrand (bis 10 %) zwischen 62,6 und 71,7 %
+    const hex = (n: number): string => Math.round(n).toString(16).padStart(2, '0');
+    const mische = (a: string, b: string, f: number): string => `#${[1, 3, 5].map((i) => hex(parseInt(a.slice(i, i + 2), 16) * (1 - f) + parseInt(b.slice(i, i + 2), 16) * f)).join('')}`;
+    const vonBis = [0.626, cqh(displayHall.panel.height) / 100 + cqh(displayHall.bar.gapTop) / 100 + cqh(displayHall.bar.height) / 100] as const;
     for (const thema of ['dark', 'light'] as const) {
       const farben = displayHall.barColors[thema];
-      for (const hintergrund of hintergruende[thema]) { expect(getContrastRatio(farben.track, hintergrund), `${thema}: Bahn gegen ${hintergrund}`).toBeGreaterThanOrEqual(mindestBahn[thema]); }
+      for (const f of vonBis) {
+        const stelle = mische(hintergruende[thema][0], hintergruende[thema][1], f);
+        expect(getContrastRatio(farben.track, stelle), `${thema}: Bahn gegen den Hintergrund bei ${String(f)} der Höhe (${stelle})`).toBeGreaterThanOrEqual(mindestBahn[thema]);
+      }
       for (const ton of ['gruen', 'grau', 'violett', 'gedaempft'] as const) { expect(getContrastRatio(farben[ton], farben.track), `${thema}: ${ton} gegen Bahn`).toBeGreaterThanOrEqual(3); }
-      // helles Thema: die Füllung ist der kräftige Teil (dunkler als die Bahn), dunkles Thema: heller als die Bahn
-      for (const ton of ['gruen', 'grau', 'violett', 'gedaempft'] as const) { expect(getContrastRatio(farben[ton], hintergruende[thema][0]) >= getContrastRatio(farben.track, hintergruende[thema][0]) * (thema === 'light' ? 1 : 0), `${thema}: ${ton} kräftig`).toBe(true); }
+      // Dunkles Thema: die Füllung ist heller als die Bahn (mehr Kontrast gegen Schwarz); helles Thema: dunkler als die Bahn (mehr Kontrast gegen Weiß)
+      const gegen = thema === 'dark' ? '#000000' : '#FFFFFF';
+      for (const ton of ['gruen', 'grau', 'violett', 'gedaempft'] as const) { expect(getContrastRatio(farben[ton], gegen), `${thema}: ${ton} kräftiger als die Bahn`).toBeGreaterThan(getContrastRatio(farben.track, gegen)); }
     }
     // dunkel: Violett ist das Violett der Uhr in der Schlussphase und von „angehalten“ (hell, kaum gesättigt) und der Pause (gedämpft) zu unterscheiden
     expect(displayHall.barColors.dark.violett).toBe(palette.purple[300]);
@@ -419,11 +427,12 @@ describe('@ZM-215 Die Live-Sicht zeigt nur, was man aus der Ferne braucht, und d
     expect(screen.queryByTestId('hall-section')).toBeNull();
   });
 
-  it('Bestandsschutz: ohne Profil bleibt der Zeitbalken der bisherigen Folie unverändert (Wort „Restzeit“, Höhe aus dem bisherigen Token)', () => {
+  it('Ohne Profil bleibt die bisherige Anordnung (Kopfzeile, Kästen, Zeitbalken `monitor-zeitbalken`); seit @ZM-215 ohne das Wort „Restzeit“, mit dem Balken in der Höhe des Tokens der Folie', () => {
     zeige({ patch: laeuft(), profil: null });
     expect(screen.getByTestId('live-header')).toBeInTheDocument();
     expect(screen.queryByTestId('hall-zeitbalken')).toBeNull();
-    expect(screen.getByText('Restzeit')).toBeInTheDocument();
+    expect(screen.queryByText('Restzeit')).toBeNull();
+    expect(screen.getByTestId('monitor-zeitbalken').style.height).toBe(displayLayout.scoreArea.progressHeight);
   });
 });
 

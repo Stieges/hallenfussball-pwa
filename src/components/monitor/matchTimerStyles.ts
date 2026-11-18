@@ -16,31 +16,36 @@ export const STUFEN: Record<MatchTimerSize, Stufe> = {
   sm: { time: cssVars.fontSizes.titleLg, progress: cssVars.spacing.xs, gap: cssVars.spacing.xs, label: displayFontSizes.bodySM },
   md: { time: cssVars.fontSizes.headlineMd, progress: cssVars.spacing.sm, gap: cssVars.spacing.sm, label: displayFontSizes.bodySM },
   lg: { time: cssVars.fontSizes.displaySm, progress: cssVars.spacing.sm, gap: cssVars.spacing.md, label: displayFontSizes.bodySM },
-  // F5 (Plan R5, „gilt nach Vorschlag“): Balken ≈ 3 % der Bildhöhe (@ZM-165)
-  xl: { time: displayFontSizes.clockXL, progress: L.progressHeight, gap: L.clockGap, label: displayFontSizes.clockHint },
+  // @ZM-215: Balken 5 % der Höhe, Restzeit 14 % (der Platz der früheren Zeile „Restzeit“ über der Uhr geht an Uhr und Balken)
+  xl: { time: L.clockFont, progress: L.progressHeight, gap: L.clockGap, label: displayFontSizes.clockHint },
 };
 
 export function containerStyle(stufe: Stufe): CSSProperties {
   return { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: stufe.gap, width: '100%' };
 }
 
-/** Zeile über der Uhr: immer da, feste Höhe auch ohne Text (B-44a2: die Lage ändert sich nie), bricht nie um. */
-export function labelRowStyle(size: MatchTimerSize, stufe: Stufe): CSSProperties {
+/**
+ * Zeile der Uhr (@ZM-215): die Uhr steht in der Mitte, ein Wort („angehalten“, „Pause · Halbzeit“, „Zeit abgelaufen“, „Verlängerung“, „Anstoß“) links daneben (man
+ * liest „Anstoß 16:20“, „angehalten 3:20“) und nur bei Abweichung vom laufenden Spiel; über der Uhr steht nichts. Die Uhr bleibt dabei mittig, ihre Lage ändert sich mit dem Wort nie (@ZM-151).
+ */
+export function clockRowStyle(size: MatchTimerSize): CSSProperties {
   return {
-    display: 'flex', justifyContent: 'center', flexWrap: 'nowrap', whiteSpace: 'nowrap',
-    minHeight: size === 'xl' ? `calc(${stufe.label} * ${L.hintLineHeight})` : undefined,
-    lineHeight: L.hintLineHeight,
+    display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', width: '100%',
+    columnGap: size === 'xl' ? L.clockInnerGap : cssVars.spacing.sm,
   };
 }
 
-/** H1: der Text steht direkt auf dem Monitor-Hintergrund, in der Textfarbe (Kontrast ≥ 4,5 : 1). */
-export function labelStyle(stufe: Stufe, colors: MonitorThemeColors): CSSProperties {
-  return { fontSize: stufe.label, fontWeight: cssVars.fontWeights.bold, color: colors.text, textAlign: 'center' };
+/** Das Wort neben der Uhr: erste Spalte, rechts bündig an der Uhr, bricht nie um. */
+export function wordStyle(stufe: Stufe, colors: MonitorThemeColors): CSSProperties {
+  return {
+    gridColumn: 1, justifySelf: 'end', whiteSpace: 'nowrap', minWidth: 0, lineHeight: L.hintLineHeight,
+    fontSize: stufe.label, fontWeight: cssVars.fontWeights.bold, color: colors.text,
+  };
 }
 
 export function clockBoxStyle(size: MatchTimerSize): CSSProperties {
   return {
-    display: 'flex', alignItems: 'baseline',
+    gridColumn: 2, display: 'flex', alignItems: 'baseline',
     gap: size === 'xl' ? L.clockInnerGap : cssVars.spacing.sm,
     // B-44a2: Größe und Lage der Uhr sind in jeder Phase gleich
     padding: size === 'xl' ? `${L.clockPadY} ${L.clockPadX}` : `${cssVars.spacing.xs} ${cssVars.spacing.md}`,

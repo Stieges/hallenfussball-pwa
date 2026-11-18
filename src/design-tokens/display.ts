@@ -245,7 +245,8 @@ export const displayLayout = {
     // B-44a3: fasst Uhr, Balken, Hinweiszeile und Schiedsrichter-Zeile
     lowerHeight: '30cqh',
     // B-44a2: Abstand zwischen Namen und Uhr (liegt innerhalb von lowerHeight)
-    lowerPaddingTop: '2cqh',
+    // @ZM-215: 3 statt 2 (die größere Uhr hat sonst bei Namen mit 50 Zeichen in zwei Zeilen einen Textrahmen, der den Namen berührt; visual:metrics)
+    lowerPaddingTop: '3cqh',
     // B-44a2: Abstand zwischen Uhr und Hinweisen sowie zwischen Hinweisen
     hintGap: '1cqh',
     hintGapAbove: '1.6cqh',
@@ -261,12 +262,14 @@ export const displayLayout = {
     noticeLineHeight: NOTICE_LINE_HEIGHT,
     noticeGap: '0.6cqh',
     // B-44a3: Uhr und unterer Bereich (vorher Literale in MatchTimer)
-    // R5 PR 2 (@ZM-165, Plan F5 „gilt nach Vorschlag“): Zeitbalken etwa 3 % der Bildhöhe (vorher 1,2cqh, C-MONITOR-ZEITBALKEN-DUENN)
-    progressHeight: '3cqh',
+    // @ZM-215 (Daniel 2026-11-18: „die Zeit größer machen und den Balken dicker“): Zeitbalken der Live-Folie „Spielfeld (fern)“ 5 % der Höhe
+    // (vorher 3 %, R5 PR 2 / @ZM-165; Profil „Halle (sehr fern)“: 6 %, `displayHall.bar`), Restzeit 14 % statt 11 % (`clockXL` bleibt für Karte und Endstand)
+    progressHeight: '5cqh',
+    clockFont: '14cqh',
     clockGap: '1.2cqh',
     // R5 PR 2: Zeichenabstand der Uhr-Ziffern (vorher Literal in MatchTimer)
     clockLetterSpacing: '0.02em',
-    clockPadY: '0.8cqh',
+    clockPadY: '0.5cqh',
     clockPadX: '2cqh',
     clockInnerGap: '1cqh',
     clockLineHeight: 1,

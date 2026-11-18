@@ -57,6 +57,10 @@ export interface LiveMatchDisplayProps {
   zeitstrafenQuelle?: ZeitstrafenQuelle;
   /** Vor dem Anpfiff (@ZM-195, Folie „Nächstes Spiel“): die Anstoßzeit steht an der Stelle der Uhr, die Kästen zeigen „0 : 0“ in Größe und Lage wie im Spiel */
   kickoff?: { time: string; notes?: ReactNode };
+  /** Feld in der Kopfzeile nennen (nur bei mehr als einem Feld im Turnier, @ZM-215); ohne Angabe ja */
+  showField?: boolean;
+  /** Gruppe in der Kopfzeile nennen (nur bei mehr als einer Gruppe im Turnier, @ZM-215); ohne Angabe ja */
+  showGroup?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -78,6 +82,8 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   uhr,
   zeitstrafenQuelle,
   kickoff,
+  showField = true,
+  showGroup = true,
 }) => {
   const { t } = useTranslation('monitor');
   const { themeColors } = useMonitorTheme(theme);
@@ -133,6 +139,8 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
           group={group ?? match.group}
           size={size}
           themeColors={themeColors}
+          showField={showField}
+          showGroup={showGroup}
         />
 
         {/* Raster: Kästen, Trenner, Namen (@ZM-140); Kindermodus ohne Kästen; Ende nach Mockup K5g */}

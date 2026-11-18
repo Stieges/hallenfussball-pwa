@@ -1,5 +1,6 @@
 /**
- * Kopfzeile der Live-Folie (B-44a2): LIVE-Marke links, Feld/Spiel in der Mitte, Gruppe rechts.
+ * Kopfzeile der Live-Folie (B-44a2): LIVE-Marke links, Feld/Spiel in der Mitte, Gruppe rechts. Das Feld steht nur, wenn das Turnier mehr als ein Feld hat,
+ * die Gruppe nur bei mehr als einer Gruppe (@ZM-215); das Spiel steht immer.
  * Der Wachhalten-Hinweis steht nicht hier, sondern als Ecke der Monitor-Seite (B-48a, `WakeLockNotice`).
  */
 import type { CSSProperties } from 'react';
@@ -21,9 +22,13 @@ export interface LiveHeaderProps {
   group?: string;
   size: 'md' | 'lg' | 'xl';
   themeColors: MonitorThemeColors;
+  /** Feld nennen (nur bei mehr als einem Feld im Turnier, @ZM-215); ohne Angabe ja */
+  showField?: boolean;
+  /** Gruppe nennen (nur bei mehr als einer Gruppe im Turnier, @ZM-215); ohne Angabe ja */
+  showGroup?: boolean;
 }
 
-export function LiveHeader({ badge, field, matchNumber, group, size, themeColors }: LiveHeaderProps) {
+export function LiveHeader({ badge, field, matchNumber, group, size, themeColors, showField = true, showGroup = true }: LiveHeaderProps) {
   const { t } = useTranslation('monitor');
   const xl = size === 'xl';
   // B-44a2: feste drei Spalten (Marke links, Feld/Spiel Mitte, Gruppe rechts), auch wenn eine Gruppe fehlt
@@ -55,9 +60,9 @@ export function LiveHeader({ badge, field, matchNumber, group, size, themeColors
       <div style={badgeSlotStyle} data-testid="live-badge">
         <MatchStatusBadge model={badge} size={xl ? 'display' : 'card'} tone={monitorBadgeTone(themeColors)} />
       </div>
-      <div style={infoStyle} data-testid="live-info">Feld {field} — Spiel {matchNumber}</div>
+      <div style={infoStyle} data-testid="live-info">{showField ? `Feld ${String(field)} — Spiel ${String(matchNumber)}` : t('liveMatch.matchOnly', { number: matchNumber })}</div>
       <div style={{ ...infoStyle, color: themeColors.text, justifySelf: 'end' }} data-testid="live-group">
-        {group !== undefined && !isSingleGroupId(group) ? t('liveMatch.group', { group }) : null}
+        {showGroup && group !== undefined && !isSingleGroupId(group) ? t('liveMatch.group', { group }) : null}
       </div>
     </div>
   );
