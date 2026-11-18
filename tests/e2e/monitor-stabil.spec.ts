@@ -66,7 +66,7 @@ test.describe('Monitor-Stabilität (Paket M)', () => {
       await expect(hinweis).toHaveAttribute('aria-label', 'Keine Verbindung seit 14:32');
       await expect(hinweis.locator('svg')).toBeVisible();
       // die Restzeit läuft unverändert weiter (ohne Kennzeichnung): 6:00 minus 31 Sekunden
-      await expect(page.getByTestId('clock-label')).toHaveText('Restzeit');
+      await expect(page.getByTestId('clock-label'), 'im laufenden Spiel kein Wort neben der Uhr (@ZM-215)').toHaveCount(0);
       await expect(page.getByTestId('monitor-clock')).toHaveText('5:29');
       // das Bild bleibt: Spiel, Namen und Uhr stehen weiter da
       await expect(page.getByTestId('live-block-home')).toBeVisible();
@@ -87,7 +87,7 @@ test.describe('Monitor-Stabilität (Paket M)', () => {
       await netz(page, true);
       await page.clock.runFor(3_000);
       await expect(page.getByTestId('monitor-connection-hint')).toHaveCount(0);
-      await expect(page.getByTestId('clock-label')).toHaveText('Restzeit');
+      await expect(page.getByTestId('clock-label'), 'im laufenden Spiel kein Wort neben der Uhr (@ZM-215)').toHaveCount(0);
     });
   }
 
