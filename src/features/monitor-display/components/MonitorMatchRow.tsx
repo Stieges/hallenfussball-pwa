@@ -1,6 +1,6 @@
 import { useId, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, displayMonitor, monitorThemes } from '../../../design-tokens';
+import { cssVars, displayList, displayMonitor, monitorThemes } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { MatchView } from '../../../core/view';
 import type { MonitorTheme } from '../../../types/monitor';
@@ -9,7 +9,8 @@ import { resultFigures, tableResultExtra, tableResultExtraTerms } from '../../..
 import { resolveTheme } from '../monitorDisplayHelpers';
 import { monitorSideLabel } from '../matchSides';
 import { monitorBadgeTone } from '../../../components/ui/molecules/matchStatusBadgeStyle';
-import { DEFAULT_FRAME, hyphenWordStaysTogether, nameCharsPerLine, rowHeight, scaledList, type ListColumns, type ListFrame } from '../listRows';
+import { DEFAULT_FRAME, hyphenWordStaysTogether, nameCharsPerLine, rowHeight, type ListColumns, type ListFrame } from '../listRows';
+import { compactRowHeight, compactTokens, namenBreiteEm, textBreiteEm } from '../listCompact';
 import { MonitorTimeCell } from './MonitorTimeCell';
 import { SlashBreaks } from '../../../components/ui/atoms/TeamName';
 
@@ -35,21 +36,27 @@ interface MonitorMatchRowProps {
  * Teamname mit Bindestrich-Wörtern, die zusammenbleiben, solange sie in eine Zeile passen (@ZM-188): nur die Darstellung (`nowrap`),
  * der Text bleibt unverändert, Suche und Vorlesen sehen den echten Bindestrich.
  */
-function NameText({ name, perLine }: { name: string; perLine: number }) {
+function NameText({ name, keep }: { name: string; keep: (teil: string) => boolean }) {
   // Umbruchstelle nach „/“ (@ZM-207): „SG Taching/Tengling“ bricht nie als „Ten-gling“
-  return <SlashBreaks text={name} keep={(teil) => hyphenWordStaysTogether(teil, perLine)} />;
+  return <SlashBreaks text={name} keep={keep} />;
 }
 
 /** Eine Zeile einer Spielliste: Uhrzeit, Feld, Paarung, Stand und Zusätze an festen Stellen (@ZM-187). */
 export function MonitorMatchRow({ match, tournament, theme, showScore = false, columns, frame = DEFAULT_FRAME, reserveExtra = columns.state }: MonitorMatchRowProps) {
   const { t } = useTranslation(['tournament', 'sport']);
   const colors = monitorThemes[resolveTheme(theme)];
+  // @ZM-211: schmale Zeitspalte, „(war …)“ unter der Uhrzeit, Schrift im Maßstab der Folie; sonst die Aufteilung von bisher
+  const compact = frame.compact === true;
+  const scale = frame.scale ?? 1;
+  const list = compact ? compactTokens(scale, columns) : displayList;
   const perLine = nameCharsPerLine(frame);
-  // @ZM-125: Schrift und Abstände der Zeile mit dem Maßstab der Folie (1 = Stufen der Tokens)
-  const displayList = scaledList(frame.scale ?? 1);
+  const keep = compact
+    ? (teil: string) => teil.includes('-') && textBreiteEm(teil) <= namenBreiteEm(frame, columns, scale)
+    : (teil: string) => hyphenWordStaysTogether(teil, perLine);
+  const hoehe = (m: typeof match) => (compact ? compactRowHeight(m, columns, frame, scale, reserveExtra) : rowHeight(m, columns, frame, reserveExtra));
   // B-44b (@ZM-125, @ZM-087): Schrift relativ zur Bildhöhe, Namen umbrechen statt zu kürzen
   const cell: CSSProperties = {
-    fontSize: displayList.fontSizes.team,
+    fontSize: list.fontSizes.team,
     color: colors.text,
     minWidth: 0,
     overflowWrap: 'break-word',
@@ -61,14 +68,14 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
   // Kurzform („i. E.“, „n. V.“) immer mit ausgeschriebenem Begriff für Darüberfahren und Screenreader (@OB-075)
   const extraTerms = figures === null ? undefined : tableResultExtraTerms(figures, t);
 
-  const extraStyle: CSSProperties = { fontSize: displayList.fontSizes.note, fontWeight: cssVars.fontWeights.normal, color: colors.text, whiteSpace: 'nowrap', position: 'absolute', top: '100%', left: 0, right: 0, lineHeight: 1.2 };
+  const extraStyle: CSSProperties = { fontSize: list.fontSizes.note, fontWeight: cssVars.fontWeights.normal, color: colors.text, whiteSpace: 'nowrap', position: 'absolute', top: '100%', left: 0, right: 0, lineHeight: 1.2 };
 
   const labelId = useId();
-  const cardHeight = rowHeight({ ...match, labelText: undefined }, columns, frame, reserveExtra);
+  const cardHeight = hoehe({ ...match, labelText: undefined });
   return (
     <div
       data-testid="monitor-match-block"
-      data-height-vh={String(rowHeight(match, columns, frame, reserveExtra))}
+      data-height-vh={String(hoehe(match))}
       role={match.labelText ? 'group' : undefined}
       aria-labelledby={match.labelText ? labelId : undefined}
       style={{ width: '100%' }}
@@ -78,15 +85,15 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
         <div
           data-testid="monitor-match-labelline"
           style={{
-            display: 'flex', gap: displayList.cellGap, width: '100%', boxSizing: 'border-box', fontSize: displayList.fontSizes.team,
+            display: 'flex', gap: list.cellGap, width: '100%', boxSizing: 'border-box', fontSize: list.fontSizes.team,
             // Rand nur links und rechts (wie die Karte): oben und unten würde die Zeile höher als in listRows gerechnet
-            padding: `0 ${displayList.rowPaddingX}`, borderStyle: 'solid', borderColor: 'transparent', borderWidth: `0 ${cssVars.borderWidth.thin}`, marginBottom: displayList.labelGap,
+            padding: `0 ${list.rowPaddingX}`, borderStyle: 'solid', borderColor: 'transparent', borderWidth: `0 ${cssVars.borderWidth.thin}`, marginBottom: list.labelGap,
           }}
         >
-          <div style={{ flex: `0 0 ${displayList.timeFieldWidth}` }} />
+          <div style={{ flex: `0 0 ${list.timeFieldWidth}` }} />
           <div style={{ flex: '1 1 0' }} />
-          <div style={{ flex: `0 0 ${displayList.separatorWidth}`, display: 'flex', justifyContent: 'center' }}>
-            <div id={labelId} data-testid="monitor-match-label" style={{ whiteSpace: 'nowrap', fontSize: displayList.fontSizes.timeNote, fontWeight: cssVars.fontWeights.bold, color: colors.text, lineHeight: 1.2 }}>{match.labelText}</div>
+          <div style={{ flex: `0 0 ${list.separatorWidth}`, display: 'flex', justifyContent: 'center' }}>
+            <div id={labelId} data-testid="monitor-match-label" style={{ whiteSpace: 'nowrap', fontSize: list.fontSizes.timeNote, fontWeight: cssVars.fontWeights.bold, color: colors.text, lineHeight: 1.2 }}>{match.labelText}</div>
           </div>
           <div style={{ flex: '1 1 0' }} />
         </div>
@@ -101,9 +108,9 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
           alignItems: 'center',
           minHeight: `${String(cardHeight)}vh`,
           position: 'relative',
-          gap: displayList.cellGap,
+          gap: list.cellGap,
           width: '100%',
-          padding: `${displayList.rowPaddingY} ${displayList.rowPaddingX}`,
+          padding: `${list.rowPaddingY} ${list.rowPaddingX}`,
           boxSizing: 'border-box',
           background: colors.surface,
           borderRadius: displayMonitor.radius.card,
@@ -117,26 +124,27 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
           color={colors.text}
           tone={monitorBadgeTone(colors)}
           style={{ ...cell, fontWeight: cssVars.fontWeights.semibold }}
-          list={displayList}
+          list={list}
+          compact={compact}
         />
-        <div data-teamname style={{ ...cell, flex: '1 1 0', textAlign: 'right' }}><NameText name={monitorSideLabel(match.home)} perLine={perLine} /></div>
+        <div data-teamname style={{ ...cell, flex: '1 1 0', textAlign: 'right' }}><NameText name={monitorSideLabel(match.home)} keep={keep} /></div>
         <div
           data-testid="monitor-match-separator"
           style={{
             ...cell,
             // Breite in em der Namensschrift (nicht der Standschrift): fest in jeder Zeile (@ZM-151, @ZM-187), listRows.ts rechnet auf derselben Basis
-            flex: `0 0 ${displayList.separatorWidth}`,
+            flex: `0 0 ${list.separatorWidth}`,
             textAlign: 'center',
             // nur so hoch wie der Stand: mittig in der Zeile, „(4:3 i. E.)“ hängt darunter (außerhalb des Flusses)
             position: 'relative',
-            height: `calc(${displayList.fontSizes.score} * 1.2)`,
+            height: `calc(${list.fontSizes.score} * 1.2)`,
           }}
         >
           <div
             data-testid="monitor-match-score"
             style={{
               // Stand: 1,5 × Namensschrift, so fett wie die Uhrzeit (VISUAL-DESIGN § 8)
-              fontSize: displayList.fontSizes.score,
+              fontSize: list.fontSizes.score,
               lineHeight: 1.2,
               fontWeight: showScore ? cssVars.fontWeights.bold : cssVars.fontWeights.normal,
               color: showScore ? colors.text : colors.textMuted,
@@ -154,7 +162,7 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
             </div>
           )}
         </div>
-        <div data-teamname style={{ ...cell, flex: '1 1 0' }}><NameText name={monitorSideLabel(match.away)} perLine={perLine} /></div>
+        <div data-teamname style={{ ...cell, flex: '1 1 0' }}><NameText name={monitorSideLabel(match.away)} keep={keep} /></div>
       </div>
     </div>
   );
