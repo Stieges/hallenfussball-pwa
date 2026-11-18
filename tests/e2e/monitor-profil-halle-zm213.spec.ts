@@ -96,6 +96,9 @@ function saatFuer(fall: string, optionen: SaatOptionen = {}): SaatDatei {
 async function oeffne(page: Page, fall: string, w: number, h: number, rand: number, optionen: Parameters<typeof saatFuer>[1] = {}, monitor = 'mon-halle'): Promise<void> {
   await page.setViewportSize({ width: w, height: h });
   await installiereSaat(page.context(), saatFuer(fall, optionen));
+  // Ein Wechsel nur der Adresse nach „#“ lädt nicht neu: die Namen der Seite davor würden als „eingepasst“ gelten, während die Seite schon auf das nächste Spiel umschaltet
+  // (in der CI gemessen: 0,8 px Unterschied der Namen). Über eine leere Seite wird jeder Fall frisch geladen.
+  if (page.url() !== 'about:blank') { await page.goto('about:blank'); }
   await page.goto(`/#/display/${fall}/${monitor}?rand=${String(rand)}`);
   await expect(page.locator('[data-testid="hall-display"], [data-testid="live-slide-area"]').first()).toBeVisible({ timeout: 25000 });
   await animationenFertig(page);
