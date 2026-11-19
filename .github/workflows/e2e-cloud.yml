@@ -65,25 +65,27 @@ jobs:
           printf 'Acquire::Retries "3";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\n' | sudo tee /etc/apt/apt.conf.d/99ci-retries >/dev/null
 
       - name: Install Playwright Chromium
-        id: pw-install
-        continue-on-error: true
-        timeout-minutes: 6
+        timeout-minutes: 20
         env:
           CACHE_HIT: ${{ steps.pw-cache.outputs.cache-hit }}
         run: |
-          if [ "$CACHE_HIT" = "true" ]; then npx playwright install-deps chromium; else npx playwright install --with-deps chromium; fi
-
-      - name: Install Playwright Chromium (Wiederholung)
-        if: steps.pw-install.outcome != 'success'
-        timeout-minutes: 8
-        env:
-          CACHE_HIT: ${{ steps.pw-cache.outputs.cache-hit }}
-        run: |
-          sudo pkill -KILL -x apt-get || true
-          sudo pkill -KILL -x dpkg || true
-          sudo rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock
-          sudo dpkg --configure -a || true
-          if [ "$CACHE_HIT" = "true" ]; then npx playwright install-deps chromium; else npx playwright install --with-deps chromium; fi
+          # Ursache der 6-Minuten-Abbrüche (Lauf 44468570083): Auch bei Cache-Treffer holt `install-deps` über apt
+          # die Schriften-Pakete (~22 MB) vom Ubuntu-Spiegel, der dort mit ~64 kB/s lieferte (5 min 40 s). Der
+          # apt-Leerlauf-Timeout (20 s) greift bei zähem, aber stetigem Fluss nie. Daher: jeder Versuch hart
+          # begrenzt (`timeout`), apt setzt angefangene Pakete beim nächsten Versuch fort (partial/), hängende
+          # apt-Prozesse und Locks werden vor jedem neuen Versuch beseitigt.
+          if [ "$CACHE_HIT" = "true" ]; then CMD="npx playwright install-deps chromium"; LIMIT=200; else CMD="npx playwright install --with-deps chromium"; LIMIT=360; fi
+          for versuch in 1 2 3 4; do
+            echo "Playwright-Install, Versuch $versuch von 4: $CMD"
+            if timeout --kill-after=15 "$LIMIT" bash -c "$CMD"; then exit 0; fi
+            echo "::warning::Playwright-Install, Versuch $versuch gescheitert oder nach ${LIMIT} s abgebrochen"
+            sudo pkill -KILL -x apt-get || true
+            sudo pkill -KILL -x dpkg || true
+            sudo pkill -KILL -f /usr/lib/apt/methods || true
+            sudo rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock
+            sudo dpkg --configure -a || true
+          done
+          exit 1
 
       - name: Setup Supabase CLI
         # Version fest gepinnt in der Action (nicht "latest": dort einmal am GitHub-Rate-Limit
@@ -95,9 +97,19 @@ jobs:
         # Testwert, kein Secret) -- dieselbe Datei, keine zweite Kopie des Werts. Muss VOR
         # `supabase start` gesetzt sein, weil die Edge-Runtime das Secret beim Container-Start
         # aus der Prozess-Variable liest (supabase/config.toml, [edge_runtime.secrets]).
+        # Wiederholung: Lauf 44384102794 scheiterte beim Start (Registry „Rate exceeded“ bei public.ecr.aws, vom CLI
+        # selbst wiederholt, danach „port 54322 already in use“). Ohne Anmeldung und ohne neue Secrets: bis zu 3
+        # Versuche, dazwischen Reste der eigenen Container entfernen und warten (geladene Images bleiben erhalten).
         run: |
           source scripts/lib/e2e-registration-code.sh
-          supabase start
+          for versuch in 1 2 3; do
+            if supabase start; then exit 0; fi
+            echo "::warning::supabase start, Versuch $versuch von 3 gescheitert"
+            supabase stop --no-backup || true
+            docker ps -aq --filter "name=supabase_" | xargs -r docker rm -f || true
+            sleep $((versuch * 30))
+          done
+          exit 1
 
       - name: Schema zurücksetzen + Testdaten säen
         # Dieselbe Kette wie lokal, ein einziger npm-Befehl -- keine zweite Kopie der Logik aus

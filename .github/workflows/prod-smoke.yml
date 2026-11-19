@@ -96,8 +96,27 @@ jobs:
 
       - name: Install Playwright Chromium
         if: steps.secrets.outputs.have == 'true'
-        timeout-minutes: 8
-        run: npx playwright install --with-deps chromium
+        timeout-minutes: 10
+        env:
+          CACHE_HIT: 'false'
+        run: |
+          # Ursache der 6-Minuten-Abbrüche (Lauf 44468570083): Auch bei Cache-Treffer holt `install-deps` über apt
+          # die Schriften-Pakete (~22 MB) vom Ubuntu-Spiegel, der dort mit ~64 kB/s lieferte (5 min 40 s). Der
+          # apt-Leerlauf-Timeout (20 s) greift bei zähem, aber stetigem Fluss nie. Daher: jeder Versuch hart
+          # begrenzt (`timeout`), apt setzt angefangene Pakete beim nächsten Versuch fort (partial/), hängende
+          # apt-Prozesse und Locks werden vor jedem neuen Versuch beseitigt.
+          if [ "$CACHE_HIT" = "true" ]; then CMD="npx playwright install-deps chromium"; LIMIT=200; else CMD="npx playwright install --with-deps chromium"; LIMIT=360; fi
+          for versuch in 1 2 3 4; do
+            echo "Playwright-Install, Versuch $versuch von 4: $CMD"
+            if timeout --kill-after=15 "$LIMIT" bash -c "$CMD"; then exit 0; fi
+            echo "::warning::Playwright-Install, Versuch $versuch gescheitert oder nach ${LIMIT} s abgebrochen"
+            sudo pkill -KILL -x apt-get || true
+            sudo pkill -KILL -x dpkg || true
+            sudo pkill -KILL -f /usr/lib/apt/methods || true
+            sudo rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock
+            sudo dpkg --configure -a || true
+          done
+          exit 1
 
       - name: Rauchtest gegen die Produktion
         if: steps.secrets.outputs.have == 'true'

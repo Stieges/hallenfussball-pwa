@@ -226,25 +226,27 @@ jobs:
 
       - name: Install Playwright Browser
         if: env.PW_BROWSER != 'webkit'
-        id: pw-install
-        continue-on-error: true
-        timeout-minutes: 6
+        timeout-minutes: 20
         env:
           CACHE_HIT: ${{ steps.pw-cache.outputs.cache-hit }}
         run: |
-          if [ "$CACHE_HIT" = "true" ]; then npx playwright install-deps "$PW_BROWSER"; else npx playwright install --with-deps "$PW_BROWSER"; fi
-
-      - name: Install Playwright Browser (Wiederholung)
-        if: env.PW_BROWSER != 'webkit' && steps.pw-install.outcome != 'success'
-        timeout-minutes: 8
-        env:
-          CACHE_HIT: ${{ steps.pw-cache.outputs.cache-hit }}
-        run: |
-          sudo pkill -KILL -x apt-get || true
-          sudo pkill -KILL -x dpkg || true
-          sudo rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock
-          sudo dpkg --configure -a || true
-          if [ "$CACHE_HIT" = "true" ]; then npx playwright install-deps "$PW_BROWSER"; else npx playwright install --with-deps "$PW_BROWSER"; fi
+          # Ursache der 6-Minuten-Abbrüche (Lauf 44468570083): Auch bei Cache-Treffer holt `install-deps` über apt
+          # die Schriften-Pakete (~22 MB) vom Ubuntu-Spiegel, der dort mit ~64 kB/s lieferte (5 min 40 s). Der
+          # apt-Leerlauf-Timeout (20 s) greift bei zähem, aber stetigem Fluss nie. Daher: jeder Versuch hart
+          # begrenzt (`timeout`), apt setzt angefangene Pakete beim nächsten Versuch fort (partial/), hängende
+          # apt-Prozesse und Locks werden vor jedem neuen Versuch beseitigt.
+          if [ "$CACHE_HIT" = "true" ]; then CMD="npx playwright install-deps $PW_BROWSER"; LIMIT=200; else CMD="npx playwright install --with-deps $PW_BROWSER"; LIMIT=360; fi
+          for versuch in 1 2 3 4; do
+            echo "Playwright-Install, Versuch $versuch von 4: $CMD"
+            if timeout --kill-after=15 "$LIMIT" bash -c "$CMD"; then exit 0; fi
+            echo "::warning::Playwright-Install, Versuch $versuch gescheitert oder nach ${LIMIT} s abgebrochen"
+            sudo pkill -KILL -x apt-get || true
+            sudo pkill -KILL -x dpkg || true
+            sudo pkill -KILL -f /usr/lib/apt/methods || true
+            sudo rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock
+            sudo dpkg --configure -a || true
+          done
+          exit 1
 
       - name: Build for E2E tests
         run: npm run build
@@ -254,12 +256,6 @@ jobs:
         env:
           CI_E2E_USE_PREVIEW: 'true'
 
-      # Haertetest der visuellen Messung (scripts/visual-metrics, Skill visuelle-pruefung): braucht
-      # Chromium und baut die App selbst (ohne .env); einmal je CI-Lauf genuegt (Review B-17).
-      - name: Haertetest visuelle Messung
-        if: matrix.project == 'desktop'
-        run: npm run test:visual-metrics
-
       - name: Upload Playwright report
         uses: actions/upload-artifact@v7
         if: failure()
@@ -268,12 +264,89 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
+  # Haertetest der visuellen Messung (scripts/visual-metrics, Skill visuelle-pruefung): braucht Chromium und
+  # baut die App selbst (ohne .env). Früher ein Schritt im Job "E2E Tests (desktop)"; dort riss er mit ~5 min die
+  # 25-Minuten-Grenze (PR #560). Eigener Job, gleiche Umgebung (Runner, Chromium, gleicher Befehl). Sperrt über den
+  # Job "Build" (needs + Gate-Schritt), bis der Job zusätzlich als Pflicht-Prüfung in der Branch-Regel steht.
+  visual-metrics-haertetest:
+    name: Haertetest visuelle Messung
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Playwright-Version ermitteln
+        id: pw-version
+        run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/@playwright/test'].version")" >> "$GITHUB_OUTPUT"
+
+      - name: Playwright-Browser-Cache
+        id: pw-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ env.ImageOS }}-chromium-${{ steps.pw-version.outputs.version }}
+
+      - name: apt-Haertung (Download-Timeout und Retries)
+        run: |
+          printf 'Acquire::Retries "3";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\n' | sudo tee /etc/apt/apt.conf.d/99ci-retries >/dev/null
+
+      - name: Install Playwright Browser
+        timeout-minutes: 20
+        env:
+          CACHE_HIT: ${{ steps.pw-cache.outputs.cache-hit }}
+        run: |
+          # Ursache der 6-Minuten-Abbrüche (Lauf 44468570083): Auch bei Cache-Treffer holt `install-deps` über apt
+          # die Schriften-Pakete (~22 MB) vom Ubuntu-Spiegel, der dort mit ~64 kB/s lieferte (5 min 40 s). Der
+          # apt-Leerlauf-Timeout (20 s) greift bei zähem, aber stetigem Fluss nie. Daher: jeder Versuch hart
+          # begrenzt (`timeout`), apt setzt angefangene Pakete beim nächsten Versuch fort (partial/), hängende
+          # apt-Prozesse und Locks werden vor jedem neuen Versuch beseitigt.
+          if [ "$CACHE_HIT" = "true" ]; then CMD="npx playwright install-deps chromium"; LIMIT=200; else CMD="npx playwright install --with-deps chromium"; LIMIT=360; fi
+          for versuch in 1 2 3 4; do
+            echo "Playwright-Install, Versuch $versuch von 4: $CMD"
+            if timeout --kill-after=15 "$LIMIT" bash -c "$CMD"; then exit 0; fi
+            echo "::warning::Playwright-Install, Versuch $versuch gescheitert oder nach ${LIMIT} s abgebrochen"
+            sudo pkill -KILL -x apt-get || true
+            sudo pkill -KILL -x dpkg || true
+            sudo pkill -KILL -f /usr/lib/apt/methods || true
+            sudo rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock
+            sudo dpkg --configure -a || true
+          done
+          exit 1
+
+      - name: Haertetest visuelle Messung
+        run: npm run test:visual-metrics
+
   build:
     name: Build
-    needs: [unit-tests, e2e-tests]
+    needs: [unit-tests, e2e-tests, visual-metrics-haertetest]
+    # Läuft auch, wenn ein Vorjob rot ist, und scheitert dann selbst (statt "skipped"): Ein übersprungener
+    # Pflicht-Check gilt als bestanden, ein roter Härtetest darf aber nie durchrutschen.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
 
     steps:
+      - name: Gate - alle Vorjobs grün (Unit Tests, E2E, Härtetest)
+        env:
+          VORJOBS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Ergebnisse der Vorjobs: $VORJOBS"
+          for r in $VORJOBS; do
+            if [ "$r" != "success" ]; then
+              echo "::error::Ein Vorjob war nicht grün ($VORJOBS); Build gilt als gescheitert."
+              exit 1
+            fi
+          done
+
       - name: Checkout
         uses: actions/checkout@v7
 
