@@ -25,7 +25,9 @@ const FUTURE_DATE = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
 /**
  * Wartet, bis die App den Schritt wirklich zeigt (Fortschrittsleiste: `aria-current="step"`), nicht nur, bis die Adresse ihn nennt.
- * Die Adresse wechselt vor der Anzeige; ein „Weiter“ in dieser Lücke trifft noch den alten Schritt und wird verschluckt.
+ * VERMUTUNG, nicht belegt: Ein „Weiter“ zwischen Adresswechsel und Anzeige könnte den alten Schritt treffen und verschluckt werden
+ * (einmaliger CI-Fehllauf „step=3 statt 4“, lokal 0 von 15 nachgestellt). Nach dem Code setzen `handleStepChange` Schritt und Adresse im
+ * selben Klick-Durchlauf; dann ist dieses Warten wirkungslos, aber unschädlich. Die wahre Ursache ist offen.
  */
 async function schrittAngezeigt(page: Page, nummer: number): Promise<void> {
   await expect(page.locator('[aria-current="step"]')).toHaveAttribute('aria-label', new RegExp(`^(Schritt|Step) ${String(nummer)}:`));
