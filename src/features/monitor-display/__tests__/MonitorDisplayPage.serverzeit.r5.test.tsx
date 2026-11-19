@@ -55,6 +55,6 @@ describe('@ME-031 @ZM-176 Monitor-Seite: Restzeit in Serverzeit', () => {
     await waitFor(() => expect(screen.getByTestId('monitor-clock')).toBeInTheDocument());
     // Laufzeit der Antwort im Test ≈ 0 ms: Abweichung höchstens 1 s
     expect(['6:00', '5:59']).toContain(screen.getByTestId('monitor-clock').textContent);
-    expect(screen.getByTestId('clock-label')).toHaveTextContent('Restzeit');
+    expect(screen.queryByTestId('clock-label')).toBeNull(); // @ZM-215: im laufenden Spiel steht kein Wort neben der Uhr, nie „Restzeit“
   });
 });

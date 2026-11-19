@@ -130,7 +130,10 @@ describe('@ZM-039 @ZM-040 @ZM-041 F-PAUSE: unterbrochen bleibt live, nie „näc
     const spiel7 = cup.tournament.matches[GAME[7]];
     const name = (slot: typeof spiel7.slotA) => cup.tournament.teams.find(t => slot.kind === 'team' && t.id === slot.teamId)?.name ?? '';
     expect(screen.getAllByText(name(spiel7.slotA)).length).toBeGreaterThan(0);
-    expect(screen.getByTestId('match-status-badge')).toHaveTextContent('Pause'); // Wort statt Marke „PAUSE“ (@OB-066)
+    // Umgestellt wegen @ZM-215 (Daniel 2026-11-19): oben links bleibt „Live“, die Unterbrechung steht als Symbol an der Uhr
+    expect(screen.getByTestId('match-status-badge')).toHaveTextContent('Live');
+    expect(screen.getByTestId('match-status-badge')).not.toHaveTextContent('Pause');
+    expect(screen.getByTestId('clock-label')).toBeInTheDocument();
   });
 });
 

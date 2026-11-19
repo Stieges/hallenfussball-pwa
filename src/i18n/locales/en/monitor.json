@@ -20,6 +20,7 @@
   "liveMatch": {
     "finished": "FINISHED",
     "waiting": "WAITING",
+    "matchOnly": "Match {{number}}",
     "fieldAndMatch": "Field {{field}} — Match {{number}}",
     "group": "Group {{group}}",
     "referee": "Referee: {{name}}",

@@ -12,7 +12,7 @@ import { useCallback, useState, type ReactElement, type ReactNode } from 'react'
 import { useMonitorTheme } from '../../../hooks';
 import { pairFrameStrength, type ScoreBoxOutcome } from '../../ui/molecules/scoreBoxStyle';
 import type { LiveMatchDisplayProps } from '../LiveMatchDisplay';
-import { badgeOfLiveMatch } from '../liveBadge';
+import { badgeOfLiveMatch, monitorLiveBadge } from '../liveBadge';
 import { outcomeOfSide, winnerOf } from '../matchOutcome';
 import { standardBoxes } from '../standardBoxes';
 import { gemeinsameNamenGroesse } from '../teamNameFit';
@@ -72,7 +72,7 @@ export function HallMatchDisplay({
         )}
       </div>
       <HallBand
-        match={match} group={group ?? match.group} badge={badge ?? badgeOfLiveMatch(match)} theme={theme} colors={themeColors} resolvedTheme={resolvedTheme}
+        match={match} group={group ?? match.group} badge={monitorLiveBadge(badge ?? badgeOfLiveMatch(match))} theme={theme} colors={themeColors} resolvedTheme={resolvedTheme}
         clockMode={clockMode} uhr={uhr} finalScore={finalScore} hideScore={hideScore} kickoff={kickoff} showField={showField} showGroup={showGroup}
       />
     </div>

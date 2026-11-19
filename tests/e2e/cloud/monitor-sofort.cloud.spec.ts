@@ -212,7 +212,8 @@ test.describe('R5 Sofort-Kanal: Monitor ohne Anmeldung folgt dem Cockpit', () =>
       await olli.page.getByTestId('match-pause-button').click();
       await expect(olli.page.getByTestId('scoreboard-clock')).toHaveAttribute('data-steht', 'true');
       const pauseBeginn = Date.now();
-      await expect(monitor.getByTestId('clock-label')).toHaveText('angehalten', { timeout: FRIST_MS + 500 });
+      // @ZM-215 (Daniel 2026-11-19: Symbole statt Text): „angehalten“ steht als Pause-Symbol mit dem Wort als zugänglichem Namen
+      await expect(monitor.getByTestId('clock-label').getByRole('img', { name: 'angehalten' })).toBeVisible({ timeout: FRIST_MS + 500 });
       const pauseLatenz = Date.now() - pauseBeginn;
       const beiPause = sekunden(await cockpitUhr.textContent());
       const monitorBeiPause = sekunden(await monitorUhr.textContent());
@@ -221,7 +222,7 @@ test.describe('R5 Sofort-Kanal: Monitor ohne Anmeldung folgt dem Cockpit', () =>
 
       // Weiter: der Monitor läuft vom Pausenwert weiter
       await olli.page.getByRole('button', { name: 'Weiter' }).click();
-      await expect(monitor.getByTestId('clock-label')).toHaveText('Restzeit', { timeout: FRIST_MS + 500 });
+      await expect(monitor.getByTestId('clock-label'), 'läuft wieder: kein Symbol neben der Uhr (@ZM-215)').toHaveCount(0, { timeout: FRIST_MS + 500 });
       await expect.poll(async () => sekunden(await monitorUhr.textContent()), { timeout: 5_000 }).toBeLessThan(monitorBeiPause);
 
       const daten = {

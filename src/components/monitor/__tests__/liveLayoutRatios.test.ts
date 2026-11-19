@@ -21,7 +21,7 @@ function metrics(w: number, h: number, rand = 0) {
   const digit = resolveCss(scoreDigitFontSize(), { ...ctx, cqw: boxW, cqh: boxH });
   const name = resolveCss(displayFontSizes.teamName, ctx);
   const nameKids = resolveCss(displayFontSizes.teamNameKids, ctx);
-  const clock = resolveCss(displayFontSizes.clockXL, ctx);
+  const clock = resolveCss(L.clockFont, ctx); // @ZM-215: Restzeit der Live-Folie (14 % statt 11 % der Höhe)
   const hint = resolveCss(displayFontSizes.clockHint, ctx);
   return { ctx, boxW, boxH, digit, name, nameKids, clock, hint };
 }
@@ -43,8 +43,9 @@ describe.each(RESOLUTIONS.flatMap(r => [0, 48].map(rand => ({ ...r, rand }))))('
     expect(m.digit).toBeGreaterThanOrEqual(2 * m.name);
   });
 
-  it('Ziffern deutlich größer als die Uhr (mindestens 1,8 ×); Uhr mindestens 1,5 × Teamname', () => {
-    expect(m.digit).toBeGreaterThanOrEqual(1.8 * m.clock);
+  // @ZM-215 (Daniel 2026-11-18: „die Zeit größer machen“): die Uhr wächst von 11 auf 14 % der Höhe, der Stand bleibt das Größte (vorher mindestens 1,8 ×, jetzt 1,4 ×)
+  it('Ziffern größer als die Uhr (mindestens 1,4 ×); Uhr mindestens 1,5 × Teamname', () => {
+    expect(m.digit).toBeGreaterThanOrEqual(1.4 * m.clock);
     expect(m.clock).toBeGreaterThanOrEqual(1.5 * m.name);
   });
 
@@ -69,7 +70,7 @@ describe.each(RESOLUTIONS.flatMap(r => [0, 48].map(rand => ({ ...r, rand }))))('
   });
 
   it('keine festen Pixel-Deckel: Schriftgrößen der Folie wachsen mit der Bildhöhe', () => {
-    for (const token of [displayFontSizes.liveInfo, displayFontSizes.liveBadge, displayFontSizes.clockXL, displayFontSizes.teamName]) {
+    for (const token of [displayFontSizes.liveInfo, displayFontSizes.liveBadge, displayFontSizes.clockXL, L.clockFont, displayFontSizes.teamName]) {
       const share = resolveCss(token, m.ctx) / h;
       const small = resolveCss(token, { vw: 1280, vh: 720, cqw: 1280 - 2 * rand, cqh: 720 - 2 * rand }) / 720;
       expect(share).toBeCloseTo(small, 1);
@@ -84,22 +85,21 @@ describe.each(RESOLUTIONS.flatMap(r => [0, 48].map(rand => ({ ...r, rand }))))('
     expect(header + m.boxH + names + lower + 2 * padding).toBeLessThanOrEqual(flaecheH);
   });
 
-  // R5 PR 2 (@ZM-166, @ZM-165): der Text steht ÜBER der Uhr (eine Zeile statt Hinweiszeile darunter), der Balken ist etwa
-  // 3 % der Bildhöhe hoch. Aufbau: Polster · Zeile über der Uhr · Abstand · Uhr · Abstand · Balken · Abstand · Schiedsrichter-Zeile.
-  it('unterer Bereich fasst Text über der Uhr, Uhr, Balken und Schiedsrichter-Zeile', () => {
+  // @ZM-215 (ersetzt R5 PR 2 / @ZM-166, @ZM-165: Zeile „Restzeit“ über der Uhr, Balken etwa 3 %): ein Wort steht nur bei Abweichung LINKS neben der Uhr (keine eigene Zeile),
+  // der Balken ist 5 % der Höhe hoch. Aufbau: Polster · Uhr · Abstand · Balken · Abstand · Schiedsrichter-Zeile.
+  it('unterer Bereich fasst Uhr, Balken und Schiedsrichter-Zeile (das Wort steht neben der Uhr, braucht keine Zeile)', () => {
     const c = m.ctx;
     const rows = resolveCss(L.lowerPaddingTop, c)
-      + m.hint * L.hintLineHeight + resolveCss(L.clockGap, c)
       + m.clock * L.clockLineHeight + 2 * resolveCss(L.clockPadY, c)
       + resolveCss(L.clockGap, c) + resolveCss(L.progressHeight, c)
       + resolveCss(L.hintGapAbove, c) + m.hint * L.hintLineHeight;
     expect(rows).toBeLessThanOrEqual(resolveCss(L.lowerHeight, c));
   });
 
-  it('@ZM-165 Zeitbalken etwa 3 % der Bildhöhe (mindestens 2,5 %, höchstens 3,5 % der Folienfläche)', () => {
+  it('@ZM-215 Zeitbalken 5 % der Höhe (mindestens 4,5 %, höchstens 5,5 % der Folienfläche)', () => {
     const balken = resolveCss(L.progressHeight, m.ctx);
-    expect(balken).toBeGreaterThanOrEqual(0.025 * flaecheH);
-    expect(balken).toBeLessThanOrEqual(0.035 * flaecheH);
+    expect(balken).toBeGreaterThanOrEqual(0.045 * flaecheH);
+    expect(balken).toBeLessThanOrEqual(0.055 * flaecheH);
   });
 
   it('Abstand zwischen Namen und Uhr vorhanden', () => {

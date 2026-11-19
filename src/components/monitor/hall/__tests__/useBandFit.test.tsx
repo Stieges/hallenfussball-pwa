@@ -6,6 +6,7 @@
 import { useRef } from 'react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render } from '@testing-library/react';
+import { displayHall } from '../../../../design-tokens';
 import { useBandFit } from '../useBandFit';
 
 interface Breiten { band: number; text: number; links: number; rechts: number }
@@ -80,12 +81,11 @@ describe('@ZM-213 useBandFit', () => {
         const schrift = this.parentElement?.style.fontSize ?? '';
         return this.parentElement?.getAttribute('data-testid') === 'rechts' ? (schrift.endsWith('px') ? (parseFloat(schrift) / 78) * zeilenHoehe : zeilenHoehe) : 0;
       });
-      // die beiden Messelemente (zuerst die Nah-Grenze, dann die Notgrenze) lösen sich zu 76 px und 54 px auf; die Spalte hat die Schrift ihres Inline-Stils
-      const messer = [76, 54];
-      let nr = 0;
+      // die beiden Messelemente lösen sich nach der Länge auf, die sie messen (nicht nach der Reihenfolge der Aufrufe): Nah-Grenze 76 px, Notgrenze 54 px
+      const messer: Record<string, number> = { [displayHall.side.fontMin]: 76, [displayHall.side.fontNot]: 54 };
       vi.spyOn(window, 'getComputedStyle').mockImplementation((el: Element) => {
         const stil = (el as HTMLElement).style;
-        const px = stil.position === 'absolute' ? `${String(messer[nr++ % 2])}px` : stil.fontSize.endsWith('px') ? stil.fontSize : '78px';
+        const px = stil.position === 'absolute' ? `${String(messer[stil.fontSize] ?? 0)}px` : stil.fontSize.endsWith('px') ? stil.fontSize : '78px';
         return { fontSize: px, paddingLeft: '0px', paddingRight: '0px', paddingTop: '0px', paddingBottom: '0px', rowGap: '0px' } as unknown as CSSStyleDeclaration;
       });
     }

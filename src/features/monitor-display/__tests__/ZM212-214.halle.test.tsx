@@ -12,7 +12,7 @@ import { ZeitBalken } from '../../../components/ui/atoms/ZeitBalken';
 import type { MonitorProfile, PerformanceSettings } from '../../../types/monitor';
 import type { Match, Tournament } from '../../../types/tournament';
 import { NowSourceContext } from '../../../components/schedule/useTickingNow';
-import { displayHall, monitorThemes } from '../../../design-tokens';
+import { displayHall, displayLayout, monitorThemes } from '../../../design-tokens';
 import { getContrastRatio } from '../../../design-tokens/display';
 import { palette } from '../../../design-tokens/colors/palette';
 import { FALLBACK_PATTERN } from '../../../core/models/scoreBoxColors';
@@ -38,6 +38,16 @@ const WEISS = palette.neutral[0];
 
 /** Laufende Uhr: 250 s gespielt in einem Abschnitt von 600 s, Restzeit 5:50 (wie im Mockup). */
 const LAEUFT = { status: 'running', phase: 'regular', section: 1, sections: 1, sectionSeconds: 600, sectionStartMs: 0, elapsedMs: 250_000, anchorAt: T0 };
+/**
+ * Symbole neben der Uhr (@ZM-215, Daniel 2026-11-19: Symbole statt Text): gelesen werden ihre zugänglichen Namen (das bisherige Wort), und es steht nie ein Wort als Text da.
+ * Mehrere Symbole (z. B. angehalten in der Verlängerung) stehen mit „ + “ verbunden.
+ */
+const symbolNamen = (id: string): string => {
+  const el = screen.getByTestId(id);
+  expect(el.textContent, `an der Uhr (${id}) steht kein Wort, nur ein Symbol`).toBe('');
+  return Array.from(el.querySelectorAll('[aria-label]')).map((e) => e.getAttribute('aria-label')).join(' + ');
+};
+
 const ANGEHALTEN = { ...LAEUFT, status: 'paused', anchorAt: null };
 const HALBZEIT = { status: 'section_break', phase: 'regular', section: 1, sections: 2, sectionSeconds: 300, sectionStartMs: 0, elapsedMs: 300_000, anchorAt: null, breakStartedAt: T0 - 20_000, breakSeconds: 60 };
 const geplant: Partial<Match> = { matchStatus: 'scheduled', scoreA: undefined, scoreB: undefined, scheduledTime: new Date('2026-10-10T14:00:00') };
@@ -126,8 +136,11 @@ describe('@ZM-213 Anordnung und Mindestgrößen (Anteil der Höhe der Folienflä
     zeige({ patch: laeuft() });
     expect(screen.getByTestId('hall-clock')).toHaveTextContent('5:50');
     expect(within(screen.getByTestId('hall-side-left')).getByText('Live')).toBeInTheDocument();
-    expect(screen.getByTestId('hall-field')).toHaveTextContent('Feld 1');
-    expect(screen.getByTestId('hall-group')).toHaveTextContent('Gruppe A');
+    // @ZM-215 (Daniel 2026-11-19): Feld als Spielfeld-Symbol mit Nummer, Gruppe als Buchstabe im Kasten; die Wörter stehen als zugängliche Namen da
+    expect(screen.getByTestId('hall-field')).toHaveAttribute('aria-label', 'Feld 1');
+    expect(screen.getByTestId('hall-field')).toHaveTextContent(/^1$/);
+    expect(screen.getByTestId('hall-group')).toHaveAttribute('aria-label', 'Gruppe A');
+    expect(screen.getByTestId('hall-group')).toHaveTextContent(/^A$/);
   });
 
   it('Der Zeitbalken läuft über die ganze Breite (außerhalb des Bands) und nimmt ab; nie Rot', () => {
@@ -175,33 +188,59 @@ describe('@ZM-214 Zustände ohne Sprung', () => {
     zeige({ feld: 'field-2' });
     expect(screen.getByTestId('hall-kickoff')).toHaveTextContent('14:20');
     expect(within(screen.getByTestId('hall-side-left')).getByText('Nächstes Spiel')).toBeInTheDocument();
+    expect(screen.getByTestId('hall-kickoff-symbol').style.color).toBe(rgbVon(monitorThemes.dark.text)); // Uhr-Symbol in Textfarbe, zur Uhr hin (Daniel 2026-11-19)
+    expect(screen.getByTestId('hall-kickoff-symbol').style.alignSelf).toBe('flex-start');
     expect(ziffer('home')).toHaveTextContent('0');
     expect(ziffer('away')).toHaveTextContent('0');
     expect(screen.queryByTestId('hall-zeitbalken')).toBeNull();
     expect(screen.queryByTestId('hall-clock')).toBeNull();
   });
 
-  it('Uhr angehalten: neben der Restzeit „angehalten“, der Zeitbalken ist grau – die Restzeit bleibt weiß (nicht grau)', () => {
+  // Umgestellt wegen @ZM-215 (Daniel 2026-11-19: Symbole statt Text, „Ziffern gedämpft“): bisher stand „angehalten“ als Wort neben der Uhr und die Restzeit blieb weiß
+  it('Uhr angehalten: neben der Restzeit das Pause-Symbol „angehalten“, der Zeitbalken ist grau, die Ziffern sind gedämpft; das Abzeichen bleibt „Live“', () => {
     zeige({ patch: { scoreA: 1, scoreB: 0, liveState: ANGEHALTEN, matchStatus: 'paused' } });
-    expect(screen.getByTestId('hall-phase-text')).toHaveTextContent('angehalten');
+    expect(symbolNamen('hall-phase-text')).toBe('angehalten');
+    expect(screen.getByTestId('hall-phase-text-pause')).toHaveAttribute('data-symbol', 'pause');
     expect(screen.getByTestId('hall-zeitbalken')).toHaveAttribute('data-ton', 'grau');
     expect(screen.getByTestId('hall-clock')).toHaveTextContent('5:50');
-    const slot = screen.getByTestId('hall-slot');
-    expect(slot.style.color).toBe(rgbVon(monitorThemes.dark.timerNormal)); // dieselbe Farbe wie laufend
+    expect(screen.getByTestId('hall-slot').style.color).toBe(rgbVon(monitorThemes.dark.textSecondary)); // gedämpft statt der Farbe der laufenden Uhr
+    expect(within(screen.getByTestId('hall-side-left')).getByText('Live')).toBeInTheDocument();
+    expect(within(screen.getByTestId('hall-side-left')).queryByText('Pause')).toBeNull();
   });
 
-  it('Gegenbeispiel: läuft die Uhr, steht kein Wort daneben (@ZM-215: auch kein „Restzeit“) und der Balken ist grün', () => {
+  it('Gegenbeispiel: läuft die Uhr, steht kein Symbol daneben (@ZM-215: auch kein „Restzeit“), die Ziffern sind nicht gedämpft und der Balken ist grün', () => {
     zeige({ patch: laeuft() });
+    expect(screen.getByTestId('hall-slot').style.color).toBe(rgbVon(monitorThemes.dark.timerNormal));
     expect(screen.queryByTestId('hall-phase-text')).toBeNull();
     expect(screen.queryByText('Restzeit')).toBeNull();
     expect(screen.getByTestId('hall-zeitbalken')).toHaveAttribute('data-ton', 'gruen');
   });
 
-  it('Halbzeitpause: die Pausenzeit steht an der Stelle der Restzeit, daneben „Pause“ (Abzeichen „Halbzeit“)', () => {
+  // Umgestellt wegen @ZM-215 (Daniel 2026-11-19): bisher „Pause“ als Wort neben der Uhr und „Halbzeit“ im Abzeichen; jetzt der halbe Kreis an der Uhr und „Live“ oben links
+  it('Halbzeitpause: die Pausenzeit steht an der Stelle der Restzeit, daneben der halbe Kreis „Pause · Halbzeit“; das Abzeichen bleibt „Live“ (nicht „Halbzeit“, nicht „Pause“)', () => {
     zeige({ patch: { scoreA: 1, scoreB: 0, liveState: HALBZEIT } });
     expect(screen.getByTestId('hall-clock')).toHaveTextContent('0:40');
-    expect(screen.getByTestId('hall-phase-text')).toHaveTextContent(/^Pause$/);
-    expect(within(screen.getByTestId('hall-side-left')).getByText('Halbzeit')).toBeInTheDocument();
+    expect(symbolNamen('hall-phase-text')).toBe('Pause · Halbzeit');
+    expect(screen.getByTestId('hall-phase-text-halbzeit')).toHaveAttribute('data-symbol', 'halbzeit');
+    const links = within(screen.getByTestId('hall-side-left'));
+    expect(links.getByText('Live')).toBeInTheDocument();
+    expect(links.queryByText('Halbzeit')).toBeNull();
+    expect(links.queryByText('Pause')).toBeNull();
+  });
+
+  // Review PR #563 D2: Pause ohne Pausen-Daten (keine Pausenlänge im Feinstatus, Restzeit unbekannt): keine Ziffern, aber der halbe Kreis muss stehen, sonst steht die Pause nirgends
+  it('Halbzeitpause ohne Pausen-Daten: keine Ziffern, aber der halbe Kreis („Pause · Halbzeit“) steht; das Abzeichen bleibt „Live“', () => {
+    const ohnePausenlaenge: Record<string, unknown> = { ...HALBZEIT };
+    Reflect.deleteProperty(ohnePausenlaenge, 'breakSeconds');
+    zeige({ patch: { scoreA: 1, scoreB: 0, liveState: ohnePausenlaenge } });
+    expect(screen.queryByTestId('hall-clock')).toBeNull();
+    expect(symbolNamen('hall-phase-text')).toBe('Pause · Halbzeit');
+    expect(within(screen.getByTestId('hall-side-left')).getByText('Live')).toBeInTheDocument();
+  });
+
+  it('Gegenbeispiel: läuft die Uhr, steht auch ohne Ziffern-Rückfall kein Symbol (keine Uhr ohne Zustand)', () => {
+    zeige({ patch: laeuft() });
+    expect(screen.queryByTestId('hall-phase-text')).toBeNull();
   });
 
   it('Ende 2 : 1: an der Stelle der Restzeit „Endstand“, kein Zeitbalken, keine Uhr; Sieger mit Ring, Verlierer gedämpft', () => {
@@ -214,6 +253,33 @@ describe('@ZM-214 Zustände ohne Sprung', () => {
     expect(panel('home').style.boxShadow).toContain(displayHall.panel.ringWidth);
     expect(panel('away').style.boxShadow).toBe('');
     expect(panel('away').style.backgroundColor).not.toBe(panel('home').style.backgroundColor);
+  });
+
+  // Daniel 2026-11-19 („Ja zum Hallenprofil“, Delta-Review PR #563 D5): „Endstand“ steht groß, das Abzeichen „Ende“ entfällt (jede Angabe nur an einer Stelle)
+  it('Nach dem Abpfiff steht kein Abzeichen „Ende“, nur „Endstand“ bzw. das Strafstoßergebnis; Gegenbeispiel: im Spiel bleibt das Abzeichen „Live“', () => {
+    const lauf = zeige({ patch: laeuft() });
+    expect(within(screen.getByTestId('hall-side-left')).getByText('Live')).toBeInTheDocument();
+    lauf.unmount();
+    const ende = zeige({ patch: { matchStatus: 'finished', scoreA: 2, scoreB: 1, decidedBy: 'regular', liveState: undefined }, pinned: 'match-7' });
+    expect(screen.getByTestId('hall-endstand')).toHaveTextContent('Endstand');
+    expect(screen.queryByTestId('match-status-badge')).toBeNull();
+    expect(screen.getByTestId('hall-side-left')).not.toHaveTextContent('Ende');
+    ende.unmount();
+    zeige({ patch: { matchStatus: 'finished', scoreA: 1, scoreB: 1, penaltyScoreA: 4, penaltyScoreB: 3, decidedBy: 'penalty', liveState: undefined }, pinned: 'match-7' });
+    expect(screen.getByTestId('hall-shootout-result')).toHaveTextContent('4 : 3 i. E.');
+    expect(screen.queryByTestId('match-status-badge')).toBeNull();
+  });
+
+  it('Symbole des Uhr-Zustands in Textfarbe (nicht grau) und zur Uhr hin ausgerichtet: Pause-Symbol und Uhr-Symbol vor dem Anpfiff', () => {
+    zeige({ patch: { scoreA: 1, scoreB: 0, liveState: ANGEHALTEN, matchStatus: 'paused' } });
+    expect(screen.getByTestId('hall-phase-text').style.color).toBe(rgbVon(monitorThemes.dark.text));
+    expect(screen.getByTestId('hall-phase-text').style.alignSelf).toBe('flex-start');
+    expect(getContrastRatio(monitorThemes.dark.text, monitorThemes.dark.background)).toBeGreaterThanOrEqual(7); // Textfarbe gegen Hintergrund (Zustands-Symbole)
+  });
+
+  it('Gegenbeispiel: Feld und Abschnitt bleiben grau (nur die Zustands-Symbole wechseln die Farbe)', () => {
+    zeige({ patch: laeuft() });
+    expect(screen.getByTestId('hall-field').style.color).toBe(rgbVon(monitorThemes.dark.textSecondary));
   });
 
   it('Gegenbeispiel: Unentschieden in der Gruppe hat weder Ring noch gedämpfte Fläche', () => {
@@ -312,17 +378,20 @@ describe('@ZM-215 Die Live-Sicht zeigt nur, was man aus der Ferne braucht, und d
   });
 
   it.each([
-    ['angehalten', { patch: { scoreA: 1, scoreB: 0, liveState: ANGEHALTEN, matchStatus: 'paused' as const } }, 'angehalten'],
-    ['Pause', { patch: { scoreA: 1, scoreB: 0, liveState: HALBZEIT } }, 'Pause'],
-  ])('Ein Wort steht nur bei Abweichung vom laufenden Spiel: %s', (_n, eingabe, wort) => {
+    ['angehalten', { patch: { scoreA: 1, scoreB: 0, liveState: ANGEHALTEN, matchStatus: 'paused' as const } }, 'angehalten', 'pause'],
+    ['Pause', { patch: { scoreA: 1, scoreB: 0, liveState: HALBZEIT } }, 'Pause · Halbzeit', 'halbzeit'],
+    ['Zeit abgelaufen', { patch: { scoreA: 1, scoreB: 0, liveState: { ...LAEUFT, elapsedMs: 1_200_000 } } }, 'Zeit abgelaufen', 'pfeife'],
+  ])('Ein Symbol steht nur bei Abweichung vom laufenden Spiel, nie ein Wort: %s', (_n, eingabe, name, art) => {
     zeige(eingabe);
-    expect(screen.getByTestId('hall-phase-text')).toHaveTextContent(new RegExp(`^${wort}$`));
+    expect(symbolNamen('hall-phase-text')).toBe(name);
+    expect(screen.getByTestId(`hall-phase-text-${art}`)).toHaveAttribute('data-symbol', art);
   });
 
-  it('Feld und Gruppe stehen bei mehr als einem Feld und mehr als einer Gruppe', () => {
+  it('Feld und Gruppe stehen bei mehr als einem Feld und mehr als einer Gruppe, als Symbole mit zugänglichem Namen (Daniel 2026-11-19)', () => {
     zeige({ patch: laeuft() });
-    expect(screen.getByTestId('hall-field')).toHaveTextContent('Feld 1');
-    expect(screen.getByTestId('hall-group')).toHaveTextContent('Gruppe A');
+    expect(screen.getByTestId('hall-field')).toHaveAttribute('aria-label', 'Feld 1');
+    expect(screen.getByTestId('hall-group')).toHaveAttribute('aria-label', 'Gruppe A');
+    expect(screen.queryByText(/Feld 1|Gruppe A/)).toBeNull(); // kein Wort, nur Symbol
   });
 
   it('Gegenbeispiel: bei einem Feld steht kein Feld, bei einer Gruppe keine Gruppe', () => {
@@ -365,15 +434,23 @@ describe('@ZM-215 Die Live-Sicht zeigt nur, was man aus der Ferne braucht, und d
     expect((bestand.getByTestId('bestand-balken').firstElementChild as HTMLElement).style.background).toBe('var(--color-scoreboard-ok)');
   });
 
-  it('Bahn und Füllung heben sich in beiden Themen ab: Füllung gegen Bahn mindestens 3 : 1, Bahn gegen Hintergrund (dunkel 2,5 : 1, hell 2,0 : 1); Schlussphase und angehalten sind verschieden', () => {
+  it('Bahn und Füllung heben sich in beiden Themen ab: Füllung gegen Bahn mindestens 3 : 1, Bahn gegen den Hintergrund AN DER STELLE DES BALKENS (dunkel 2,9 : 1, hell 2,0 : 1); Schlussphase und angehalten sind verschieden', () => {
     const hintergruende = { dark: ['#1E293B', '#0F172A'], light: ['#FFFFFF', '#E2E8F0'] } as const;
-    const mindestBahn = { dark: 2.5, light: 2.0 } as const;
+    const mindestBahn = { dark: 2.9, light: 2.0 } as const;
+    // Der Verlauf läuft senkrecht über die ganze Folie; der Balken liegt bei 65,7 bis 71,7 % der Höhe, mit Bildrand (bis 10 %) zwischen 62,6 und 71,7 %
+    const hex = (n: number): string => Math.round(n).toString(16).padStart(2, '0');
+    const mische = (a: string, b: string, f: number): string => `#${[1, 3, 5].map((i) => hex(parseInt(a.slice(i, i + 2), 16) * (1 - f) + parseInt(b.slice(i, i + 2), 16) * f)).join('')}`;
+    const vonBis = [0.626, cqh(displayHall.panel.height) / 100 + cqh(displayHall.bar.gapTop) / 100 + cqh(displayHall.bar.height) / 100] as const;
     for (const thema of ['dark', 'light'] as const) {
       const farben = displayHall.barColors[thema];
-      for (const hintergrund of hintergruende[thema]) { expect(getContrastRatio(farben.track, hintergrund), `${thema}: Bahn gegen ${hintergrund}`).toBeGreaterThanOrEqual(mindestBahn[thema]); }
+      for (const f of vonBis) {
+        const stelle = mische(hintergruende[thema][0], hintergruende[thema][1], f);
+        expect(getContrastRatio(farben.track, stelle), `${thema}: Bahn gegen den Hintergrund bei ${String(f)} der Höhe (${stelle})`).toBeGreaterThanOrEqual(mindestBahn[thema]);
+      }
       for (const ton of ['gruen', 'grau', 'violett', 'gedaempft'] as const) { expect(getContrastRatio(farben[ton], farben.track), `${thema}: ${ton} gegen Bahn`).toBeGreaterThanOrEqual(3); }
-      // helles Thema: die Füllung ist der kräftige Teil (dunkler als die Bahn), dunkles Thema: heller als die Bahn
-      for (const ton of ['gruen', 'grau', 'violett', 'gedaempft'] as const) { expect(getContrastRatio(farben[ton], hintergruende[thema][0]) >= getContrastRatio(farben.track, hintergruende[thema][0]) * (thema === 'light' ? 1 : 0), `${thema}: ${ton} kräftig`).toBe(true); }
+      // Dunkles Thema: die Füllung ist heller als die Bahn (mehr Kontrast gegen Schwarz); helles Thema: dunkler als die Bahn (mehr Kontrast gegen Weiß)
+      const gegen = thema === 'dark' ? '#000000' : '#FFFFFF';
+      for (const ton of ['gruen', 'grau', 'violett', 'gedaempft'] as const) { expect(getContrastRatio(farben[ton], gegen), `${thema}: ${ton} kräftiger als die Bahn`).toBeGreaterThan(getContrastRatio(farben.track, gegen)); }
     }
     // dunkel: Violett ist das Violett der Uhr in der Schlussphase und von „angehalten“ (hell, kaum gesättigt) und der Pause (gedämpft) zu unterscheiden
     expect(displayHall.barColors.dark.violett).toBe(palette.purple[300]);
@@ -386,17 +463,25 @@ describe('@ZM-215 Die Live-Sicht zeigt nur, was man aus der Ferne braucht, und d
     expect(screen.getByTestId('hall-zeitbalken')).toHaveAttribute('data-ton', 'grau');
   });
 
-  it('Abschnitt (@ZM-213): bei zwei Abschnitten steht rechts neben der Restzeit „2. Halbzeit“, klein wie Feld und Gruppe', () => {
+  it('Abschnitt (@ZM-213, @ZM-215): bei zwei Abschnitten stehen rechts neben der Restzeit zwei Punkte, der zweite Abschnitt läuft: beide gefüllt; Name „2. Halbzeit“', () => {
     zeige({ patch: { scoreA: 1, scoreB: 0, liveState: ZWEI_ABSCHNITTE } });
-    expect(screen.getByTestId('hall-section')).toHaveTextContent('2. Halbzeit');
+    expect(screen.getByTestId('hall-section')).toHaveAttribute('aria-label', '2. Halbzeit');
+    expect(screen.getByTestId('hall-section').textContent).toBe('');
+    expect(Array.from(screen.getByTestId('hall-section').children).map((d) => d.getAttribute('data-gefuellt'))).toEqual(['ja', 'ja']);
     expect(screen.getByTestId('hall-side-right')).toContainElement(screen.getByTestId('hall-section'));
     expect(screen.getByTestId('hall-clock')).toHaveTextContent('3:20');
   });
 
-  it('Abschnitt: angehalten steht der Abschnitt zusätzlich zum Wort', () => {
+  it('Abschnitt: angehalten steht der Abschnitt zusätzlich zum Symbol der Uhr', () => {
     zeige({ patch: { scoreA: 1, scoreB: 0, liveState: { ...ZWEI_ABSCHNITTE, status: 'paused', anchorAt: null }, matchStatus: 'paused' } });
-    expect(screen.getByTestId('hall-section')).toHaveTextContent('2. Halbzeit');
-    expect(screen.getByTestId('hall-phase-text')).toHaveTextContent('angehalten');
+    expect(screen.getByTestId('hall-section')).toHaveAttribute('aria-label', '2. Halbzeit');
+    expect(symbolNamen('hall-phase-text')).toBe('angehalten');
+  });
+
+  it('Abschnitt 2 von 3: zwei Punkte gefüllt, einer leer; Name „Abschnitt 2 von 3“', () => {
+    zeige({ patch: { scoreA: 1, scoreB: 0, liveState: { ...ZWEI_ABSCHNITTE, section: 2, sections: 3 } } });
+    expect(screen.getByTestId('hall-section')).toHaveAttribute('aria-label', 'Abschnitt 2 von 3');
+    expect(Array.from(screen.getByTestId('hall-section').children).map((d) => d.getAttribute('data-gefuellt'))).toEqual(['ja', 'ja', 'nein']);
   });
 
   it.each([['läuft', 'running', T0], ['angehalten', 'paused', null]] as const)('Gegenbeispiel: in der Verlängerung (%s) steht kein „2. Halbzeit“ und kein „Abschnitt 3 von 2“', (_n, status, anker) => {
@@ -405,8 +490,12 @@ describe('@ZM-215 Die Live-Sicht zeigt nur, was man aus der Ferne braucht, und d
     expect(screen.getByTestId('hall-clock')).toBeInTheDocument();
     expect(screen.queryByTestId('hall-section')).toBeNull();
     expect(screen.queryByText(/Halbzeit|Abschnitt/)).toBeNull();
-    // angehalten sagt das Abzeichen „Pause“: dann muss „Verlängerung“ rechts stehen; läuft sie, steht es im Abzeichen
-    if (status === 'paused') { expect(screen.getByTestId('hall-overtime-text')).toHaveTextContent('Verlängerung'); } else { expect(screen.queryByTestId('hall-overtime-text')).toBeNull(); }
+    // @ZM-215 (Daniel 2026-11-19): die Verlängerung steht nur noch an der Uhr (Kreis mit Plus), nie im Abzeichen; angehalten daneben das Pause-Symbol; oben links bleibt „Live“
+    expect(symbolNamen('hall-phase-text')).toBe(status === 'paused' ? 'angehalten + Verlängerung' : 'Verlängerung');
+    const links = within(screen.getByTestId('hall-side-left'));
+    expect(links.getByText('Live')).toBeInTheDocument();
+    expect(links.queryByText('Verlängerung')).toBeNull();
+    expect(screen.queryByTestId('hall-overtime-text')).toBeNull();
   });
 
   it('Gegenbeispiel: bei einem Abschnitt steht kein Abschnitt', () => {
@@ -414,16 +503,17 @@ describe('@ZM-215 Die Live-Sicht zeigt nur, was man aus der Ferne braucht, und d
     expect(screen.queryByTestId('hall-section')).toBeNull();
   });
 
-  it('Gegenbeispiel: in der Halbzeitpause steht kein Abschnitt (das Abzeichen sagt „Halbzeit“)', () => {
+  it('Gegenbeispiel: in der Halbzeitpause steht kein Abschnitt (dort sagt es der halbe Kreis)', () => {
     zeige({ patch: { scoreA: 1, scoreB: 0, liveState: HALBZEIT } });
     expect(screen.queryByTestId('hall-section')).toBeNull();
   });
 
-  it('Bestandsschutz: ohne Profil bleibt der Zeitbalken der bisherigen Folie unverändert (Wort „Restzeit“, Höhe aus dem bisherigen Token)', () => {
+  it('Ohne Profil bleibt die bisherige Anordnung (Kopfzeile, Kästen, Zeitbalken `monitor-zeitbalken`); seit @ZM-215 ohne das Wort „Restzeit“, mit dem Balken in der Höhe des Tokens der Folie', () => {
     zeige({ patch: laeuft(), profil: null });
     expect(screen.getByTestId('live-header')).toBeInTheDocument();
     expect(screen.queryByTestId('hall-zeitbalken')).toBeNull();
-    expect(screen.getByText('Restzeit')).toBeInTheDocument();
+    expect(screen.queryByText('Restzeit')).toBeNull();
+    expect(screen.getByTestId('monitor-zeitbalken').style.height).toBe(displayLayout.scoreArea.progressHeight);
   });
 });
 
@@ -452,8 +542,8 @@ describe('Texte des Uhrbands und Vorlesetext in Deutsch und Englisch (Sprachwert
 
     it('Abschnitt „2nd half“, angehalten „stopped“, Vorlesetext mit Teamname', () => {
       zeige({ patch: { scoreA: 1, scoreB: 0, liveState: { ...ZWEI_ABSCHNITTE, status: 'paused', anchorAt: null }, matchStatus: 'paused' } });
-      expect(screen.getByTestId('hall-section')).toHaveTextContent('2nd half');
-      expect(screen.getByTestId('hall-phase-text')).toHaveTextContent('stopped');
+      expect(screen.getByTestId('hall-section')).toHaveAttribute('aria-label', '2nd half');
+      expect(symbolNamen('hall-phase-text')).toBe('stopped');
       expect(panel('home')).toHaveAttribute('aria-label', 'FC Nord: 1');
     });
   });

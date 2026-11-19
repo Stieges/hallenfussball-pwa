@@ -93,7 +93,8 @@ describe('@ZM-140 Kasten-Rahmen und Gruppen-Text', () => {
 
   it('Gruppe läuft über i18n', () => {
     render(<LiveMatchDisplay match={createMatch({ group: 'A' })} />);
-    expect(screen.getByText(/liveMatch\.group/)).toBeInTheDocument();
+    // @ZM-215 (Daniel 2026-11-19): die Gruppe steht als Buchstabe im Kasten, ihr Wort aus i18n steht im zugänglichen Namen
+    expect(screen.getByRole('img', { name: /liveMatch\.group/ })).toBeInTheDocument();
     expect(de.liveMatch.group).toBe('Gruppe {{group}}');
   });
 });

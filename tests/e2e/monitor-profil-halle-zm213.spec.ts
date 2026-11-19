@@ -5,6 +5,7 @@
  * - nichts überlappt (Begrenzungsrahmen von Namen, Torzahlen, Uhrband-Teilen), nichts abgeschnitten (Namen, Uhrband innerhalb der Folie)
  * - Torzahl in jedem Zustand an derselben Stelle (@ZM-151)
  * - Zeitbalken mindestens 6 % der Höhe, läuft wie die Restzeit herunter (links verankert: 3 von 9 Minuten gespielt → zwei Drittel gefüllt), Bahn sichtbar
+ * - Symbole statt Wörter im Uhrband (Daniel 2026-11-19, @ZM-215); Seitenschrift in jeder Lage mindestens 7,08 % der Bildschirmhöhe, die Notlösung nie unter 5,5 % (@ZM-213)
  * - Englisch: der Text in der Mitte („4 : 3 on penalties“, „Final score“) verdrängt die Seitenspalten nie. Die Monitor-Sprache ist heute fest Deutsch (@ZM-126 später);
  *   die Spec setzt deshalb die echten englischen Sprachwerte in die laufende Seite ein und löst das Einpassen über die Fenstergröße aus.
  * Keine festen Wartezeiten: gewartet wird auf Zustände (Namen eingepasst, Animationen fertig). Nur Profil `desktop` (setzt das Fenster selbst).
@@ -19,8 +20,7 @@ import { join } from 'node:path';
 
 /** Echte englische Sprachwerte der App (Datei der Sprachdateien, kein eingebauter Text). */
 const lies = <T,>(datei: string): T => JSON.parse(readFileSync(join(process.cwd(), 'src/i18n/locales/en', datei), 'utf8')) as T;
-const enMonitor = lies<{ liveMatch: { finalScore: string; hall: { afterShootout: string }; clock: { ended: string; stopped: string } } }>('monitor.json');
-const enTournament = lies<{ matchClock: { section: { secondHalf: string; sectionOfN: string } } }>('tournament.json');
+const enMonitor = lies<{ liveMatch: { finalScore: string; hall: { afterShootout: string } } }>('monitor.json');
 const enSport = lies<{ phases: { afterPenalties: string } }>('sport.json');
 
 test.beforeEach(() => {
@@ -44,7 +44,7 @@ interface Messung {
   fensterH: number;
   names: { text: string; px: number; rahmen: Rahmen; scrollW: number; clientW: number; feld: Rahmen; flaeche: Rahmen }[];
   teile: Record<string, Rahmen>;
-  balken: { balken: Rahmen; fuellung: Rahmen; anteil: string | null; ton: string | null; fuellungFarbe: string; bahnFarbe: string } | null;
+  balken: { balken: Rahmen; fuellung: Rahmen; anteil: string | null; ton: string | null; fuellungFarbe: string; bahnFarbe: string; hintergrund: { bild: string; fläche: Rahmen } } | null;
   seitenUeberlauf: boolean;
 }
 
@@ -63,6 +63,8 @@ interface SaatOptionen {
   thema?: 'dark' | 'light';
   /** Verlängerung läuft (Restzeit 4:00) */
   verlaengerung?: boolean;
+  /** Drittes von drei Abschnitten läuft (Abschnitt zu 400 s, 190 s gespielt); mit `abgelaufen` läuft die Zeit des Abschnitts ab, ohne dass abgepfiffen wird */
+  dreiAbschnitte?: boolean;
 }
 
 /** Saat des Falls; `neunMinuten`: Spielzeit 9 Minuten, 3 gespielt (Restzeit 6:00); `schlussphase`: Uhr-Art mit angehaltener Schlussphase, 19:30 gespielt. */
@@ -87,15 +89,29 @@ function saatFuer(fall: string, optionen: SaatOptionen = {}): SaatDatei {
     const abschnittStart = Number(live.sectionStartMs ?? 0);
     Object.assign(live, { sectionSeconds: 1200, durationSeconds: 1200, elapsedMs: live.status === 'paused' ? abschnittStart + gespielt : 0, ...(live.status === 'paused' ? {} : { anchorAt: `@jetzt-ms-${String(gespielt)}` }) });
   }
+  if (optionen.dreiAbschnitte === true) {
+    Object.assign(live, { section: 3, sections: 3, sectionSeconds: 400, durationSeconds: 1200, elapsedMs: 800000, sectionStartMs: 800000, anchorAt: '@jetzt-ms-190000' });
+  }
   if (optionen.verlaengerung === true) {
     Object.assign(live, { phase: 'overtime', playPhase: 'overtime', section: 2, sections: 1, overtimeSeconds: 300, sectionSeconds: 1200, elapsedMs: 0, anchorAt: '@jetzt-ms-60000' });
   }
   return saat;
 }
 
+/** Je Kontext und Inhalt nur ein Saat-Skript: `installiereSaat` hängt je Aufruf ein weiteres Init-Skript an, das bei jedem späteren Laden mitläuft. */
+const INSTALLIERT = new WeakMap<object, Set<string>>();
+async function saatEinmal(page: Page, saat: SaatDatei): Promise<void> {
+  const kontext = page.context();
+  const schluessel = JSON.stringify(saat);
+  const schon = INSTALLIERT.get(kontext) ?? new Set<string>();
+  if (schon.has(schluessel)) { return; }
+  await installiereSaat(kontext, saat);
+  INSTALLIERT.set(kontext, schon.add(schluessel));
+}
+
 async function oeffne(page: Page, fall: string, w: number, h: number, rand: number, optionen: Parameters<typeof saatFuer>[1] = {}, monitor = 'mon-halle'): Promise<void> {
   await page.setViewportSize({ width: w, height: h });
-  await installiereSaat(page.context(), saatFuer(fall, optionen));
+  await saatEinmal(page, saatFuer(fall, optionen));
   // Ein Wechsel nur der Adresse nach „#“ lädt nicht neu: die Namen der Seite davor würden als „eingepasst“ gelten, während die Seite schon auf das nächste Spiel umschaltet
   // (in der CI gemessen: 0,8 px Unterschied der Namen). Über eine leere Seite wird jeder Fall frisch geladen.
   if (page.url() !== 'about:blank') { await page.goto('about:blank'); }
@@ -108,7 +124,8 @@ async function oeffne(page: Page, fall: string, w: number, h: number, rand: numb
     await page.clock.install({ time: await page.evaluate(() => Date.now()) });
     await page.clock.fastForward(8 * 60 * 1000);
     await page.clock.runFor(3000);
-    await expect(page.getByTestId('hall-phase-text'), 'Zeit abgelaufen steht wirklich am Bild').toHaveText('Zeit abgelaufen');
+    // @ZM-215 (Daniel 2026-11-19): „Zeit abgelaufen“ steht als Pfeife mit dem Wort als zugänglichem Namen
+    await expect(page.getByTestId('hall-phase-text').getByRole('img', { name: 'Zeit abgelaufen' }), 'Zeit abgelaufen steht wirklich am Bild').toBeVisible();
   }
 }
 
@@ -229,6 +246,12 @@ async function messe(page: Page): Promise<Messung> {
       balken: balken === null || fuellung === null ? null : {
         balken: rahmen(balken), fuellung: rahmen(fuellung), anteil: balken.getAttribute('data-anteil'), ton: balken.getAttribute('data-ton'),
         fuellungFarbe: getComputedStyle(fuellung).backgroundColor, bahnFarbe: getComputedStyle(balken).backgroundColor,
+        // der Verlauf des Themas liegt auf der Fläche der Folie (nächster Vorfahre mit Verlauf): daran wird der Hintergrund AN DER STELLE DES BALKENS bestimmt
+        hintergrund: (() => {
+          let a: Element | null = balken.parentElement;
+          while (a !== null && !getComputedStyle(a).backgroundImage.startsWith('linear-gradient')) { a = a.parentElement; }
+          return { bild: a === null ? '' : getComputedStyle(a).backgroundImage, fläche: rahmen(a ?? document.body) };
+        })(),
       },
       seitenUeberlauf: document.documentElement.scrollWidth > window.innerWidth || document.documentElement.scrollHeight > window.innerHeight,
     };
@@ -251,14 +274,16 @@ function pruefeUeberlappung(m: Messung): void {
 
 /**
  * Die Seitenangaben bleiben Nah-Information: mindestens 7,08 % der BILDSCHIRMhöhe (@ZM-213, 12 Bogenminuten aus 10 m), auch mit Bildrand. Nur als gekennzeichnete
- * Notlösung (`data-schrift="notloesung"`, eine Lage mit vier Zeilen in der Höhe des Uhrbands) darf sie darunter liegen, nie unter 5,5 %.
+ * Notlösung (`data-schrift="notloesung"`, eine Lage, in der die Zeilen auch verkleinert nicht in das Uhrband passen) darf sie darunter liegen, nie unter der Zahl aus dem
+ * Gherkin von @ZM-213: 5,5 % der BILDSCHIRMhöhe (Review PR #563 B1: bisher prüfte die Spec die 5,6 % der Folie aus dem Token). Mit den Symbolen statt Text (@ZM-215, Daniel 2026-11-19)
+ * braucht keine Lage die Notlösung mehr; `notloesungErlaubt` ist deshalb in allen Aufrufen aus.
  */
 function pruefeSeitenschrift(m: Messung, notloesungErlaubt = false): void {
   m.seitenPx.forEach((px, i) => {
     const anteilBildschirm = (px / m.fensterH) * 100;
     if (m.seitenArt[i] === 'notloesung') {
       expect(notloesungErlaubt, `Notlösung der Seitenschrift in einem Fall, der sie nicht braucht (${anteilBildschirm.toFixed(2)} %)`).toBe(true);
-      expect(anteilBildschirm, 'Notlösung nie unter 5,5 % der Bildschirmhöhe').toBeGreaterThanOrEqual(5.5);
+      expect(anteilBildschirm, 'Notlösung nie unter 5,5 % der Bildschirmhöhe (@ZM-213)').toBeGreaterThanOrEqual(5.5 - 0.02);
     } else {
       expect(anteilBildschirm, 'Schrift der Seitenangaben in % der Bildschirmhöhe').toBeGreaterThanOrEqual(7.08 - 0.02);
     }
@@ -308,7 +333,7 @@ for (const { w, h } of GROESSEN) {
       });
 
       test('@ZM-213 nichts überlappt, nichts ist abgeschnitten, Seitenschrift ≥ 7,08 % des Bildschirms: läuft, 25-Zeichen-Namen, zweistellig, zwei Felder, Abschnitt, vor dem Anpfiff, Halbzeit, angehalten', async ({ page }) => {
-        // Fälle ohne Abwandlung teilen sich eine Seite: ein Wechsel nur der Adresse nach „#“ lädt nicht neu, die Saat enthält alle Fälle
+        // Fälle ohne Abwandlung teilen sich eine Seite und eine Saat; jeder Fall lädt über eine leere Seite neu (siehe `oeffne`)
         for (const fall of ['halle-laeuft', 'halle-lang25', 'halle-zweistellig', 'halle-zwei-felder', 'halle-abschnitt', 'halle-angehalten', 'halle-halbzeit', 'halle-vor']) {
           await oeffne(page, fall, w, h, rand);
           const m = await messe(page);
@@ -318,30 +343,37 @@ for (const { w, h } of GROESSEN) {
         }
       });
 
-      test('@ZM-213 Lagen mit Feld, Gruppe, Abschnitt und Wort: alle Angaben sichtbar, nichts überlappt; „Zeit abgelaufen“, „Abschnitt 3 von 3“ angehalten, zweistellige Minuten, Verlängerung', async ({ browser, baseURL }) => {
+      test('@ZM-213 Lagen mit Feld, Gruppe, Abschnitt und Symbol: alle Angaben sichtbar, nichts überlappt, Seitenschrift ohne Notlösung (≥ 7,08 %); „Zeit abgelaufen“, „Abschnitt 3 von 3“, zweistellige Minuten, Verlängerung', async ({ browser, baseURL }) => {
         test.setTimeout(120000);
-        interface Lage { fall: string; optionen: SaatOptionen; sichtbar: string[]; notloesung?: boolean }
+        interface Lage { fall: string; optionen: SaatOptionen; sichtbar: string[] }
         const lagen: Lage[] = [
           { fall: 'halle-voll', optionen: {}, sichtbar: ['hall-field', 'hall-group', 'hall-section'] },
-          { fall: 'halle-voll', optionen: { abgelaufen: true }, sichtbar: ['hall-field', 'hall-group', 'hall-section', 'hall-phase-text'], notloesung: true },
-          { fall: 'halle-voll-3', optionen: {}, sichtbar: ['hall-field', 'hall-group', 'hall-section', 'hall-phase-text'], notloesung: true },
-          { fall: 'halle-voll-3', optionen: { rest: 1080 }, sichtbar: ['hall-field', 'hall-group', 'hall-section', 'hall-phase-text'], notloesung: true },
+          { fall: 'halle-voll', optionen: { abgelaufen: true }, sichtbar: ['hall-field', 'hall-group', 'hall-section', 'hall-phase-text'] },
+          { fall: 'halle-voll-3', optionen: {}, sichtbar: ['hall-field', 'hall-group', 'hall-section', 'hall-phase-text'] },
+          { fall: 'halle-voll-3', optionen: { rest: 1080 }, sichtbar: ['hall-field', 'hall-group', 'hall-section', 'hall-phase-text'] },
+          // N14 (Review PR #563 B1): drei Abschnitte, Gruppe, Feld und „Zeit abgelaufen“ zugleich – mit Symbolen steht jede Angabe in einer Zeile, die Untergrenze 5,5 % aus @ZM-213 gilt ohne Notlösung
+          { fall: 'halle-voll', optionen: { dreiAbschnitte: true, abgelaufen: true }, sichtbar: ['hall-field', 'hall-group', 'hall-section', 'hall-phase-text'] },
           { fall: 'halle-laeuft', optionen: { zehnMinuten: true }, sichtbar: [] },
-          { fall: 'halle-laeuft', optionen: { verlaengerung: true }, sichtbar: [] },
+          { fall: 'halle-laeuft', optionen: { verlaengerung: true }, sichtbar: ['hall-phase-text'] },
         ];
         // je Lage ein eigener Kontext: eine Abwandlung der Saat greift nur beim Neuladen
-        for (const { fall, optionen, sichtbar, notloesung } of lagen) {
+        for (const { fall, optionen, sichtbar } of lagen) {
           const m = await messeInNeuemKontext(browser, baseURL ?? undefined, async (seite) => {
             await oeffne(seite, fall, w, h, rand, optionen);
             // die Zustände sind wirklich da (kein stilles Ausweichen auf „läuft“)
-            if (optionen.verlaengerung === true) { await expect(seite.getByTestId('match-status-badge')).toHaveText(/Verlängerung/); }
+            // @ZM-215 (Daniel 2026-11-19): die Verlängerung steht nur an der Uhr (Kreis mit Plus), das Abzeichen bleibt „Live“
+            if (optionen.verlaengerung === true) {
+              await expect(seite.getByTestId('hall-phase-text').getByRole('img', { name: 'Verlängerung' })).toBeVisible();
+              await expect(seite.getByTestId('match-status-badge')).toHaveText('Live');
+            }
             if (optionen.zehnMinuten === true) { await expect(seite.getByTestId('hall-clock')).toHaveText(/^\d\d:\d\d$/); }
             if (optionen.rest !== undefined) { await expect(seite.getByTestId('hall-clock')).toHaveText('18:00'); }
+            if (optionen.dreiAbschnitte === true) { await expect(seite.getByTestId('hall-section')).toHaveAttribute('aria-label', 'Abschnitt 3 von 3'); }
           });
           pruefeSichtbar(m, sichtbar);
           pruefeUeberlappung(m);
           pruefeAbgeschnitten(m);
-          pruefeSeitenschrift(m, notloesung === true);
+          pruefeSeitenschrift(m);
         }
       });
 
@@ -424,7 +456,7 @@ test.describe('@ZM-215 Zeitbalken läuft herunter (1920×1080)', () => {
     await expect(page.getByTestId('hall-kickoff')).toBeVisible();
   });
 
-  test('Bahn gegen Hintergrund und Füllung gegen Bahn (dunkles UND helles Thema): Füllung gegen Bahn mindestens 3 : 1 für grün (läuft), grau (angehalten), violett (Schlussphase) und gedämpft (Pause), Bahn gegen Hintergrund dunkel 2,5 : 1, hell 2,0 : 1', async ({ browser, baseURL }) => {
+  test('Bahn gegen Hintergrund und Füllung gegen Bahn (dunkles UND helles Thema): Füllung gegen Bahn mindestens 3 : 1 für grün (läuft), grau (angehalten), violett (Schlussphase) und gedämpft (Pause), Bahn gegen den Hintergrund an der Stelle des Balkens dunkel 2,9 : 1, hell 2,0 : 1', async ({ browser, baseURL }) => {
     type Farbe = [number, number, number, number];
     const lies = (rgb: string): Farbe => { const m = (rgb.match(/[\d.]+/g) ?? []).map(Number); return [m[0] ?? 0, m[1] ?? 0, m[2] ?? 0, m[3] ?? 1]; };
     const lum = (c: Farbe): number => {
@@ -432,15 +464,24 @@ test.describe('@ZM-215 Zeitbalken läuft herunter (1920×1080)', () => {
       return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     };
     const verhaeltnis = (a: Farbe, b: Farbe): number => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
-    // Hintergrund des Themas: Anfang und Ende des Verlaufs der Folie
-    const HINTERGRUND = { dark: ['rgb(30, 41, 59)', 'rgb(15, 23, 42)'], light: ['rgb(255, 255, 255)', 'rgb(226, 232, 240)'] } as const;
+    // Hintergrund an der Stelle des Balkens: der senkrechte Verlauf des Themas (zwei Farbstopps) an der Ober- und Unterkante des Balkens
+    const hintergrundAn = (b: NonNullable<Messung['balken']>, kante: 't' | 'b'): Farbe => {
+      const stopps = (b.hintergrund.bild.match(/rgba?\([^)]*\)/g) ?? []).map(lies);
+      const y = kante === 't' ? b.balken.t : b.balken.b;
+      const f = Math.min(1, Math.max(0, (y - b.hintergrund.fläche.t) / b.hintergrund.fläche.h));
+      const [von, bis] = [stopps[0] ?? [0, 0, 0, 1], stopps[1] ?? [0, 0, 0, 1]];
+      return [0, 1, 2, 3].map((i) => von[i] * (1 - f) + bis[i] * f) as unknown as Farbe;
+    };
     const zustaende: Array<[string, SaatOptionen, string]> = [['halle-laeuft', {}, 'gruen'], ['halle-angehalten', {}, 'grau'], ['halle-laeuft', { schlussphase: true }, 'violett'], ['halle-halbzeit', {}, 'gedaempft']];
     for (const thema of ['dark', 'light'] as const) {
       for (const [fall, optionen, ton] of zustaende) {
         const b = (await messeInNeuemKontext(browser, baseURL, (seite) => oeffne(seite, fall, 1920, 1080, 5, { ...optionen, thema }))).balken;
         expect(b, `${fall}/${thema}: Balken vorhanden`).not.toBeNull();
         expect(b?.ton).toBe(ton);
-        for (const hintergrund of HINTERGRUND[thema]) { expect(verhaeltnis(lies(b?.bahnFarbe ?? ''), lies(hintergrund)), `${thema}/${ton}: Bahn ${b?.bahnFarbe} gegen Hintergrund ${hintergrund}`).toBeGreaterThanOrEqual(thema === 'dark' ? 2.5 : 2.0); }
+        for (const kante of ['t', 'b'] as const) {
+          const hintergrund = hintergrundAn(b!, kante);
+          expect(verhaeltnis(lies(b?.bahnFarbe ?? ''), hintergrund), `${thema}/${ton}: Bahn ${b?.bahnFarbe} gegen Hintergrund ${hintergrund.map(Math.round).join(',')} (${kante === 't' ? 'Oberkante' : 'Unterkante'} des Balkens)`).toBeGreaterThanOrEqual(thema === 'dark' ? 2.9 : 2.0);
+        }
         // hell: die Füllung ist der kräftige (dunklere) Teil, die Bahn der blassere; dunkel umgekehrt
         expect(lum(lies(b?.fuellungFarbe ?? '')) < lum(lies(b?.bahnFarbe ?? '')), `${thema}/${ton}: Füllung ${thema === 'light' ? 'dunkler' : 'heller'} als die Bahn`).toBe(thema === 'light');
         expect(verhaeltnis(lies(b?.fuellungFarbe ?? ''), lies(b?.bahnFarbe ?? '')), `${thema}/${ton}: Füllung ${b?.fuellungFarbe} gegen Bahn ${b?.bahnFarbe}`).toBeGreaterThanOrEqual(3);
@@ -495,46 +536,72 @@ for (const { w, h } of GROESSEN) {
         pruefeAbgeschnitten(ende);
       });
 
-      test('englisches Uhrband (Field, Group, 2nd half): nichts überlappt, nichts abgeschnitten', async ({ page }) => {
-        await oeffne(page, 'halle-zwei-felder', w, h, rand);
-        await englisch(page, { 'hall-field': 'Field 1', 'hall-group': 'Group A' });
-        const laeuft = await messe(page);
-        pruefeUeberlappung(laeuft);
-        pruefeAbgeschnitten(laeuft);
-        await oeffne(page, 'halle-abschnitt', w, h, rand);
-        await englisch(page, { 'hall-section': '2nd half' });
-        const abschnitt = await messe(page);
-        pruefeUeberlappung(abschnitt);
-        pruefeAbgeschnitten(abschnitt);
-      });
-
-      test('englisch mit Gruppe, Abschnitt und Wort zugleich („Group A“, „2nd half“, „Time up“; „Period 3 of 3“, „stopped“): alle Angaben sichtbar, nichts ragt in den Balken oder aus der Folie', async ({ browser, baseURL }) => {
+      // Seit @ZM-215 (Daniel 2026-11-19: Symbole statt Text) stehen im Uhrband keine Wörter mehr: Feld, Gruppe, Abschnitt und Uhr-Zustand sind Symbole, die Sprache ändert ihre Größe nicht.
+      // Die englischen Wörter stehen nur noch in den zugänglichen Namen (Vorlesetext), nicht im Bild.
+      test('Uhrband mit Symbolen (Feld, Gruppe, Abschnitt, Zustand): sprachunabhängig, nichts überlappt, nichts abgeschnitten, Seitenschrift ≥ 7,08 %', async ({ browser, baseURL }) => {
         const erwartet = ['hall-field', 'hall-group', 'hall-section', 'hall-phase-text'];
         const abgelaufen = await messeInNeuemKontext(browser, baseURL ?? undefined, async (seite) => {
           await oeffne(seite, 'halle-voll', w, h, rand, { abgelaufen: true });
-          await englisch(seite, { 'hall-field': 'Field 1', 'hall-group': 'Group A', 'hall-section': enTournament.matchClock.section.secondHalf, 'hall-phase-text': enMonitor.liveMatch.clock.ended });
+          await expect(seite.getByTestId('hall-side-right').getByText(/Group|Gruppe|half|Halbzeit|Zeit abgelaufen/)).toHaveCount(0); // kein Wort im Bild
         });
         pruefeSichtbar(abgelaufen, erwartet);
         pruefeUeberlappung(abgelaufen);
         pruefeAbgeschnitten(abgelaufen);
-        pruefeSeitenschrift(abgelaufen, true);
-        const angehalten = await messeInNeuemKontext(browser, baseURL ?? undefined, async (seite) => {
-          await oeffne(seite, 'halle-voll-3', w, h, rand);
-          await englisch(seite, { 'hall-field': 'Field 1', 'hall-group': 'Group A', 'hall-section': enTournament.matchClock.section.sectionOfN.replace('{{section}}', '3').replace('{{sections}}', '3'), 'hall-phase-text': enMonitor.liveMatch.clock.stopped });
-        });
+        pruefeSeitenschrift(abgelaufen);
+        const angehalten = await messeInNeuemKontext(browser, baseURL ?? undefined, async (seite) => { await oeffne(seite, 'halle-voll-3', w, h, rand); });
         pruefeSichtbar(angehalten, erwartet);
         pruefeUeberlappung(angehalten);
         pruefeAbgeschnitten(angehalten);
-        pruefeSeitenschrift(angehalten, true);
+        pruefeSeitenschrift(angehalten);
       });
     });
   }
 }
 
+test.describe('@ZM-214 @ZM-215 Hallen-Profil: Symbole zur Uhr hin, „Ende“ nur als „Endstand“ (1920×1080, Daniel 2026-11-19)', () => {
+  const abstaende = async (page: Page, symbolId: string, uhrId: string): Promise<{ zurUhr: number; zumRand: number }> => page.evaluate(([s, u]) => {
+    const r = (id: string): DOMRect => (document.querySelector(`[data-testid="${id}"]`))!.getBoundingClientRect();
+    const [sym, uhr, folie] = [r(s), r(u), r('hall-display')];
+    return { zurUhr: sym.left - uhr.right, zumRand: folie.right - sym.right };
+  }, [symbolId, uhrId]);
+
+  test('Uhr-Symbol vor dem Anpfiff und Pause-Symbol bei angehaltener Uhr stehen näher an der Uhr als am rechten Rand', async ({ page }) => {
+    await oeffne(page, 'halle-vor', 1920, 1080, 5);
+    const vor = await abstaende(page, 'hall-kickoff-symbol', 'hall-kickoff');
+    expect(vor.zurUhr, `Abstand zur Uhr ${vor.zurUhr.toFixed(0)} px gegen Rand ${vor.zumRand.toFixed(0)} px`).toBeLessThan(vor.zumRand);
+    await oeffne(page, 'halle-angehalten', 1920, 1080, 5);
+    const steht = await abstaende(page, 'hall-phase-text', 'hall-clock');
+    expect(steht.zurUhr, `Abstand zur Uhr ${steht.zurUhr.toFixed(0)} px gegen Rand ${steht.zumRand.toFixed(0)} px`).toBeLessThan(steht.zumRand);
+    pruefeUeberlappung(await messe(page));
+  });
+
+  test('Gegenbeispiel: Gruppe und Abschnitt bleiben am rechten Rand (nur die Zustands-Symbole rücken zur Uhr)', async ({ page }) => {
+    await oeffne(page, 'halle-voll-3', 1920, 1080, 5);
+    const gruppe = await abstaende(page, 'hall-group', 'hall-clock');
+    const symbol = await abstaende(page, 'hall-phase-text', 'hall-clock');
+    expect(gruppe.zumRand, 'Gruppe bündig am rechten Rand').toBeLessThan(symbol.zumRand);
+  });
+
+  test('nach dem Abpfiff und nach dem Turnierabschluss steht kein Abzeichen „Ende“, „Endstand“ bleibt; Kästen wie im Spiel', async ({ browser, baseURL }) => {
+    const messeIn = (oeffnen: (seite: Page) => Promise<void>): Promise<Messung> => messeInNeuemKontext(browser, baseURL ?? undefined, oeffnen);
+    const lauf = await messeIn((seite) => oeffne(seite, 'halle-laeuft', 1920, 1080, 5));
+    for (const fall of ['halle-ende', 'halle-ende-strafstoss']) {
+      let abzeichen = -1;
+      const ende = await messeIn(async (seite) => { await oeffneEnde(seite, fall, 1920, 1080, 5); abzeichen = await seite.getByTestId('match-status-badge').count(); });
+      expect(abzeichen, `kein Abzeichen „Ende“ im Fall ${fall}`).toBe(0);
+      for (const id of ['hall-digits-home', 'hall-digits-away'] as const) { expect(Math.abs(ende.teile[id].t - lauf.teile[id].t)).toBeLessThanOrEqual(TOLERANZ_PX); }
+      pruefeUeberlappung(ende);
+      pruefeAbgeschnitten(ende);
+    }
+  });
+});
+
 test.describe('@ZM-213 Abschnitt und @ZM-215 Wort/Feld/Gruppe am fertigen Bild (1920×1080)', () => {
-  test('zwei Halbzeiten: rechts neben der Restzeit „2. Halbzeit“; ein Feld und eine Gruppe: weder Feld noch Gruppe, kein „Restzeit“', async ({ page }) => {
+  test('zwei Halbzeiten: rechts neben der Restzeit zwei gefüllte Punkte („2. Halbzeit“ als Name); ein Feld und eine Gruppe: weder Feld noch Gruppe, kein „Restzeit“', async ({ page }) => {
     await oeffne(page, 'halle-abschnitt', 1920, 1080, 5);
-    await expect(page.getByTestId('hall-section')).toHaveText('2. Halbzeit');
+    await expect(page.getByTestId('hall-section')).toHaveAttribute('aria-label', '2. Halbzeit');
+    await expect(page.getByTestId('hall-section')).toHaveText('');
+    await expect(page.getByTestId('hall-section').locator('[data-gefuellt="ja"]')).toHaveCount(2);
     await expect(page.getByTestId('hall-field')).toHaveCount(0);
     await expect(page.getByText('Restzeit')).toHaveCount(0);
     const m = await messe(page);
@@ -547,7 +614,9 @@ test.describe('@ZM-213 Abschnitt und @ZM-215 Wort/Feld/Gruppe am fertigen Bild (
     await oeffne(page, 'halle-laeuft', 1920, 1080, 5);
     await expect(page.getByTestId('hall-section')).toHaveCount(0);
     await oeffne(page, 'halle-zwei-felder', 1920, 1080, 5);
-    await expect(page.getByTestId('hall-field')).toHaveText('Feld 1');
-    await expect(page.getByTestId('hall-group')).toHaveText('Gruppe A');
+    await expect(page.getByTestId('hall-field')).toHaveAttribute('aria-label', 'Feld 1'); // @ZM-215: Spielfeld-Symbol mit der Nummer 1
+    await expect(page.getByTestId('hall-field')).toHaveText('1');
+    await expect(page.getByTestId('hall-group')).toHaveAttribute('aria-label', 'Gruppe A'); // Buchstabe im Kasten
+    await expect(page.getByTestId('hall-group')).toHaveText('A');
   });
 });

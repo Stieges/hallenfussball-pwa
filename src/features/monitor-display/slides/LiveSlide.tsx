@@ -57,10 +57,8 @@ export function LiveSlide({ slide, tournament, view, theme, style, pinnedMatchId
   const { teams } = tournament;
   // Beide Anordnungen nehmen dieselben Daten; die Fassung für die Hallentiefe braucht kein `fullscreen`
   const Display = hall ? HallMatchDisplay : FullscreenLiveMatchDisplay;
-  // @ZM-215 (nur Profil „Halle (sehr fern)“): Feld und Gruppe stehen im Band nur, wenn das Turnier mehr als eins davon hat
-  const hallAngaben = hall
-    ? { showField: effectiveFieldCount(tournament) > 1, showGroup: effectiveGroupCount(tournament) > 1 }
-    : {};
+  // @ZM-215 (alle Live-Sichten): Feld und Gruppe stehen nur, wenn das Turnier mehr als eins davon hat
+  const angaben = { showField: effectiveFieldCount(tournament) > 1, showGroup: effectiveGroupCount(tournament) > 1 };
 
   // Profil „Halle (sehr fern)“, Kindermodus nach dem Abschluss (@ZM-121): der Satz „Turnier beendet – danke fürs Mitspielen“, nie „Endstand“ über Flächen ohne Torzahlen
   if (hall && showsKidsEnded(tournament, view)) {
@@ -78,7 +76,7 @@ export function LiveSlide({ slide, tournament, view, theme, style, pinnedMatchId
     return (
       <div style={{ ...style, containerType: 'size' }} data-testid="live-slide-area">
         <Display
-          {...hallAngaben}
+          {...angaben}
           match={liveMatch}
           group={runningMatch.group}
           theme={theme}
@@ -110,7 +108,7 @@ export function LiveSlide({ slide, tournament, view, theme, style, pinnedMatchId
     return (
       <div style={{ ...style, containerType: 'size' }} data-testid="next-slide-area">
         <Display
-          {...hallAngaben}
+          {...angaben}
           match={toLiveMatch(nextMatch, nextRaw, teams, tournament)}
           group={nextRaw.group}
           theme={theme}

@@ -1,7 +1,7 @@
 /**
  * R5 PR 2 – Uhr und Zeitbalken am Hallenmonitor (Live-Folie, echte deutsche Texte). Testwerte aus dem Gherkin:
  * @ZM-176 (Uhr folgt dem steuernden Gerät, ≤ 1 s), @ME-031 (Rechneruhr geht 7 Minuten nach → 6:00 ± 1 s),
- * @ZM-084 (Pause bei 6:41, Weiter, „Zeit abgelaufen“ über der Uhr), @ZM-166 (Grundriss je Zeile), @ZM-165 (Höhe/Breite),
+ * @ZM-084 (Pause bei 6:41, Weiter, „Zeit abgelaufen“ neben der Uhr, @ZM-215), @ZM-166 (Grundriss je Zeile), @ZM-165 (Höhe/Breite),
  * @ZM-085 (ohne neue Antwort bis 0:00, nie darunter), @ZM-180 (beendet bleibt beendet). Plan R5 PR 2, Tests 1, 3, 4, 5, 7.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -75,7 +75,16 @@ function zeige(t: Tournament, jetzt: () => number, pinnedMatchId?: string) {
 }
 
 const uhrText = () => screen.getByTestId('monitor-clock').textContent;
-const ueberDerUhr = () => screen.getByTestId('clock-label').textContent;
+/**
+ * Das bisherige Wort neben der Uhr (@ZM-215): nur bei Abweichung vom laufenden Spiel, sonst `null`; „Restzeit“ gibt es nicht. Seit Daniel 2026-11-19 (Symbole statt Text) steht dort
+ * ein Symbol: gelesen wird sein zugänglicher Name (`aria-label`), und es steht nie ein Wort als Text da.
+ */
+const wortAnDerUhr = (): string | null => {
+  const el = screen.queryByTestId('clock-label');
+  if (el === null) { return null; }
+  expect(el.textContent, 'an der Uhr steht kein Wort, nur ein Symbol').toBe('');
+  return Array.from(el.querySelectorAll('[aria-label]')).map((e) => e.getAttribute('aria-label')).join(' + ');
+};
 
 beforeEach(() => { vi.useFakeTimers(); });
 afterEach(() => { vi.useRealTimers(); });
@@ -100,20 +109,22 @@ describe('@ZM-176 @ME-031 Die Uhr folgt der Serverzeit, nicht der Uhr des Hallen
 });
 
 describe('@ZM-084 Pause und Weiter (Test 3)', () => {
-  it('@ZM-199 Tom drückt bei 6:41 „Pause“: die Uhr steht bei 6:41, über der Uhr „angehalten“, das Abzeichen sagt „Pause“; „Weiter“ → läuft ab 6:41', () => {
+  it('@ZM-199 Tom drückt bei 6:41 „Pause“: die Uhr steht bei 6:41, neben der Uhr das Symbol „angehalten“, das Abzeichen sagt „Live“; „Weiter“ → läuft ab 6:41', () => {
     vi.setSystemTime(SERVER);
     const lange = { sectionSeconds: 600 };
     const angehalten = spiel7({ status: 'paused', section: 1, gespieltMs: 199_000, anchorAt: null, ...lange });
     const { neu } = zeige(turnier(angehalten, 'immer-durchlaufend', 20), () => Date.now());
     expect(uhrText()).toBe('6:41');
-    expect(ueberDerUhr()).toBe('angehalten');
-    expect(screen.getByTestId('live-badge')).toHaveTextContent('Pause');
+    expect(wortAnDerUhr()).toBe('angehalten');
+    expect(screen.getByTestId('live-badge')).toHaveTextContent('Live'); // @ZM-215 (Daniel 2026-11-19): oben links bleibt „Live“, „Pause“ steht als Symbol an der Uhr
+    expect(screen.getByTestId('live-badge')).not.toHaveTextContent('Pause');
     act(() => { vi.advanceTimersByTime(5000); });
     expect(uhrText()).toBe('6:41');
 
     neu(turnier(spiel7({ status: 'running', section: 1, gespieltMs: 199_000, anchorAt: Date.now(), ...lange }), 'immer-durchlaufend', 20));
     expect(uhrText()).toBe('6:41');
-    expect(ueberDerUhr()).toBe('Restzeit');
+    expect(wortAnDerUhr()).toBeNull(); // läuft wieder: kein Wort, nie „Restzeit“ (@ZM-215)
+    expect(screen.queryByText('Restzeit')).toBeNull();
     act(() => { vi.advanceTimersByTime(1100); });
     expect(uhrText()).toBe('6:40');
   });
@@ -134,16 +145,16 @@ describe('Takt an der Sekundengrenze (Test 4)', () => {
 describe('@ZM-166 Der Zeitbalken zeigt den Zustand des Spiels, nie in Rot (Test 5)', () => {
   const laeuft = (section: number, restSek: number, phase: Lage['phase'] = 'regular', laenge = 360): Lage =>
     ({ status: 'running', phase, section, gespieltMs: (laenge - restSek) * 1000, anchorAt: SERVER });
-  const zeilen: ReadonlyArray<[string, Lage, ClockMode, string, string, string]> = [
-    ['im ersten Abschnitt bei 3:00, die Uhr läuft', laeuft(1, 180), 'immer-durchlaufend', '0.500', 'gruen', 'Restzeit'],
-    ['im zweiten Abschnitt bei 0:30, die Uhr läuft', laeuft(2, 30), 'immer-durchlaufend', '0.083', 'gruen', 'Restzeit'],
+  const zeilen: ReadonlyArray<[string, Lage, ClockMode, string, string, string | null]> = [
+    ['im ersten Abschnitt bei 3:00, die Uhr läuft', laeuft(1, 180), 'immer-durchlaufend', '0.500', 'gruen', null],
+    ['im zweiten Abschnitt bei 0:30, die Uhr läuft', laeuft(2, 30), 'immer-durchlaufend', '0.083', 'gruen', null],
     ['im ersten Abschnitt bei 3:00, Tom hat die Uhr angehalten', { ...laeuft(1, 180), status: 'paused', anchorAt: null }, 'immer-durchlaufend', '0.500', 'grau', 'angehalten'],
     ['in der Halbzeitpause, noch 0:30 Pause', { status: 'section_break', section: 1, gespieltMs: 360_000, anchorAt: null, breakStartedAt: SERVER - 30_000 }, 'immer-durchlaufend', '0.500', 'gedaempft', 'Pause · Halbzeit'],
     ['in der Verlängerung bei 1:00, die Uhr läuft', laeuft(2, 60, 'overtime', 120), 'immer-durchlaufend', '0.500', 'gruen', 'Verlängerung'],
     ['mit abgelaufener Spielzeit, noch nicht abgepfiffen', laeuft(2, 0), 'immer-durchlaufend', '0.000', 'gruen', 'Zeit abgelaufen'],
-    ['in der Schlussphase bei Uhr-Art „durchlaufend, letzte x Minuten angehalten“, Uhr läuft', laeuft(2, 30), 'durchlaufend-letzte-minute-angehalten', '0.083', 'violett', 'Restzeit'],
-    ['in den letzten Minuten bei jeder anderen Uhr-Art (durchlaufend ohne Schlussphase)', laeuft(2, 30), 'immer-durchlaufend', '0.083', 'gruen', 'Restzeit'],
-    ['in den letzten Minuten bei jeder anderen Uhr-Art (Netto)', laeuft(2, 30), 'immer-angehalten', '0.083', 'gruen', 'Restzeit'],
+    ['in der Schlussphase bei Uhr-Art „durchlaufend, letzte x Minuten angehalten“, Uhr läuft', laeuft(2, 30), 'durchlaufend-letzte-minute-angehalten', '0.083', 'violett', null],
+    ['in den letzten Minuten bei jeder anderen Uhr-Art (durchlaufend ohne Schlussphase)', laeuft(2, 30), 'immer-durchlaufend', '0.083', 'gruen', null],
+    ['in den letzten Minuten bei jeder anderen Uhr-Art (Netto)', laeuft(2, 30), 'immer-angehalten', '0.083', 'gruen', null],
   ];
   it.each(zeilen)('%s', (_lage, lage, mode, anteil, ton, text) => {
     vi.setSystemTime(SERVER);
@@ -151,7 +162,8 @@ describe('@ZM-166 Der Zeitbalken zeigt den Zustand des Spiels, nie in Rot (Test 
     const balken = screen.getByTestId('monitor-zeitbalken');
     expect(balken).toHaveAttribute('data-anteil', anteil);
     expect(balken).toHaveAttribute('data-ton', ton);
-    expect(ueberDerUhr()).toBe(text);
+    expect(wortAnDerUhr()).toBe(text); // @ZM-215: ein Wort nur bei Abweichung, nie „Restzeit“
+    expect(screen.queryByText('Restzeit')).toBeNull();
     // nie rot: die Füllung trägt einen Ton der Tafel, nie die Live-Farbe des Abzeichens
     expect(balken.querySelector<HTMLElement>('div')?.style.background).not.toMatch(/live|rose|red/i);
   });
@@ -173,12 +185,12 @@ describe('@ZM-166 Der Zeitbalken zeigt den Zustand des Spiels, nie in Rot (Test 
 });
 
 describe('@ZM-165 Der Zeitbalken ist aus der Halle gut zu sehen', () => {
-  it('etwa 3 % der Bildhöhe hoch, so breit wie die beiden Kästen (Token), nur der erste Abschnitt', () => {
+  it('@ZM-215 mindestens 5 % der Bildhöhe hoch („Spielfeld (fern)“, vorher etwa 3 %), so breit wie die beiden Kästen (Token), nur der erste Abschnitt', () => {
     vi.setSystemTime(SERVER);
     zeige(turnier(spiel7({ status: 'running', section: 1, gespieltMs: 180_000, anchorAt: SERVER })), () => Date.now());
     const balken = screen.getByTestId('monitor-zeitbalken');
     expect(balken.style.height).toBe(displayLayout.scoreArea.progressHeight);
-    expect(displayLayout.scoreArea.progressHeight).toBe('3cqh');
+    expect(parseFloat(displayLayout.scoreArea.progressHeight)).toBeGreaterThanOrEqual(5);
     expect(balken.parentElement?.style.maxWidth).toBe('calc(85%)'); // jsdom rechnet den Token aus
     // so breit wie die Kästen: Spalte = halbe Breite, Kasten blockWidth mittig → (1 + blockWidth) / 2 der Breite
     expect(displayLayout.scoreArea.progressWidth).toBe(`calc((100% + ${displayLayout.scoreArea.blockWidth}) / 2)`);
@@ -196,7 +208,7 @@ describe('@ZM-085 Ohne neue Antwort zählt die Uhr bis 0:00 und nie darunter (Te
     expect(uhrText()).toBe('0:00');
     act(() => { vi.advanceTimersByTime(5 * MIN); });
     expect(uhrText()).toBe('0:00');
-    expect(ueberDerUhr()).toBe('Zeit abgelaufen');
+    expect(wortAnDerUhr()).toBe('Zeit abgelaufen');
     expect(screen.getByTestId('monitor-zeitbalken')).toHaveAttribute('data-anteil', '0.000');
   });
 });

@@ -7,7 +7,7 @@
  * Restzeit 26 % (jetzt 34 %), Namen je nach Länge 7,5 bis 20 %. Die Werte stammen aus der Mockup-Messung des Reviews (1080 px = 100 cqh).
  * Ausgabe der übrigen Folien und der Profile „Spielfeld (fern)“ und „Info (nah)“ bleibt unberührt: nichts hier wird dort gelesen.
  */
-import { palette } from './colors/palette';
+import { barColors } from './displayBar';
 
 export const displayHall = {
   /** Zwei Farbflächen oben bis an den Rand der Folienfläche: Höhe (64,5 %: Namensfeld und Torzahl füllen sie, der Rest geht an Zeitbalken und Restzeit, @ZM-215), Lücke dazwischen, Rundung der unteren Ecken */
@@ -22,18 +22,8 @@ export const displayHall = {
   mark: { size: '4.4cqh', inset: '0.8cqh', border: '0.3cqh', iconShare: 0.6 },
   /** Zeitbalken über die ganze Breite: Abstand zur Fläche darüber, Höhe (6 %, @ZM-215), seitlicher Abstand, Umrandung der Bahn */
   bar: { gapTop: '1.2cqh', height: '6cqh', padX: '2.2cqh' },
-  /**
-   * Farben des Zeitbalkens je Thema (@ZM-215): die Füllung ist der kräftige Teil und läuft mit der Restzeit herunter, die abgelaufene Strecke ist die blassere Bahn.
-   * Dunkel (das einzige Thema am Monitor im MVP, helles Design @ZM-173): Füllung heller als die Bahn; hell: Füllung dunkler als die Bahn.
-   * Füllung gegen Bahn jeweils mindestens 3 : 1, Bahn gegen Hintergrund dunkel mindestens 2,6 : 1, hell mindestens 2,0 : 1 (Test `displayHall.zm213.test.ts`).
-   * Grün läuft, grau angehalten, violett in der Schlussphase (dunkel: dasselbe Violett wie die Uhr), gedämpft in der Pause. Aus der Palette; neu sind nur
-   * `dark.track` (#586880: die Bahn muss gegen #1E293B/#0F172A mindestens 2,6 : 1 haben, `neutral.500` hat nur 2,3 : 1 am oberen Ende des Verlaufs) und
-   * `light.violett` (#5B21B6: dunkles Violett, `purple.600` hat gegen die Bahn nur 2,4 : 1).
-   */
-  barColors: {
-    dark: { track: '#586880', gruen: palette.green[400], grau: palette.neutral[50], violett: palette.purple[300], gedaempft: palette.neutral[300] },
-    light: { track: palette.neutral[400], gruen: palette.green[800], grau: palette.neutral[700], violett: '#5B21B6', gedaempft: palette.blue[900] },
-  },
+  /** Farben des Zeitbalkens je Thema: gemeinsam mit den übrigen Live-Sichten des Monitors (@ZM-215), siehe `displayBar.ts` */
+  barColors,
   /** Uhrband unten: Innenabstand seitlich und unten, Abstand zwischen den Zeilen der Seitenangaben */
   band: { padX: '3.7cqh', padBottom: '1.2cqh', sideGap: '0.6cqh' },
   /** Restzeit bzw. Anstoßzeit: 34 % der Höhe (größtmöglich im Uhrband, @ZM-215; bei vierstelligen Zeiten passt `useBandFit` sie der Breite an); Zeilenhöhe so, dass die Ziffern den Platz ausfüllen */
@@ -42,8 +32,13 @@ export const displayHall = {
   word: { font: '26cqh' },
   /** Zwischenstand im Strafstoßschießen an der Stelle der Restzeit */
   shootout: { font: '23cqh' },
-  /** Angaben links und rechts neben der Uhr (Live-Abzeichen, Feld, Gruppe, Abschnitt): 8 % der Höhe (mit der Vorbelegung des Bildrands von 5 % noch 7,2 % des Bildschirms, mindestens 7,08 %), Nah-Information, bei zu vielen Zeilen im Uhrband höchstens bis `fontMin` verkleinert (nie unter 7,08 % der BILDSCHIRMhöhe, auch mit Bildrand: `max(…cqh, …vh)`), nie ausgeblendet; reicht auch das nicht, als Notlösung bis `fontNot` (sichtbar vor klein); das lange Wort „Verlängerung“ im Abzeichen (12 Zeichen) in `fontLong`, damit es neben die Restzeit passt */
-  side: { font: '8cqh', fontMin: 'max(7cqh, 7.08vh)', fontNot: '5.6cqh', fontLong: '6cqh', lineHeight: 1, badgePadY: '0.04em', badgePadX: '0.4em', badgeGap: '0.35em', badgeDot: '0.38em' },
+  /** Angaben links und rechts neben der Uhr (Live-Abzeichen, Feld, Gruppe, Abschnitt): 8 % der Höhe (mit der Vorbelegung des Bildrands von 5 % noch 7,2 % des Bildschirms, mindestens 7,08 %), Nah-Information, bei zu vielen Zeilen im Uhrband höchstens bis `fontMin` verkleinert (nie unter 7,08 % der BILDSCHIRMhöhe, auch mit Bildrand: die Folie ist nie höher als das Fenster, also liegt 7 cqh nie darüber), nie ausgeblendet; reicht auch das nicht, als Notlösung bis `fontNot` (5,5 % der Bildschirmhöhe, die Grenze aus @ZM-213; mit den Symbolen statt Text von @ZM-215 steht jede Angabe in einer Zeile, die Lage „drei Abschnitte + Gruppe + Feld + Zeit abgelaufen“ braucht keine Verkleinerung mehr, Review PR #563 B1); das Wort „Verlängerung“ steht seit @ZM-215 nicht mehr im Abzeichen */
+  side: { font: '8cqh', fontMin: '7.08vh', fontNot: '5.5vh', lineHeight: 1, badgePadY: '0.04em', badgePadX: '0.4em', badgeGap: '0.35em', badgeDot: '0.38em' },
+  /**
+   * Symbole neben der Restzeit (@ZM-215, Daniel 2026-11-19: Symbole statt Text): alle Maße in `em` der Seitenspalte, damit sie mit `useBandFit` zusammen kleiner werden.
+   * Zustand der Uhr (angehalten, Pause, Pfeife, Verlängerung, Anstoß), Feld und Gruppe in Zeilenhöhe, Punkte des Abschnitts (Größe, Abstand, Randbreite), Abstand zweier Symbole
+   */
+  symbols: { state: '1.25em', stateGap: '0.3em', field: '1em', group: '1.1em', dot: '0.55em', dotGap: '0.2em', dotBorder: '0.09em', groupBorder: '0.07em', groupRadius: '0.15em' },
   /** Kein Spiel mehr auf dem Feld: Satz mittig, Schrift 9 % der Höhe */
   noMatch: { font: '9cqh', padX: '6cqh' },
 } as const;

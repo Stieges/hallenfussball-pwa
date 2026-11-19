@@ -167,17 +167,17 @@ for (const [breite, hoehe] of [[1920, 1080], [1280, 720], [3840, 2160]] as const
       });
     }
 
-    // Gegenbeispiel: Live-Folie mit laufendem Spiel. Nie ein Hinweis, die Kopfzeile zeigt Feld/Spiel und Gruppe.
+    // Gegenbeispiel: Live-Folie mit laufendem Spiel. Nie ein Hinweis, die Kopfzeile zeigt das Spiel; Feld und Gruppe nur bei mehreren (@ZM-215, hier ein Feld und eine Gruppe: weder noch).
     for (const modus of ['abgelehnt', 'haengt'] as const) {
       test(`Gegenbeispiel, Anfrage ${modus}: Live-Folie mit laufendem Spiel zeigt nie einen Hinweis, Kopfzeile bleibt`, async ({ page, seedIndexedDB }) => {
         await wakeLockMocken(page, modus);
         await oeffneMonitor(page, seedIndexedDB, [LIVE_FOLIE], theme, 'laeuft');
-        await expect(page.getByTestId('live-group')).toContainText('A');
-        await expect(page.getByTestId('live-info')).toContainText('1');
+        await expect(page.getByTestId('live-group')).toHaveText('');
+        await expect(page.getByTestId('live-info')).toHaveText(/^Spiel \d+$/);
         await page.screenshot({ path: `${SCR}/kopfzeile-spiel-laeuft-${modus}-${bild}.png` });
         await page.clock.runFor(11_000);
         await expect(page.getByTestId('monitor-wakelock-hint')).toHaveCount(0);
-        await expect(page.getByTestId('live-group')).toContainText('A');
+        await expect(page.getByTestId('live-info')).toHaveText(/^Spiel \d+$/);
       });
     }
 
@@ -198,7 +198,7 @@ for (const [breite, hoehe] of [[1920, 1080], [1280, 720], [3840, 2160]] as const
       await expect(hinweis).toHaveCount(0);
       expect(vergangen, 'Hinweis vor Ablauf der 10 s weg').toBeLessThan(9_000);
       await expect(page.getByTestId('live-header')).toBeVisible();
-      await expect(page.getByTestId('live-group')).toContainText('A');
+      await expect(page.getByTestId('live-info')).toHaveText(/^Spiel \d+$/);
     });
 
     test('Gegenbeispiel: bei Zusage des Browsers erscheint nie ein Hinweis', async ({ page, seedIndexedDB }) => {

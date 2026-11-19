@@ -2,11 +2,11 @@
  * @ZM-139 Monitor zeigt die Restzeit · @ZM-137 Hervorhebung nur in der angehaltenen Schlussphase
  *
  * R5 PR 2 (Umstellung nach Record, nicht nach Code): Der Hinweis „Uhr hält bei Unterbrechung“ entfällt (@ZM-137, KORREKTUR
- * 2026-10-16 „ist sinnlos als Hinweis“); über der Uhr steht genau ein Text (@ZM-166: „Restzeit“ | „angehalten“ | …
- * | „Zeit abgelaufen“), die Hervorhebung ist Violett (@ZM-137, Konsolidierung G17) statt der Umkehrung der Textfarbe.
+ * 2026-10-16 „ist sinnlos als Hinweis“); neben der Uhr steht nur bei Abweichung ein Wort (@ZM-215, vorher @ZM-166 „Restzeit“ | „angehalten“ | …
+ * | „Zeit abgelaufen“; seit @ZM-215 / Daniel 2026-11-19 als Symbol mit dem Wort als zugänglichem Namen), die Hervorhebung ist Violett (@ZM-137, Konsolidierung G17) statt der Umkehrung der Textfarbe.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { MatchTimer } from '../MatchTimer';
 import de from '../../../i18n/locales/de/monitor.json';
 
@@ -15,6 +15,9 @@ import de from '../../../i18n/locales/de/monitor.json';
 // i18n ist in Tests ein Durchreicher (Schlüssel). Die deutschen Texte prüft der letzte Block gegen die JSON.
 
 const nowIso = () => new Date().toISOString();
+/** Zugänglicher Name des Symbols neben der Uhr (@ZM-215: Symbole statt Wörter, das bisherige Wort steht im Namen) */
+const zustandsName = (): string | null => within(screen.getByTestId('clock-label')).getByRole('img').getAttribute('aria-label');
+const ziffernFarbe = (): string => screen.getByTestId('monitor-clock').querySelector<HTMLElement>('[data-monitor="uhr"]')?.style.color ?? '';
 
 describe('@ZM-139 MatchTimer zeigt Restzeit', () => {
   it('@ZM-199 Spiel 11: 6-Minuten-Abschnitt bei gespielten 4:10 zeigt 1:50 und nicht 4:10', () => {
@@ -31,17 +34,19 @@ describe('@ZM-137 Uhr-Hervorhebung und Hinweise', () => {
     expect(screen.queryByText('liveMatch.clock.holdsOnInterruption')).toBeNull();
   });
 
-  it('angehaltene Schlussphase: Hervorhebung und „angehalten“ über der Uhr, kein Hinweis „Uhr hält bei Unterbrechung“', () => {
+  it('angehaltene Schlussphase: Hervorhebung und „angehalten“ neben der Uhr, kein Hinweis „Uhr hält bei Unterbrechung“', () => {
     render(<MatchTimer elapsedSeconds={300} durationSeconds={360} status="PAUSED" timerElapsedSeconds={300} clockMode="durchlaufend-letzte-minute-angehalten" />);
     expect(screen.getByTestId('monitor-clock')).toHaveAttribute('data-phase', 'schlussphaseAngehalten');
-    expect(screen.getByTestId('clock-label')).toHaveTextContent('liveMatch.clock.stopped');
+    // @ZM-215 (Daniel 2026-11-19): „angehalten“ steht als Pause-Symbol mit dem Wort als Namen; in der Schlussphase bleibt das Violett (Ziffern nicht gedämpft)
+    expect(zustandsName()).toMatch(/liveMatch\.clock\.stopped/);
     expect(screen.queryByText(/liveMatch\.clock\.holdsOnInterruption/)).toBeNull();
   });
 
-  it('laufende Schlussphase: Hervorhebung ohne zusätzlichen Text, über der Uhr „Restzeit“, nicht „angehalten“', () => {
+  it('laufende Schlussphase: Hervorhebung ohne zusätzlichen Text (kein Wort neben der Uhr, kein „Restzeit“, nicht „angehalten“; @ZM-215)', () => {
     render(<MatchTimer elapsedSeconds={300} durationSeconds={360} status="RUNNING" timerStartTime={nowIso()} timerElapsedSeconds={300} clockMode="durchlaufend-letzte-minute-angehalten" />);
     expect(screen.getByTestId('monitor-clock')).toHaveAttribute('data-phase', 'schlussphaseAngehalten');
-    expect(screen.getByTestId('clock-label')).toHaveTextContent('liveMatch.clock.remaining');
+    expect(screen.queryByTestId('clock-label')).toBeNull();
+    expect(screen.queryByText('liveMatch.clock.remaining')).toBeNull();
     expect(screen.queryByText('liveMatch.clock.stopped')).toBeNull();
   });
 
@@ -60,7 +65,8 @@ describe('@ZM-137 Uhr-Hervorhebung und Hinweise', () => {
   it('nach Ablauf ohne Abpfiff (RUNNING): 0:00 und „Zeit abgelaufen“, nie Nachspielzeit', () => {
     render(<MatchTimer elapsedSeconds={400} durationSeconds={360} status="RUNNING" timerStartTime={nowIso()} timerElapsedSeconds={400} />);
     expect(screen.getByTestId('monitor-clock')).toHaveTextContent('0:00');
-    expect(screen.getByText(/liveMatch\.clock\.ended/)).toBeInTheDocument();
+    expect(zustandsName()).toMatch(/liveMatch\.clock\.ended/); // @ZM-215: Pfeife mit dem Namen „Zeit abgelaufen“, kein Wort
+    expect(screen.getByTestId('clock-label').textContent).toBe('');
     expect(screen.queryByText('Nachspielzeit')).toBeNull();
   });
 
@@ -89,9 +95,13 @@ describe('Monitor-Uhr: Texte und weitere Zustände', () => {
     expect('holdsOnInterruption' in de.liveMatch.clock).toBe(false);
   });
 
-  it('pausiertes Spiel: über der Uhr „angehalten“ („Pause“ trägt das Abzeichen in der Kopfzeile, @OB-066)', () => {
+  it('pausiertes Spiel: neben der Uhr das Pause-Symbol „angehalten“, die Ziffern sind gedämpft (@ZM-215; das Abzeichen oben links bleibt „Live“)', () => {
     render(<MatchTimer elapsedSeconds={100} durationSeconds={600} status="PAUSED" timerElapsedSeconds={100} />);
-    expect(screen.getByTestId('clock-label')).toHaveTextContent('liveMatch.clock.stopped');
+    expect(zustandsName()).toMatch(/liveMatch\.clock\.stopped/);
+    const angehalten = ziffernFarbe();
+    cleanup();
+    render(<MatchTimer elapsedSeconds={100} durationSeconds={600} status="RUNNING" timerStartTime={nowIso()} timerElapsedSeconds={100} clockMode="immer-durchlaufend" />);
+    expect(ziffernFarbe(), 'Gegenbeispiel: laufende Uhr hat ungedämpfte Ziffern').not.toBe(angehalten);
   });
 
   it('Start: 0:00 Restzeit bei gespielten 0 Sekunden wird als volle Abschnittslänge gezeigt', () => {

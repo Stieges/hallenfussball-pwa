@@ -188,11 +188,12 @@ async function messeLiveFolie(page: Page, namen: string[], vorgabe: string) {
 
     const bloecke: Box[] = [];
     // B-44a4: Kopf über die Kennungen (die Marke hat den Punkt als Kind und war als „Blatt“ nie gefunden)
-    const kopfTeile: Array<[string, string]> = [['live-badge', 'LIVE-Kennzeichen'], ['live-info', 'Feld/Spiel'], ['live-group', 'Gruppe']];
+    // @ZM-215: Marke und Spiel stehen immer, Feld und Gruppe nur bei mehreren (das Turnier hat ein Feld und eine Gruppe): die Gruppe fehlt dort nicht, sie ist leer und liefert keinen Kasten
+    const kopfTeile: Array<[string, string, boolean]> = [['live-badge', 'LIVE-Kennzeichen', true], ['live-info', 'Spiel', true], ['live-group', 'Gruppe', false]];
     const fehlenderKopf: string[] = [];
-    for (const [id, name] of kopfTeile) {
+    for (const [id, name, pflicht] of kopfTeile) {
       const el = document.querySelector(`[data-testid="${id}"]`);
-      if (!el || (el.textContent ?? '').trim() === '') { fehlenderKopf.push(name); continue; }
+      if (!el || (el.textContent ?? '').trim() === '') { if (pflicht) { fehlenderKopf.push(name); } continue; }
       bloecke.push(box(el, name));
     }
     document.querySelectorAll('[data-position]').forEach((el) => {

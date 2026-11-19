@@ -1,11 +1,12 @@
 /**
  * Aufgabe 1.1 (Spielanzeige), Fixrunde A1: das Live-Rot gehört nur dem Abzeichen. Der Zeitbalken am Monitor ist seit R5 PR 2
- * der gemeinsame `ZeitBalken` der Tafel (@ZM-166: grün, grau, gedämpft, violett – nie Rot); früher ein Verlauf grün → grün.
+ * der gemeinsame `ZeitBalken` der Tafel (@ZM-166: grün, grau, gedämpft, violett – nie Rot); früher ein Verlauf grün → grün. Seit @ZM-215 trägt er die Farben
+ * `displayBar` (auf die Bahn abgestimmt, wie im Profil „Halle (sehr fern)“) statt der Tafel-Farben.
  */
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MatchTimer } from '../MatchTimer';
-import { monitorThemes } from '../../../design-tokens';
+import { displayBar, monitorThemes } from '../../../design-tokens';
 import { contrastRatio, MIN_TEXT_CONTRAST } from '../../../test/contrast';
 
 const THEMES = ['dark', 'light'] as const;
@@ -26,9 +27,11 @@ describe('@OB-039 Fortschrittsbalken nutzt nicht das Live-Rot', () => {
     expect(background).not.toContain('190, 18, 60');
   });
 
-  it.each(THEMES)('Monitor-Theme %s: der Balken trägt den Ton des Zustands aus den Tafel-Tokens (angehalten: grau), nie die Live-Farben', (theme) => {
+  it.each(THEMES)('Monitor-Theme %s: der Balken trägt den Ton des Zustands aus den Balken-Tokens (angehalten: grau), nie die Live-Farben', (theme) => {
     const background = barBackground(theme);
-    expect(background).toBe('var(--color-scoreboard-neutral)');
+    const erwartet = displayBar.colors[theme].grau.replace('#', '');
+    const [r, g, b] = [0, 2, 4].map((i) => parseInt(erwartet.slice(i, i + 2), 16));
+    expect(background).toBe(`rgb(${String(r)}, ${String(g)}, ${String(b)})`);
     expect(monitorThemes[theme].liveBadgeFill.toLowerCase()).not.toBe(background.toLowerCase());
   });
 

@@ -1,6 +1,7 @@
 /**
  * R5 PR 3, @ZM-177: bei nur einer Gruppe steht am Monitor keine Gruppenangabe, nirgends „Gruppe all“;
- * Gegenprobe: bei zwei Gruppen steht „Gruppe A“ (Testumgebung gibt den Schlüssel zurück).
+ * Gegenprobe: bei zwei Gruppen steht die Gruppe A als Buchstabe im Kasten, Name „Gruppe A“ (Testumgebung gibt den Schlüssel zurück).
+ * Umgestellt wegen @ZM-215 (Daniel 2026-11-19: Symbole statt Text): Feld und Gruppe stehen als Symbole, ihr Wort steht im zugänglichen Namen (`aria-label`).
  * Mutation: Prüfung `isSingleGroupId` in `LiveHeader` entfernen → erster und zweiter Test rot.
  */
 import { describe, it, expect, vi } from 'vitest';
@@ -38,13 +39,17 @@ describe('@ZM-177 Gruppenangabe in der Kopfzeile der Live-Folie', () => {
   it.each(['all', '', undefined])('Gruppe %j (eine Gruppe, Jeder gegen jeden): Kopfzeile ohne Gruppenangabe', (group) => {
     const { container } = render(<LiveMatchDisplay match={createMatch({ group })} />);
     expect(screen.getByTestId('live-group').textContent).toBe('');
-    expect(screen.getByTestId('live-info').textContent).toBe('Feld 1 — Spiel 11');
+    expect(screen.queryByTestId('live-group-box')).toBeNull();
+    expect(screen.getByTestId('live-field')).toHaveAttribute('aria-label', 'monitor:fieldSelector.field');
+    expect(screen.getByTestId('live-info')).toHaveTextContent('monitor:liveMatch.matchOnly');
     expect(container.textContent ?? '').not.toMatch(/\ball\b|liveMatch\.group/);
+    expect(container.innerHTML).not.toMatch(/aria-label="monitor:liveMatch\.group"/);
   });
 
   it('Gegenprobe: bei „A“ (mehrere Gruppen) steht die Gruppenangabe', () => {
     render(<LiveMatchDisplay match={createMatch({ group: 'A' })} />);
-    expect(screen.getByTestId('live-group').textContent).toBe('monitor:liveMatch.group');
+    expect(screen.getByTestId('live-group-box')).toHaveAttribute('aria-label', 'monitor:liveMatch.group');
+    expect(screen.getByTestId('live-group-box')).toHaveTextContent('A');
   });
 
   it('Gruppenname von außen (group-Prop „all“) wird ebenfalls nicht gezeigt', () => {

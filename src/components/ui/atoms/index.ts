@@ -28,3 +28,5 @@ export type { StatusPilleProps, StatusPilleTon, StatusPilleRand, StatusPilleAkti
 // @ZM-207: Teamnamen brechen nur an Leerzeichen und nach „/“ um, nie mitten im Wort; `TeamName` trägt `data-teamname`
 export { TeamName, HyphenSafe, SlashBreaks } from './TeamName';
 export { splitAfterSlash } from './teamNameBreaks';
+export { MonitorSymbol, FeldSymbol, GruppenKasten, AbschnittPunkte } from './MonitorSymbole';
+export type { MonitorSymbolKind, MonitorSymbolProps, FeldSymbolProps, GruppenKastenProps, AbschnittPunkteProps } from './MonitorSymbole';

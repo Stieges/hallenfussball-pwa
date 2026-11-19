@@ -83,9 +83,11 @@ test.describe('@OB-066 Jeder Zustand hat sein Wort', () => {
     await expect(page.locator('[data-testid^="final-live-"]')).toHaveText('Strafstoßschießen');
   });
 
-  test('@ZM-115 Halbzeit: „Halbzeit“ auf Monitor und Zuschauer-Seite', async ({ page }) => {
+  // Umgestellt wegen @ZM-215 (Daniel 2026-11-19: jede Angabe nur an einer Stelle): am Monitor bleibt oben links „Live“, die Halbzeit steht als halber Kreis an der Uhr; die Zuschauer-Seite bleibt bei „Halbzeit“
+  test('@ZM-115 Halbzeit: halber Kreis an der Uhr des Monitors („Live“ oben links), „Halbzeit“ im Abzeichen der Zuschauer-Seite', async ({ page }) => {
     await oeffne(page, MONITOR, '/#/display/hallencup-phase-halbzeit/mon-live', '[data-testid="live-badge"]');
-    await expect(page.locator('[data-testid="live-badge"]')).toHaveText('Halbzeit');
+    await expect(page.locator('[data-testid="live-badge"]')).toHaveText('Live');
+    await expect(page.getByTestId('clock-label').getByRole('img', { name: /Halbzeit/ })).toBeVisible();
 
     await oeffne(page, HANDY, '/#/live/PHASEH', '[data-testid^="final-live-"]');
     await expect(page.locator('[data-testid^="final-live-"]')).toHaveText('Halbzeit');

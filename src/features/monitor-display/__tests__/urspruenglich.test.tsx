@@ -132,7 +132,8 @@ describe('B-27 Monitor „Live“, nächstes Spiel: Uhrzeit mit „(war …)“ 
   it('Feld 2 hat kein laufendes Spiel: „Anstoß 14:30“ und klein „(war 14:20)“', () => {
     const t = mitZeiten({ shown: '14:30', original: '14:20' }, { shown: '14:40' });
     render(<LiveSlide slide={slide('live', { fieldId: 'field-2' })} {...withView(t)} performanceSettings={performanceSettings} theme="dark" style={{}} />);
-    expect(document.body.textContent).toMatch(/Anstoß\s*14:30/);
+    expect(document.body.textContent).toMatch(/14:30/);
+    expect(screen.getByRole('img', { name: 'Anstoß' })).toBeInTheDocument(); // @ZM-215 (Daniel 2026-11-19): Uhr-Symbol mit dem Namen „Anstoß“ statt Wort
     expect(screen.getByTestId('monitor-next-original')).toHaveTextContent('(war 14:20)');
   });
 
@@ -147,7 +148,8 @@ describe('B-27 Monitor „Live“, nächstes Spiel: K.-o.-Spiel ohne „voraussi
     const matches = withMatch('match-8', { isFinal: true, label: 'Finale', scheduledTime: at('14:30'), originalStart: at('14:20') });
     const ansicht = withView(buildTournament({ matches }));
     render(<LiveSlide slide={slide('live', { fieldId: 'field-2' })} {...ansicht} performanceSettings={performanceSettings} theme="dark" style={{}} />);
-    expect(document.body.textContent).toMatch(/Anstoß\s*14:30/);
+    expect(document.body.textContent).toMatch(/14:30/);
+    expect(screen.getByRole('img', { name: 'Anstoß' })).toBeInTheDocument(); // @ZM-215 (Daniel 2026-11-19): Uhr-Symbol mit dem Namen „Anstoß“ statt Wort
     expect(screen.getByTestId('monitor-next-original')).toHaveTextContent('(war 14:20)');
     expect(document.body.textContent).not.toContain('voraussichtlich');
   });
