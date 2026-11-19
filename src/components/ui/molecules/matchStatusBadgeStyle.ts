@@ -109,7 +109,7 @@ export function badgeStyle(state: MatchBadgeState, size: MatchStatusBadgeSize, t
       gap: displayHall.side.badgeGap,
       padding: `${displayHall.side.badgePadY} ${displayHall.side.badgePadX}`,
       borderRadius: cssVars.borderRadius.md,
-      fontSize: state === 'overtime' ? displayHall.side.fontLong : displayHall.side.font,
+      fontSize: displayHall.side.font,
       lineHeight: displayHall.side.lineHeight,
       // „Nächstes Spiel“ bricht in der schmalen Seitenspalte zweizeilig um (Mockup `.badge` bei kleiner Seitenspalte); nie breiter als die Spalte
       whiteSpace: 'normal',

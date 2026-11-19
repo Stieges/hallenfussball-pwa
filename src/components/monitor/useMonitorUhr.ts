@@ -10,7 +10,7 @@ import { useContext, useEffect, useRef, useState } from 'react';
 import type { MonitorTheme } from '../../types/monitor';
 import type { MatchStatus } from '../../hooks/useLiveMatches';
 import { DEFAULT_CLOCK_MODE, type ClockMode } from '../../core/match/clockDisplay';
-import { monitorUhrMitSperre, monitorUhrOf, type MatchView, type MonitorUhrEingabe, type MonitorUhrModell, type MonitorUhrText } from '../../core/view';
+import { monitorUhrMitSperre, monitorUhrOf, type MatchView, type MonitorUhrEingabe, type MonitorUhrModell } from '../../core/view';
 import { NowSourceContext } from '../schedule/useTickingNow';
 import { cachedElapsedSeconds } from '../schedule/matchResult';
 import type { MatchTimerSize } from './matchTimerStyles';
@@ -50,15 +50,6 @@ export interface MatchTimerProps {
 const TICK_NACHLAUF_MS = 15;
 
 export type UhrTextKey = 'remaining' | 'stopped' | 'pauseHalftime' | 'pause' | 'overtime' | 'ended';
-
-export const UHR_TEXT_KEY: Record<MonitorUhrText, UhrTextKey> = {
-  restzeit: 'remaining',
-  angehalten: 'stopped',
-  pauseHalbzeit: 'pauseHalftime',
-  pause: 'pause',
-  verlaengerung: 'overtime',
-  zeitAbgelaufen: 'ended',
-};
 
 function eingabeOf(props: MatchTimerProps, nowMs: number): MonitorUhrEingabe {
   const { uhr } = props;

@@ -138,7 +138,8 @@ function HallTimedBand(props: HallBandProps): ReactElement {
     return <HallLayout props={props} inhalt={{ bar, symbole: [], section: null, slot: { kind: 'shootout', text, testId: 'hall-shootout' } }} />;
   }
   // Pause ohne Pausen-Daten oder keine Uhr: nur Balken und Seitenangaben
-  const keineZiffern = <HallLayout props={props} inhalt={{ bar, symbole: [], section: null, slot: null }} />;
+  const keineZiffern = <HallLayout props={props} inhalt={{ bar, symbole: modell === null ? [] : uhrSymbole(modell), section: null, slot: null, ...(modell === null ? {} : { uhrText: modell.text }) }} />;
+  // Auch ohne Pausen-Daten (Restzeit unbekannt) steht der Zustand der Uhr als Symbol: das Abzeichen sagt dort „Live“, sonst stünde die Pause nirgends (Review PR #563 D2)
   if (modell === null) { return keineZiffern; }
   if (modell.restSekunden === null) { return keineZiffern; }
   const phase = modell.schlussphase ? 'schlussphaseAngehalten' : modell.text === 'zeitAbgelaufen' ? 'abgelaufen' : 'normal';

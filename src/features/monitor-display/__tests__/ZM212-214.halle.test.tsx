@@ -226,6 +226,21 @@ describe('@ZM-214 Zustände ohne Sprung', () => {
     expect(links.queryByText('Pause')).toBeNull();
   });
 
+  // Review PR #563 D2: Pause ohne Pausen-Daten (keine Pausenlänge im Feinstatus, Restzeit unbekannt): keine Ziffern, aber der halbe Kreis muss stehen, sonst steht die Pause nirgends
+  it('Halbzeitpause ohne Pausen-Daten: keine Ziffern, aber der halbe Kreis („Pause · Halbzeit“) steht; das Abzeichen bleibt „Live“', () => {
+    const ohnePausenlaenge: Record<string, unknown> = { ...HALBZEIT };
+    Reflect.deleteProperty(ohnePausenlaenge, 'breakSeconds');
+    zeige({ patch: { scoreA: 1, scoreB: 0, liveState: ohnePausenlaenge } });
+    expect(screen.queryByTestId('hall-clock')).toBeNull();
+    expect(symbolNamen('hall-phase-text')).toBe('Pause · Halbzeit');
+    expect(within(screen.getByTestId('hall-side-left')).getByText('Live')).toBeInTheDocument();
+  });
+
+  it('Gegenbeispiel: läuft die Uhr, steht auch ohne Ziffern-Rückfall kein Symbol (keine Uhr ohne Zustand)', () => {
+    zeige({ patch: laeuft() });
+    expect(screen.queryByTestId('hall-phase-text')).toBeNull();
+  });
+
   it('Ende 2 : 1: an der Stelle der Restzeit „Endstand“, kein Zeitbalken, keine Uhr; Sieger mit Ring, Verlierer gedämpft', () => {
     zeige({ patch: { matchStatus: 'finished', scoreA: 2, scoreB: 1, decidedBy: 'regular', liveState: undefined }, pinned: 'match-7' });
     expect(screen.getByTestId('hall-endstand')).toHaveTextContent('Endstand');

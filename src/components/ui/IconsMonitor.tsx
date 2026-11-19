@@ -1,7 +1,7 @@
 /**
- * Symbole für den Hallenmonitor (@OB-038). Anders als die Linien-Symbole der Oberfläche gefüllt und kräftig,
- * weil sie aus der Hallentiefe gelesen werden (Monitor: gefüllt und kräftig, weil aus der Hallentiefe gelesen). Sie erben die Textfarbe,
- * viewBox 24, dekorativ (`aria-hidden`).
+ * Symbole für den Hallenmonitor (@OB-038, @ZM-215). Kräftiger als die Linien-Symbole der Oberfläche, weil sie aus der Hallentiefe gelesen werden:
+ * die Pause aus zwei gefüllten Balken, die Zustands-Symbole der Live-Sichten (halber Kreis, Pfeife, Kreis mit Plus, Uhr, Spielfeld) als Linien der Stärke 2,6.
+ * Sie erben die Textfarbe, viewBox 24, dekorativ (`aria-hidden`).
  */
 interface IconProps {
   size?: number | string;
