@@ -12,6 +12,7 @@
  * URL-Pattern: /tournament/new?step=X (Query-Parameter)
  */
 
+import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
 import { t } from '../helpers/i18n';
 import { neuLaden } from '../helpers/neuLaden';
@@ -21,6 +22,14 @@ import { neuLaden } from '../helpers/neuLaden';
 const FUTURE_DATE = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
   .toISOString()
   .split('T')[0];
+
+/**
+ * Wartet, bis die App den Schritt wirklich zeigt (Fortschrittsleiste: `aria-current="step"`), nicht nur, bis die Adresse ihn nennt.
+ * Die Adresse wechselt vor der Anzeige; ein „Weiter“ in dieser Lücke trifft noch den alten Schritt und wird verschluckt.
+ */
+async function schrittAngezeigt(page: Page, nummer: number): Promise<void> {
+  await expect(page.locator('[aria-current="step"]')).toHaveAttribute('aria-label', new RegExp(`^(Schritt|Step) ${String(nummer)}:`));
+}
 
 test.describe('Tournament Creation Wizard', () => {
 
@@ -376,19 +385,23 @@ test.describe('Tournament Creation Wizard', () => {
 
     // Step 2: Sport & Turniertyp - klassisch wählen
     await expect(page).toHaveURL(/.*\/tournament\/new\?step=2/, { timeout: 10000 });
+    await schrittAngezeigt(page, 2);
     await page.locator('[data-testid="wizard-type-classic"]').click();
     await page.getByRole('button', { name: 'Weiter', exact: true }).click();
 
     // Step 3: Modus - Defaults akzeptieren
     await expect(page).toHaveURL(/.*\/tournament\/new\?step=3/, { timeout: 10000 });
+    await schrittAngezeigt(page, 3);
     await page.getByRole('button', { name: 'Weiter', exact: true }).click();
 
     // Step 4: Gruppen & Felder - Defaults akzeptieren
     await expect(page).toHaveURL(/.*\/tournament\/new\?step=4/, { timeout: 10000 });
+    await schrittAngezeigt(page, 4);
     await page.getByRole('button', { name: 'Weiter', exact: true }).click();
 
     // Step 5: Teams - 4 Teams generieren
     await expect(page).toHaveURL(/.*\/tournament\/new\?step=5/, { timeout: 10000 });
+    await schrittAngezeigt(page, 5);
 
     const generateButton = page.locator('[data-testid="wizard-generate-teams"]');
     if (await generateButton.count() > 0 && await generateButton.isVisible()) {
@@ -406,6 +419,7 @@ test.describe('Tournament Creation Wizard', () => {
 
     // Step 6: Übersicht → Vorschau generieren
     await expect(page).toHaveURL(/.*\/tournament\/new\?step=6/, { timeout: 10000 });
+    await schrittAngezeigt(page, 6);
     await page.locator('[data-testid="wizard-show-preview"]').click();
 
     // Preview-Ansicht: Publish-Button erscheint nach Schedule-Generierung
