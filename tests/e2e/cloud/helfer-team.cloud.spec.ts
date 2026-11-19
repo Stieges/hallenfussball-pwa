@@ -80,7 +80,11 @@ test.describe('Team & Helfer, zwei Rollen (A-18a)', () => {
     const { shown } = await joinAs(browser, code, nm('Tom'));
 
     await expect(olli.getByTestId('join-request').filter({ hasText: nm('Tom') })).toBeVisible({ timeout: 5000 });
-    await expect(olli.getByTestId('join-request').first()).not.toContainText(String(shown)); // S-1: keine Zahl in der Zeile
+    // S-1: keine Zahl in der Zeile. Name und Uhrzeit („gestellt 10:47 Uhr“) abziehen: Beide können dieselben Ziffern tragen wie die Zahl des Handys
+    // (die Minute der Uhrzeit, ein Stück der Namensendung) und machten die Prüfung zufällig rot.
+    const anfrage = olli.getByTestId('join-request').filter({ hasText: nm('Tom') }).first();
+    const sichtbarerText = (await anfrage.innerText()).replace(nm('Tom'), '').replace(/\d{1,2}:\d{2}/, '');
+    expect(sichtbarerText, 'in der Anfrage steht die Zahl des Handys nicht').not.toContain(String(shown));
     await olli.getByTestId('request-approve').first().click(); // Tipp 1
     await olli.getByTestId('approve-field-2').click(); // Tipp 2
     await olli.getByTestId(`approve-number-${shown}`).click(); // Tipp 3

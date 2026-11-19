@@ -11,6 +11,9 @@ import { test, expect } from '../helpers/test-fixtures';
 // @ts-expect-error – .mjs ohne Typen; derselbe Lader wie bei `npm run visual:metrics --saat`
 import { installiereSaat, leseSaat } from '../../../scripts/visual-metrics/saat/lader.mjs';
 
+/** Tippziele 44/56 px mit Rundungsspielraum: Der Browser legt Flex-Zeilen in Bruchteilen von Bildpunkten aus (gemessen 43,99997 statt 44), das ist kein zu kleines Ziel. */
+const ZIEL_44 = 44 - 0.01;
+const ZIEL_56 = 56 - 0.01;
 const SPIEL_3 = '0000000b-0000-4000-9000-000000000003';
 const FENSTER = [
   { name: 'mobile-sm 360×640', width: 360, height: 640, handy: true },
@@ -115,13 +118,13 @@ for (const f of FENSTER) {
       expect(karte.y + karte.height).toBeLessThanOrEqual(anpfiff.y + 1); // die Karte liegt über der Leiste, nichts darunter
       const best = await box(page.getByTestId('leibchen-bestaetigen'));
       const keine = await box(page.getByTestId('leibchen-keine'));
-      expect(best.height).toBeGreaterThanOrEqual(56); // K-6: Haupttasten 56
-      expect(best.width).toBeGreaterThanOrEqual(44);
+      expect(best.height).toBeGreaterThanOrEqual(ZIEL_56); // K-6: Haupttasten 56
+      expect(best.width).toBeGreaterThanOrEqual(ZIEL_44);
       expect(Math.abs(best.width - keine.width)).toBeLessThanOrEqual(1);
       expect(Math.abs(best.height - keine.height)).toBeLessThanOrEqual(1);
       const vorschlag = await box(page.getByTestId('leibchen-vorschlag'));
-      expect(vorschlag.height).toBeGreaterThanOrEqual(44);
-      expect(vorschlag.width).toBeGreaterThanOrEqual(44);
+      expect(vorschlag.height).toBeGreaterThanOrEqual(ZIEL_44);
+      expect(vorschlag.width).toBeGreaterThanOrEqual(ZIEL_44);
       // beide Tasten nur umrandet (keine gefüllt)
       for (const id of ['leibchen-bestaetigen', 'leibchen-keine']) {
         expect(await page.getByTestId(id).evaluate((e) => getComputedStyle(e).backgroundColor)).toMatch(/rgba\(0, 0, 0, 0\)|transparent/);
@@ -219,8 +222,8 @@ for (const f of FENSTER) {
         for (const el of felder) { boxen.push(await box(el)); }
         const schliessen = await box(page.getByTestId('leibchen-andere-schliessen'));
         for (const b of [...boxen, schliessen]) {
-          expect(b.height).toBeGreaterThanOrEqual(44);
-          expect(b.width).toBeGreaterThanOrEqual(44);
+          expect(b.height).toBeGreaterThanOrEqual(ZIEL_44);
+          expect(b.width).toBeGreaterThanOrEqual(ZIEL_44);
           expect(b.y).toBeGreaterThanOrEqual(0);
           expect(b.y + b.height).toBeLessThanOrEqual(f.height);
           expect(b.x + b.width).toBeLessThanOrEqual(f.width);
@@ -255,7 +258,7 @@ for (const f of FENSTER) {
       expect(await nachtragen.evaluate((el) => [el, ...el.querySelectorAll('*')].filter((e) => e.scrollHeight > e.clientHeight + 1 && ['auto', 'scroll'].includes(getComputedStyle(e).overflowY)).length), 'nichts rollt im Nachtragen-Blatt').toBe(0);
       const schliessen = await box(page.getByTestId('nachtrag-schliessen'));
       expect(schliessen.y).toBeGreaterThanOrEqual(0);
-      expect(schliessen.height).toBeGreaterThanOrEqual(44);
+      expect(schliessen.height).toBeGreaterThanOrEqual(ZIEL_44);
       const speichern = await box(page.getByTestId('nachtrag-speichern'));
       expect(speichern.y + speichern.height).toBeLessThanOrEqual(f.height);
       await page.getByTestId('nachtrag-andere').click();
@@ -265,7 +268,7 @@ for (const f of FENSTER) {
       expect(await blatt.evaluate((el) => [el, ...el.querySelectorAll('*')].filter((e) => e.scrollHeight > e.clientHeight + 1 && ['auto', 'scroll'].includes(getComputedStyle(e).overflowY)).length), 'nichts rollt im Blatt „Andere Farbe“').toBe(0);
       for (const el of felder) {
         const b = await box(el);
-        expect(b.height).toBeGreaterThanOrEqual(44);
+        expect(b.height).toBeGreaterThanOrEqual(ZIEL_44);
         expect(b.y).toBeGreaterThanOrEqual(0);
         expect(b.y + b.height).toBeLessThanOrEqual(f.height);
         expect(b.x + b.width).toBeLessThanOrEqual(f.width);
@@ -390,15 +393,15 @@ for (const f of FENSTER) {
       await oeffne(page, f);
       await page.getByTestId('leibchen-bestaetigen').click();
       const aendern = await box(page.getByTestId('leibchen-aendern'));
-      expect(aendern.height).toBeGreaterThanOrEqual(44);
-      expect(aendern.width).toBeGreaterThanOrEqual(44);
+      expect(aendern.height).toBeGreaterThanOrEqual(ZIEL_44);
+      expect(aendern.width).toBeGreaterThanOrEqual(ZIEL_44);
       await aendernOeffnen(page);
       await page.getByTestId('leibchen-vorschlag').click();
       await page.getByTestId('leibchen-andere').click();
       for (const el of await page.locator('[data-testid^="leibchen-farbe-"], [data-testid^="leibchen-team-"]').all()) {
         const b = await box(el);
-        expect(b.height).toBeGreaterThanOrEqual(44);
-        expect(b.width).toBeGreaterThanOrEqual(44);
+        expect(b.height).toBeGreaterThanOrEqual(ZIEL_44);
+        expect(b.width).toBeGreaterThanOrEqual(ZIEL_44);
       }
     });
   });
