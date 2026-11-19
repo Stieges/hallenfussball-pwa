@@ -29,14 +29,16 @@ export interface MonitorSymbolProps {
   size: string;
   /** Farbe, sonst die Textfarbe der Umgebung */
   color?: string;
+  /** In einer Spalte (Flex) zum Anfang statt zum Ende ausrichten */
+  alignSelf?: CSSProperties['alignSelf'];
   testId?: string;
 }
 
 /** Ein Symbol (Pause, Halbzeit, Pfeife, Verlängerung, Uhr, Spielfeld) in Kantenlänge `size`. */
-export function MonitorSymbol({ kind, label, size, color, testId }: MonitorSymbolProps): ReactElement {
+export function MonitorSymbol({ kind, label, size, color, alignSelf, testId }: MonitorSymbolProps): ReactElement {
   const Icon = ICON[kind];
   return (
-    <span role="img" aria-label={label} data-symbol={kind} data-testid={testId} style={{ ...mittig, width: size, height: size, ...(color === undefined ? {} : { color }) }}>
+    <span role="img" aria-label={label} data-symbol={kind} data-testid={testId} style={{ ...mittig, width: size, height: size, ...(color === undefined ? {} : { color }), ...(alignSelf === undefined ? {} : { alignSelf }) }}>
       <Icon size="100%" />
     </span>
   );

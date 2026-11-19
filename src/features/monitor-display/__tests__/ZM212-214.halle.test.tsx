@@ -188,6 +188,8 @@ describe('@ZM-214 Zustände ohne Sprung', () => {
     zeige({ feld: 'field-2' });
     expect(screen.getByTestId('hall-kickoff')).toHaveTextContent('14:20');
     expect(within(screen.getByTestId('hall-side-left')).getByText('Nächstes Spiel')).toBeInTheDocument();
+    expect(screen.getByTestId('hall-kickoff-symbol').style.color).toBe(rgbVon(monitorThemes.dark.text)); // Uhr-Symbol in Textfarbe, zur Uhr hin (Daniel 2026-11-19)
+    expect(screen.getByTestId('hall-kickoff-symbol').style.alignSelf).toBe('flex-start');
     expect(ziffer('home')).toHaveTextContent('0');
     expect(ziffer('away')).toHaveTextContent('0');
     expect(screen.queryByTestId('hall-zeitbalken')).toBeNull();
@@ -251,6 +253,33 @@ describe('@ZM-214 Zustände ohne Sprung', () => {
     expect(panel('home').style.boxShadow).toContain(displayHall.panel.ringWidth);
     expect(panel('away').style.boxShadow).toBe('');
     expect(panel('away').style.backgroundColor).not.toBe(panel('home').style.backgroundColor);
+  });
+
+  // Daniel 2026-11-19 („Ja zum Hallenprofil“, Delta-Review PR #563 D5): „Endstand“ steht groß, das Abzeichen „Ende“ entfällt (jede Angabe nur an einer Stelle)
+  it('Nach dem Abpfiff steht kein Abzeichen „Ende“, nur „Endstand“ bzw. das Strafstoßergebnis; Gegenbeispiel: im Spiel bleibt das Abzeichen „Live“', () => {
+    const lauf = zeige({ patch: laeuft() });
+    expect(within(screen.getByTestId('hall-side-left')).getByText('Live')).toBeInTheDocument();
+    lauf.unmount();
+    const ende = zeige({ patch: { matchStatus: 'finished', scoreA: 2, scoreB: 1, decidedBy: 'regular', liveState: undefined }, pinned: 'match-7' });
+    expect(screen.getByTestId('hall-endstand')).toHaveTextContent('Endstand');
+    expect(screen.queryByTestId('match-status-badge')).toBeNull();
+    expect(screen.getByTestId('hall-side-left')).not.toHaveTextContent('Ende');
+    ende.unmount();
+    zeige({ patch: { matchStatus: 'finished', scoreA: 1, scoreB: 1, penaltyScoreA: 4, penaltyScoreB: 3, decidedBy: 'penalty', liveState: undefined }, pinned: 'match-7' });
+    expect(screen.getByTestId('hall-shootout-result')).toHaveTextContent('4 : 3 i. E.');
+    expect(screen.queryByTestId('match-status-badge')).toBeNull();
+  });
+
+  it('Symbole des Uhr-Zustands in Textfarbe (nicht grau) und zur Uhr hin ausgerichtet: Pause-Symbol und Uhr-Symbol vor dem Anpfiff', () => {
+    zeige({ patch: { scoreA: 1, scoreB: 0, liveState: ANGEHALTEN, matchStatus: 'paused' } });
+    expect(screen.getByTestId('hall-phase-text').style.color).toBe(rgbVon(monitorThemes.dark.text));
+    expect(screen.getByTestId('hall-phase-text').style.alignSelf).toBe('flex-start');
+    expect(getContrastRatio(monitorThemes.dark.text, monitorThemes.dark.background)).toBeGreaterThanOrEqual(7); // Textfarbe gegen Hintergrund (Zustands-Symbole)
+  });
+
+  it('Gegenbeispiel: Feld und Abschnitt bleiben grau (nur die Zustands-Symbole wechseln die Farbe)', () => {
+    zeige({ patch: laeuft() });
+    expect(screen.getByTestId('hall-field').style.color).toBe(rgbVon(monitorThemes.dark.textSecondary));
   });
 
   it('Gegenbeispiel: Unentschieden in der Gruppe hat weder Ring noch gedämpfte Fläche', () => {

@@ -9,7 +9,8 @@
  * - vor dem Anpfiff: Anstoßzeit an der Stelle der Restzeit, daneben „Nächstes Spiel“ (Abzeichen der Live-Folie) und das Uhr-Symbol
  * - Halbzeitpause: die Pausenzeit an der Stelle der Restzeit, daneben der halbe Kreis (das Abzeichen links bleibt „Live“)
  * - Strafstoßschießen: Zwischenstand an der Stelle der Restzeit, daneben „Strafstoßschießen“, kein Balken
- * - Ende: „Endstand“ bzw. „4 : 3 i. E.“ an der Stelle der Restzeit, kein Balken
+ * - Ende: „Endstand“ bzw. „4 : 3 i. E.“ an der Stelle der Restzeit, kein Balken, kein Abzeichen „Ende“ (Daniel 2026-11-19: jede Angabe nur an einer Stelle)
+ * - Die Symbole des Zustands stehen in Textfarbe und zur Uhr hin ausgerichtet (linker Rand der rechten Spalte), nicht am rechten Rand
  * Daten und Zustandsregeln dieselben wie in der übrigen Live-Folie (`useMonitorUhr`, `monitorUhrOf`, Abzeichen der Ansicht).
  */
 import { useRef, type ReactElement, type ReactNode } from 'react';
@@ -84,7 +85,9 @@ function HallLayout({ props, inhalt }: { props: HallBandProps; inhalt: BandInhal
   useBandFit({ band: bandRef, slot: slotRef, text: textRef, links: linksRef, rechts: rechtsRef }, schluessel);
   // Strafstoßschießen: das Wort steht über dem Zwischenstand in der Mitte (Mockup „schiessen“), nicht links (es ist breiter als die Seitenspalte)
   const mitteAbzeichen = slot?.kind === 'shootout';
-  const abzeichen = <MatchStatusBadge model={badge} size="halle" tone={monitorBadgeTone(colors)} />;
+  // Nach dem Abpfiff steht „Endstand“ (bzw. das Strafstoßergebnis) groß an der Stelle der Uhr: das Abzeichen „Ende“ entfällt, jede Angabe nur an einer Stelle (@ZM-214, Daniel 2026-11-19)
+  const ohneAbzeichen = slot?.kind === 'word' && badge.kind === 'badge' && badge.state === 'ended';
+  const abzeichen = ohneAbzeichen ? null : <MatchStatusBadge model={badge} size="halle" tone={monitorBadgeTone(colors)} />;
   return (
     <>
       <div style={barRowStyle} data-testid="hall-bar-row">{inhalt.bar}</div>
@@ -108,7 +111,7 @@ function HallLayout({ props, inhalt }: { props: HallBandProps; inhalt: BandInhal
             <AbschnittAnzeige current={inhalt.section.current} total={inhalt.section.total} size={symbols.dot} gap={symbols.dotGap} border={symbols.dotBorder} color={colors.textSecondary} testId="hall-section" />
           )}
           {inhalt.symbole.length > 0 && (
-            <UhrZustand symbole={inhalt.symbole} size={symbols.state} gap={symbols.stateGap} color={colors.textSecondary} testId="hall-phase-text" text={inhalt.uhrText ?? ''} />
+            <UhrZustand symbole={inhalt.symbole} size={symbols.state} gap={symbols.stateGap} color={colors.text} alignSelf="flex-start" testId="hall-phase-text" text={inhalt.uhrText ?? ''} />
           )}
           {inhalt.anstoss}
         </div>
@@ -169,7 +172,7 @@ function HallStaticBand(props: HallBandProps): ReactElement {
   if (kickoff) {
     const anstoss = (
       <>
-        <MonitorSymbol kind="uhr" size={displayHall.symbols.state} label={t('slides.live.kickoff')} color={colors.textSecondary} testId="hall-kickoff-symbol" />
+        <MonitorSymbol kind="uhr" size={displayHall.symbols.state} label={t('slides.live.kickoff')} color={colors.text} alignSelf="flex-start" testId="hall-kickoff-symbol" />
         {kickoff.notes}
       </>
     );

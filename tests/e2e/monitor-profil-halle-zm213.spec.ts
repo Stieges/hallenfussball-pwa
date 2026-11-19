@@ -558,6 +558,44 @@ for (const { w, h } of GROESSEN) {
   }
 }
 
+test.describe('@ZM-214 @ZM-215 Hallen-Profil: Symbole zur Uhr hin, „Ende“ nur als „Endstand“ (1920×1080, Daniel 2026-11-19)', () => {
+  const abstaende = async (page: Page, symbolId: string, uhrId: string): Promise<{ zurUhr: number; zumRand: number }> => page.evaluate(([s, u]) => {
+    const r = (id: string): DOMRect => (document.querySelector(`[data-testid="${id}"]`))!.getBoundingClientRect();
+    const [sym, uhr, folie] = [r(s), r(u), r('hall-display')];
+    return { zurUhr: sym.left - uhr.right, zumRand: folie.right - sym.right };
+  }, [symbolId, uhrId]);
+
+  test('Uhr-Symbol vor dem Anpfiff und Pause-Symbol bei angehaltener Uhr stehen näher an der Uhr als am rechten Rand', async ({ page }) => {
+    await oeffne(page, 'halle-vor', 1920, 1080, 5);
+    const vor = await abstaende(page, 'hall-kickoff-symbol', 'hall-kickoff');
+    expect(vor.zurUhr, `Abstand zur Uhr ${vor.zurUhr.toFixed(0)} px gegen Rand ${vor.zumRand.toFixed(0)} px`).toBeLessThan(vor.zumRand);
+    await oeffne(page, 'halle-angehalten', 1920, 1080, 5);
+    const steht = await abstaende(page, 'hall-phase-text', 'hall-clock');
+    expect(steht.zurUhr, `Abstand zur Uhr ${steht.zurUhr.toFixed(0)} px gegen Rand ${steht.zumRand.toFixed(0)} px`).toBeLessThan(steht.zumRand);
+    pruefeUeberlappung(await messe(page));
+  });
+
+  test('Gegenbeispiel: Gruppe und Abschnitt bleiben am rechten Rand (nur die Zustands-Symbole rücken zur Uhr)', async ({ page }) => {
+    await oeffne(page, 'halle-voll-3', 1920, 1080, 5);
+    const gruppe = await abstaende(page, 'hall-group', 'hall-clock');
+    const symbol = await abstaende(page, 'hall-phase-text', 'hall-clock');
+    expect(gruppe.zumRand, 'Gruppe bündig am rechten Rand').toBeLessThan(symbol.zumRand);
+  });
+
+  test('nach dem Abpfiff und nach dem Turnierabschluss steht kein Abzeichen „Ende“, „Endstand“ bleibt; Kästen wie im Spiel', async ({ browser, baseURL }) => {
+    const messeIn = (oeffnen: (seite: Page) => Promise<void>): Promise<Messung> => messeInNeuemKontext(browser, baseURL ?? undefined, oeffnen);
+    const lauf = await messeIn((seite) => oeffne(seite, 'halle-laeuft', 1920, 1080, 5));
+    for (const fall of ['halle-ende', 'halle-ende-strafstoss']) {
+      let abzeichen = -1;
+      const ende = await messeIn(async (seite) => { await oeffneEnde(seite, fall, 1920, 1080, 5); abzeichen = await seite.getByTestId('match-status-badge').count(); });
+      expect(abzeichen, `kein Abzeichen „Ende“ im Fall ${fall}`).toBe(0);
+      for (const id of ['hall-digits-home', 'hall-digits-away'] as const) { expect(Math.abs(ende.teile[id].t - lauf.teile[id].t)).toBeLessThanOrEqual(TOLERANZ_PX); }
+      pruefeUeberlappung(ende);
+      pruefeAbgeschnitten(ende);
+    }
+  });
+});
+
 test.describe('@ZM-213 Abschnitt und @ZM-215 Wort/Feld/Gruppe am fertigen Bild (1920×1080)', () => {
   test('zwei Halbzeiten: rechts neben der Restzeit zwei gefüllte Punkte („2. Halbzeit“ als Name); ein Feld und eine Gruppe: weder Feld noch Gruppe, kein „Restzeit“', async ({ page }) => {
     await oeffne(page, 'halle-abschnitt', 1920, 1080, 5);

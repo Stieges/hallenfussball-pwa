@@ -6,7 +6,7 @@
  * - Läuft die Uhr in der Verlängerung nicht (angehalten, abgelaufen), steht das Plus neben dem Symbol, damit die Verlängerung nicht verloren geht
  * - Abschnitt als Punkte, nur bei mehr als einem Abschnitt und im regulären Spiel außerhalb der Pause
  */
-import type { ReactElement } from 'react';
+import type { CSSProperties, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { regularKey } from '../../core/view';
 import { AbschnittPunkte, MonitorSymbol } from '../ui/atoms/MonitorSymbole';
@@ -20,16 +20,18 @@ export interface UhrZustandProps {
   gap: string;
   testId: string;
   color?: string;
+  /** In einer Spalte (Flex) zum Anfang statt zum Ende ausrichten */
+  alignSelf?: CSSProperties['alignSelf'];
   /** `MonitorUhrText` des Modells (Prüfhilfe) */
   text: string;
 }
 
 /** Symbole des Uhr-Zustands nebeneinander; ohne Symbole nichts. */
-export function UhrZustand({ symbole, size, gap, color, testId, text }: UhrZustandProps): ReactElement | null {
+export function UhrZustand({ symbole, size, gap, color, alignSelf, testId, text }: UhrZustandProps): ReactElement | null {
   const { t } = useTranslation('monitor');
   if (symbole.length === 0) { return null; }
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap, ...(color === undefined ? {} : { color }) }} data-testid={testId} data-text={text}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap, ...(color === undefined ? {} : { color }), ...(alignSelf === undefined ? {} : { alignSelf }) }} data-testid={testId} data-text={text}>
       {symbole.map((s) => <MonitorSymbol key={s.kind} kind={s.kind} size={size} label={t(`liveMatch.clock.${s.key}`)} testId={`${testId}-${s.kind}`} />)}
     </span>
   );
