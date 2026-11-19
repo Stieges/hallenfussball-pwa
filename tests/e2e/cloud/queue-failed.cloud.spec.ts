@@ -27,6 +27,10 @@ import { neuLaden } from '../helpers/neuLaden';
 
 test('Cup QUEUE: eine dauerhaft abgelehnte Turnier-Mutation ist innerhalb von 10s als gescheitert sichtbar, retry/verwerfen wirken (Task A4, C-SYNC Teil B, @FU-126, @FU-127)', async ({ asRole }, testInfo) => {
   test.skip(!testInfo.project.name.includes('desktop'), 'Engine-Cups nur auf cloud-desktop.');
+  // Drei Neuladen mit „networkidle“ und je einer Wartefrist für das laufende Spiel (15 s), dazu die Fristen für Ablage, Liste und Dialog: Die Einzelfristen
+  // summieren sich auf mehr als die 60 s der Vorgabe. Gemessen in der CI vom 16. bis 19.11.: grüne Läufe 26 bis 60 s (mehrere zwischen 56 und 60 s), die roten
+  // liefen an der Grenze von 60 s aus – an wechselnder Stelle (Spiel läuft, Verwerfen-Taste), also kein Fehler an einer Stelle, sondern die Gesamtzeit.
+  test.setTimeout(150_000);
   const ids = engineCupIds('QUEUE');
   await expectSeededEngineMatch(engineCupTarget('QUEUE'));
   const ownerPage = await asRole('owner');

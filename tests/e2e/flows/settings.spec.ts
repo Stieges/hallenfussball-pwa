@@ -284,7 +284,9 @@ test.describe('App Settings', () => {
 
       // THEN - Datenschutz-Seite lädt
       await expect(page).toHaveURL(/.*\/datenschutz/);
-      await expect(page.getByRole('heading', { name: /Datenschutz|Privacy/i })).toBeVisible();
+      // Nur die Überschrift der Seite (h1): die Einstellungen führen selbst eine Zwischenüberschrift „Datenschutz“ (h2), die beim Wechsel
+      // noch einen Augenblick im Bild steht – ohne Ebene trifft der Locator beide und Playwright bricht wegen Mehrdeutigkeit ab.
+      await expect(page.getByRole('heading', { level: 1, name: /Datenschutz|Privacy/i })).toBeVisible();
     }
   });
 
