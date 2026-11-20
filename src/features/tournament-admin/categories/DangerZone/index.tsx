@@ -15,6 +15,8 @@ import { DANGER_ACTIONS } from '../../constants/admin.constants';
 import { Dialog } from '../../../../components/dialogs/Dialog';
 import { useTournamentStartState } from '../../../../hooks/useTournamentStartState';
 import { useCan } from '../../../auth/hooks/useCan';
+import { RightSlot } from '../../components/RightSlot';
+import { useRightView } from '../../hooks/useRightView';
 import { useTournamentClosed } from '../../../../hooks/useTournamentClosed';
 import { TournamentClosedHint } from '../../../../components/ui/molecules/TournamentClosedHint';
 import type { Tournament } from '../../../../types/tournament';
@@ -208,6 +210,9 @@ export function DangerZoneCategory({
   // useTournamentStartState/getMatchStartState).
   const { state: matchStartState } = useTournamentStartState(tournament);
   const canOfferDelete = canDelete && matchStartState === 'not-started';
+  // @HE-113: der Warnkasten kündigt Aktionen an -- ohne angebotene Karte (Helfer) steht nur der Hinweis
+  const resetView = useRightView('leadMatches', tournamentId);
+  const showWarning = closed || canOfferDelete || resetView !== 'hint';
 
   // @OB-014: Fokus der Rückfrage liegt zuerst auf „Abbrechen".
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
@@ -319,15 +324,15 @@ export function DangerZoneCategory({
       description={t('dangerZone.description')}
     >
       {/* Warning */}
-      <div style={styles.warning}>
+      {showWarning && <div style={styles.warning}>
         <span>⚠️</span>
         <div>
           <strong>{t('dangerZone.warningTitle')}</strong> {t('dangerZone.warningText')}
         </div>
-      </div>
+      </div>}
 
       {/* Reset Schedule (Danger) */}
-      {closed ? <TournamentClosedHint /> : renderActionCard('reset_schedule')}
+      {closed ? <TournamentClosedHint /> : <RightSlot permission="leadMatches" tournamentId={tournamentId}>{renderActionCard('reset_schedule')}</RightSlot>}
 
       {/* Delete Tournament (Danger) — R7: nur für den Eigentümer, @LZ-003: nur vor dem ersten Anpfiff */}
       {canOfferDelete && renderActionCard('delete_tournament')}

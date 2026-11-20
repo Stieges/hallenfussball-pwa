@@ -64,6 +64,8 @@ export interface CanState {
   allowed: boolean;
   /** Die Rolle ist noch nicht bekannt und es gibt auch kein Gedächtnis: die Anzeige wartet, statt „kein Recht“ zu zeigen. */
   isLoading: boolean;
+  /** @HE-113: nur gesetzt (true), wenn die Rolle NICHT bestimmt werden konnte (Prüfung gescheitert, kein Gedächtnis); `allowed` bleibt dann L7. */
+  isUnknown?: true;
 }
 
 /**
@@ -99,7 +101,7 @@ function useRoleCanState(permission: Permission, tournamentId: string): CanState
   if (remembered !== null) {
     return { allowed: hasPermission(remembered, permission), isLoading: false };
   }
-  return { allowed: UNKNOWN_ROLE_RIGHTS.has(permission), isLoading: isLoading && !isUnknown };
+  return { allowed: UNKNOWN_ROLE_RIGHTS.has(permission), isLoading: isLoading && !isUnknown, ...(isUnknown === true ? { isUnknown } : {}) };
 }
 
 export function useCan(permission: Permission, tournamentId: string, options: CanOptions = {}): boolean {

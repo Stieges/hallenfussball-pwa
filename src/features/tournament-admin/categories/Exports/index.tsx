@@ -13,6 +13,7 @@ import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
 import { PDFExportDialog } from '../../../../components/dialogs/PDFExportDialog';
 import { useCan } from '../../../auth/hooks/useCan';
+import { RightSlot } from '../../components/RightSlot';
 import { useTournamentClosed } from '../../../../hooks/useTournamentClosed';
 import { TournamentClosedHint } from '../../../../components/ui/molecules/TournamentClosedHint';
 import { generateFullSchedule } from '../../../../core/generators';
@@ -946,6 +947,7 @@ export function ExportsCategory({
         {closed ? (
           <div style={{ marginTop: cssVars.spacing.xl }}><TournamentClosedHint /></div>
         ) : (
+        <RightSlot permission="tournamentSettings" tournamentId={tournament.id}>
         <div style={{ marginTop: cssVars.spacing.xl }}>
           <h4 style={styles.label}>{t('exports.restoreBackup')}</h4>
           <input
@@ -982,6 +984,7 @@ export function ExportsCategory({
             </span>
           </div>
         </div>
+        </RightSlot>
         )}
       </CollapsibleSection>
 

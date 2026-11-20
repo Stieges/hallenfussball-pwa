@@ -27,6 +27,7 @@ import { DashboardArchivTab } from '../components/dashboard/DashboardArchivTab';
 import { DashboardPapierkorbTab } from '../components/dashboard/DashboardPapierkorbTab';
 import { LegacyTournamentNotice } from '../components/dashboard/LegacyTournamentNotice';
 import { useTournamentLimit } from '../features/auth/hooks/useTournamentLimit';
+import { useAuth } from '../features/auth/hooks/useAuth';
 import { TournamentLimitModal, GuestBanner } from '../features/auth/components';
 
 interface DashboardScreenProps {
@@ -79,6 +80,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
   // Tournament limit for anonymous users
   const { canCreate, isAtLimit, isNearLimit, isLimited } = useTournamentLimit();
+  // @HE-113: eine Gerätesitzung ohne Konto (anonym, nicht der lokale Gast) bietet kein Anlegen, Importieren, Kopieren an
+  const { isAnonymous } = useAuth();
+  const onCopyOffered = isAnonymous ? undefined : onCopyTournament;
 
   // Get active tab from URL path
   const activeTab = getTabFromPath(location.pathname);
@@ -152,7 +156,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         </div>
 
         {/* Action Buttons Row */}
-        <div style={{
+        {!isAnonymous && <div data-testid="dashboard-create-actions" style={{
           display: 'flex',
           gap: isMobile ? cssVars.spacing.sm : cssVars.spacing.md,
           flexDirection: isMobile ? 'row' : 'row',
@@ -190,7 +194,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           >
             {isAtLimit ? t('buttons.limitReached') : t('buttons.newTournament')}
           </Button>
-        </div>
+        </div>}
       </div>
 
       {/* Offline: nur die Marke im Kopf (AuthSection), kein zweiter Kasten (C-OFFLINE-GLOBAL) */}
@@ -230,7 +234,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           searchQuery={searchQuery}
           activeFilters={activeFilters}
           onTournamentClick={onTournamentClick}
-          onCopyTournament={onCopyTournament}
+          onCopyTournament={onCopyOffered}
           onSoftDelete={onSoftDelete}
           onDeleteTournament={onDeleteTournament}
         />
@@ -240,7 +244,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         <DashboardArchivTab
           activeTournaments={activeTournaments}
           onTournamentClick={onTournamentClick}
-          onCopyTournament={onCopyTournament}
+          onCopyTournament={onCopyOffered}
           onSoftDelete={onSoftDelete}
         />
       )}
