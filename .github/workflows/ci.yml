@@ -257,14 +257,16 @@ jobs:
         env:
           CI_E2E_USE_PREVIEW: 'true'
 
-      # @TA-021 (Beleg): Auch ein grüner Job mit Wiederholung („flaky“) lässt Belege zurück. Playwright behält mit
-      # `trace: 'retain-on-failure'` Trace, Bild und Anhänge jedes GESCHEITERTEN Versuchs (auch wenn die Wiederholung besteht);
-      # bestandene Versuche löscht es. Liegt in test-results eine Trace oder ein Fehlerbild, wird alles hochgeladen, sonst bleibt der Job ohne Artefakt.
+      # @TA-021 (Beleg): Auch ein grüner Job mit Wiederholung („flaky“) lässt Belege zurück. Ohne Aufzeichnung (die Trace
+      # verschob Zeiten und machte zeitkritische Tests rot) bleiben das Fehlerbild des gescheiterten Versuchs
+      # (`screenshot: 'only-on-failure'`) und der Anhang `belege-*.txt` (Adresse, sichtbarer Text, Konsole, Netz) in dessen
+      # Ordner unter test-results liegen, weil `preserveOutput` auf „always“ steht. Bei rotem Job wird immer hochgeladen,
+      # bei grünem nur, wenn so ein Beleg vorliegt.
       - name: Gibt es Belege gescheiterter Versuche?
         id: belege
         if: always()
         run: |
-          if [ -n "$(find test-results -mindepth 2 -type f \( -name 'trace.zip' -o -name 'test-failed-*.png' \) 2>/dev/null | head -n 1)" ]; then
+          if [ -n "$(find test-results -mindepth 2 -type f \( -name 'test-failed-*.png' -o -name 'belege-*.txt' \) 2>/dev/null | head -n 1)" ]; then
             echo "vorhanden=true" >> "$GITHUB_OUTPUT"
           else
             echo "vorhanden=false" >> "$GITHUB_OUTPUT"
@@ -272,16 +274,16 @@ jobs:
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v7
-        if: always() && steps.belege.outputs.vorhanden == 'true'
+        if: failure() || (always() && steps.belege.outputs.vorhanden == 'true')
         with:
           name: playwright-report-${{ matrix.project }}-v${{ github.run_attempt }}
           path: playwright-report/
           if-no-files-found: ignore
           retention-days: 7
 
-      - name: Upload Belege gescheiterter Versuche (Trace, Bild, Anhänge)
+      - name: Upload Belege gescheiterter Versuche (Bild, Anhänge)
         uses: actions/upload-artifact@v7
-        if: always() && steps.belege.outputs.vorhanden == 'true'
+        if: failure() || (always() && steps.belege.outputs.vorhanden == 'true')
         with:
           name: test-results-${{ matrix.project }}-v${{ github.run_attempt }}
           path: test-results/
