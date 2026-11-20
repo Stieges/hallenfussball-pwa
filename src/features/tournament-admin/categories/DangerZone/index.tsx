@@ -15,6 +15,7 @@ import { DANGER_ACTIONS } from '../../constants/admin.constants';
 import { Dialog } from '../../../../components/dialogs/Dialog';
 import { useTournamentStartState } from '../../../../hooks/useTournamentStartState';
 import { useCan } from '../../../auth/hooks/useCan';
+import { RightSlot } from '../../components/RightSlot';
 import { useTournamentClosed } from '../../../../hooks/useTournamentClosed';
 import { TournamentClosedHint } from '../../../../components/ui/molecules/TournamentClosedHint';
 import type { Tournament } from '../../../../types/tournament';
@@ -327,7 +328,7 @@ export function DangerZoneCategory({
       </div>
 
       {/* Reset Schedule (Danger) */}
-      {closed ? <TournamentClosedHint /> : renderActionCard('reset_schedule')}
+      {closed ? <TournamentClosedHint /> : <RightSlot permission="leadMatches" tournamentId={tournamentId}>{renderActionCard('reset_schedule')}</RightSlot>}
 
       {/* Delete Tournament (Danger) — R7: nur für den Eigentümer, @LZ-003: nur vor dem ersten Anpfiff */}
       {canOfferDelete && renderActionCard('delete_tournament')}

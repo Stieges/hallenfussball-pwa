@@ -142,7 +142,7 @@ function AppContent() {
   const { t } = useTranslation('common');
   const { t: tTournament } = useTranslation('tournament');
   const { showError } = useToast();
-  const { isGuest } = useAuth();
+  const { isGuest, isAnonymous } = useAuth();
   const navigate = useNavigate();
   const backOrHome = useBackOrHome(); // Zurück bleibt in der App (@RE-005, @OB-090): Impressum, Datenschutz, Registrieren, Profil, Einstellungen
   const location = useLocation();
@@ -212,6 +212,11 @@ function AppContent() {
   const isNewWizardPath = route?.name === 'wizardNew';
   const isEditWizardPath = route?.name === 'wizardEdit';
   const isWizardPath = isNewWizardPath || isEditWizardPath;
+  // @HE-113: eine Gerätesitzung ohne Konto (anonym) legt kein Turnier an -- die Adresse zum Anlegen führt auf die Startseite
+  const blockNewWizard = isNewWizardPath && isAnonymous;
+  useEffect(() => {
+    if (blockNewWizard) { void navigate('/', { replace: true }); }
+  }, [blockNewWizard, navigate]);
   const editingTournamentId = route?.name === 'wizardEdit' ? route.params.tournamentId ?? null : null;
   const {
     tournaments,
@@ -555,7 +560,7 @@ function AppContent() {
         {isEditWizardPath && wizardLoad.status !== 'ready' && (
           <WizardOpeningNotice status={wizardLoad.status} onBack={() => void navigate('/')} />
         )}
-        {(isWizardPath || screen === 'create') && wizardLoad.status === 'ready' && !(isEditWizardPath && wizardTournament !== undefined && isTournamentClosed(wizardTournament)) && (
+        {(isWizardPath || screen === 'create') && !blockNewWizard && wizardLoad.status === 'ready' && !(isEditWizardPath && wizardTournament !== undefined && isTournamentClosed(wizardTournament)) && (
           <TournamentCreationScreen
             onBack={() => {
               // Abbrechen im Wizard-Bearbeiten stellt den Stand von vorher wieder her – mit dem Zustand von vorher

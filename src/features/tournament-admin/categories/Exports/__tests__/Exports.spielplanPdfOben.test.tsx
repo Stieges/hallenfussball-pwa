@@ -4,7 +4,7 @@
  */
 import 'fake-indexeddb/auto';
 import { describe, it, expect, vi } from 'vitest';
-vi.mock('../../../../auth/hooks/useCan', () => ({ useCan: () => true }));
+vi.mock('../../../../auth/hooks/useCan', () => ({ useCan: () => true, useCanState: () => ({ allowed: true, isLoading: false }) }));
 import { render, screen } from '@testing-library/react';
 
 vi.unmock('i18next');
