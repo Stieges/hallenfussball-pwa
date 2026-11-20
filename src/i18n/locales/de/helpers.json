@@ -27,6 +27,9 @@
       "authRateLimited": {
         "title": "Zu viele Anmeldungen aus diesem Netz – bitte in 2 Minuten noch einmal versuchen oder mobile Daten nutzen"
       },
+      "anonymousDisabled": {
+        "title": "Beitritt ohne Konto ist gerade nicht freigeschaltet. Bitte der Turnierleitung Bescheid sagen."
+      },
       "unexpected": {
         "title": "Das hat nicht geklappt – bitte noch einmal",
         "text": "Dein Name bleibt stehen."

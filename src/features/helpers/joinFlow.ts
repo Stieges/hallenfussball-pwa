@@ -34,7 +34,7 @@ export interface JoinTournament {
 }
 
 /** Hinweis im Namensformular; Eingaben bleiben erhalten (§ 3.2 „Netz/Zeitüberschreitung“, „Auth 429“, `INVALID_NAME`). */
-export type JoinFormNotice = 'offline' | 'authRateLimited' | 'invalidName' | 'unexpected';
+export type JoinFormNotice = 'offline' | 'authRateLimited' | 'anonymousDisabled' | 'invalidName' | 'unexpected';
 
 /** Namensformular (auch während des Absendens): Eingaben bleiben bei jedem Fehler erhalten. */
 interface JoinFormFields {
@@ -117,6 +117,7 @@ function onInfoLoaded(code: string, event: Extract<JoinFlowEvent, { type: 'infoL
 const SESSION_NOTICES: Record<Exclude<DeviceSessionFailure, 'accountSession'>, JoinFormNotice> = {
   network: 'offline',
   rateLimited: 'authRateLimited',
+  anonymousDisabled: 'anonymousDisabled',
   unavailable: 'unexpected',
   unexpected: 'unexpected',
 };
