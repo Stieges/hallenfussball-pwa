@@ -65,12 +65,27 @@ interface SaatOptionen {
   verlaengerung?: boolean;
   /** Drittes von drei Abschnitten läuft (Abschnitt zu 400 s, 190 s gespielt); mit `abgelaufen` läuft die Zeit des Abschnitts ab, ohne dass abgepfiffen wird */
   dreiAbschnitte?: boolean;
+  /** Erfundene Teamnamen statt „TSV Fridolfing“ (Heim) und „SG Taching/Tengling“ (Gast): Tinte der Namen gegen die Torzahl (@ZM-213 „nichts überlappt“) */
+  namen?: readonly [string, string];
+}
+
+/** Ersetzt die Teamnamen der Saat eines Falls (Heim „TSV Fridolfing“, Gast „SG Taching/Tengling“) durch erfundene Namen. */
+function mitNamen(turnier: Record<string, unknown>, namen: readonly [string, string] | undefined): void {
+  if (namen === undefined) { return; }
+  const roh = JSON.stringify(turnier);
+  // kein stilles Durchlaufen mit den falschen Namen: beide Ursprungsnamen müssen in der Saat stehen
+  for (const ursprung of ['TSV Fridolfing', 'SG Taching/Tengling']) {
+    if (!roh.includes(ursprung)) { throw new Error(`Saat ohne Ursprungsnamen „${ursprung}“ – die Teamnamen lassen sich nicht ersetzen`); }
+  }
+  const text = roh.replaceAll('TSV Fridolfing', namen[0]).replaceAll('SG Taching/Tengling', namen[1]);
+  Object.assign(turnier, JSON.parse(text) as Record<string, unknown>);
 }
 
 /** Saat des Falls; `neunMinuten`: Spielzeit 9 Minuten, 3 gespielt (Restzeit 6:00); `schlussphase`: Uhr-Art mit angehaltener Schlussphase, 19:30 gespielt. */
 function saatFuer(fall: string, optionen: SaatOptionen = {}): SaatDatei {
   const saat = structuredClone(leseSaat('monitor-halle')) as SaatDatei;
   const turnier = saat.datenbanken.find((d) => d.store === 'cache')?.eintraege.tournaments?.find((t) => t.id === fall);
+  if (turnier !== undefined) { mitNamen(turnier, optionen.namen); }
   const spiel = turnier?.matches.find((m) => m.matchStatus === 'running' || m.matchStatus === 'paused');
   if (turnier === undefined || spiel === undefined) { return saat; }
   const live = spiel.liveState as Record<string, unknown>;
@@ -148,9 +163,11 @@ async function namenEingepasst(page: Page): Promise<void> {
  * Zustand „Ende“ wie im echten Betrieb: der Monitor sieht das Spiel zuerst laufen und hält es nach dem Abpfiff (Ende-Folie); danach schreibt die Spec den
  * beendeten Stand in den lokalen Zwischenspeicher, den die Seite von selbst nachlädt.
  */
-async function oeffneEnde(page: Page, fall: string, w: number, h: number, rand: number): Promise<void> {
+async function oeffneEnde(page: Page, fall: string, w: number, h: number, rand: number, namen?: readonly [string, string]): Promise<void> {
   const saat = structuredClone(leseSaat('monitor-halle')) as SaatDatei;
   const turniere = saat.datenbanken.find((d) => d.store === 'cache')?.eintraege.tournaments ?? [];
+  const ziel = turniere.find((t) => t.id === fall);
+  if (ziel !== undefined) { mitNamen(ziel, namen); }
   const fertig = structuredClone(turniere.find((t) => t.id === fall));
   const lauf = turniere.find((t) => t.id === 'halle-laeuft')?.matches.find((m) => m.label === '1. Halbfinale');
   const stufe = turniere.find((t) => t.id === fall)?.matches.find((m) => m.label === '1. Halbfinale');
@@ -256,6 +273,101 @@ async function messe(page: Page): Promise<Messung> {
       seitenUeberlauf: document.documentElement.scrollWidth > window.innerWidth || document.documentElement.scrollHeight > window.innerHeight,
     };
   });
+}
+
+/** Gezeichnete Tinte (nicht Zeilenkästen): Unterkante des Namens samt Unterlängen, Ober-/Unterkante der Torzahl, je Seite. Alle Werte in Bildpunkten der Seite. */
+interface TintenMessung {
+  H: number;
+  /** je Seite: Zeilen des Namens, Tinten-Unterkante der letzten Zeile, Tinte der Torzahl (oben, unten, links, rechts), Fläche samt Rand */
+  seiten: { name: string; zeilen: number; nameUnten: number; ziffer: string; zifferOben: number; zifferUnten: number; zifferLinks: number; zifferRechts: number; flaeche: Rahmen; rand: number }[];
+  /** Oberkante dessen, was unter den Flächen steht: Zeitbalken, sonst Wort/Anstoßzeit/Restzeit */
+  untenOben: number;
+}
+
+/** Misst die Tinte mit Browser-Schriftmaßen: Rechteck je Zeichen (Range) und `measureText` für Auf- und Unterlänge des Zeichens; die Maße des Rechtecks sind Ober- und Unterkante des Schriftkastens. */
+async function messeTinte(page: Page): Promise<TintenMessung> {
+  return page.evaluate(() => {
+    const q = (id: string): HTMLElement => {
+      const e = document.querySelector<HTMLElement>(`[data-testid="${id}"]`);
+      if (e === null) { throw new Error(`Element fehlt: ${id}`); }
+      return e;
+    };
+    const ctx = document.createElement('canvas').getContext('2d');
+    if (ctx === null) { throw new Error('kein Canvas'); }
+    /** Zeichen mit Rechteck und Tinte (Unterkante, Oberkante der Tinte) */
+    const zeichen = (el: HTMLElement): { t: string; l: number; r: number; oben: number; unten: number; kastenOben: number }[] => {
+      const stil = getComputedStyle(el);
+      ctx.font = `${stil.fontWeight} ${stil.fontSize} ${stil.fontFamily}`;
+      const aus: { t: string; l: number; r: number; oben: number; unten: number; kastenOben: number }[] = [];
+      const lauf = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      for (let n = lauf.nextNode(); n !== null; n = lauf.nextNode()) {
+        const text = n.textContent ?? '';
+        for (let i = 0; i < text.length; i++) {
+          if (text[i].trim() === '' || text[i] === '\u200b') { continue; }
+          const r = document.createRange();
+          r.setStart(n, i); r.setEnd(n, i + 1);
+          const box = r.getClientRects()[0];
+          if (box === undefined || box.width === 0) { continue; }
+          const m = ctx.measureText(text[i]);
+          const grundlinie = box.top + m.fontBoundingBoxAscent;
+          aus.push({ t: text[i], l: box.left, r: box.right, oben: grundlinie - m.actualBoundingBoxAscent, unten: grundlinie + m.actualBoundingBoxDescent, kastenOben: box.top });
+        }
+      }
+      return aus;
+    };
+    const H = q('hall-display').getBoundingClientRect().height;
+    const seiten = ['home', 'away'].map((s) => {
+      const name = zeichen(q(`hall-teamname-${s}`));
+      const zeilenTop = [...new Set(name.map((z) => Math.round(z.kastenOben / 4)))].sort((a, b) => a - b);
+      const letzte = name.filter((z) => Math.round(z.kastenOben / 4) === zeilenTop[zeilenTop.length - 1]);
+      const ziffer = zeichen(q(`hall-digits-${s}`));
+      const flaeche = q(`hall-panel-${s}`);
+      const fb = flaeche.getBoundingClientRect();
+      const stil = getComputedStyle(flaeche);
+      return {
+        name: q(`hall-teamname-${s}`).textContent ?? '',
+        zeilen: zeilenTop.length,
+        nameUnten: Math.max(...letzte.map((z) => z.unten)),
+        ziffer: ziffer.map((z) => z.t).join(''),
+        zifferOben: Math.min(...ziffer.map((z) => z.oben)),
+        zifferUnten: Math.max(...ziffer.map((z) => z.unten)),
+        zifferLinks: Math.min(...ziffer.map((z) => z.l)),
+        zifferRechts: Math.max(...ziffer.map((z) => z.r)),
+        flaeche: { l: fb.left, t: fb.top, r: fb.right, b: fb.bottom, w: fb.width, h: fb.height },
+        rand: parseFloat(stil.borderBottomWidth) || 0,
+      };
+    });
+    const unten = ['hall-zeitbalken', 'hall-endstand', 'hall-shootout-result', 'hall-clock', 'hall-kickoff']
+      .map((id) => document.querySelector(`[data-testid="${id}"]`)).filter((e): e is Element => e !== null)
+      .map((e) => e.getBoundingClientRect().top);
+    return { H, seiten, untenOben: Math.min(...unten) };
+  });
+}
+
+/** Siegerring: innen 1,5 % der Höhe an allen Rändern der Fläche (Stil des Rings, `hallStyles.ts`); im Test fest, damit eine Änderung der Tokens ihn nicht verschiebt. */
+const RING_CQH = 1.5;
+/** Sichtbarer Abstand zwischen Tinte des Namens und Torzahl: mindestens 0,4 % der Folienhöhe (rund 4 px bei 1080). */
+const NAME_ZIFFER_CQH = 0.4;
+
+/** Erfundene Namen mit Unterlängen (g, j, p, y): kurze Wörter (zwei Zeilen, Höhe begrenzt die Schrift) und lange (Breite begrenzt die Schrift). */
+const TINTEN_NAMEN = [['TSV Gipping', 'DJK Jappen'], ['SG Jägerpfad/Bergtal', 'TSV Pygmäenhof']] as const;
+
+function pruefeTinte(t: TintenMessung, beschreibung: string): void {
+  const cq = t.H / 100;
+  for (const s of t.seiten) {
+    const wo = `${beschreibung}, „${s.name}“ über ${s.ziffer}`;
+    const ring = RING_CQH * cq + s.rand;
+    // Maße als Anmerkung des Tests (Bericht): Abstand Name–Torzahl, Torzahl–Ring unten, Torzahl–Zeitbalken, je in % der Höhe
+    test.info().annotations.push({ type: 'abstand', description: `${beschreibung} | ${s.name} | ${s.ziffer} | name-ziffer ${((s.zifferOben - s.nameUnten) / cq).toFixed(2)} | ring ${((s.flaeche.b - ring - s.zifferUnten) / cq).toFixed(2)} | balken ${((t.untenOben - s.zifferUnten) / cq).toFixed(2)}` });
+    // (a) Tinte des Namens (mit Unterlänge) gegen Oberkante der Torzahl
+    expect((s.zifferOben - s.nameUnten) / cq, `${wo}: Abstand Name–Torzahl in % der Höhe (${(s.zifferOben - s.nameUnten).toFixed(1)} px)`).toBeGreaterThanOrEqual(NAME_ZIFFER_CQH);
+    // (b) Torzahl gegen den inneren Rand des Siegerrings (an allen vier Rändern der Fläche)
+    expect(s.flaeche.b - ring - s.zifferUnten, `${wo}: Torzahl über dem Siegerring (px)`).toBeGreaterThanOrEqual(0);
+    expect(s.zifferLinks - (s.flaeche.l + ring), `${wo}: Torzahl rechts vom Siegerring links (px)`).toBeGreaterThanOrEqual(0);
+    expect(s.flaeche.r - ring - s.zifferRechts, `${wo}: Torzahl links vom Siegerring rechts (px)`).toBeGreaterThanOrEqual(0);
+    // (c) Torzahl gegen den Zeitbalken (bzw. das Wort an seiner Stelle) darunter
+    expect(t.untenOben - s.zifferUnten, `${wo}: Torzahl über dem Zeitbalken (px)`).toBeGreaterThan(0);
+  }
 }
 
 const schneiden = (a: Rahmen, b: Rahmen): number => Math.max(0, Math.min(a.r, b.r) - Math.max(a.l, b.l)) * Math.max(0, Math.min(a.b, b.b) - Math.max(a.t, b.t));
@@ -388,6 +500,29 @@ for (const { w, h } of GROESSEN) {
             for (const kante of ['l', 't', 'w', 'h'] as const) { expect(Math.abs(ende.teile[id][kante] - lauf.teile[id][kante]), `${id}.${kante} im Fall ${fall}`).toBeLessThanOrEqual(TOLERANZ_PX); }
           }
         }
+      });
+
+      test('@ZM-213 @ZM-214 nichts überlappt, auch nicht die Tinte: Unterlänge des Namens gegen Torzahl, Torzahl gegen Siegerring und Zeitbalken (läuft, zweistellig, Endstand)', async ({ browser, baseURL }) => {
+        test.setTimeout(180000);
+        let zweizeilig = 0;
+        for (const namen of TINTEN_NAMEN) {
+          const fuerNamen = (fall: string, ende: boolean) => async (seite: Page): Promise<TintenMessung> => {
+            if (ende) { await oeffneEnde(seite, fall, w, h, rand, namen); } else { await oeffne(seite, fall, w, h, rand, { namen }); }
+            return messeTinte(seite);
+          };
+          const faelle: [string, string, boolean][] = [['läuft', 'halle-laeuft', false], ['zweistellig', 'halle-zweistellig', false], ['Endstand', 'halle-ende', true]];
+          for (const [zustand, fall, ende] of faelle) {
+            const kontext = await browser.newContext({ baseURL: baseURL ?? undefined });
+            try {
+              const seite = await kontext.newPage();
+              const t = await fuerNamen(fall, ende)(seite);
+              zweizeilig += t.seiten.filter((x) => x.zeilen === 2).length;
+              pruefeTinte(t, `${zustand} ${String(w)}×${String(h)} Rand ${String(rand)} %`);
+            } finally { await kontext.close(); }
+          }
+        }
+        // der Fall ist echt: je nach Seitenverhältnis stehen kurze Namen in einer Zeile, mindestens einer der Namen steht in zwei Zeilen
+        expect(zweizeilig, 'mindestens ein Name steht in zwei Zeilen').toBeGreaterThan(0);
       });
 
       test('@ZM-213 Torzahl an derselben Stelle in zwei Zuständen (@ZM-151): läuft, vor dem Anpfiff, Halbzeit gleich', async ({ page }) => {

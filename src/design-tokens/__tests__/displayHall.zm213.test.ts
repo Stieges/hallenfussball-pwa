@@ -19,6 +19,9 @@ describe('@ZM-213 displayHall', () => {
   it('Zwei Zeilen Name passen ins Namensfeld (Feldhöhe mindestens zwei Zeilen der Schrift, die 12,5 % trägt)', () => {
     expect(cqh(displayHall.name.height)).toBeGreaterThanOrEqual(2 * 12.5 * displayHall.name.lineHeight);
   });
+  it('@ZM-213 Zwei Zeilen zu 15 % passen ins Namensfeld („TSV Fridolfing / DJK Otting“ mindestens 15 %, die Höhe begrenzt dort die Schrift)', () => {
+    expect(cqh(displayHall.name.height)).toBeGreaterThanOrEqual(2 * 15 * displayHall.name.lineHeight);
+  });
   it('Namensfeld, Torzahl und Balken überlappen sich nicht: Torzahl (Versalhöhe) beginnt unter dem Namensfeld, der Balken unter der Fläche', () => {
     const namenEnde = cqh(displayHall.name.top) + cqh(displayHall.name.height);
     const zahlOben = cqh(displayHall.panel.height) - cqh(displayHall.digit.bottom) - cqh(displayHall.digit.font) * displayHall.digit.lineHeight;
