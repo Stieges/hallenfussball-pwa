@@ -50,6 +50,33 @@ test.describe('@HE-112 Beitritt ohne Konto (Netz-Stub)', () => {
     }
   }
 
+  for (const code of ['anonymous_provider_disabled', 'signup_disabled']) {
+    test(`@HE-112 aktuelles Server-Format (code im Körper, Kopfzeile x-supabase-api-version): ${code} → Meldung, keine Taste „Erneut versuchen“`, async ({ page, context }) => {
+      await installiereStub(context, { name: 'he112', zustand: { einwilligung: true, signup: `fehler-neu:${code}`, rpc: { join_code_info: INFO } } });
+      const anfragen: string[] = [];
+      page.on('request', (r) => { if (r.url().includes('request_helper_access')) { anfragen.push(r.url()); } });
+      await page.goto(`${app.basisUrl}/#/join/CODE123456`);
+      await page.getByTestId('join-name').fill('Tom');
+      await page.getByTestId('join-submit').click();
+      await expect(page.getByTestId('join-anonymous-disabled')).toContainText(MELDUNG, { timeout: 20000 });
+      await expect(page.getByTestId('join-retry')).toHaveCount(0);
+      expect(anfragen).toEqual([]);
+    });
+  }
+
+  test('@HE-112 Bild bei 360×640 (hell)', async ({ page, context }) => {
+    test.skip(!BILDER, 'Bild nur mit HE112_BILDER');
+    await page.setViewportSize({ width: 360, height: 640 });
+    await page.emulateMedia({ colorScheme: 'light' });
+    await installiereStub(context, { name: 'he112', zustand: { einwilligung: true, signup: 'fehler:anonymous_provider_disabled', rpc: { join_code_info: INFO } } });
+    await page.goto(`${app.basisUrl}/#/join/CODE123456`);
+    await page.getByTestId('join-name').fill('Tom');
+    await page.getByTestId('join-submit').click();
+    await expect(page.getByTestId('join-anonymous-disabled')).toContainText(MELDUNG, { timeout: 20000 });
+    mkdirSync(BILDER ?? '.', { recursive: true });
+    await page.screenshot({ path: `${BILDER}/he112-beitritt-gesperrt-360-light.png` });
+  });
+
   test('@HE-112 Gegenbeispiel: Netzfehler bei der Anmeldung → Netz-Meldung mit „Erneut versuchen“', async ({ page, context }) => {
     await installiereStub(context, { name: 'he112', zustand: { einwilligung: true, signup: 'netz', rpc: { join_code_info: INFO } } });
     await page.goto(`${app.basisUrl}/#/join/CODE123456`);

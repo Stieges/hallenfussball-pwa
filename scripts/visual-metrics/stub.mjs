@@ -4,7 +4,9 @@
 //   --stub helfer-join/e1     Datei stubs/helfer-join.json, Zustand "e1"
 // Zustand: { rpc: { <funktion>: { json } | { fehler: { code, message } } | { abbruch: true } },
 //            geraet: { id } (optional: anonyme Gerätesitzung eines Helfer-Handys im Speicher),
-//            signup: "ok" | "429" (optional, Standard "ok"), konto: { id, name } (optional: angemeldetes Konto im Speicher),
+//            signup: "ok" | "429" | "netz" (Abbruch) | "fehler:<code>" (422, älteres Format: error_code im Körper) |
+//                    "fehler-neu:<code>" (422, aktuelles Format: code als Text im Körper plus Kopfzeile x-supabase-api-version, @HE-112)
+//                    (optional, Standard "ok"), konto: { id, name } (optional: angemeldetes Konto im Speicher),
 //            rest: { <tabelle>: [Zeile, …] } (optional: Antworten auf /rest/v1/<tabelle>, sonst leer),
 //            ausgang: <N> (optional, nur mit konto: N wartende Einträge des Kontos in der lokalen Kopie, z. B. e4 „Erst verbinden“ @HE-092) }
 // Kein Code in src/ (Testumgebung ≠ Produktivcode). Nie gegen Produktion: die Adresse ist fest 127.0.0.1.
@@ -97,6 +99,14 @@ export async function installiereStub(ctx, stub) {
       if (z.signup === '429') return json(429, { code: 429, error_code: 'over_request_rate_limit', msg: 'rate limit' })
       // @HE-112: Betriebsumgebung lässt die Anmeldung ohne Konto nicht zu (`signup: 'fehler:<Fehlercode>'`) bzw. Netz weg (`'netz'`)
       if (z.signup === 'netz') return route.abort('failed')
+      // Aktuelles Server-Format: auth-js liest `code` nur, wenn die Kopfzeile x-supabase-api-version (>= 2024-01-01) lesbar ist (CORS-Freigabe nötig)
+      if (typeof z.signup === 'string' && z.signup.startsWith('fehler-neu:')) {
+        return route.fulfill({
+          status: 422,
+          headers: { ...CORS, 'content-type': 'application/json', 'x-supabase-api-version': '2024-01-01', 'access-control-expose-headers': 'x-supabase-api-version' },
+          body: JSON.stringify({ code: z.signup.slice('fehler-neu:'.length), message: 'Anonymous sign-ins are disabled' }),
+        })
+      }
       if (typeof z.signup === 'string' && z.signup.startsWith('fehler:')) {
         return json(422, { code: 422, error_code: z.signup.slice('fehler:'.length), msg: 'Anonymous sign-ins are disabled' })
       }

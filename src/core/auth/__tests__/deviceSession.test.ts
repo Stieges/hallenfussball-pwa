@@ -111,6 +111,8 @@ describe('ensureDeviceSession', () => {
     await expect(ensureDeviceSession(auth)).resolves.toEqual({ ok: false, reason: 'rateLimited' });
   });
 
+  // Ersetzt die frühere Erwartung „422 anonymous_provider_disabled → unexpected“: Die Anforderung hat sich geändert –
+  // `2026-09-24_helfer-am-turniertag.md`, Szenariogrundriss @HE-112 (Grundriss vom 20.11.2026).
   it.each(['anonymous_provider_disabled', 'signup_disabled'])(
     '@HE-112 Server lehnt die Anmeldung ohne Konto mit %s ab → anonymousDisabled (erkannt am Code, nicht am Text)',
     async (code) => {
@@ -130,7 +132,7 @@ describe('ensureDeviceSession', () => {
     const auth = fakeAuth();
     auth.signInAnonymously.mockResolvedValueOnce({
       data: { session: null },
-      error: new AuthApiError('Anonymous sign-ins are disabled', 500, 'unexpected_failure'),
+      error: new AuthApiError('Anonymous sign-ins are disabled', 422, 'validation_failed'),
     });
     await expect(ensureDeviceSession(auth)).resolves.toEqual({
       ok: false, reason: 'unexpected', message: 'Anonymous sign-ins are disabled',
