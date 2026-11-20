@@ -160,10 +160,35 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+      # @TA-021 (Beleg): Auch ein grüner Job mit Wiederholung („flaky“) lässt Belege zurück. Playwright behält mit
+      # `trace: 'retain-on-failure'` Trace, Bild und Anhänge jedes GESCHEITERTEN Versuchs (auch wenn die Wiederholung besteht);
+      # bestandene Versuche löscht es. Liegt in test-results eine Trace oder ein Fehlerbild, wird alles hochgeladen, sonst bleibt der Job ohne Artefakt.
+      - name: Gibt es Belege gescheiterter Versuche?
+        id: belege
+        if: always()
+        run: |
+          if [ -n "$(find test-results -mindepth 2 -type f \( -name 'trace.zip' -o -name 'test-failed-*.png' \) 2>/dev/null | head -n 1)" ]; then
+            echo "vorhanden=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "vorhanden=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Playwright-Report hochladen
-        if: failure()
+        if: always() && steps.belege.outputs.vorhanden == 'true'
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-report-cloud
+          name: playwright-report-cloud-v${{ github.run_attempt }}
           path: playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Belege gescheiterter Versuche hochladen (Trace, Bild, Anhänge)
+        if: always() && steps.belege.outputs.vorhanden == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-cloud-v${{ github.run_attempt }}
+          path: |
+            test-results/
+            !test-results/b49-bilder/
+          if-no-files-found: ignore
           retention-days: 7

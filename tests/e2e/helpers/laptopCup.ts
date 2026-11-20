@@ -3,8 +3,9 @@
  */
 import { writeFileSync } from 'node:fs';
 import type { Page } from '@playwright/test';
-import { expect } from './test-fixtures';
+import { expect, test } from './test-fixtures';
 import { neuLaden } from './neuLaden';
+import { mitSeitenBelegen } from './seitenBelege';
 
 export const ID = 'e2e-laptop-cup';
 export const TEAMS = ['e1', 'e2', 'e3', 'e4'].map((n) => `00000000-0000-4000-8000-0000000000${n}`);
@@ -47,13 +48,16 @@ export async function bild(page: Page, name: string): Promise<void> {
  * `leibchen: true` tippt bei gleicher Trikotfarbe vor dem Anpfiff „Bestätigen“ (der Vorschlag: das Heim-Team zieht die erste Hallenfarbe, @SL-206).
  */
 export async function anpfeifen(page: Page, { leibchen = false }: { leibchen?: boolean } = {}): Promise<void> {
-  await page.goto(`/#/tournament/${ID}/live`);
-  if (leibchen) {
-    await page.getByTestId('leibchen-bestaetigen').click({ timeout: 15000 });
-    await expect(page.getByTestId('leibchen-zeile')).toBeVisible();
-  }
-  await page.getByTestId('match-start-button').click({ timeout: 15000 });
-  await expect(page.getByTestId('match-pause-button')).toBeVisible();
+  // Beleg bei Fehlschlag (@TA-021): Adresse, sichtbarer Text, Konsole und Netz der Seite als Anhang; die Prüfung bleibt gleich.
+  await mitSeitenBelegen(page, test.info(), 'anpfeifen', async () => {
+    await page.goto(`/#/tournament/${ID}/live`);
+    if (leibchen) {
+      await page.getByTestId('leibchen-bestaetigen').click({ timeout: 15000 });
+      await expect(page.getByTestId('leibchen-zeile')).toBeVisible();
+    }
+    await page.getByTestId('match-start-button').click({ timeout: 15000 });
+    await expect(page.getByTestId('match-pause-button')).toBeVisible();
+  });
 }
 
 /** Unterkante eines Elements (px von oben) – ohne Scrollen sichtbar heißt: höchstens die Höhe des Fensters. */

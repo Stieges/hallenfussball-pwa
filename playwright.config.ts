@@ -149,7 +149,11 @@ export default defineConfig({
     // Without this, CI runners report en-US and the app renders English while
     // most E2E selectors still target the German UI strings.
     locale: 'de-DE',
-    trace: 'on-first-retry',
+    // @TA-021 (Beleg): In der CI wird jeder Versuch aufgezeichnet, behalten wird nur die Trace GESCHEITERTER Versuche, auch
+    // wenn die Wiederholung besteht (Playwright 1.63, types/test.d.ts, `trace`: „'retain-on-failure': ... A failed run's trace is
+    // kept even when a later retry passes“). `on-first-retry` zeichnete nur die Wiederholung auf, also gerade nicht den Fehlversuch.
+    // Lokal gibt es keine Wiederholungen, dort bleibt alles beim Alten.
+    trace: process.env.CI ? 'retain-on-failure' : 'on-first-retry',
     screenshot: 'only-on-failure',
     // Action and navigation timeouts
     actionTimeout: process.env.CI ? 15000 : 10000,

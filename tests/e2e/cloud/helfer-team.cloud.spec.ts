@@ -17,6 +17,7 @@
 import { test, expect } from './fixtures';
 import { restAsRole } from './restAsRole';
 import { loginAsRole } from './helpers';
+import { mitSeitenBelegen } from '../helpers/seitenBelege';
 import { E2E_TEAM_HELFER_CUP_ID } from './testData';
 
 const HAS_008 = process.env.E2E_STACK_HAS_008 === '1';
@@ -55,9 +56,12 @@ test.describe('Team & Helfer, zwei Rollen (A-18a)', () => {
     devices.push(context);
     await context.addInitScript((c) => localStorage.setItem('app:consent', JSON.stringify(c)), consent);
     const page = await context.newPage();
-    await loginAsRole(page, role);
-    await page.goto(ADMIN);
-    await expect(page.getByTestId('helper-code-card')).toBeVisible({ timeout: 15000 });
+    // Beleg bei Fehlschlag (@TA-021): Adresse, sichtbarer Text, Konsole und Netz der Seite als Anhang; die Prüfung bleibt gleich.
+    await mitSeitenBelegen(page, test.info(), `leaderPage-${role}`, async () => {
+      await loginAsRole(page, role);
+      await page.goto(ADMIN);
+      await expect(page.getByTestId('helper-code-card')).toBeVisible({ timeout: 15000 });
+    });
     return page;
   }
 
