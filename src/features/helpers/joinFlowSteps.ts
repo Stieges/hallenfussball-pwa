@@ -115,7 +115,7 @@ export async function submitJoinRequest(
   const session = await deps.ensureDeviceSession();
   if (!session.ok) {
     // N-2: `accountSession` meldet nur, wenn schon der Scan das Konto sah; sonst kam es danach zurück (Wettlauf, kein Fehler).
-    const reportable = session.reason === 'accountSession' ? state.sawAccount === true : session.reason === 'unexpected' || session.reason === 'unavailable';
+    const reportable = session.reason === 'accountSession' ? state.sawAccount === true : session.reason === 'unexpected' || session.reason === 'unavailable' || session.reason === 'anonymousDisabled';
     if (reportable) {
       deps.reportError(new Error(`Helfer-Beitritt: Gerätesitzung ${session.reason}${session.message ? ` – ${session.message}` : ''}`));
     }

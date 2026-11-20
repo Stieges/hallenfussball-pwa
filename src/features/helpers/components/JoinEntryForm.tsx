@@ -2,7 +2,8 @@
  * Einstieg am Helfer-Handy (A-17b, Mockup M1 `e1`/`e2`, @HE-033, @HE-001, @HE-015): Turnierkarte, Info „nur für Helfer“ mit
  * Weg zur Zuschauer-Ansicht (nur mit `shareCode`), Namensfeld, Haupttaste „Anfrage senden“ (56 px), Datenschutzhinweis.
  * Eine Anfrage entsteht erst beim Absenden des Namens (S-5). Fehler (kein Netz, 429, unerwartet) stehen als Hinweis
- * über dem Feld, der Name bleibt stehen, die Haupttaste heißt dann „Erneut versuchen“ (@HE-015).
+ * über dem Feld, der Name bleibt stehen, die Haupttaste heißt dann „Erneut versuchen“ (@HE-015). Ausnahme @HE-112:
+ * Beitritt ohne Konto nicht freigeschaltet → nur Hinweis, kein Feld, keine Taste.
  */
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../../components/ui/Button';
@@ -34,6 +35,18 @@ export const JoinEntryForm = ({ state, onNameChange, onSubmit, onViewer, onPriva
   const sending = state.step === 'submitting';
   const noticeKey = state.notice ? NOTICE_KEYS[state.notice] : undefined;
   const retry = noticeKey !== undefined;
+  if (state.notice === 'anonymousDisabled') {
+    // @HE-112: Betriebsumgebung lässt den Beitritt ohne Konto nicht zu – Wiederholen hilft nie, also weder Feld noch Taste.
+    return (
+      <>
+        {state.tournament ? <JoinInfoCard title={state.tournament.title} date={state.tournament.date} /> : null}
+        <JoinNotice tone="warn" title={t('join.formNotice.anonymousDisabled.title')} data-testid="join-anonymous-disabled" />
+        <Button variant="ghost" onClick={onPrivacy} data-testid="join-privacy" style={{ textDecoration: 'underline', alignSelf: 'flex-start' }}>
+          {t('join.privacy')}
+        </Button>
+      </>
+    );
+  }
   return (
     <>
       {state.tournament ? <JoinInfoCard title={state.tournament.title} date={state.tournament.date} /> : null}

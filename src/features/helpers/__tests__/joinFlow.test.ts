@@ -210,6 +210,12 @@ describe('Namensformular und Anfrage', () => {
       .toMatchObject({ step: 'form', name: 'Tom', notice: 'offline' });
   });
 
+  it('@HE-112 Beitritt ohne Konto nicht freigeschaltet → Hinweis anonymousDisabled; Netzfehler bleibt „offline“', () => {
+    expect(run(submitting('Tom'), { type: 'sessionFailed', reason: 'anonymousDisabled' }))
+      .toMatchObject({ step: 'form', name: 'Tom', notice: 'anonymousDisabled' });
+    expect(run(submitting('Tom'), { type: 'sessionFailed', reason: 'network' })).toMatchObject({ notice: 'offline' });
+  });
+
   it('§ 3.2 Auth 429 → Hinweis im Formular, Name bleibt; unavailable/unexpected → allgemeiner Hinweis', () => {
     expect(run(submitting(), { type: 'sessionFailed', reason: 'rateLimited' })).toMatchObject({ step: 'form', notice: 'authRateLimited' });
     expect(run(submitting(), { type: 'sessionFailed', reason: 'unavailable' })).toMatchObject({ step: 'form', notice: 'unexpected' });

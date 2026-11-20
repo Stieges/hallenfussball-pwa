@@ -38,7 +38,7 @@ export interface SessionInfo {
   userId: string | null;
 }
 
-export type DeviceSessionFailure = 'accountSession' | 'network' | 'rateLimited' | 'unavailable' | 'unexpected';
+export type DeviceSessionFailure = 'accountSession' | 'network' | 'rateLimited' | 'anonymousDisabled' | 'unavailable' | 'unexpected';
 
 export type DeviceSessionResult =
   | { ok: true; userId: string; created: boolean }
@@ -56,6 +56,9 @@ function isNetworkError(error: unknown): boolean {
   return error instanceof TypeError || isAuthRetryableFetchError(error);
 }
 
+/** Fehlercodes von GoTrue, wenn anonyme Anmeldungen serverseitig abgeschaltet sind (@HE-112). */
+const ANONYMOUS_DISABLED_CODES: ReadonlySet<string> = new Set(['anonymous_provider_disabled', 'signup_disabled']);
+
 function classifySignInError(error: unknown): { ok: false; reason: DeviceSessionFailure; message?: string } {
   if (isNetworkError(error)) {
     return { ok: false, reason: 'network' };
@@ -63,6 +66,10 @@ function classifySignInError(error: unknown): { ok: false; reason: DeviceSession
   // § 3.2 „Auth 429“: anonyme Anmeldungen je IP und Stunde ausgeschöpft.
   if (isAuthApiError(error) && error.status === 429) {
     return { ok: false, reason: 'rateLimited' };
+  }
+  // @HE-112: Betriebsumgebung lässt die Anmeldung ohne Konto nicht zu (Schalter aus) – erkannt am Fehlercode, nie am Text.
+  if (isAuthApiError(error) && ANONYMOUS_DISABLED_CODES.has(error.code ?? '')) {
+    return { ok: false, reason: 'anonymousDisabled' };
   }
   return { ok: false, reason: 'unexpected', message: error instanceof Error ? error.message : String(error) };
 }
