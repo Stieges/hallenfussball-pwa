@@ -12,7 +12,7 @@ import { barColors } from './displayBar';
 export const displayHall = {
   /** Zwei Farbflächen oben bis an den Rand der Folienfläche: Höhe (64,5 %: Namensfeld und Torzahl füllen sie, der Rest geht an Zeitbalken und Restzeit, @ZM-215), Lücke dazwischen, Rundung der unteren Ecken */
   panel: { height: '64.5cqh', gap: '3cqh', radius: '1.7cqh', ringWidth: '1.5cqh' },
-  /** Teamname oben in der Fläche: Feld (Abstand oben, Höhe, seitlicher Abstand), größte Schrift, Zeilenhöhe (unitlos); höchstens zwei Zeilen. Die Höhe endet 2,2 cqh früher als die Zeilenkästen es verlangten (@ZM-213 „nichts überlappt“): die Unterlängen (g, j, p, y) der zweiten Zeile ragen rund 0,09 em über den Zeilenkasten und müssen vor der Torzahl enden (gemessen: mindestens 0,6 % der Höhe Abstand, vorher bis 1,3 % Überdeckung) */
+  /** Teamname oben in der Fläche: Feld (Abstand oben, Höhe, seitlicher Abstand), größte Schrift, Zeilenhöhe (unitlos); höchstens zwei Zeilen. Die Höhe lässt Platz für die Unterlängen (g, j, p, y) der zweiten Zeile vor der Torzahl und trägt zwei Zeilen zu 15 %; beides sichern der Test `displayHall.zm213.test.ts` und die Tintenmessung in `monitor-profil-halle-zm213.spec.ts` (@ZM-213) */
   name: { top: '2.4cqh', height: '31.6cqh', padX: '3.7cqh', maxFont: '22.5cqh', lineHeight: 1.04, letterSpacing: '-0.01em' },
   /** Torzahl unter dem Namen: 35 % der Höhe, Zeilenhöhe = Versalhöhe der Ziffern (Inter 0,727), Abstand zum unteren Rand der Fläche */
   digit: { font: '35cqh', lineHeight: 0.727, bottom: '2.4cqh', letterSpacing: '-0.02em' },

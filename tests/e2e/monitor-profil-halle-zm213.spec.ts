@@ -72,7 +72,12 @@ interface SaatOptionen {
 /** Ersetzt die Teamnamen der Saat eines Falls (Heim „TSV Fridolfing“, Gast „SG Taching/Tengling“) durch erfundene Namen. */
 function mitNamen(turnier: Record<string, unknown>, namen: readonly [string, string] | undefined): void {
   if (namen === undefined) { return; }
-  const text = JSON.stringify(turnier).replaceAll('TSV Fridolfing', namen[0]).replaceAll('SG Taching/Tengling', namen[1]);
+  const roh = JSON.stringify(turnier);
+  // kein stilles Durchlaufen mit den falschen Namen: beide Ursprungsnamen müssen in der Saat stehen
+  for (const ursprung of ['TSV Fridolfing', 'SG Taching/Tengling']) {
+    if (!roh.includes(ursprung)) { throw new Error(`Saat ohne Ursprungsnamen „${ursprung}“ – die Teamnamen lassen sich nicht ersetzen`); }
+  }
+  const text = roh.replaceAll('TSV Fridolfing', namen[0]).replaceAll('SG Taching/Tengling', namen[1]);
   Object.assign(turnier, JSON.parse(text) as Record<string, unknown>);
 }
 
