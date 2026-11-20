@@ -319,6 +319,30 @@ describe('M2 Endzustände (Tabelle § 3.2)', () => {
     expect(screen.getByTestId<HTMLInputElement>('join-name').value).toBe('Tom');
   });
 
+  it('@HE-112 Beitritt ohne Konto nicht freigeschaltet → Meldung, keine Taste „Erneut versuchen“, keine Anfrage', async () => {
+    const deps = makeDeps(ok(OPEN));
+    deps.ensureDeviceSession = vi.fn(async () => ({ ok: false as const, reason: 'anonymousDisabled' as const }));
+    renderJoin(deps);
+    await userEvent.type(await screen.findByTestId('join-name'), 'Tom');
+    await userEvent.click(screen.getByTestId('join-submit'));
+    expect((await screen.findByTestId('join-anonymous-disabled')).textContent)
+      .toContain('Beitritt ohne Konto ist gerade nicht freigeschaltet. Bitte der Turnierleitung Bescheid sagen.');
+    expect(screen.queryByTestId('join-retry')).toBeNull();
+    expect(screen.queryByTestId('join-submit')).toBeNull();
+    expect(deps.requestAccess).not.toHaveBeenCalled();
+  });
+
+  it('@HE-112 Gegenbeispiel: Netzfehler bei der Gerätesitzung → Netz-Meldung mit Taste „Erneut versuchen“', async () => {
+    const deps = makeDeps(ok(OPEN));
+    deps.ensureDeviceSession = vi.fn(async () => ({ ok: false as const, reason: 'network' as const }));
+    renderJoin(deps);
+    await userEvent.type(await screen.findByTestId('join-name'), 'Tom');
+    await userEvent.click(screen.getByTestId('join-submit'));
+    expect(await screen.findByTestId('join-offline')).toBeTruthy();
+    expect(screen.getByTestId('join-retry')).toBeTruthy();
+    expect(screen.queryByTestId('join-anonymous-disabled')).toBeNull();
+  });
+
   it('§ 3.2 noRequest (Konto-Sitzung ohne Anfrage) → Hinweis', async () => {
     renderJoin(makeDeps(ok({ relation: 'none' } as JoinCodeInfo)));
     await endTitle('Für dieses Turnier hast du keinen Zugang');

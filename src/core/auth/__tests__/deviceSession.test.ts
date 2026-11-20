@@ -111,11 +111,26 @@ describe('ensureDeviceSession', () => {
     await expect(ensureDeviceSession(auth)).resolves.toEqual({ ok: false, reason: 'rateLimited' });
   });
 
-  it('anonyme Anmeldung abgeschaltet (422) → unexpected mit Meldung; ohne Client → unavailable', async () => {
+  it.each(['anonymous_provider_disabled', 'signup_disabled'])(
+    '@HE-112 Server lehnt die Anmeldung ohne Konto mit %s ab → anonymousDisabled (erkannt am Code, nicht am Text)',
+    async (code) => {
+      const auth = fakeAuth();
+      auth.signInAnonymously.mockResolvedValueOnce({
+        data: { session: null },
+        error: new AuthApiError('irgendein anderer Text', 422, code),
+      });
+      await expect(ensureDeviceSession(auth)).resolves.toEqual({ ok: false, reason: 'anonymousDisabled' });
+    },
+  );
+
+  it('@HE-112 Gegenbeispiele: Netzfehler → network; anderer Code mit dem Text „disabled“ → unexpected; ohne Client → unavailable', async () => {
+    const net = fakeAuth();
+    net.signInAnonymously.mockResolvedValueOnce({ data: { session: null }, error: new TypeError('Failed to fetch') });
+    await expect(ensureDeviceSession(net)).resolves.toEqual({ ok: false, reason: 'network' });
     const auth = fakeAuth();
     auth.signInAnonymously.mockResolvedValueOnce({
       data: { session: null },
-      error: new AuthApiError('Anonymous sign-ins are disabled', 422, 'anonymous_provider_disabled'),
+      error: new AuthApiError('Anonymous sign-ins are disabled', 500, 'unexpected_failure'),
     });
     await expect(ensureDeviceSession(auth)).resolves.toEqual({
       ok: false, reason: 'unexpected', message: 'Anonymous sign-ins are disabled',

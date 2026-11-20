@@ -4,6 +4,7 @@
  * echtes Konto → nie signInAnonymously, „Abmelden gelingt, dann reißt das Netz“ → Name bleibt, kein Konto zurück.
  */
 import { describe, expect, it, vi } from 'vitest';
+import { AuthApiError } from '@supabase/supabase-js';
 import type { HelperRpcResult, JoinCodeInfo, RequestHelperAccessResult } from '../../../core/repositories/helperAccessRpc';
 import { ensureDeviceSession, readSessionInfo, type DeviceSessionLike } from '../../../core/auth/deviceSession';
 import { initialJoinFlowState, joinFlowReducer, type JoinFlowState } from '../joinFlow';
@@ -276,6 +277,20 @@ describe('Absenden: Fehler und Meldungen', () => {
     const { deps } = device(null, { ensureDeviceSession: async () => ({ ok: false, reason: 'rateLimited' }) });
     expect(await submit(await scan(deps), deps)).toMatchObject({ step: 'form', notice: 'authRateLimited' });
     expect(deps.reportError).not.toHaveBeenCalled();
+  });
+
+  it('@HE-112 Server lehnt die Anmeldung ohne Konto ab → Hinweis, keine Anfrage, Meldung an Sentry; Netzfehler → „offline“', async () => {
+    for (const code of ['anonymous_provider_disabled', 'signup_disabled']) {
+      const { deps, auth } = device(null);
+      auth.signInAnonymously.mockResolvedValueOnce({ data: { session: null as never }, error: new AuthApiError('x', 422, code) });
+      expect(await submit(await scan(deps), deps)).toMatchObject({ step: 'form', name: 'Tom', notice: 'anonymousDisabled' });
+      expect(deps.requestAccess).not.toHaveBeenCalled();
+      expect(deps.reportError).toHaveBeenCalledTimes(1);
+    }
+    const net = device(null);
+    net.auth.signInAnonymously.mockResolvedValueOnce({ data: { session: null as never }, error: new TypeError('Failed to fetch') });
+    expect(await submit(await scan(net.deps), net.deps)).toMatchObject({ step: 'form', notice: 'offline' });
+    expect(net.deps.reportError).not.toHaveBeenCalled();
   });
 
   it('N-2 accountSession → Sentry nur, wenn schon der Scan das Konto sah; kommt es nach dem Scan zurück, kein Sentry', async () => {

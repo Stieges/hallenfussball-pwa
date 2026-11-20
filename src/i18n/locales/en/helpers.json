@@ -27,6 +27,9 @@
       "authRateLimited": {
         "title": "Too many sign-ins from this network – please try again in 2 minutes or use mobile data"
       },
+      "anonymousDisabled": {
+        "title": "Joining without an account is not enabled right now. Please tell the tournament organisers."
+      },
       "unexpected": {
         "title": "That did not work – please try again",
         "text": "Your name stays in the field."

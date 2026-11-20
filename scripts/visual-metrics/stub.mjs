@@ -95,6 +95,11 @@ export async function installiereStub(ctx, stub) {
     }
     if (pfad === '/auth/v1/signup') {
       if (z.signup === '429') return json(429, { code: 429, error_code: 'over_request_rate_limit', msg: 'rate limit' })
+      // @HE-112: Betriebsumgebung lässt die Anmeldung ohne Konto nicht zu (`signup: 'fehler:<Fehlercode>'`) bzw. Netz weg (`'netz'`)
+      if (z.signup === 'netz') return route.abort('failed')
+      if (typeof z.signup === 'string' && z.signup.startsWith('fehler:')) {
+        return json(422, { code: 422, error_code: z.signup.slice('fehler:'.length), msg: 'Anonymous sign-ins are disabled' })
+      }
       return json(200, sitzung('00000000-0000-4000-8000-0000000000aa', true, ''))
     }
     // Angemeldetes Konto: die App prueft den Nutzer beim Start (`getUser`) und frischt ggf. auf
