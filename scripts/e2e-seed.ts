@@ -304,6 +304,12 @@ async function findUserIdByEmail(email: string): Promise<string | null> {
 async function deleteUserIfExists(email: string): Promise<void> {
   const id = await findUserIdByEmail(email);
   if (id) {
+    // Seit 20261128_001 (Konto loeschen) verweigert die Datenbank das Loeschen eines Kontos, dem noch ein Turnier gehoert
+    // (tournaments.owner_id RESTRICT). Test-Turniere dieses Kontos vorher bewusst loeschen (Kaskade ueber die Turnier-Fremdschluessel).
+    const { error: tournamentsError } = await admin.from('tournaments').delete().eq('owner_id', id);
+    if (tournamentsError) {
+      throw new Error(`Turniere von ${email} loeschen: ${tournamentsError.message}`);
+    }
     const { error } = await admin.auth.admin.deleteUser(id);
     if (error) {
       throw new Error(`deleteUser(${email}): ${error.message}`);

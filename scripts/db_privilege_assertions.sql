@@ -1932,4 +1932,34 @@ SELECT 'zuschauer-zaehlung-netzstoerung-columns',
                             AND position('stoerung_kurz' IN p.prosrc) > 0 AND position('stoerung_lang' IN p.prosrc) > 0
                             AND position('RAISE' IN p.prosrc) = 0
                        FROM pg_proc p WHERE p.oid = to_regprocedure('public.count_public_view(text,text,text,text,boolean)')), false)
+
+-- ---------------------------------------------------------------------------------------------------------------
+-- Konto loeschen auf Anfrage (20261128_001_konto_loeschen.sql, Record Recht/Impressum/Datenschutz @RE-009, @RE-010, @RE-011):
+-- Pruefskript scripts/konto-loeschen-check.sh. Vor dem Live-Einspielen "f" (vom Drift-Check bis dahin ausgelassen).
+-- ---------------------------------------------------------------------------------------------------------------
+-- (1) Die fuenf Regeln (auth.users ueber pg_class/pg_namespace, nicht to_regclass: ci_schema_reader hat kein USAGE auf Schema auth): drei Verweise auf auth.users sind ON DELETE SET NULL, tournaments.owner_id ist RESTRICT (Turniere schuetzen das Konto),
+--     der Fremdschluessel tournament_collaborators.invited_by existiert nicht mehr (die Spalte bleibt).
+UNION ALL
+SELECT 'konto-loeschen-fk-rules',
+       coalesce((SELECT count(*) = 3
+                   FROM pg_constraint c
+                  WHERE c.contype = 'f' AND c.confrelid = (SELECT r.oid FROM pg_class r JOIN pg_namespace n ON n.oid = r.relnamespace WHERE n.nspname = 'auth' AND r.relname = 'users') AND c.confdeltype = 'n'
+                    AND c.conname IN ('matches_last_modified_by_fkey', 'tournaments_last_modified_by_fkey', 'match_corrections_corrected_by_fkey')), false)
+       AND coalesce((SELECT c.confdeltype = 'r' AND c.confrelid = (SELECT r.oid FROM pg_class r JOIN pg_namespace n ON n.oid = r.relnamespace WHERE n.nspname = 'auth' AND r.relname = 'users')
+                       FROM pg_constraint c
+                      WHERE c.conrelid = to_regclass('public.tournaments') AND c.conname = 'tournaments_owner_id_fkey' AND c.contype = 'f'), false)
+       AND NOT EXISTS (SELECT 1 FROM pg_constraint c
+                        WHERE c.conrelid = to_regclass('public.tournament_collaborators') AND c.conname = 'tournament_collaborators_invited_by_fkey')
+       AND EXISTS (SELECT 1 FROM pg_attribute a
+                    WHERE a.attrelid = to_regclass('public.tournament_collaborators') AND a.attname = 'invited_by' AND NOT a.attisdropped)
+-- (2) Die Vorpruefung: SECURITY DEFINER mit festem search_path, nur service_role darf sie aufrufen (nicht PUBLIC, anon, authenticated).
+UNION ALL
+SELECT 'konto-loeschen-check-function-service-role-only',
+       coalesce((SELECT p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                        AND p.proacl IS NOT NULL
+                        AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+                        AND has_function_privilege('service_role', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.account_deletion_check(uuid)')), false)
 ;

@@ -284,6 +284,10 @@ pending_assertions_for() {
     20261127_001_zuschauer_zaehlung_netzstoerung.sql)
       echo "zuschauer-zaehlung-netzstoerung-columns"
       ;;
+    # Konto loeschen auf Anfrage (@RE-009, @RE-010, @RE-011): fuenf Fremdschluessel-Regeln, Vorpruefung nur service_role (scripts/konto-loeschen-check.sh)
+    20261128_001_konto_loeschen.sql)
+      echo "konto-loeschen-fk-rules konto-loeschen-check-function-service-role-only"
+      ;;
     *)
       return 1
       ;;
@@ -885,6 +889,9 @@ PRIVILEGE_ASSERTION_NAMES=(
   "zuschauer-zaehlung-os-browser-derive-function"
   # Zuschauer-Zaehlung Stufe 1c (20261127_001_zuschauer_zaehlung_netzstoerung.sql, @RZ-033 bis @RZ-036): gleicher Block am Ende von db_privilege_assertions.sql
   "zuschauer-zaehlung-netzstoerung-columns"
+  # Konto loeschen (20261128_001_konto_loeschen.sql, @RE-009, @RE-010, @RE-011): gleicher Block am Ende von db_privilege_assertions.sql
+  "konto-loeschen-fk-rules"
+  "konto-loeschen-check-function-service-role-only"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then

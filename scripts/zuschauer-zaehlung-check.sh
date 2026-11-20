@@ -91,7 +91,8 @@ command -v curl >/dev/null 2>&1 || { echo "::error::curl wird benoetigt." >&2; e
 source "$REPO_ROOT/scripts/lib/migrations-since-baseline.sh"
 # Spaetere Migration mit eigenem Harness (hallenton-check.sh): sie aendert hall_speaker_heartbeat und stuende nach dem Rueckweg als
 # Unterschied zu "vorher" da (Pruefung R "Schema wie vorher"); hier ohne Belang, weil sie die Zaehlung nicht beruehrt.
-OWN_HARNESS_LATER="20261125_001_hallenton_ausgang_zustaende.sql"
+# 20261128_001_konto_loeschen.sql (Regeln an Fremdschluesseln, Vorpruefung) laeuft in scripts/konto-loeschen-check.sh und beruehrt die Zaehlung nicht.
+OWN_HARNESS_LATER=" 20261125_001_hallenton_ausgang_zustaende.sql 20261128_001_konto_loeschen.sql "
 BEFORE=()
 AFTER=()
 SEEN=0
@@ -99,7 +100,7 @@ while IFS= read -r line; do
   [[ -z "$line" ]] && continue
   if [[ "$(basename "$line")" == "$TARGET_NAME" ]]; then SEEN=1
   elif [[ "$SEEN" -eq 0 ]]; then BEFORE+=("$line")
-  elif [[ "$(basename "$line")" == "$OWN_HARNESS_LATER" ]]; then :
+  elif [[ "$OWN_HARNESS_LATER" == *" $(basename "$line") "* ]]; then :
   elif [[ "$(basename "$line")" == "$NEW_NAME" ]]; then :   # Stufe 1b: wird gesondert eingespielt (Vorher-/Nachher-Pruefung)
   elif [[ "$(basename "$line")" == "$NS_NAME" ]]; then :   # Stufe 1c: wird gesondert eingespielt (Vorher-/Nachher-Pruefung)
   elif [[ "$(basename "$line")" == "$GRANT_NAME" ]]; then :   # wird gesondert eingespielt (apply_target), damit --without-migration sie nicht braucht
@@ -492,7 +493,7 @@ run_checks() {
   priv="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } \
     | docker exec -i -e PGOPTIONS="-c client_min_messages=warning" "$C" psql -U postgres -X -q -tA -v ON_ERROR_STOP=1 2>&1 || true)"
   # Die zwei hallenton-*-Zeilen von 20261125_001 sind hier ausser Betracht (Migration laeuft in hallenton-check.sh, siehe OWN_HARNESS_LATER)
-  red="$( (grep -v '|t$' <<<"$priv" | grep -vE '^(hallenton-(output-states-heartbeat|speaker-unassign-rpc-authenticated-only)|zuschauer-zaehlung-netzstoerung-columns)\|f$' || true) | head -5 | tr '\n' ';')"
+  red="$( (grep -v '|t$' <<<"$priv" | grep -vE '^(hallenton-(output-states-heartbeat|speaker-unassign-rpc-authenticated-only)|zuschauer-zaehlung-netzstoerung-columns|konto-loeschen-fk-rules|konto-loeschen-check-function-service-role-only)\|f$' || true) | head -5 | tr '\n' ';')"
   own="$( (grep -E '^zuschauer-zaehlung-[a-z-]+\|t$' <<<"$priv" || true) | grep -c . || true)"
   check S "db_privilege_assertions.sql als ci_schema_reader: jede Zeile |t, darunter die fuenf zuschauer-zaehlung-* (inkl. ci-schema-reader-select, os-browser-*)" "keine|5" "${red:-keine}|$own"
 }
@@ -893,7 +894,7 @@ run_ns_checks() {
   local priv red own
   priv="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } \
     | docker exec -i -e PGOPTIONS="-c client_min_messages=warning" "$C" psql -U postgres -X -q -tA -v ON_ERROR_STOP=1 2>&1 || true)"
-  red="$( (grep -v '|t$' <<<"$priv" | grep -vE '^hallenton-(output-states-heartbeat|speaker-unassign-rpc-authenticated-only)\|f$' || true) | head -5 | tr '\n' ';')"
+  red="$( (grep -v '|t$' <<<"$priv" | grep -vE '^(hallenton-(output-states-heartbeat|speaker-unassign-rpc-authenticated-only)|konto-loeschen-fk-rules|konto-loeschen-check-function-service-role-only)\|f$' || true) | head -5 | tr '\n' ';')"
   own="$( (grep -E '^zuschauer-zaehlung-[a-z-]+\|t$' <<<"$priv" || true) | grep -c . || true)"
   check N "db_privilege_assertions.sql: jede Zeile |t, darunter die sechs zuschauer-zaehlung-* (inkl. netzstoerung-columns)" "keine|6" "${red:-keine}|$own"
 }
