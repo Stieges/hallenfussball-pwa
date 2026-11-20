@@ -326,7 +326,7 @@ describe('M2 Endzustände (Tabelle § 3.2)', () => {
     await userEvent.type(await screen.findByTestId('join-name'), 'Tom');
     await userEvent.click(screen.getByTestId('join-submit'));
     expect((await screen.findByTestId('join-anonymous-disabled')).textContent)
-      .toContain('Beitritt ohne Konto ist gerade nicht freigeschaltet. Bitte der Turnierleitung Bescheid sagen.');
+      .toContain('Beitritt ohne Konto ist gerade nicht möglich. Bitte der Turnierleitung Bescheid sagen.');
     expect(screen.queryByTestId('join-retry')).toBeNull();
     expect(screen.queryByTestId('join-submit')).toBeNull();
     expect(deps.requestAccess).not.toHaveBeenCalled();

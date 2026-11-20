@@ -160,7 +160,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-      # @TA-021 (Beleg): Auch ein grüner Job mit Wiederholung („flaky“) lässt Belege zurück. Ohne Aufzeichnung (die Trace
+      # @TA-040: Auch ein grüner Job mit Wiederholung („flaky“) lässt Belege zurück. Ohne Aufzeichnung (die Trace
       # verschob Zeiten und machte zeitkritische Tests rot) bleiben das Fehlerbild des gescheiterten Versuchs
       # (`screenshot: 'only-on-failure'`) und der Anhang `belege-*.txt` (Adresse, sichtbarer Text, Konsole, Netz) in dessen
       # Ordner unter test-results liegen, weil `preserveOutput` auf „always“ steht. Bei rotem Job wird immer hochgeladen,

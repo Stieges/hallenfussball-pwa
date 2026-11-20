@@ -48,7 +48,7 @@ export async function bild(page: Page, name: string): Promise<void> {
  * `leibchen: true` tippt bei gleicher Trikotfarbe vor dem Anpfiff „Bestätigen“ (der Vorschlag: das Heim-Team zieht die erste Hallenfarbe, @SL-206).
  */
 export async function anpfeifen(page: Page, { leibchen = false }: { leibchen?: boolean } = {}): Promise<void> {
-  // Beleg bei Fehlschlag (@TA-021): Adresse, sichtbarer Text, Konsole und Netz der Seite als Anhang; die Prüfung bleibt gleich.
+  // Beleg bei Fehlschlag (@TA-040): Adresse, sichtbarer Text, Konsole und Netz der Seite als Anhang; die Prüfung bleibt gleich.
   await mitSeitenBelegen(page, test.info(), 'anpfeifen', async () => {
     await page.goto(`/#/tournament/${ID}/live`);
     if (leibchen) {
