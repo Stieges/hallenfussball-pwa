@@ -1,5 +1,5 @@
 /**
- * Belege für wackelnde Hilfsschritte (@TA-021, Beleg-Teil): Konsole, Seitenfehler, fehlgeschlagene und abgelehnte Netzanfragen,
+ * Belege für wackelnde Hilfsschritte (@TA-040): Konsole, Seitenfehler, fehlgeschlagene und abgelehnte Netzanfragen,
  * Adresse und sichtbarer Text der Seite werden mitgeschrieben und NUR bei einem Fehlschlag als Anhang an den Testbericht gehängt.
  * Der Anhang liegt als Datei `belege-<name>.txt` im Ausgabeordner des gescheiterten Versuchs (also im hochgeladenen
  * `test-results`) und zusätzlich im Report.

@@ -12,7 +12,7 @@ import { starteApp } from '../../../scripts/visual-metrics/app-server.mjs';
 import { STUB_URL, installiereStub } from '../../../scripts/visual-metrics/stub.mjs';
 
 const BILDER = process.env.HE112_BILDER;
-const MELDUNG = 'Beitritt ohne Konto ist gerade nicht freigeschaltet. Bitte der Turnierleitung Bescheid sagen.';
+const MELDUNG = 'Beitritt ohne Konto ist gerade nicht möglich. Bitte der Turnierleitung Bescheid sagen.';
 const INFO = { json: { state: 'open', relation: 'none', tournament: { id: 't-cup', title: 'Live-Cup', date: '2026-11-28' }, shareCode: 'SHARE1' } };
 
 interface App { basisUrl: string; stop: () => Promise<void> }
@@ -64,9 +64,9 @@ test.describe('@HE-112 Beitritt ohne Konto (Netz-Stub)', () => {
     });
   }
 
-  test('@HE-112 Bild bei 360×640 (hell)', async ({ page, context }) => {
+  test('@HE-112 Bild bei 390×844 (hell)', async ({ page, context }) => {
     test.skip(!BILDER, 'Bild nur mit HE112_BILDER');
-    await page.setViewportSize({ width: 360, height: 640 });
+    await page.setViewportSize({ width: 390, height: 844 });
     await page.emulateMedia({ colorScheme: 'light' });
     await installiereStub(context, { name: 'he112', zustand: { einwilligung: true, signup: 'fehler:anonymous_provider_disabled', rpc: { join_code_info: INFO } } });
     await page.goto(`${app.basisUrl}/#/join/CODE123456`);
@@ -74,7 +74,7 @@ test.describe('@HE-112 Beitritt ohne Konto (Netz-Stub)', () => {
     await page.getByTestId('join-submit').click();
     await expect(page.getByTestId('join-anonymous-disabled')).toContainText(MELDUNG, { timeout: 20000 });
     mkdirSync(BILDER ?? '.', { recursive: true });
-    await page.screenshot({ path: `${BILDER}/he112-beitritt-gesperrt-360-light.png` });
+    await page.screenshot({ path: `${BILDER}/he112-nicht-moeglich-390-light.png` });
   });
 
   test('@HE-112 Gegenbeispiel: Netzfehler bei der Anmeldung → Netz-Meldung mit „Erneut versuchen“', async ({ page, context }) => {
