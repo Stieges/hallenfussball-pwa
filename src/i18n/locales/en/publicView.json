@@ -34,6 +34,7 @@
     "title": "My team",
     "next": "Up next",
     "nextLine": "Match {{number}} · {{time}} · Field {{field}} vs {{opponent}}",
+    "nextLineOneField": "Match {{number}} · {{time}} vs {{opponent}}",
     "noNext": "No further match",
     "table": "Standings",
     "place": "Place {{place}} in group {{group}} · {{points}} points",

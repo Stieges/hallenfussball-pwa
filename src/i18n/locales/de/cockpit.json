@@ -105,6 +105,7 @@
       "gesperrt": "{{team}}: #{{nummer}} ist für dieses Turnier gesperrt",
       "reihenfolgeNurLeitung": "Nur die Turnierleitung ändert die Reihenfolge",
       "keinSpielMehr": "Auf {{feld}} folgt kein Spiel mehr",
+      "keinSpielMehrHeute": "Heute folgt kein Spiel mehr",
       "wartetOffline": "Dein Gerät hat kein Netz – dein Stand kann veraltet sein. Die Besetzung steht am Server vielleicht schon fest.",
       "wartetAuf": "Wartet auf: {{grund}}",
       "abschnitteMal": "{{anzahl}} ×",

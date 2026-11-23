@@ -10,7 +10,7 @@ import type { CSSProperties, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import type { GeneratedSchedule } from '../../../core/generators';
-import type { MatchView, TournamentView, ViewLocale } from '../../../core/view';
+import { effectiveFieldCount, type MatchView, type TournamentView, type ViewLocale } from '../../../core/view';
 import type { Match, Tournament } from '../../../types/tournament';
 import { getGroupShortCode } from '../../../utils/displayNames';
 import { CurrentMatchCard } from '../../../components/schedule/CurrentMatchCard';
@@ -26,7 +26,7 @@ import { publicCurrentOf, type PublicCurrent } from '../publicCurrentOf';
 export interface PublicCurrentBlockProps {
   view: TournamentView;
   schedule: GeneratedSchedule;
-  tournament: Pick<Tournament, 'teams' | 'groups'>;
+  tournament: Pick<Tournament, 'teams' | 'groups' | 'fields' | 'numberOfFields'>;
   /** Spiele mit den Ständen, die die Zielgruppe sehen darf (Uhr und Zeitstrafen) */
   currentMatches: readonly Match[];
   locale: ViewLocale;
@@ -52,6 +52,8 @@ export function PublicCurrentBlock({ view, schedule, tournament, currentMatches,
   const shown: readonly MatchView[] = current.kind === 'live' ? current.matches : [current.match];
   const sides = buildSideContext({ teams: tournament.teams, groups: tournament.groups, matches: schedule.allMatches, view, locale }, schedule.allMatches);
   const showGroup = (tournament.groups?.length ?? 0) > 1;
+  // @ZM-216: das Feld steht nur, wenn das Turnier mehr als eins hat
+  const showField = effectiveFieldCount({ fields: tournament.fields, numberOfFields: tournament.numberOfFields, matches: schedule.allMatches }) > 1;
 
   const card = (mv: MatchView): ReactElement | null => {
     const scheduled = schedule.allMatches.find((m) => m.id === mv.id);
@@ -62,7 +64,7 @@ export function PublicCurrentBlock({ view, schedule, tournament, currentMatches,
     const place = heading ?? (showGroup && scheduled.group ? tTournament('matchCard.groupPrefix', { group: getGroupShortCode(scheduled.group, tournament) }) : undefined);
     const meta = [
       mv.matchNumber === undefined ? undefined : t('current.match', { number: mv.matchNumber }),
-      tTournament('matchCard.field', { field: mv.field }),
+      showField ? tTournament('matchCard.field', { field: mv.field }) : undefined,
       place,
     ].filter((part): part is string => part !== undefined).join(' · ');
     const status = cardStatusOf(mv);

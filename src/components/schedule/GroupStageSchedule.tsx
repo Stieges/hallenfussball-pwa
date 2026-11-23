@@ -49,6 +49,8 @@ interface GroupStageScheduleProps {
   hasGroups: boolean;
   refereeConfig?: RefereeConfig;
   numberOfFields?: number;
+  /** Feld in den Karten nennen (@ZP-116): false bei einem Feld; ohne Angabe wie bisher */
+  showFieldLabel?: boolean;
   onRefereeChange?: (matchId: string, refereeNumber: number | null) => void;
   onFieldChange?: (matchId: string, fieldNumber: number) => void;
   /** Speichert den Endstand; `false` (bzw. abgelehnte Zusage) = nicht gespeichert, das Blatt bleibt offen (@SL-195) */
@@ -94,6 +96,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   hasGroups,
   refereeConfig,
   numberOfFields = 1,
+  showFieldLabel = true,
   onRefereeChange,
   onFieldChange,
   onScoreChange,
@@ -355,7 +358,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             awayTeam={awayTeam}
             matchNumber={match.matchNumber}
             scheduledTime={match.time}
-            field={match.field}
+            field={showFieldLabel ? match.field : undefined}
             onConfirm={() => handleNavigateToCockpit(match.id)}
             onCancel={handleExpandClose}
             extraAction={forfeitAction}
@@ -391,7 +394,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
       default:
         return null;
     }
-  }, [expandedMatchId, expandType, handleExpandClose, openQuickEntry, handleNavigateToCockpit, sides, liveMatches, clockOf, _editable, canEndRunning, onScoreChange, forfeit, menu.enabled]);
+  }, [expandedMatchId, expandType, handleExpandClose, openQuickEntry, handleNavigateToCockpit, sides, liveMatches, clockOf, _editable, canEndRunning, onScoreChange, forfeit, menu.enabled, showFieldLabel]);
 
   const sheetMatch = resultSheetId === null ? undefined : matches.find((m) => m.id === resultSheetId);
   const sheetView = sheetMatch === undefined ? undefined : matchViewOf(sides, sheetMatch.id);
@@ -479,6 +482,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             tournament={tournament}
             sideContext={sides}
             showGroupLabel={showGroupLabel}
+            showFieldLabel={showFieldLabel}
             onCardClick={handleCardClick}
             onCircleClick={handleCircleClick}
             renderExpandContent={renderExpandContent}
@@ -658,6 +662,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                     tournament={tournament}
                     sideContext={sides}
                     showGroupLabel={showGroupLabel}
+                    showFieldLabel={showFieldLabel}
                     showReferees={showReferees}
                     refereeOptions={editableRefereeOptions}
                     showFields={showFields}
@@ -721,7 +726,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
               matchId: match.id,
               matchNumber: match.matchNumber,
               scheduledTime: match.time,
-              field: match.field,
+              field: showFieldLabel ? match.field : undefined,
               group: matchHeading(match, sides) ?? (match.group ? getGroupShortCode(match.group, tournament) : undefined),
               showGroupLabel,
               homeTeam: sideDisplay(match, 'A', sides),

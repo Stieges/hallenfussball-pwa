@@ -55,6 +55,8 @@ export interface SortableMobileCardProps {
   sideContext?: SideContext;
   /** Whether to show group label (hide for single-group tournaments) */
   showGroupLabel?: boolean;
+  /** Feld in der Karte nennen (@ZP-116): false bei einem Feld */
+  showFieldLabel?: boolean;
   /** Show referee selector */
   showReferees: boolean;
   /** Referee options for dropdown */
@@ -93,6 +95,7 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
   tournament,
   sideContext,
   showGroupLabel = true,
+  showFieldLabel = true,
   showReferees,
   refereeOptions,
   showFields,
@@ -159,7 +162,7 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
     matchId: match.id,
     matchNumber: match.matchNumber,
     scheduledTime: match.time,
-    field: match.field,
+    field: showFieldLabel ? match.field : undefined,
     group: matchHeading(match, sides) ?? (match.group ? getGroupShortCode(match.group, tournament) : undefined),
     showGroupLabel,
     homeTeam: sideDisplay(match, 'A', sides),

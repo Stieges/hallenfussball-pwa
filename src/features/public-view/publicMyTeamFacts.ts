@@ -10,7 +10,8 @@ import type { Standing } from '../../types/tournament';
 export interface MyTeamNext {
   number?: number;
   time?: string;
-  field: number;
+  /** Nur bei mehr als einem Feld (@ZM-216) */
+  field?: number;
   opponent: string;
 }
 
@@ -36,9 +37,11 @@ export interface MyTeamFactsInput {
   standings: readonly Standing[];
   teamId: string;
   groupCount: number;
+  /** Das Turnier hat mehr als ein Feld (@ZM-216) */
+  showField?: boolean;
 }
 
-export function myTeamFacts({ view, standings, teamId, groupCount }: MyTeamFactsInput): MyTeamFacts {
+export function myTeamFacts({ view, standings, teamId, groupCount, showField = true }: MyTeamFactsInput): MyTeamFacts {
   const mine = view.matches.filter((m) => m.home.teamId === teamId || m.away.teamId === teamId);
   const upcoming = [...mine].filter((m) => m.isUpcoming).sort(byKickoff)[0];
   const facts: MyTeamFacts = {};
@@ -47,7 +50,7 @@ export function myTeamFacts({ view, standings, teamId, groupCount }: MyTeamFacts
     facts.next = {
       ...(upcoming.matchNumber === undefined ? {} : { number: upcoming.matchNumber }),
       ...(upcoming.kickoff === undefined ? {} : { time: upcoming.kickoff.time }),
-      field: upcoming.field,
+      ...(showField ? { field: upcoming.field } : {}),
       opponent: other.label,
     };
   }

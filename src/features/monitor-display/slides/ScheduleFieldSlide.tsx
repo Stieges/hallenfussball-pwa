@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { displayList, monitorThemes } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
-import type { TournamentView } from '../../../core/view';
+import { effectiveFieldCount, type TournamentView } from '../../../core/view';
 import type { MonitorSlide, MonitorTheme } from '../../../types/monitor';
 import { wirksamerRand } from '../overscan';
 import { fieldIdToNumber, resolveTheme } from '../monitorDisplayHelpers';
@@ -48,7 +48,7 @@ export function ScheduleFieldSlide({ slide, tournament, view, theme, style, page
 
   return (
     <div style={style}>
-      <SlideHeading icon="schedule" color={themeColors.text}>{t('slides.schedule.title', { field: fieldName })}</SlideHeading>
+      <SlideHeading icon="schedule" color={themeColors.text}>{effectiveFieldCount(tournament) > 1 ? t('slides.schedule.title', { field: fieldName }) : t('slides.schedule.titleSingle')}</SlideHeading>
 
       {/* Match List */}
       <div style={{

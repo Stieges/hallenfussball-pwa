@@ -79,14 +79,16 @@
       "none": "No tables yet"
     },
     "schedule": {
-      "title": "Schedule {{field}}"
+      "title": "Schedule {{field}}",
+      "titleSingle": "Schedule"
     },
     "live": {
       "idleSkip": "Waiting for the next match...",
       "nextMatch": "Next match",
       "noMatch": "No match scheduled",
       "kickoff": "Kickoff",
-      "hallNoMoreMatch": "No more matches on {{field}} today"
+      "hallNoMoreMatch": "No more matches on {{field}} today",
+      "hallNoMoreMatchSingle": "No more matches today"
     },
     "sponsor": {
       "notFound": "Sponsor not found",

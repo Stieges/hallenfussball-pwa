@@ -210,13 +210,15 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
           <OriginalTimeNote matchId={matchId} />
         </div>
 
-        {/* Field */}
-        <div style={fieldStyle}>
-          {field !== undefined ? t('matchCard.field', { field }) : ''}
-          {matchNumber && matchNumber > 0 && referee && (
-            <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>{t('matchCard.refereeSR', { referee })}</div>
-          )}
-        </div>
+        {/* Field – bei einem Feld (ohne Feldangabe) steht keine Spalte, nur der Schiedsrichter behält seinen Platz (@ZP-116) */}
+        {(field !== undefined || (matchNumber && matchNumber > 0 && referee)) && (
+          <div style={fieldStyle}>
+            {field !== undefined ? t('matchCard.field', { field }) : ''}
+            {matchNumber && matchNumber > 0 && referee && (
+              <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>{t('matchCard.refereeSR', { referee })}</div>
+            )}
+          </div>
+        )}
 
         <MatchCardSides
           matchId={matchId} homeTeam={homeTeam} awayTeam={awayTeam} result={result} status={status} clock={clock}

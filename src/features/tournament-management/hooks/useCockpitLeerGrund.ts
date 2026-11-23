@@ -6,6 +6,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SperrHinweis } from '../../../core/match';
+import { effectiveFieldCount } from '../../../core/view';
 import type { ScheduledMatch } from '../../../core/generators';
 import { awaitingLabel } from '../../../core/models/slotLabel';
 import type { Tournament } from '../../../types/tournament';
@@ -50,22 +51,25 @@ export function useCockpitLeerGrund(args: CockpitLeerGrundArgs): CockpitLeerGrun
     return Array.from(new Set(reasons));
   }, [currentMatchData, tournament.teams, tournament.groups, allMatches]);
 
+  // @SL-243: bei einem Feld nennt die Tafel kein Feld
+  const zeigtFeld = effectiveFieldCount(tournament) > 1;
+
   const sperrHinweise = useRedCardSuspensions(tournament, currentMatchData?.id ?? '');
 
   const leer = useMemo((): LeerGrund | null => {
-    const feldName = t('management.field', { number: selectedFieldNumber });
+    const feldName = zeigtFeld ? t('management.field', { number: selectedFieldNumber }) : undefined;
     if (awaitingTeams && currentMatchData) {
       return {
         art: 'wartetAufHerkunft', gruende: awaitingReasons, offline: !isOnline,
         paarung: `${sideName(currentMatchData, 'A', sides)} – ${sideName(currentMatchData, 'B', sides)}`,
-        spielLabel: tCockpit('tafel.vor.spielFeld', { nummer: currentMatchData.matchNumber, feld: feldName }),
+        spielLabel: feldName === undefined ? tCockpit('tafel.kopf.spiel', { nummer: currentMatchData.matchNumber }) : tCockpit('tafel.vor.spielFeld', { nummer: currentMatchData.matchNumber, feld: feldName }),
       };
     }
     return currentMatchData ? null : { art: 'keinSpiel', feldName };
-  }, [awaitingTeams, currentMatchData, awaitingReasons, isOnline, sides, tCockpit, t, selectedFieldNumber]);
+  }, [awaitingTeams, currentMatchData, awaitingReasons, isOnline, sides, tCockpit, t, selectedFieldNumber, zeigtFeld]);
 
   const leerProps: LiveCockpitProps = {
-    fieldName: t('management.field', { number: selectedFieldNumber }), tournamentName: tournament.title, tournamentId: tournament.id,
+    fieldName: t('management.field', { number: selectedFieldNumber }), showField: zeigtFeld, tournamentName: tournament.title, tournamentId: tournament.id,
     // ohne Spiel gibt es nichts zu steuern: nur die Tafel mit dem Grund
     cockpitSettings: tournament.matchCockpitSettings, kannSteuern: false, istLeitung, currentMatch: null, leer, upcomingMatches,
     onStart: () => undefined, onPause: () => undefined, onResume: () => undefined, onFinish: () => undefined,

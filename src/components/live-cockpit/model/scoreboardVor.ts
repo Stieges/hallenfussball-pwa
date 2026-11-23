@@ -82,7 +82,7 @@ export function scoreboardVor(input: VorEingang, t: Uebersetzer): ScoreboardVorE
   if (phase.zustand === 'vorAnpfiff' && match) {
     // @SL-197: groß die Spielzeit aus den Regeln („9:00“, bei Abschnitten „2 × 4:00“), darunter „Anstoß 9:10 · Spiel 1 · Feld 1“; ohne Regeln die Anstoßzeit wie bisher
     const zeit = vor.spielzeit && vor.spielzeit.abschnittSekunden > 0 ? vor.spielzeit : null;
-    const spielFeld = t('tafel.vor.spielFeld', { nummer: match.number, feld: input.fieldName ?? '' });
+    const spielFeld = input.fieldName ? t('tafel.vor.spielFeld', { nummer: match.number, feld: input.fieldName }) : t('tafel.kopf.spiel', { nummer: match.number });
     const kleinSpielzeit = zeit ? `${zeit.abschnitte > 1 ? `${t('tafel.vor.abschnitteMal', { anzahl: zeit.abschnitte })} ` : ''}${formatMinuten(zeit.abschnittSekunden)}` : null;
     if (input.spielzeitKlein === true) {
       // @SL-241: „Anstoß 10:20 · Spiel 3 · Feld 1 · Spielzeit 9:00“ klein, ohne große Ziffern
@@ -116,8 +116,8 @@ export function scoreboardVor(input: VorEingang, t: Uebersetzer): ScoreboardVorE
     if (grund.offline) { hinweise.push(t('tafel.vor.wartetOffline')); }
   }
   if (phase.zustand === 'keinSpiel' && grund?.art === 'keinSpiel') {
-    leerAnzeige = { titel: t('tafel.keinWeiteresSpiel'), untertitel: grund.feldName };
-    hinweise.push(t('tafel.vor.keinSpielMehr', { feld: grund.feldName }));
+    leerAnzeige = { titel: t('tafel.keinWeiteresSpiel'), untertitel: grund.feldName ?? null };
+    hinweise.push(grund.feldName ? t('tafel.vor.keinSpielMehr', { feld: grund.feldName }) : t('tafel.vor.keinSpielMehrHeute'));
   }
   // @SL-015, @FU-111: nach der Übernahme Uhr prüfen; '' = Vorgänger ohne Namen (B-49)
   if (vor.uebernahmeVon !== null) {

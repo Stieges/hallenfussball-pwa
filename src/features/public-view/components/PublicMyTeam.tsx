@@ -67,7 +67,9 @@ export function PublicMyTeam({ teamName, facts, onOpenSelector, onlyMine, onOnly
         <dd style={valueStyle} data-testid="my-team-next">
           {next === undefined
             ? t('myTeam.noNext')
-            : t('myTeam.nextLine', { number: next.number ?? '–', time: next.time ?? '–', field: next.field, opponent: next.opponent })}
+            : next.field === undefined
+              ? t('myTeam.nextLineOneField', { number: next.number ?? '–', time: next.time ?? '–', opponent: next.opponent })
+              : t('myTeam.nextLine', { number: next.number ?? '–', time: next.time ?? '–', field: next.field, opponent: next.opponent })}
         </dd>
         {table !== undefined && (
           <>

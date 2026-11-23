@@ -15,6 +15,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS, Tournament } from '../../types/tournament';
 import { GeneratedSchedule, ScheduledMatch } from '../../core/generators';
+import { effectiveFieldCount } from '../../core/view';
 import { LiveCockpit } from '../../components/live-cockpit';
 import { ShortcutHelp } from '../../components/live-cockpit/areas/ShortcutHelp';
 import type { MatchSummary } from '../../components/live-cockpit/types';
@@ -212,6 +213,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         <RulesLockProvider value={!canChangeRules}>
           <LiveCockpit
             fieldName={t('management.field', { number: feld })}
+            showField={effectiveFieldCount(tournament) > 1}
             tournamentName={tournament.title}
             tournamentId={tournament.id}
             cockpitSettings={tournament.matchCockpitSettings}

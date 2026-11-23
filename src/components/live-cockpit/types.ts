@@ -130,6 +130,8 @@ export interface GoalAction {
 export interface LiveCockpitProps extends LiveCockpitLeisteProps {
   /** Name of the field/court */
   fieldName: string;
+  /** Feld in der Tafel nennen (@SL-243): false bei einem Feld; ohne Angabe wie bisher true */
+  showField?: boolean;
   /** Tournament name for display */
   tournamentName: string;
   /** Tournament ID for custom sound lookup */

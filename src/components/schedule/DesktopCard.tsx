@@ -33,6 +33,8 @@ export interface DesktopCardProps {
   sideContext?: SideContext;
   /** Whether to show group label (hide for single-group tournaments) */
   showGroupLabel?: boolean;
+  /** Feld in der Karte nennen (@ZP-116): false bei einem Feld */
+  showFieldLabel?: boolean;
   /** Callback when card body is clicked */
   onCardClick: (matchId: string) => void;
   /** Callback when score circle is clicked */
@@ -56,6 +58,7 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
   tournament,
   sideContext,
   showGroupLabel = true,
+  showFieldLabel = true,
   onCardClick,
   onCircleClick,
   renderExpandContent,
@@ -83,7 +86,7 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
         matchId={match.id}
         matchNumber={match.matchNumber}
         scheduledTime={match.time}
-        field={match.field}
+        field={showFieldLabel ? match.field : undefined}
         referee={match.referee ? String(match.referee) : undefined}
         group={matchHeading(match, sides) ?? (match.group && !isSingleGroupId(match.group) ? getGroupShortCode(match.group, tournament) : undefined)}
         showGroupLabel={showGroupLabel}

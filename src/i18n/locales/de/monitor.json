@@ -79,14 +79,16 @@
       "none": "Noch keine Tabellen"
     },
     "schedule": {
-      "title": "Spielplan {{field}}"
+      "title": "Spielplan {{field}}",
+      "titleSingle": "Spielplan"
     },
     "live": {
       "idleSkip": "Warte auf nächstes Spiel...",
       "nextMatch": "Nächstes Spiel",
       "noMatch": "Kein Spiel geplant",
       "kickoff": "Anstoß",
-      "hallNoMoreMatch": "Auf {{field}} folgt heute kein Spiel mehr"
+      "hallNoMoreMatch": "Auf {{field}} folgt heute kein Spiel mehr",
+      "hallNoMoreMatchSingle": "Heute folgt kein Spiel mehr"
     },
     "sponsor": {
       "notFound": "Sponsor nicht gefunden",

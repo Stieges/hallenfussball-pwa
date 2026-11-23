@@ -13,7 +13,7 @@ import type { ScoreCommitResult } from './ui/molecules';
 import { CSSProperties, useMemo } from 'react';
 import { cssVars } from '../design-tokens'
 import { GeneratedSchedule } from '../core/generators';
-import type { TournamentView, ViewLocale } from '../core/view';
+import { effectiveFieldCount, type TournamentView, type ViewLocale } from '../core/view';
 import { Standing, Match, Team } from '../types/tournament';
 import type { ScheduleSource } from './schedule/scheduleSource';
 import { useLiveMatches } from '../hooks/useLiveMatches';
@@ -202,6 +202,8 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
     view,
     locale,
   }), [tournamentTeams, schedule.teams, schedule.tournament.id, schedule.tournament.groups, schedule.allMatches, view, locale]);
+  // @ZP-116: das Feld steht in den Karten nur, wenn das Turnier mehr als eins hat (dieselbe Zählweise wie Monitor und Verwaltung)
+  const showFieldLabel = effectiveFieldCount({ fields: schedule.tournament.fields, numberOfFields: schedule.numberOfFields, matches: schedule.allMatches }) > 1;
   // Live-Daten mit Ereignissen: EIN Abonnement für Gruppen- und Finalrunde und das Protokoll der Aktionsauswahl (@FU-080)
   const { liveMatches } = useLiveMatches(schedule.tournament.id);
   // Mit den Spielen (Ereignisse, live_state) trägt die Uhr der Karte laufende Zeitstrafen beim Team (@ZM-184)
@@ -264,6 +266,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           hasGroups={hasGroups}
           refereeConfig={schedule.refereeConfig}
           numberOfFields={schedule.numberOfFields}
+          showFieldLabel={showFieldLabel}
           editable={editable}
           editingSchedule={editingSchedule}
           pendingChanges={pendingChanges}

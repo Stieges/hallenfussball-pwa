@@ -105,6 +105,7 @@
       "gesperrt": "{{team}}: #{{nummer}} is suspended for this tournament",
       "reihenfolgeNurLeitung": "Only the organisers can change the order",
       "keinSpielMehr": "No more matches on {{feld}}",
+      "keinSpielMehrHeute": "No more matches today",
       "wartetOffline": "Your device has no network – your data may be out of date. The line-up may already be set on the server.",
       "wartetAuf": "Waiting for: {{grund}}",
       "abschnitteMal": "{{anzahl}} ×",
