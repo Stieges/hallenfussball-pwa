@@ -32,7 +32,7 @@ runs:
     - name: Supabase CLI über setup-cli (GitHub-Release)
       id: setup
       if: steps.cache.outputs.cache-hit != 'true'
-      uses: supabase/setup-cli@v1
+      uses: supabase/setup-cli@v3
       continue-on-error: true
       with:
         version: ${{ inputs.version }}
