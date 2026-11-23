@@ -14,7 +14,7 @@
  * @see docs/concepts/ANMELDUNG-KONZEPT.md
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../../components/ui/Button';
 import { PasswordInput } from '../../../components/ui/PasswordInput';
@@ -96,6 +96,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     validateForm,
   } = useLoginForm();
 
+  // @AN-059: Zeitgeber der Weiterleitung nach dem Anmelden; beim Verlassen der Seite löschen, sonst reißt er einen, der
+  // schon woandershin getippt hat, zurück auf die Startseite.
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (successTimerRef.current !== null) {
+      clearTimeout(successTimerRef.current);
+      successTimerRef.current = null;
+    }
+  }, []);
+
   const [apiError, setApiError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -133,7 +143,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           }
           setShowSuccess(true);
           const delay = (result.migratedCount && result.migratedCount > 0) ? 2500 : 1500;
-          setTimeout(() => {
+          successTimerRef.current = setTimeout(() => {
+            successTimerRef.current = null;
             onSuccess?.();
           }, delay);
         } else {
