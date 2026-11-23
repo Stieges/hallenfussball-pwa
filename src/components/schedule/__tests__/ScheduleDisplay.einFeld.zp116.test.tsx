@@ -47,5 +47,8 @@ describe('@ZP-116 Zeile am Laptop (MatchCardDesktop): keine Spalte ohne Feldanga
     expect(ohneZeile.container.textContent).not.toContain('Feld');
     const ohne = ohneZeile.container.querySelector('[role="article"]')!.children.length;
     expect(ohne).toBe(mit - 1);
+    // das Spaltenraster hat genau so viele Spalten wie die Zeile Zellen hat (sonst rutschen die Zellen)
+    const spalten = (r: HTMLElement) => getComputedStyle(r).gridTemplateColumns.split(' ').length;
+    expect(spalten(ohneZeile.container.querySelector('[role="article"]')!)).toBe(ohne);
   });
 });
