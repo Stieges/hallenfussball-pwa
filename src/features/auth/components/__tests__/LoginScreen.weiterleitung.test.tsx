@@ -72,4 +72,26 @@ describe('@AN-059 LoginScreen: Weiterleitung nach dem Anmelden', () => {
     act(() => { vi.advanceTimersByTime(200); });
     expect(onSuccess).toHaveBeenCalledTimes(1);
   });
+
+  it('Erfolgsmeldung geschlossen: onSuccess genau einmal, auch nach Ablauf von 1,5 s und 2,5 s (kein zweiter Sprung auf die Startseite)', async () => {
+    setupAuth();
+    const onSuccess = vi.fn();
+    await anmelden(onSuccess);
+    act(() => { vi.advanceTimersByTime(300); });
+    fireEvent.click(screen.getByText('loginDialogs.success.continue'));
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+    act(() => { vi.advanceTimersByTime(1500); });
+    act(() => { vi.advanceTimersByTime(1000); });
+    act(() => { vi.advanceTimersByTime(10_000); });
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+  });
+
+  it('Erfolgsmeldung geschlossen bei übernommenen Turnieren (2,5 s): onSuccess genau einmal', async () => {
+    setupAuth(3);
+    const onSuccess = vi.fn();
+    await anmelden(onSuccess);
+    fireEvent.click(screen.getByText('loginDialogs.success.continue'));
+    act(() => { vi.advanceTimersByTime(10_000); });
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+  });
 });

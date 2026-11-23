@@ -106,4 +106,22 @@ describe('@SL-244 EventEditDialog: angefangene Rückennummer bleibt bei neuem Se
     rerender(dialog({ ...tor(7), id: 'g2' }));
     expect(screen.getByTestId('event-edit-number')).toHaveValue('7');
   });
+
+  it('Wiederöffnen (z. B. nach Esc) zeigt die gespeicherte Nummer, nicht die verworfene Eingabe', () => {
+    const { rerender } = render(dialog(tor(7)));
+    fireEvent.change(screen.getByTestId('event-edit-number'), { target: { value: '9' } });
+    rerender(<EventEditDialog isOpen={false} onClose={vi.fn()} event={tor(7)} onUpdate={vi.fn()} onDelete={vi.fn()} {...teams} />);
+    rerender(dialog(tor(7)));
+    expect(screen.getByTestId('event-edit-number')).toHaveValue('7');
+  });
+
+  it('Wiederöffnen setzt die Löschen-Rückfrage zurück', () => {
+    const { rerender } = render(dialog(tor(7)));
+    fireEvent.click(screen.getByTestId('event-edit-delete'));
+    expect(screen.getByText('Ereignis wirklich löschen?')).toBeTruthy();
+    rerender(<EventEditDialog isOpen={false} onClose={vi.fn()} event={tor(7)} onUpdate={vi.fn()} onDelete={vi.fn()} {...teams} />);
+    rerender(dialog(tor(7)));
+    expect(screen.queryByText('Ereignis wirklich löschen?')).toBeNull();
+    expect(screen.getByTestId('event-edit-delete')).toBeTruthy();
+  });
 });
