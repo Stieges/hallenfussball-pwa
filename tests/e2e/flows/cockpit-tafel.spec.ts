@@ -102,7 +102,7 @@ test.describe('Cockpit-Tafel', () => {
       await expect(page.getByTestId('scoreboard-clock-rest')).toContainText(/\d{1,2}:\d{2}/);
       await expect(page.getByTestId('scoreboard-clock')).toContainText('Anstoß');
     }
-    // Am Laptop steht „Spiel 1 · Feld 1“ in der Kopfzeile der Tafel (@SL-180), am Handy unter der Uhr
+    // Am Laptop steht „Spiel 1“ (bei einem Feld ohne Feld, @SL-243) in der Kopfzeile der Tafel (@SL-180), am Handy unter der Uhr
     await expect(page.locator(UHR_ZEILE).first()).toContainText(/Spiel\s\d+/);
 
     // @SL-001: der Anpfiff startet die Uhr; die Spielzeit läuft ab 0:00
