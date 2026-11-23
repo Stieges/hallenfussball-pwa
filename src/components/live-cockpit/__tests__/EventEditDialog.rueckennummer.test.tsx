@@ -80,3 +80,30 @@ describe('@SL-172 EventEditDialog: Rückennummer 1–99', () => {
     expect(onClose).toHaveBeenCalled();
   });
 });
+
+describe('@SL-244 EventEditDialog: angefangene Rückennummer bleibt bei neuem Server-Stand', () => {
+  const dialog = (event: EditableMatchEvent) => (
+    <EventEditDialog isOpen onClose={vi.fn()} event={event} onUpdate={vi.fn()} onDelete={vi.fn()} {...teams} />
+  );
+
+  it('Eine angefangene Rückennummer bleibt stehen, wenn ein neuer Stand vom Server kommt', () => {
+    const { rerender } = render(dialog(tor(7)));
+    fireEvent.change(screen.getByTestId('event-edit-number'), { target: { value: '9' } });
+    rerender(dialog(tor(7))); // neues, inhaltsgleiches Objekt wie nach jeder Neuberechnung des Spiels
+    expect(screen.getByTestId('event-edit-number')).toHaveValue('9');
+  });
+
+  it('Gegenbeispiel: Eine geänderte Nummer eines anderen Geräts wird übernommen', () => {
+    const { rerender } = render(dialog(tor(7)));
+    fireEvent.change(screen.getByTestId('event-edit-number'), { target: { value: '9' } });
+    rerender(dialog(tor(12)));
+    expect(screen.getByTestId('event-edit-number')).toHaveValue('12');
+  });
+
+  it('anderes Ereignis: Feld zeigt dessen Nummer', () => {
+    const { rerender } = render(dialog(tor(7)));
+    fireEvent.change(screen.getByTestId('event-edit-number'), { target: { value: '9' } });
+    rerender(dialog({ ...tor(7), id: 'g2' }));
+    expect(screen.getByTestId('event-edit-number')).toHaveValue('7');
+  });
+});
