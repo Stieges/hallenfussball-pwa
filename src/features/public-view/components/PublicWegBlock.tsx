@@ -5,7 +5,7 @@
  */
 import { useState } from 'react';
 import type { ReactElement } from 'react';
-import type { TournamentView } from '../../../core/view';
+import { effectiveFieldCount, type TournamentView } from '../../../core/view';
 import type { Standing, Tournament } from '../../../types/tournament';
 import { hiddenFilterKeys } from '../publicFilterState';
 import { myTeamFacts } from '../publicMyTeamFacts';
@@ -38,7 +38,7 @@ export function PublicWegBlock(p: PublicWegBlockProps): ReactElement {
   const teamName = myTeamName(p.tournament, p.filters.myTeamId);
   const facts = p.filters.myTeamId === null || teamName === null
     ? {}
-    : myTeamFacts({ view: p.view, standings: p.standings, teamId: p.filters.myTeamId, groupCount: groups.length });
+    : myTeamFacts({ view: p.view, standings: p.standings, teamId: p.filters.myTeamId, groupCount: groups.length, showField: effectiveFieldCount(p.tournament) > 1 });
   const keys = hiddenFilterKeys(p.filters);
   // Phase nur anbieten, wenn es eine Finalrunde gibt (@ZM-196: Nikolaus ohne Phasen-Filter)
   const hasFinals = p.view.matches.some((m) => m.phase === 'final');

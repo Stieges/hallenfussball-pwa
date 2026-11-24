@@ -126,7 +126,7 @@ export function LiveSlide({ slide, tournament, view, theme, style, pinnedMatchId
     return (
       <div style={{ ...style, containerType: 'size' }} data-testid="hall-no-match-area">
         <div data-testid="hall-no-match" data-monitor="uhr" style={hallNoMatchStyle(themeColors.text)}>
-          {t('slides.live.hallNoMoreMatch', { field: fieldName })}
+          {angaben.showField ? t('slides.live.hallNoMoreMatch', { field: fieldName }) : t('slides.live.hallNoMoreMatchSingle')}
         </div>
       </div>
     );
@@ -134,13 +134,16 @@ export function LiveSlide({ slide, tournament, view, theme, style, pinnedMatchId
 
   return (
     <div style={style}>
-      <div style={{
-        fontSize: displayFontSizes.headingMD,
-        color: themeColors.textSecondary,
-        marginBottom: displaySpacing.sectionMD,
-      }}>
-        {fieldName}
-      </div>
+      {/* @ZM-217: bei einem Feld keine Überschrift „Feld 1“ */}
+      {angaben.showField && (
+        <div style={{
+          fontSize: displayFontSizes.headingMD,
+          color: themeColors.textSecondary,
+          marginBottom: displaySpacing.sectionMD,
+        }}>
+          {fieldName}
+        </div>
+      )}
 
       {whenIdleType === 'skip' ? (
         <div style={{

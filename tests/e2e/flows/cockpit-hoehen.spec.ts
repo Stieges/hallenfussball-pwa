@@ -79,7 +79,7 @@ for (const [breite, fh] of FENSTER) {
       const etikett = await page.getByTestId('scoreboard-clock').getByText('Restzeit', { exact: true }).boundingBox();
       expect(etikett && uhr && etikett.y + etikett.height).toBeLessThanOrEqual((uhr?.y ?? 0) + 1);
       expect((balken?.y ?? 0)).toBeGreaterThanOrEqual((uhr?.y ?? 0) + (uhr?.height ?? 0) - 1);
-      await expect(page.getByTestId('scoreboard-kopf-text')).toContainText(/Spiel 1 · Feld 1 · 1\. Halbzeit · Gespielt \d+:\d{2}/i); // die Kopfzeile steht in Großbuchstaben (CSS)
+      await expect(page.getByTestId('scoreboard-kopf-text')).toContainText(/Spiel 1 · 1\. Halbzeit · Gespielt \d+:\d{2}/i); // @SL-243: ein Feld, die Kopfzeile nennt kein Feld; sie steht in Großbuchstaben (CSS)
       await expect(page.getByTestId('scoreboard-clock-sub')).toHaveCount(0);
       const achse = Math.abs((await mitte(page, 'scoreboard-colon')) - (await mitte(page, 'scoreboard-clock-rest-colon')));
       expect(achse, 'Doppelpunkt der Uhr unter dem der Kästen').toBeLessThanOrEqual(1);

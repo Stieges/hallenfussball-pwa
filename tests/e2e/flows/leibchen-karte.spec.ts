@@ -362,7 +362,7 @@ for (const f of FENSTER) {
       await animationenFertig(page);
       if (f.handy) {
         await expect(page.getByTestId('scoreboard-clock-rest')).toHaveCount(0);
-        await expect(page.getByTestId('scoreboard-clock-sub')).toHaveText(/^Anstoß\s\d{2}:\d{2}\s·\sSpiel\s3\s·\sFeld\s\d+\s·\sSpielzeit\s\d+:\d{2}$/);
+        await expect(page.getByTestId('scoreboard-clock-sub')).toHaveText(/^Anstoß\s\d{2}:\d{2}\s·\sSpiel\s3\s·\sSpielzeit\s\d+:\d{2}$/);
         // sauberer Umbruch: nur an „ · “, nie mitten in einer Angabe (jede Angabe steht in einer Zeile)
         const umbrueche = await page.getByTestId('scoreboard-clock-sub').evaluate((el) => {
           const bereich = document.createRange(); const text = el.firstChild as Text; const zeilen = new Set<number>();

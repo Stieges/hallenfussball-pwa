@@ -61,7 +61,7 @@ import { CockpitKopfStreifen } from './areas/CockpitKopfStreifen';
 const NO_SPERREN: readonly SperrHinweis[] = [];
 const NO_TEAMS = { home: { id: '', name: '' }, away: { id: '', name: '' } };
 export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
-  const { fieldName, tournamentName, tournamentId, cockpitSettings: cockpitSettingsProp, kannSteuern, istLeitung = false, currentMatch, upcomingMatches, leer = null } = props;
+  const { fieldName, showField = true, tournamentName, tournamentId, cockpitSettings: cockpitSettingsProp, kannSteuern, istLeitung = false, currentMatch, upcomingMatches, leer = null } = props;
   const { t } = useTranslation('cockpit');
 
   // Ausgang, Übergabe bei entzogenem Recht, verworfene Klärungseinträge (W1, B-50)
@@ -166,7 +166,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
       eintraegeWarten={rejectedOutbox.pendingCount}
       tonHinweis={tonHinweis}
       wachhaltenHinweis={wachhaltenHinweis}
-      fieldName={fieldName}
+      fieldName={showField ? fieldName : undefined}
       tournamentName={tournamentName}
       leer={leer}
       mindestpause={props.mindestpause}

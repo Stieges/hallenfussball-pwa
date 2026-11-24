@@ -15,7 +15,7 @@ export type LeerGrund =
       /** Das Gerät hat kein Netz: Die Besetzung am Server kann schon feststehen (@TM-035). */
       offline?: boolean;
     }
-  | { art: 'keinSpiel'; feldName: string };
+  | { art: 'keinSpiel'; feldName?: string };
 export interface CockpitPhase {
   zustand: CockpitZustand;
   abschnittArt: AbschnittArt;

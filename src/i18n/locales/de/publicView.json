@@ -34,6 +34,7 @@
     "title": "Mein Team",
     "next": "Als Nächstes",
     "nextLine": "Spiel {{number}} · {{time}} Uhr · Feld {{field}} gegen {{opponent}}",
+    "nextLineOneField": "Spiel {{number}} · {{time}} Uhr gegen {{opponent}}",
     "noNext": "Kein weiteres Spiel",
     "table": "Tabelle",
     "place": "Platz {{place}} in Gruppe {{group}} · {{points}} Punkte",

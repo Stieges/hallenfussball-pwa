@@ -141,9 +141,11 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
     border: `${cssVars.borderWidth.thin} solid ${isLive ? cssVars.colors.borderActive : cssVars.colors.border}`,
   };
 
+  const hasFieldColumn = field !== undefined || Boolean(matchNumber && matchNumber > 0 && referee);
   const rowStyle: CSSProperties = {
     display: 'grid',
-    gridTemplateColumns: 'auto auto 1fr auto 1fr auto',
+    // ohne Feld-Spalte (ein Feld, @ZP-116) eine Spalte weniger, sonst rutschen alle Zellen eine Spalte nach links
+    gridTemplateColumns: hasFieldColumn ? 'auto auto 1fr auto 1fr auto' : 'auto 1fr auto 1fr auto',
     alignItems: 'center',
     gap: cssVars.spacing.md,
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
@@ -210,13 +212,15 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
           <OriginalTimeNote matchId={matchId} />
         </div>
 
-        {/* Field */}
-        <div style={fieldStyle}>
-          {field !== undefined ? t('matchCard.field', { field }) : ''}
-          {matchNumber && matchNumber > 0 && referee && (
-            <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>{t('matchCard.refereeSR', { referee })}</div>
-          )}
-        </div>
+        {/* Field – bei einem Feld (ohne Feldangabe) steht keine Spalte, nur der Schiedsrichter behält seinen Platz (@ZP-116) */}
+        {hasFieldColumn && (
+          <div style={fieldStyle}>
+            {field !== undefined ? t('matchCard.field', { field }) : ''}
+            {matchNumber && matchNumber > 0 && referee && (
+              <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>{t('matchCard.refereeSR', { referee })}</div>
+            )}
+          </div>
+        )}
 
         <MatchCardSides
           matchId={matchId} homeTeam={homeTeam} awayTeam={awayTeam} result={result} status={status} clock={clock}
