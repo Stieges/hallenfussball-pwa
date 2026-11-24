@@ -227,4 +227,47 @@ describe('A-08f3b2 Push-Kette Kanal offen → Spielplan frisch (@FU-087)', () =>
     await tick(REALTIME_POLL_FALLBACK_INTERVAL_MS);
     expect(view.getByTestId('score').textContent).toBe('2:0');
   });
+
+  // @FU-102: Ergebnis aus der Unterbrechung kommt nach dem Wiederverbinden ohne Neuladen an
+  it('@FU-102 erstes Verbinden nach dem Öffnen liest nicht nach', async () => {
+    const cloud = createFakeCloud({ tournament: withScore(1), revisions: revisions(2) });
+    await mount(cloud);
+    const readsBefore = cloud.fake.getWithMatchRevisions.mock.calls.length;
+    act(() => server.join());
+    await tick(PUSH_COALESCE_MAX_WAIT_MS + 100);
+    expect(cloud.fake.getWithMatchRevisions.mock.calls.length).toBe(readsBefore);
+  });
+
+  it('@FU-102 Wiederverbinden: genau ein frisches Lesen, das Ergebnis aus der Lücke („2:0“) kommt ohne Push und ohne Neuladen an', async () => {
+    const cloud = createFakeCloud({ tournament: withScore(1), revisions: revisions(2) });
+    const view = await mount(cloud);
+    act(() => server.join());
+    await tick(PUSH_COALESCE_MAX_WAIT_MS + 100);
+    const readsBefore = cloud.fake.getWithMatchRevisions.mock.calls.length;
+
+    cloud.setState({ tournament: withScore(2), revisions: revisions(3) }); // in der Lücke eingetragen, kein Push angekommen
+    act(() => server.join()); // Kanal beigetreten (SUBSCRIBED) – zweites Mal
+    await tick(PUSH_COALESCE_MAX_WAIT_MS + 100);
+
+    expect(view.getByTestId('score').textContent).toBe('2:0');
+    expect(cloud.fake.getWithMatchRevisions.mock.calls.length - readsBefore).toBe(1);
+  });
+
+  it('@FU-102 flatterndes Netz: fünf Wiederverbindungen in 400 ms lösen höchstens zwei Lesungen aus (Bündler, kein Nachlese-Sturm)', async () => {
+    const cloud = createFakeCloud({ tournament: withScore(1), revisions: revisions(2) });
+    await mount(cloud);
+    act(() => server.join());
+    await tick(PUSH_COALESCE_MAX_WAIT_MS + 100);
+    const readsBefore = cloud.fake.getWithMatchRevisions.mock.calls.length;
+
+    for (let i = 0; i < 5; i++) {
+      act(() => server.join());
+      await tick(80);
+    }
+    await tick(PUSH_COALESCE_MAX_WAIT_MS + 100);
+
+    const reads = cloud.fake.getWithMatchRevisions.mock.calls.length - readsBefore;
+    expect(reads).toBeGreaterThanOrEqual(1);
+    expect(reads).toBeLessThanOrEqual(2);
+  });
 });

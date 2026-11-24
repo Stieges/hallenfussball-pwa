@@ -70,15 +70,17 @@ export function EventEditDialog({
   const [playerNumber, setPlayerNumber] = useState<string>('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // Reset state when dialog opens or event changes
+  // @SL-244: Zurücksetzen nur beim Öffnen, bei einem anderen Ereignis oder wenn sich die GESPEICHERTE Nummer ändert
+  // (z. B. von einem anderen Gerät). Ein neues, inhaltsgleiches `event`-Objekt (jede Neuberechnung des Spiels) lässt die
+  // angefangene Eingabe stehen. Beide Formate (direkt und payload) werden unterstützt.
+  const eventId = event?.id;
+  const savedNumber = event ? (event.playerNumber ?? event.payload?.playerNumber)?.toString() ?? '' : null;
   useEffect(() => {
-    if (isOpen && event) {
-      // Support both direct and payload property formats
-      const existingNumber = event.playerNumber ?? event.payload?.playerNumber;
-      setPlayerNumber(existingNumber?.toString() ?? '');
+    if (isOpen && savedNumber !== null) {
+      setPlayerNumber(savedNumber);
       setShowDeleteConfirm(false);
     }
-  }, [isOpen, event]);
+  }, [isOpen, eventId, savedNumber]);
 
   // Helper to get teamId from either format
   const getEventTeamId = (e: EditableMatchEvent): string | undefined => {

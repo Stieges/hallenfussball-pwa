@@ -1,6 +1,6 @@
 /**
  * Belege für wackelnde Hilfsschritte (@TA-040): Konsole, Seitenfehler, fehlgeschlagene und abgelehnte Netzanfragen,
- * Adresse und sichtbarer Text der Seite werden mitgeschrieben und NUR bei einem Fehlschlag als Anhang an den Testbericht gehängt.
+ * Seitenwechsel des Hauptframes (mit Zeit seit Beginn des Schritts), Adresse und sichtbarer Text der Seite werden mitgeschrieben und NUR bei einem Fehlschlag als Anhang an den Testbericht gehängt.
  * Der Anhang liegt als Datei `belege-<name>.txt` im Ausgabeordner des gescheiterten Versuchs (also im hochgeladenen
  * `test-results`) und zusätzlich im Report.
  * Die Prüfung selbst bleibt unverändert: der Fehler wird nach dem Anhängen unverändert weitergereicht (keine Wartezeit, keine
@@ -37,6 +37,10 @@ export async function mitSeitenBelegen<T>(page: Page, testInfo: TestInfo, name: 
   const merke = (art: string, text: string): void => {
     if (zeilen.length < MAX_ZEILEN) { zeilen.push(kuerzen(schwaerzen(`${art} ${text}`), MAX_ZEICHEN_ZEILE)); }
   };
+  const beginn = Date.now();
+  const onNavigated = (frame: { url(): string }): void => {
+    if (frame === page.mainFrame()) { merke('[seitenwechsel]', `${new Date().toISOString()} (+${String(Date.now() - beginn)} ms) ${frame.url()}`); }
+  };
   const onConsole = (m: { type(): string; text(): string }): void => { merke(`[konsole:${m.type()}]`, m.text()); };
   const onPageError = (e: Error): void => { merke('[seitenfehler]', e.message); };
   const onRequestFailed = (r: { method(): string; url(): string; failure(): { errorText: string } | null }): void => {
@@ -45,6 +49,7 @@ export async function mitSeitenBelegen<T>(page: Page, testInfo: TestInfo, name: 
   const onResponse = (r: { status(): number; url(): string; request(): { method(): string } }): void => {
     if (r.status() >= 400) { merke('[netz-status]', `${String(r.status())} ${r.request().method()} ${r.url()}`); }
   };
+  page.on('framenavigated', onNavigated);
   page.on('console', onConsole);
   page.on('pageerror', onPageError);
   page.on('requestfailed', onRequestFailed);
@@ -55,6 +60,7 @@ export async function mitSeitenBelegen<T>(page: Page, testInfo: TestInfo, name: 
     await anhaengen(page, testInfo, name, zeilen);
     throw fehler;
   } finally {
+    page.off('framenavigated', onNavigated);
     page.off('console', onConsole);
     page.off('pageerror', onPageError);
     page.off('requestfailed', onRequestFailed);

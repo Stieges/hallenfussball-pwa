@@ -165,12 +165,27 @@ export function useTournamentManager(tournamentId: string) {
         ? tournamentRepository.subscribeCloudCopyAdopted(tournamentId, () => { void loadFreshRef.current(); })
         : undefined, [tournamentRepository, tournamentId]);
 
+    // @FU-102: Ein Wiederverbinden des Turnier-Kanals (Netzwechsel, Rückkehr in den Vordergrund) liest genau einmal nach, denn ein
+    // Ergebnis aus der Lücke kommt über den neuen Kanal nicht mehr als Push. Das ERSTE Verbinden nach dem Öffnen liest nicht nach.
+    // Je erneutem „connected“ (auch nach „disconnected“/„paused“) läuft ein Anstoß über den Bündler (höchstens ein Lesen je
+    // PUSH_COALESCE_MAX_WAIT_MS, kein Nachlese-Sturm bei flatterndem Netz). Grenze: Der Abbau des alten Kanals kann bis zu 10 s
+    // dauern (`RealtimeService.startSubscription`, wartet auf `pendingRemovals`); erst danach gibt es das neue „connected“ und das
+    // Nachlesen. In dieser Lücke trägt nur das Abfrage-Ausweichen (alle 5 s), sobald der Kanal als unterbrochen gemeldet wird
+    // (Folgearbeit: „connecting“ melden).
+    const connectedForRef = useRef<string | null>(null);
+    const onRealtimeStatusChange = useCallback((status: string) => {
+        if (status !== 'connected') { return; }
+        if (connectedForRef.current === tournamentId) { pushCoalescer.trigger(); }
+        connectedForRef.current = tournamentId;
+    }, [tournamentId, pushCoalescer]);
+
     // Realtime Subscription (only when authenticated with Supabase)
     const { isConnected: isRealtimeConnected, status: realtimeStatus } = useRealtimeTournament(
         // Only enable realtime for authenticated users with Supabase
         isRealtimeEnabled ? tournamentId : undefined,
         {
             enabled: isRealtimeEnabled && !!tournament,
+            onStatusChange: onRealtimeStatusChange,
             onUpdate: () => {
                 // Refetch when any tournament data changes
                 if (import.meta.env.DEV) {
