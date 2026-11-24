@@ -67,7 +67,7 @@ describe('A-34 Drift-Check (PENDING-LIVE leer, Rechte-Assertions)', () => {
   });
 
   it('die drei Assertions stehen in der SQL-Datei, in PRIVILEGE_ASSERTION_NAMES und in pending_assertions_for', () => {
-    const mapping = drift.match(new RegExp(`    ${MIGRATION_NAME.replace(/\./g, '\\.')}\\)\\n\\s+echo "([^"]+)"`));
+    const mapping = drift.match(new RegExp(`    ${MIGRATION_NAME.replace(/[\\.]/g, '\\$&')}\\)\\n\\s+echo "([^"]+)"`));
     expect(mapping?.[1].split(' ').sort()).toEqual([...A34_ASSERTIONS].sort());
     for (const name of A34_ASSERTIONS) {
       expect(assertions).toContain(`SELECT '${name}',`);
