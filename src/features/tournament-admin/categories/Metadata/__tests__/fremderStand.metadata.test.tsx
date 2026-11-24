@@ -3,10 +3,10 @@
  * Szenariogrundriss „Eine angefangene Eingabe übersteht die Änderung eines anderen Geräts“, Formular „der Verwaltung › Metadaten“,
  * mit @FU-108 (Konflikt im selben Feld: kein stilles Überschreiben) – docs/anforderungen/plattform/2026-09-24_fundament-gemeinsamer-stand.md.
  */
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../../../../auth/hooks/useCan', () => ({ useCan: () => true }));
 vi.mock('../../../../../hooks/useTournaments', () => ({ useTournaments: () => ({ saveTournament: vi.fn(() => Promise.resolve()), tournaments: [] }) }));
 vi.mock('../../../../../hooks/useTournamentStartState', () => ({ useTournamentStartState: () => ({ state: 'unknown' }) }));
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import type { Tournament } from '../../../../../types/tournament';
 import { initRealDeI18n } from '../../../../../test/realDeI18n';
