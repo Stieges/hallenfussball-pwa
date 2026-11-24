@@ -23,7 +23,9 @@ import { useTournamentStartState } from '../../../../hooks/useTournamentStartSta
 import { useCan } from '../../../auth/hooks/useCan';
 import { immutableDescriptionKey } from '../../../tournament-management/immutableFacts';
 import { effectiveFieldCount, effectiveGroupCount } from '../../../../core/view';
-import { validateTournamentMeta, hasMetaErrors, type TournamentMetaErrors } from '../../../../core/services/tournamentMetaValidation';
+import { validateTournamentMeta, hasMetaErrors } from '../../../../core/services/tournamentMetaValidation';
+import type { MetaForm } from '../../../tournament-management/utils/metaFormRebase';
+import { useMetaFormSync } from './useMetaFormSync';
 
 // =============================================================================
 // PROPS
@@ -164,13 +166,6 @@ const styles = {
 // COMPONENT
 // =============================================================================
 
-/** Formularstand aus dem Turnier – eine Stelle für Init, Sync und Reset. */
-const toFormData = (t: Tournament): Partial<Tournament> => ({
-  title: t.title, organizer: t.organizer, rulebook: t.rulebook, ageClass: t.ageClass,
-  location: t.location, contactInfo: t.contactInfo,
-  startDate: t.startDate ?? t.date, startTime: t.startTime ?? t.timeSlot,
-});
-
 export function MetadataCategory({
   tournament,
   onTournamentUpdate,
@@ -187,19 +182,9 @@ export function MetadataCategory({
     variant: 'warning',
     confirmText: t('metadata.confirmResetDialog.confirm'),
   });
-  // Local form state (copy of tournament data)
-  const [formData, setFormData] = useState<Partial<Tournament>>(() => toFormData(tournament));
-
-  // Private notes (stored in tournament.adminNotes or similar)
-  const [notes, setNotes] = useState(tournament.adminNotes ?? '');
+  // Lokaler Formularstand samt privaten Notizen; ein neuer Turnier-Stand lässt angefangene Eingaben stehen (@FU-134)
+  const { formData, setFormData, notes, setNotes, metaErrors, setMetaErrors, getSaveBase, resetToTournament } = useMetaFormSync(tournament);
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
-  const [metaErrors, setMetaErrors] = useState<TournamentMetaErrors>({});
-
-  // Sync formData when tournament changes (after save)
-  useEffect(() => {
-    setFormData(toFormData(tournament));
-    setNotes(tournament.adminNotes ?? '');
-  }, [tournament]);
 
   // Calculate dirty state
   const isDirty = useMemo(() => {
@@ -259,7 +244,7 @@ export function MetadataCategory({
   }, [isDirty, t]);
 
   // Update handler
-  const handleUpdate = <K extends keyof Tournament>(field: K, value: Tournament[K]) => {
+  const handleUpdate = <K extends keyof MetaForm>(field: K, value: MetaForm[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (field === 'title' || field === 'startDate') { setMetaErrors(prev => ({ ...prev, [field]: undefined })); }
   };
@@ -285,6 +270,7 @@ export function MetadataCategory({
       date: formData.startDate ?? tournament.date,
       timeSlot: formData.startTime ?? tournament.timeSlot,
       updatedAt: new Date().toISOString(),
+      ...getSaveBase(), // @FU-108: bei Überschneidung auf dem alten Stand – der Server lehnt ab statt still zu überschreiben
     };
 
     onTournamentUpdate(updatedTournament);
@@ -300,9 +286,7 @@ export function MetadataCategory({
       if (!confirmReset) {return;}
     }
 
-    setFormData(toFormData(tournament));
-    setNotes(tournament.adminNotes ?? '');
-    setMetaErrors({});
+    resetToTournament();
   };
 
   // Get mode display name
