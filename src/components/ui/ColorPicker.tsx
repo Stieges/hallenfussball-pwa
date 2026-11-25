@@ -2,6 +2,9 @@ import React, { useState, useRef, useEffect, CSSProperties } from 'react';
 import { HexColorPicker } from 'react-colorful';
 import { cssVars } from '../../design-tokens';
 import { wizardJerseyPresets } from '../../design-tokens/colors/palette';
+import { useTranslation } from 'react-i18next';
+import { ColorDot } from './atoms/ColorDot';
+import { UnknownColorOption } from './UnknownColorOption';
 
 /**
  * Default jersey color presets (common team colors)
@@ -11,10 +14,12 @@ const JERSEY_COLOR_PRESETS: string[] = [...wizardJerseyPresets];
 interface ColorPickerProps {
   /** Label text */
   label?: string;
-  /** Current color value (hex) */
-  value: string;
+  /** Current color value (hex); `undefined` = keine Farbe (nur sinnvoll mit `onUnknown`, @W3-042) */
+  value: string | undefined;
   /** Called when color changes */
   onChange: (color: string) => void;
+  /** Bietet als ERSTES Feld „Unbekannt“ an und ruft dies bei Wahl (@W3-042); ohne diese Angabe gibt es das Feld nicht (Standardfarben, @W3-043) */
+  onUnknown?: () => void;
   /** Preset colors to show */
   presets?: string[];
   /** Disable the picker */
@@ -35,6 +40,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
   label,
   value,
   onChange,
+  onUnknown,
   presets = JERSEY_COLOR_PRESETS,
   disabled = false,
   valueLabel,
@@ -43,7 +49,9 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
   style = {},
   'data-testid': testId,
 }) => {
+  const { t } = useTranslation('tournament');
   const [isOpen, setIsOpen] = useState(false);
+  const unknown = value === undefined || value === '';
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -82,6 +90,11 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     }
   }, [isOpen]);
 
+  const handleUnknownClick = () => {
+    onUnknown?.();
+    setIsOpen(false);
+  };
+
   const handlePresetClick = (color: string) => {
     onChange(color);
     setIsOpen(false);
@@ -119,7 +132,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     width: 24,
     height: 24,
     borderRadius: cssVars.borderRadius.sm,
-    backgroundColor: value,
+    backgroundColor: unknown ? undefined : value,
     border: `1px solid ${cssVars.colors.borderControl}`,
     flexShrink: 0,
   };
@@ -198,16 +211,25 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
         aria-haspopup="true"
         aria-expanded={isOpen}
       >
-        <div style={swatchStyles} aria-hidden="true" />
-        {valueLabel === undefined ? (
-          <span style={valueTextStyles}>{value}</span>
+        {unknown && onUnknown !== undefined ? (
+          <>
+            <ColorDot label={t('matchCard.shirtUnknown')} testId="color-picker-unknown-dot" />
+            <span style={nameStyles}>{t('teams.colorUnknown')}</span>
+          </>
         ) : (
           <>
-            <span style={nameStyles}>{valueLabel}</span>
-            <span style={{ ...valueTextStyles, marginLeft: 'auto', fontSize: cssVars.fontSizes.labelMd, color: cssVars.colors.textSecondary }}>{value}</span>
+            <div style={swatchStyles} aria-hidden="true" />
+            {valueLabel === undefined ? (
+              <span style={valueTextStyles}>{value}</span>
+            ) : (
+              <>
+                <span style={nameStyles}>{valueLabel}</span>
+                <span style={{ ...valueTextStyles, marginLeft: 'auto', fontSize: cssVars.fontSizes.labelMd, color: cssVars.colors.textSecondary }}>{value}</span>
+              </>
+            )}
           </>
         )}
-        <span style={{ marginLeft: valueLabel === undefined ? 'auto' : undefined, color: cssVars.colors.textSecondary }}>
+        <span style={{ marginLeft: valueLabel === undefined || unknown ? 'auto' : undefined, color: cssVars.colors.textSecondary }}>
           {isOpen ? '▲' : '▼'}
         </span>
       </button>
@@ -216,15 +238,16 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
         <div ref={dropdownRef} style={dropdownStyles} role="dialog" aria-label="Farbauswahl">
           {/* Preset colors */}
           <div style={presetsGridStyles} role="listbox" aria-label="Voreingestellte Farben">
+            {onUnknown !== undefined && <UnknownColorOption selected={unknown} onSelect={handleUnknownClick} />}
             {presets.map((color) => (
               <button
                 key={color}
                 type="button"
                 onClick={() => handlePresetClick(color)}
-                style={presetSwatchStyles(color, color.toUpperCase() === value.toUpperCase())}
+                style={presetSwatchStyles(color, color.toUpperCase() === (value ?? '').toUpperCase())}
                 aria-label={presetLabel?.(color) ?? `Farbe ${color}`}
                 title={presetLabel?.(color)}
-                aria-selected={color.toUpperCase() === value.toUpperCase()}
+                aria-selected={color.toUpperCase() === (value ?? '').toUpperCase()}
                 role="option"
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'scale(1.1)';
@@ -242,7 +265,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
               <div style={dividerStyles} />
               <div style={customPickerLabelStyles}>Eigene Farbe</div>
               <HexColorPicker
-                color={value}
+                color={value ?? ''}
                 onChange={onChange}
                 style={{ width: '100%' }}
               />

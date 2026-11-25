@@ -13,14 +13,14 @@ export const COLOR_COMMIT_DELAY_MS = 400;
 
 type JerseyKey = Exclude<keyof typeof palette.jersey, 'neonGreen'>;
 const JERSEY_KEYS = Object.keys(palette.jersey).filter((k): k is JerseyKey => k !== 'neonGreen');
-const sameColor = (a: string, b: string): boolean => a.toUpperCase() === b.toUpperCase();
+const sameColor = (a: string, b: string | undefined): boolean => a.toUpperCase() === b?.toUpperCase();
 const isPresetColor = (hex: string): boolean => wizardJerseyPresets.some((p) => sameColor(p, hex));
 
 interface TeamColorFieldProps {
-  /** Gespeicherte Trikotfarbe (Hex) */
-  value: string;
-  /** Speichert die Farbe (ganzes Turnier) */
-  onCommit: (color: string) => void;
+  /** Gespeicherte Trikotfarbe (Hex); `undefined` = „Unbekannt“ (@W3-042) */
+  value: string | undefined;
+  /** Speichert die Farbe (ganzes Turnier); `undefined` stellt „Unbekannt“ wieder her */
+  onCommit: (color: string | undefined) => void;
 }
 
 export function TeamColorField({ value, onCommit }: TeamColorFieldProps) {
@@ -57,6 +57,14 @@ export function TeamColorField({ value, onCommit }: TeamColorFieldProps) {
     timer.current = setTimeout(flush, COLOR_COMMIT_DELAY_MS);
   };
 
+  // @W3-042: „Unbekannt“ gilt sofort und überholt eine noch offene Ziehfarbe
+  const handleUnknown = () => {
+    clearTimeout(timer.current);
+    draftRef.current = undefined;
+    setDraft(undefined);
+    if (valueRef.current !== undefined) { commitRef.current(undefined); }
+  };
+
   const shown = draft ?? value;
   const nameOf = (hex: string): string | undefined => {
     const key = JERSEY_KEYS.find((k) => sameColor(palette.jersey[k], hex));
@@ -65,7 +73,7 @@ export function TeamColorField({ value, onCommit }: TeamColorFieldProps) {
 
   return (
     <div onPointerUp={flush} onKeyUp={flush} onBlur={flush}>
-      <ColorPicker value={shown} valueLabel={nameOf(shown)} presetLabel={nameOf} onChange={handleChange} />
+      <ColorPicker value={shown} valueLabel={shown === undefined ? undefined : nameOf(shown)} presetLabel={nameOf} onChange={handleChange} onUnknown={handleUnknown} />
     </div>
   );
 }

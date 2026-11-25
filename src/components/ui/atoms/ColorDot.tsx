@@ -8,10 +8,12 @@
  */
 import type { CSSProperties, ReactElement } from 'react';
 import { cssVars } from '../../../design-tokens';
+import { FALLBACK_PATTERN } from '../../../core/models/scoreBoxColors';
+import { stripedImage } from '../molecules/scoreBoxStyle';
 
 export interface ColorDotProps {
-  /** Farbe als `#RRGGBB`. */
-  color: string;
+  /** Farbe als `#RRGGBB`; fehlt sie, zeigt der Tupfer das Fallback-Muster „Trikotfarbe unbekannt“ (@W3-042, @ZM-203). */
+  color?: string;
   /** Textalternative, nennt Zweck und Farbname. */
   label: string;
   testId?: string;
@@ -24,8 +26,10 @@ export function ColorDot({ color, label, testId }: ColorDotProps): ReactElement 
     width: cssVars.iconSizes.lg,
     height: cssVars.iconSizes.lg,
     borderRadius: cssVars.borderRadius.full,
-    background: color,
+    ...(color === undefined
+      ? { backgroundImage: stripedImage(FALLBACK_PATTERN.light, FALLBACK_PATTERN.dark, 'flat') }
+      : { background: color }),
     border: `${cssVars.borderWidth.medium} solid ${cssVars.colors.borderControl}`,
   };
-  return <span role="img" aria-label={label} data-testid={testId} data-accent={color} style={style} />;
+  return <span role="img" aria-label={label} data-testid={testId} {...(color !== undefined ? { 'data-accent': color } : { 'data-shirt-unknown': 'true' })} style={style} />;
 }

@@ -243,3 +243,24 @@ describe('A-30a @ZM-140 getragene Farbe am Spiel → Kasten (Farbregel Spielanze
     expect(DEFAULT_SPECTATOR_DISPLAY.homeColor).toBe(palette.kit.blue);
   });
 });
+
+describe('A-30a @W3-042 Trikotfarbe wieder auf „Unbekannt“', () => {
+  const mitSchwarz = [team(SV_SUED, 'SV Süd', SCHWARZ), team(FC_NORD, 'FC Nord', WEISS)];
+  const wiederUnbekannt = [{ id: SV_SUED, name: 'SV Süd' } as Team, team(FC_NORD, 'FC Nord', WEISS)];
+
+  it('@W3-042 das nächste Spiel von SV Süd rechnet ohne Farbe für SV Süd', () => {
+    const naechstes = spiel('spiel-9', SV_SUED, FC_NORD, { matchStatus: 'scheduled' });
+    expect(wornColors(naechstes, mitSchwarz)).toEqual({ a: SCHWARZ, b: WEISS });
+    expect(wornColors(naechstes, wiederUnbekannt)).toEqual({ a: undefined, b: WEISS });
+  });
+
+  it('@W3-042 ein beendetes Spiel behält Schwarz, mit dem es gespielt wurde', () => {
+    const gespielt = spiel('spiel-7', SV_SUED, FC_NORD, { matchStatus: 'finished', kit: compactKit({ a: SCHWARZ, b: WEISS }) });
+    expect(wornColors(gespielt, wiederUnbekannt)).toEqual({ a: SCHWARZ, b: WEISS });
+  });
+
+  it('@W3-042 eine offene Leibchen-Karte rechnet ohne Farbe neu: kein Konflikt mehr zwischen Schwarz und Schwarz', () => {
+    expect(kitConflict(SCHWARZ, SCHWARZ)).toBe('same');
+    expect(kitConflict(undefined, SCHWARZ)).toBe('none');
+  });
+});

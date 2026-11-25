@@ -335,6 +335,7 @@
       "brown": "Braun"
     },
     "jerseyColorLabel": "Trikotfarbe:",
+    "colorUnknown": "Unbekannt",
     "rename": "Umbenennen",
     "delete": "Löschen",
     "removedTeams": "Entfernte Teams ({{count}})",

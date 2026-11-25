@@ -10,6 +10,7 @@ import { getGroupDisplayName } from '../../utils/displayNames';
 import { generateTeamId } from '../../utils/idGenerator';
 import { sanitizeTeamName } from '../../core/utils/textSanitizer';
 import { activeTeams } from './utils/replanTeams';
+import { primaryColorOf, withPrimaryColor } from '../../core/models/teamColors';
 import { BibColorsSettings } from './components/BibColorsSettings';
 import { HostTeamToggle } from './components/HostTeamToggle';
 import { HostOpeningChoice } from './components/HostOpeningChoice';
@@ -146,11 +147,8 @@ export const Step4_Teams: React.FC<Step4Props> = ({
   };
 
   // Handle color change
-  const handleColorChange = (teamId: string, color: string) => {
-    const team = teams.find(t => t.id === teamId);
-    onUpdateTeam(teamId, {
-      colors: { ...team?.colors, primary: color },
-    });
+  const handleColorChange = (teamId: string, color: string | undefined) => {
+    onUpdateTeam(teamId, { colors: withPrimaryColor(teams.find(t => t.id === teamId)?.colors, color) });
   };
 
   // Toggle expanded state
@@ -398,9 +396,9 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                       {/* Color Section */}
                       <ColorPicker
                         label={t('step4.jerseyColor')}
-                        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty color should use fallback
-                        value={team.colors?.primary || '#666666'}
+                        value={primaryColorOf(team.colors)}
                         onChange={(color) => handleColorChange(team.id, color)}
+                        onUnknown={() => handleColorChange(team.id, undefined)}
                         showCustomPicker={false}
                       />
                     </div>
