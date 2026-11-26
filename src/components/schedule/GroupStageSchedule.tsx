@@ -217,6 +217,17 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   /*
    * Handle card body click - öffnet das Blatt „Endergebnis“ (ohne Aktionsauswahl)
    */
+  /** Zuschauer-Seite (@ZM-219): derselbe Tipp auf dieselbe Zeile öffnet und schließt die Ereignisse wieder */
+  const toggleExpand = (matchId: string, type: 'live' | 'summary') => {
+    if (expandedMatchId === matchId && expandType === type) {
+      setExpandedMatchId(null);
+      setExpandType(null);
+    } else {
+      setExpandedMatchId(matchId);
+      setExpandType(type);
+    }
+  };
+
   const handleCardClick = (matchId: string) => {
     const match = matches.find(m => m.id === matchId);
     if (!match) { return; }
@@ -233,6 +244,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     if (status === 'running') {
       // Live matches: Show hint that score is managed in cockpit
       // For now, show LiveInfoExpand
+      if (!_editable) { toggleExpand(matchId, 'live'); return; }
       setExpandedMatchId(matchId);
       setExpandType('live');
       return;
@@ -240,13 +252,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
     // UX-FIX: Public View - Finished matches show Summary
     if (!_editable && status === 'finished') {
-      if (expandedMatchId === matchId && expandType === 'summary') {
-        setExpandedMatchId(null);
-        setExpandType(null);
-      } else {
-        setExpandedMatchId(matchId);
-        setExpandType('summary');
-      }
+      toggleExpand(matchId, 'summary');
       return;
     }
 
@@ -278,11 +284,13 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
         break;
       case 'running':
         // Live: Show live info with link to cockpit
+        if (!_editable) { toggleExpand(matchId, 'live'); break; }
         setExpandedMatchId(matchId);
         setExpandType('live');
         break;
       case 'finished':
         // Finished: Show match summary with events (inline)
+        if (!_editable) { toggleExpand(matchId, 'summary'); break; }
         setExpandedMatchId(matchId);
         setExpandType('summary');
         break;
