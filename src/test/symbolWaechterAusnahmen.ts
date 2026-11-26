@@ -31,7 +31,6 @@ export const SYMBOL_AUSNAHMEN: Readonly<Record<string, number>> = {
   'components/schedule/MatchCard/EditableMatchCard.tsx': 3,
   'components/schedule/MatchCard/MatchCard.tsx': 1,
   'components/schedule/MatchCard/MatchCardSides.tsx': 1,
-  'components/schedule/MatchCard/MatchCardSidesSymmetric.tsx': 1,
   'components/schedule/MatchCard/SRQuickEditPopover.tsx': 1,
   'components/schedule/MatchExpand/DetailExpand.tsx': 3,
   'components/schedule/MatchExpand/liveInfoEventLine.tsx': 4,

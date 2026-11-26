@@ -4,7 +4,8 @@
  * Liefert drei Zellen für das Raster der Zeile (`MatchCardDesktop`).
  */
 import { type CSSProperties, type ReactNode } from 'react';
-import { cssVars } from '../../../design-tokens';
+import { cssVars, iconSizeValues } from '../../../design-tokens';
+import { Icons } from '../../ui/Icons';
 import { TeamAvatar } from '../../ui/TeamAvatar';
 import { SlashBreaks } from '../../ui/atoms/TeamName';
 import { ZeitstrafeHinweis } from '../../ui/molecules/ZeitstrafeHinweis';
@@ -110,7 +111,7 @@ export const MatchCardSidesSymmetric: React.FC<MatchCardSidesSymmetricProps> = (
         aria-hidden="true"
       >
         {hasEvents && !isLive && (
-          <span style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm, transition: 'transform 0.2s ease', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+          <span data-testid={`match-arrow-${matchId}`} style={{ display: 'flex', color: cssVars.colors.textMuted, transition: 'transform 0.2s ease', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}><Icons.ChevronDown size={iconSizeValues.xs} /></span>
         )}
       </div>
       </div>

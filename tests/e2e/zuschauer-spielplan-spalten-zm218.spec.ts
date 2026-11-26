@@ -53,7 +53,7 @@ async function zeilen(page: Page): Promise<Zeile[]> {
       return k === undefined ? Number.NaN : mitte(k);
     };
     const kreise = a.querySelectorAll('[data-score-circle]');
-    const pfeil = (kreise[kreise.length - 1]?.textContent ?? '').includes('▼');
+    const pfeil = a.querySelector('[data-testid^="match-arrow-"]') !== null;
     const pfeilX = mitte(kreise[kreise.length - 1]);
     return [{
       pfeilX, stand: mitte(kreis), logoHeim: logo(heimZelle, false), logoGast: logo(gastZelle, true),
@@ -90,7 +90,7 @@ test.describe('@ZM-218 Stand und Logos im Spielplan der Zuschauer-Seite in feste
     test(`@ZM-218 bei ${String(breite)} Pixeln: der große Stand der aufgeklappten Ereignisse steht genau unter dem Stand der Zeile`, async ({ page }) => {
       test.skip(test.info().project.name !== 'desktop', 'setzt das Fenster selbst');
       await oeffne(page, breite);
-      const erste = page.locator('[role="article"]').filter({ has: page.locator('[data-testid^="match-circle-"]') }).filter({ hasText: '▼' }).first();
+      const erste = page.locator('[role="article"]').filter({ has: page.locator('[data-testid^="match-circle-"]') }).filter({ has: page.locator('[data-testid^="match-arrow-"]') }).first();
       const standZeile = erste.locator('[data-testid^="match-circle-"]');
       await standZeile.click();
       await expect(page.locator('[data-expand-content]').filter({ visible: true })).toHaveCount(1);

@@ -37,9 +37,9 @@ async function oeffne(page: Page, breite: number): Promise<void> {
 }
 
 
-/** Der Pfeil der sichtbaren Zeile des Spiels (die ausgeblendete Fassung für das andere Gerät hat denselben Text). */
+/** Der Pfeil der sichtbaren Zeile des Spiels: App-Symbol am Laptop, Zeichen „▼“ in der Handy-Karte (die ausgeblendete Fassung für das andere Gerät ist nicht sichtbar). */
 function pfeil(page: Page, id: string) {
-  return page.locator('[role="article"], [data-testid="match-card"]').filter({ has: page.getByTestId(`match-name-${id}-home`) }).filter({ visible: true }).locator('span:text-is("▼")').filter({ visible: true }).first();
+  return page.locator('[role="article"], [data-testid="match-card"]').filter({ has: page.getByTestId(`match-name-${id}-home`) }).filter({ visible: true }).locator('[data-testid^="match-arrow-"], span:text-is("▼")').filter({ visible: true }).first();
 }
 const stand = (page: Page, id: string) => page.locator(`[data-testid="match-circle-${id}"], [data-testid="match-goals-${id}-home"]`).filter({ visible: true }).first();
 const name = (page: Page, id: string) => page.getByTestId(`match-name-${id}-home`).filter({ visible: true }).first();
