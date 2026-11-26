@@ -22,6 +22,8 @@ test('@OB-091 nach „Speichern“: Meldung „Name gespeichert“, neuer Name, 
   await page.getByTestId(`team-edit-button-${id}`).click();
   await page.getByTestId(`team-rename-input-${id}`).fill('SG Tengling/Taching');
   await page.getByTestId(`team-rename-save-${id}`).click();
+  // zweiter Tipp gleich danach auf „Umbenennen“ (vor allen Prüfungen, damit die Sperre noch gilt)
+  await page.getByTestId(`team-edit-button-${id}`).click();
 
   await expect(page.getByTestId(`team-rename-input-${id}`)).toHaveCount(0);
   await expect(page.getByText('Name gespeichert')).toBeVisible();
@@ -30,8 +32,4 @@ test('@OB-091 nach „Speichern“: Meldung „Name gespeichert“, neuer Name, 
   const ordner = process.env.TEAMS_BILDER ?? testInfo.outputDir;
   mkdirSync(ordner, { recursive: true });
   await page.screenshot({ path: join(ordner, '412-meldung.png'), fullPage: false });
-
-  // zweiter Tipp gleich danach auf „Umbenennen“
-  await page.getByTestId(`team-edit-button-${id}`).click();
-  await expect(page.getByTestId(`team-rename-input-${id}`)).toHaveCount(0);
 });

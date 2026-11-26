@@ -38,7 +38,7 @@ describe('TeamsTab @OB-091', () => {
     await umbenennenUndSpeichern(user);
     expect(screen.queryByTestId('team-rename-input-ufer')).toBeNull();
     expect(await screen.findByText('tournament:teams.renameSaved')).toBeTruthy();
-    // endet auf den neuen Namen (jsdom hängt bei Textknoten-Wechsel mit <wbr> den alten Text davor; im Browser prüft das Playwright-Spiegelstück genau)
+    // endet auf den neuen Namen: mit eingefrorenem Date bleibt in diesem Aufbau der alte Textknoten stehen (Baustein allein ohne Fake-Date: TeamName.namenswechsel.test.tsx, vollständiger Name; im Browser prüft das Playwright-Stück den vollen Text)
     expect(screen.getByTestId('team-name-ufer').textContent).toMatch(/SG Tengling\/Taching$/);
   });
 

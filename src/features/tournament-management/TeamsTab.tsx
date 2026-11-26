@@ -15,7 +15,6 @@ import { useState, CSSProperties, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, Input, Button, TeamAvatar, LogoUploadDialog } from '../../components/ui';
 import { TeamColorField } from './components/TeamColorField';
-import { ColorDot } from '../../components/ui/atoms/ColorDot';
 import { primaryColorOf, withPrimaryColor } from '../../core/models/teamColors';
 import { Tournament, Team, TeamLogo } from '../../types/tournament';
 import { cssVars, dialogWidths } from '../../design-tokens'
@@ -28,16 +27,15 @@ import {
   getRemovedTeams,
   TeamMatchAnalysis,
 } from '../../utils/teamHelpers';
-import { getGroupDisplayName } from '../../utils/displayNames';
 import { DialogSurface } from '../../components/ui/molecules/DialogSurface';
 import { LeadOnlyHint } from '../../components/ui/molecules/LeadOnlyHint';
 import { TournamentClosedHint } from '../../components/ui/molecules/TournamentClosedHint';
 import { useTournamentClosed } from '../../hooks/useTournamentClosed';
 import { useCan } from '../auth/hooks/useCan';
 import { ConfirmDialog, useConfirmDialog } from '../../components/ui/ConfirmDialog';
-import { SlashBreaks } from '../../components/ui/atoms/TeamName';
 import { useRenameFeedback } from './hooks/useRenameFeedback';
-import { teamNameStyle, teamNameRowStyle, expandButtonStyle, buttonGroupStyle, keepShortHyphenWord } from './teamsTabCardStyles';
+import { badgeStyle, buttonGroupStyle, teamNameStyle } from './teamsTabCardStyles';
+import { TeamCardHeader } from './components/TeamCardHeader';
 
 interface TeamsTabProps {
   tournament: Tournament;
@@ -270,15 +268,6 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     flex: 1,
   };
 
-  const badgeStyle = (color: string, bgColor: string): CSSProperties => ({
-    fontSize: cssVars.fontSizes.xs,
-    padding: '2px 8px',
-    borderRadius: cssVars.borderRadius.sm,
-    background: bgColor,
-    color: color,
-    fontWeight: cssVars.fontWeights.medium,
-  });
-
   const actionButtonStyle = (variant: 'edit' | 'delete'): CSSProperties => ({
     padding: '6px 12px',
     fontSize: cssVars.fontSizes.sm,
@@ -304,33 +293,6 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     borderRadius: cssVars.borderRadius.lg,
     marginBottom: cssVars.spacing.md,
     transition: 'border-color 0.2s ease',
-  };
-
-  const teamCardHeaderStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: cssVars.spacing.md,
-    gap: cssVars.spacing.md,
-    cursor: 'pointer',
-    transition: 'background-color 0.15s ease',
-    minHeight: '80px', // Enforce height for logo space
-  };
-
-  const teamCardLeftStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.md,
-    flex: 1,
-    minWidth: 0,
-  };
-
-  const teamCardMetaStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.sm,
-    fontSize: cssVars.fontSizes.xs,
-    color: cssVars.colors.textSecondary,
   };
 
   // Die Karte schneidet nicht ab (der Farbwähler ragt über sie hinaus): der graue Bereich trägt die unteren Rundungen selbst
@@ -420,62 +382,16 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                   borderColor: isExpanded ? cssVars.colors.primary : cssVars.colors.border,
                 }}
               >
-                {/* Card Header */}
-                <div
-                  data-testid={`team-expand-toggle-${team.id}`}
-                  style={teamCardHeaderStyle}
-                  onClick={() => !isEditing && toggleExpanded(team.id)}
-                >
-                  <div style={teamCardLeftStyle}>
-                    {/* TeamAvatar with click to open logo dialog */}
-                    <div
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (canEditTeams) { setLogoUploadTeamId(team.id); }
-                      }}
-                      style={{ cursor: canEditTeams ? 'pointer' : 'default' }}
-                    >
-                      <TeamAvatar team={team} size="lg" showColorRing />
-                    </div>
-
-                    {/* Team Name and Badges */}
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={teamNameRowStyle}>
-                        <span style={teamNameStyle} data-testid={`team-name-${team.id}`}><span data-teamname><SlashBreaks text={team.name} keep={keepShortHyphenWord} /></span></span>
-                        {team.group && (
-                          <span style={badgeStyle(cssVars.colors.primary, cssVars.colors.infoBadgeBg)}>
-                            {getGroupDisplayName(team.group, tournament)}
-                          </span>
-                        )}
-                      </div>
-                      <div style={teamCardMetaStyle}>
-                        <ColorDot size="xs" color={primaryColor} label={primaryColor === undefined ? t('matchCard.shirtUnknown') : t('teams.jerseyColor', { color: primaryColor })} testId={`team-color-dot-${team.id}`} />
-                        {analysis.matchesWithResults > 0 && (
-                          <span>{t('teams.results', { count: analysis.matchesWithResults })}</span>
-                        )}
-                        {analysis.matchesWithoutResults > 0 && (
-                          <span>{t('teams.planned', { count: analysis.matchesWithoutResults })}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Expand/Collapse Button */}
-                  <button
-                    data-testid={`team-expand-arrow-${team.id}`}
-                    style={{
-                      ...expandButtonStyle,
-                      transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleExpanded(team.id);
-                    }}
-                    aria-label={isExpanded ? t('teams.collapse') : t('teams.expand')}
-                  >
-                    ▼
-                  </button>
-                </div>
+                <TeamCardHeader
+                  team={team}
+                  tournament={tournament}
+                  analysis={analysis}
+                  isExpanded={isExpanded}
+                  canEditTeams={canEditTeams}
+                  onToggle={() => { if (!isEditing) { toggleExpanded(team.id); } }}
+                  onArrow={() => toggleExpanded(team.id)}
+                  onLogo={() => setLogoUploadTeamId(team.id)}
+                />
 
                 {/* Expanded Section */}
                 {
