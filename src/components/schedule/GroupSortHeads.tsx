@@ -10,6 +10,7 @@ import type { SortColumn, SortedColumn, SortState } from '../../core/standings/t
 import { ShortLabel } from '../ui/atoms';
 import { SHORT_TERMS, type TableHeadTerm } from '../ui/atoms/shortTerms';
 import { Icons } from '../ui/Icons';
+import { SORT_HEAD_TOUCH_OK } from '../ui/molecules/sortTouchExemption';
 import { SortableHeader } from '../ui/molecules/SortableHeader';
 import { SortPicker, type SortPickerOption } from '../ui/molecules/SortPicker';
 import { SortReset } from '../ui/molecules/SortReset';
@@ -79,7 +80,7 @@ export function GroupHeadCell({ sort, column, term, text, style, indicator = fal
   if (column === 'platz') {
     return (
       <th style={cellStyle} scope="col" aria-sort={sort.state === null ? 'ascending' : 'none'}>
-        <button type="button" style={platzButton} data-testid={testId} data-sorted={sort.state === null ? 'true' : 'false'} onClick={() => sort.onTap('platz')}>
+        <button type="button" style={platzButton} data-testid={testId} data-touch-ok={SORT_HEAD_TOUCH_OK} data-sorted={sort.state === null ? 'true' : 'false'} onClick={() => sort.onTap('platz')}>
           {visual}
           {sort.state === null ? <Icons.ArrowUp size={iconSizeValues.xs} /> : null}
         </button>

@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { cssVars, iconSizeValues } from '../../../design-tokens';
 import type { SortColumn, SortState } from '../../../core/standings/tableSort';
 import { Icons } from '../Icons';
+import { SORT_HEAD_TOUCH_OK } from './sortTouchExemption';
 
 export interface SortableHeaderProps {
   column: Exclude<SortColumn, 'platz'>;
@@ -75,7 +76,7 @@ export function SortableHeader({ column, label, visual, state, onTap, testId, as
   const Arrow = ariaSort === 'descending' ? Icons.ArrowDown : Icons.ArrowUp;
 
   const button = (
-    <button type="button" style={buttonStyle} aria-label={accessibleName} data-testid={testId} data-sorted={active ? 'true' : 'false'} onClick={() => onTap(column)}>
+    <button type="button" style={buttonStyle} aria-label={accessibleName} data-testid={testId} data-touch-ok={SORT_HEAD_TOUCH_OK} data-sorted={active ? 'true' : 'false'} onClick={() => onTap(column)}>
       <span>{shown === column && visual ? visual : name}</span>
       {active ? <Arrow size={iconSizeValues.xs} /> : null}
     </button>
