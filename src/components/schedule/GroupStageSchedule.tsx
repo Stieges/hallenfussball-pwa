@@ -214,12 +214,9 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     onEnterResult: onScoreChange ? openQuickEntry : undefined, onNavigateToCockpit, onCorrect, onRefereeChange, onFieldChange, forfeit,
   });
 
-  /*
-   * Handle card body click - öffnet das Blatt „Endergebnis“ (ohne Aktionsauswahl)
-   */
-  /** Zuschauer-Seite (@ZM-219): derselbe Tipp auf dieselbe Zeile öffnet und schließt die Ereignisse wieder */
+  /** Zuschauer-Seite (@ZM-219): ein Tipp auf dieselbe Zeile öffnet und schließt die Ereignisse wieder, auch wenn das Spiel inzwischen endete (Art wechselt von live auf Zusammenfassung) */
   const toggleExpand = (matchId: string, type: 'live' | 'summary') => {
-    if (expandedMatchId === matchId && expandType === type) {
+    if (expandedMatchId === matchId) {
       setExpandedMatchId(null);
       setExpandType(null);
     } else {
@@ -228,6 +225,9 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     }
   };
 
+  /*
+   * Handle card body click - öffnet das Blatt „Endergebnis“ (ohne Aktionsauswahl)
+   */
   const handleCardClick = (matchId: string) => {
     const match = matches.find(m => m.id === matchId);
     if (!match) { return; }

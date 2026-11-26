@@ -68,4 +68,23 @@ describe('@ZM-219 Ereignisse der Zuschauer-Seite klappen mit dem zweiten Tipp wi
     await user.click(screen.getAllByTestId(`match-circle-${SPIEL_9}`)[0]);
     expect(offen(container)).toBe(nachErstem);
   });
+
+  it('@ZM-219 live aufgeklappt, das Spiel endet in der Zwischenzeit: der nächste Tipp schließt, statt zur Zusammenfassung zu wechseln', async () => {
+    const user = userEvent.setup();
+    const start = new Date('2026-11-14T14:20:00');
+    const spiel: ScheduledMatch = {
+      id: SPIEL_9, matchNumber: 9, field: 1, phase: 'groupStage', group: 'A', isFinal: false, startTime: start, endTime: start,
+      duration: 10, time: '14:20', homeTeam: 'FC Nord', awayTeam: 'SV Süd', originalTeamA: NORD, originalTeamB: SUED,
+      slotA: teamSlot(NORD), slotB: teamSlot(SUED), label: 'Spiel 9',
+    };
+    const ansicht = (status: 'running' | 'finished') => (
+      <GroupStageSchedule matches={[spiel]} hasGroups tournament={{ teams, view: viewOf([matchOf(spiel, { matchStatus: status, scoreA: 3, scoreB: 1 })], teams) }} editable={false} />
+    );
+    const { container, rerender } = render(ansicht('running'));
+    await user.click(screen.getAllByTestId(`match-circle-${SPIEL_9}`)[0]);
+    expect(offen(container)).toBeGreaterThan(0);
+    rerender(ansicht('finished'));
+    await user.click(screen.getAllByTestId(`match-circle-${SPIEL_9}`)[0]);
+    expect(offen(container)).toBe(0);
+  });
 });

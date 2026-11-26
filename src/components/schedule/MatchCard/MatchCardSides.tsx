@@ -34,7 +34,7 @@ const teamStyle = (align: 'left' | 'right'): CSSProperties => ({
   justifyContent: align === 'right' ? 'flex-end' : 'flex-start',
 });
 
-const PFEIL_PLATZ = cssVars.spacing.lg;
+const PFEIL_PLATZ = cssVars.spacing.md; // Pfeil ist nur `fontSizes.sm`: 16 statt 24 spart den Teamspalten Platz
 const standZelleStyle: CSSProperties = {
   display: 'grid',
   // links und rechts gleich viel Platz, die Mitte hat eine Mindestbreite für „12:3“ (tabular-nums)
@@ -42,7 +42,7 @@ const standZelleStyle: CSSProperties = {
   alignItems: 'center',
   justifyItems: 'stretch',
 };
-const pfeilPlatzStyle: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'center' };
+const pfeilPlatzStyle: CSSProperties = { cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' };
 
 export const MatchCardSides: React.FC<MatchCardSidesProps> = ({
   matchId, homeTeam, awayTeam, result, status, clock, viewStatus, onCircleClick, disabled, hasEvents, isExpanded,
@@ -73,7 +73,7 @@ export const MatchCardSides: React.FC<MatchCardSidesProps> = ({
       </div>
 
       {/* Stand mit Pfeil-Platz: links ein leerer Platz, rechts der Pfeil (immer reserviert), damit der Stand mittig bleibt und die Logos in jeder Zeile gleich stehen (@ZM-218) */}
-      <div data-score-circle style={standZelleStyle}>
+      <div data-score-circle style={standZelleStyle} onClick={() => { if (!disabled) { onCircleClick(); } }}>
         <span aria-hidden="true" />
         <MatchCardScore result={result} status={status} clock={clock} viewStatus={viewStatus} onClick={onCircleClick} disabled={disabled} matchId={matchId} />
         <span style={pfeilPlatzStyle} aria-hidden="true">

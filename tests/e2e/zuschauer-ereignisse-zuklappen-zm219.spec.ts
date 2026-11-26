@@ -70,4 +70,54 @@ test.describe('@ZM-219 Ereignisse im Spielplan der Zuschauer-Seite klappen mit d
       });
     }
   }
+
+  test('@ZM-219 bei 1280 Pixeln: ein Tipp auf den Pfeil neben dem Stand klappt die Ereignisse auf, der zweite wieder zu', async ({ page }) => {
+    test.skip(test.info().project.name !== 'desktop', 'setzt das Fenster selbst');
+    await oeffne(page, 1280);
+    const offen = page.locator('[data-expand-content]').filter({ visible: true });
+    await pfeil(page, BEENDET).click();
+    await expect(offen).toHaveCount(1);
+    await pfeil(page, BEENDET).click();
+    await expect(offen).toHaveCount(0);
+  });
+
+  test('@ZM-219 bei 390 Pixeln: „Wann und Wo“ klappt mit dem zweiten Tipp wieder zu', async ({ page }) => {
+    test.skip(test.info().project.name !== 'desktop', 'setzt das Fenster selbst');
+    await oeffne(page, 390);
+    const taste = page.getByTestId('public-head-when-where');
+    await expect(taste).toHaveAttribute('aria-expanded', 'false');
+    await taste.click();
+    await expect(taste).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.getByTestId('public-head-details')).toBeVisible();
+    await taste.click();
+    await expect(taste).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.getByTestId('public-head-details')).toBeHidden();
+  });
+
+  test('@ZM-219 bei 390 Pixeln: „Teilnehmer“ klappt mit dem zweiten Tipp wieder zu', async ({ page }) => {
+    test.skip(test.info().project.name !== 'desktop', 'setzt das Fenster selbst');
+    await oeffne(page, 390);
+    const taste = page.getByTestId('public-participants-toggle');
+    await expect(taste).toHaveAttribute('aria-expanded', 'false');
+    await taste.click();
+    await expect(taste).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.getByTestId('public-participants-list')).toBeVisible();
+    await taste.click();
+    await expect(taste).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.getByTestId('public-participants-list')).toBeHidden();
+  });
+
+  test('@ZM-219 bei 390 Pixeln: eine Zeile der Gruppentabelle klappt mit dem zweiten Tipp wieder zu', async ({ page }) => {
+    test.skip(test.info().project.name !== 'desktop', 'setzt das Fenster selbst');
+    await oeffne(page, 390);
+    await page.locator('nav[aria-label="Public Navigation"] button').nth(1).click();
+    const taste = page.locator('.standings-table .mobile-view tbody button').first();
+    await expect(taste).toHaveAttribute('aria-expanded', 'false');
+    await taste.click();
+    await expect(taste).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('.standings-table .mobile-view').getByText('Siege').first()).toBeVisible();
+    await taste.click();
+    await expect(taste).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.locator('.standings-table .mobile-view').getByText('Siege').first()).toBeHidden();
+  });
 });
