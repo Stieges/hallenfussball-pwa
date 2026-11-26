@@ -35,6 +35,8 @@ import { TournamentClosedHint } from '../../components/ui/molecules/TournamentCl
 import { useTournamentClosed } from '../../hooks/useTournamentClosed';
 import { useCan } from '../auth/hooks/useCan';
 import { ConfirmDialog, useConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { SlashBreaks } from '../../components/ui/atoms/TeamName';
+import { teamNameStyle, teamNameRowStyle, expandButtonStyle, buttonGroupStyle, keepShortHyphenWord } from './teamsTabCardStyles';
 
 interface TeamsTabProps {
   tournament: Tournament;
@@ -264,13 +266,6 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     flex: 1,
   };
 
-  const teamNameStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.lg,
-    fontWeight: cssVars.fontWeights.bold,
-    color: cssVars.colors.textPrimary,
-    marginBottom: '4px',
-  };
-
   const badgeStyle = (color: string, bgColor: string): CSSProperties => ({
     fontSize: cssVars.fontSizes.xs,
     padding: '2px 8px',
@@ -279,8 +274,6 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     color: color,
     fontWeight: cssVars.fontWeights.medium,
   });
-
-  const buttonGroupStyle: CSSProperties = { display: 'flex', gap: cssVars.spacing.sm };
 
   const actionButtonStyle = (variant: 'edit' | 'delete'): CSSProperties => ({
     padding: '6px 12px',
@@ -313,7 +306,8 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: cssVars.spacing.lg, // Increased padding
+    padding: cssVars.spacing.md,
+    gap: cssVars.spacing.md,
     cursor: 'pointer',
     transition: 'background-color 0.15s ease',
     minHeight: '80px', // Enforce height for logo space
@@ -322,7 +316,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
   const teamCardLeftStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: cssVars.spacing.lg, // Increased gap
+    gap: cssVars.spacing.md,
     flex: 1,
     minWidth: 0,
   };
@@ -333,16 +327,6 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     gap: cssVars.spacing.sm,
     fontSize: cssVars.fontSizes.xs,
     color: cssVars.colors.textSecondary,
-  };
-
-  const expandButtonStyle: CSSProperties = {
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    padding: cssVars.spacing.xs,
-    color: cssVars.colors.primary,
-    fontSize: cssVars.fontSizes.lg,
-    transition: 'transform 0.2s ease',
   };
 
   // Die Karte schneidet nicht ab (der Farbwähler ragt über sie hinaus): der graue Bereich trägt die unteren Rundungen selbst
@@ -452,8 +436,8 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
 
                     {/* Team Name and Badges */}
                     <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
-                        <span style={teamNameStyle}>{team.name}</span>
+                      <div style={teamNameRowStyle}>
+                        <span style={teamNameStyle} data-testid={`team-name-${team.id}`}><span data-teamname><SlashBreaks text={team.name} keep={keepShortHyphenWord} /></span></span>
                         {team.group && (
                           <span style={badgeStyle(cssVars.colors.primary, cssVars.colors.infoBadgeBg)}>
                             {getGroupDisplayName(team.group, tournament)}
@@ -474,6 +458,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
 
                   {/* Expand/Collapse Button */}
                   <button
+                    data-testid={`team-expand-arrow-${team.id}`}
                     style={{
                       ...expandButtonStyle,
                       transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
@@ -504,7 +489,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                               data-testid={`team-rename-input-${team.id}`}
                             />
                           </div>
-                          <div style={buttonGroupStyle}>
+                          <div style={buttonGroupStyle} data-testid={`team-rename-buttons-${team.id}`}>
                             <Button variant="secondary" onClick={handleCancelEdit}>
                               {t('common.cancel')}
                             </Button>
