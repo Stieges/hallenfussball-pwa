@@ -5,11 +5,16 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { useState } from 'react';
-import { render, screen, within, fireEvent } from '@testing-library/react';
+import { render, screen, within, fireEvent, act } from '@testing-library/react';
 import type { Team, Tournament } from '../../../types/tournament';
 
 vi.unmock('i18next');
 vi.unmock('react-i18next');
+vi.mock('react-colorful', () => ({
+  HexColorPicker: ({ onChange }: { onChange: (c: string) => void }) => (
+    <button type="button" data-testid="ziehen" onClick={() => { for (const c of ['#112233', '#223344', '#4FC3F7']) { onChange(c); } }}>ziehen</button>
+  ),
+}));
 vi.mock('../../auth/hooks/useMyTournamentRole', () => ({ useMyTournamentRole: () => ({ role: 'owner', isLoading: false }) }));
 
 import { initRealDeI18n } from '../../../test/realDeI18n';
@@ -58,17 +63,37 @@ describe('@W3-042 Reiter „Teams“: Schwarz → „Unbekannt“', () => {
     expect(punkt).toHaveAttribute('data-shirt-unknown', 'true');
     expect(punkt).toHaveAccessibleName('Trikotfarbe unbekannt');
     expect(punkt.style.backgroundImage).toContain('repeating-linear-gradient');
-    expect(within(screen.getByTestId(`team-card-${SUED}`)).getByRole('button', { name: /Unbekannt/ })).toBeInTheDocument();
+    expect(within(screen.getByTestId(`team-card-${SUED}`)).getByRole('button', { name: 'Trikotfarbe unbekannt' })).toHaveTextContent('Unbekannt');
   });
 
   it('Gegenprobe: ein Team ohne Farbe wählt Schwarz wieder wie gewohnt', () => {
     const save = vi.fn<(t: Tournament) => void>();
     render(<Host initial={turnier([{ id: SUED, name: 'SV Süd' }])} onSave={save} />);
     fireEvent.click(screen.getByTestId(`team-expand-toggle-${SUED}`));
-    fireEvent.click(within(screen.getByTestId(`team-card-${SUED}`)).getByRole('button', { name: /Unbekannt/ }));
+    fireEvent.click(within(screen.getByTestId(`team-card-${SUED}`)).getByRole('button', { name: /unbekannt/i }));
     expect(screen.getByRole('option', { name: 'Trikotfarbe unbekannt' })).toHaveAttribute('aria-selected', 'true');
     fireEvent.click(screen.getByRole('option', { name: 'Schwarz' }));
     expect(save.mock.calls.at(-1)![0].teams[0].colors?.primary).toBe(SCHWARZ);
+  });
+});
+
+describe('@W3-042 Ziehfarbe bleibt nie stehen', () => {
+  it('Team ohne Farbe: eigene Farbe ziehen, dann „Unbekannt“ – am Ende ist keine Farbe gespeichert', () => {
+    vi.useFakeTimers();
+    try {
+      const save = vi.fn<(t: Tournament) => void>();
+      render(<Host initial={turnier([{ id: SUED, name: 'SV Süd' }])} onSave={save} />);
+      fireEvent.click(screen.getByTestId(`team-expand-toggle-${SUED}`));
+      fireEvent.click(within(screen.getByTestId(`team-card-${SUED}`)).getByRole('button', { name: /unbekannt/i }));
+      fireEvent.pointerDown(screen.getByTestId('ziehen'));
+      fireEvent.click(screen.getByTestId('ziehen')); // Ziehbewegungen, noch nicht gespeichert
+      expect(save).not.toHaveBeenCalled();
+      waehleUnbekannt();
+      act(() => { vi.advanceTimersByTime(2000); });
+      fireEvent.pointerUp(document.body);
+      expect(save).toHaveBeenCalled();
+      expect(save.mock.calls.every(([t]) => t.teams[0].colors === undefined), 'nie wurde eine Ziehfarbe gespeichert').toBe(true);
+    } finally { vi.useRealTimers(); }
   });
 });
 
@@ -91,7 +116,8 @@ describe('@W3-042 Wizard, Schritt „Teams“: Schwarz → „Unbekannt“', () 
     render(<Step4_Teams formData={ohne} onUpdate={noop} onAddTeam={noop} onRemoveTeam={noop} onUpdateTeam={noop} />);
     fireEvent.click(screen.getByTestId(`wizard-team-details-${SUED}`));
     const punkt = screen.getByTestId('color-picker-unknown-dot');
-    expect(punkt).toHaveAccessibleName('Trikotfarbe unbekannt');
+    expect(punkt.parentElement).toHaveAttribute('aria-hidden', 'true'); // nicht doppelt vorgelesen
+    expect(screen.getByRole('button', { name: 'Trikotfarbe unbekannt' })).toHaveAttribute('aria-haspopup', 'true'); // Auslöser liest es einmal
     expect(punkt.style.backgroundImage).toContain('repeating-linear-gradient');
     expect(screen.queryByText(/#[0-9a-f]{6}/i)).toBeNull();
   });

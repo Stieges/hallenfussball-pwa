@@ -10,8 +10,8 @@ export function primaryColorOf(colors: TeamColors | undefined): string | undefin
   return primary === undefined || primary === '' ? undefined : primary;
 }
 
-/** Neue Teamfarben mit gesetzter Trikotfarbe; `undefined` stellt „Unbekannt“ wieder her (ohne Zweitfarbe entfällt `colors` ganz). */
+/** Neue Teamfarben mit gesetzter Trikotfarbe; `undefined` stellt „Unbekannt“ wieder her: `colors` entfällt ganz (die Zweitfarbe wird nirgends benutzt). */
 export function withPrimaryColor(colors: TeamColors | undefined, primary: string | undefined): TeamColors | undefined {
   if (primary !== undefined) { return { ...colors, primary }; }
-  return colors?.secondary === undefined ? undefined : { primary: '', secondary: colors.secondary };
+  return undefined;
 }

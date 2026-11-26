@@ -17,14 +17,16 @@ export interface ColorDotProps {
   /** Textalternative, nennt Zweck und Farbname. */
   label: string;
   testId?: string;
+  /** Größe nach `iconSizes` (xs 16 px, md 24 px, lg 32 px); Vorgabe lg. */
+  size?: 'xs' | 'md' | 'lg';
 }
 
-export function ColorDot({ color, label, testId }: ColorDotProps): ReactElement {
+export function ColorDot({ color, label, testId, size = 'lg' }: ColorDotProps): ReactElement {
   const style: CSSProperties = {
     display: 'inline-block',
     flex: 'none',
-    width: cssVars.iconSizes.lg,
-    height: cssVars.iconSizes.lg,
+    width: cssVars.iconSizes[size],
+    height: cssVars.iconSizes[size],
     borderRadius: cssVars.borderRadius.full,
     ...(color === undefined
       ? { backgroundImage: stripedImage(FALLBACK_PATTERN.light, FALLBACK_PATTERN.dark, 'flat') }

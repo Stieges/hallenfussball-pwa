@@ -44,4 +44,32 @@ test.describe('@W3-042 Trikotfarbe wieder auf „Unbekannt“ (Reiter Teams)', (
     await neuLaden(page);
     await expect(page.getByTestId(`team-color-dot-${TEAM}`)).toHaveAttribute('data-shirt-unknown', 'true');
   });
+
+  test('Wizard, Schritt Teams: Schwarz wählen, dann „Unbekannt“; Weiter übernimmt keine Farbe (nach Neuladen aus dem gespeicherten Stand)', async ({ page }) => {
+    await installiereSaat(page.context(), leseSaat('hallencup-messlauf'));
+    await page.goto('/#/tournament/hallencup-entwurf/edit?step=5');
+    await page.getByRole('button', { name: /Farbe & Logo/ }).first().click();
+    const ausloeser = page.locator('button[aria-haspopup="true"]').first();
+    await ausloeser.click();
+    await page.getByRole('option', { name: 'Farbe #000000' }).click();
+    await expect(ausloeser).toContainText('#000000');
+
+    await ausloeser.click();
+    await bild(page, 'ablauf-wizard-farbauswahl-offen');
+    await page.getByRole('option', { name: 'Trikotfarbe unbekannt' }).click();
+    await expect(ausloeser).toHaveAccessibleName('Trikotfarbe unbekannt');
+    await expect(ausloeser).toContainText('Unbekannt');
+    await expect(ausloeser.getByTestId('color-picker-unknown-dot')).toBeVisible();
+    expect(await ausloeser.getByTestId('color-picker-unknown-dot').evaluate((e) => getComputedStyle(e).backgroundImage)).toContain('repeating-linear-gradient');
+
+    await page.getByRole('button', { name: /^Weiter/ }).click();
+    await expect(page).toHaveURL(/step=6/);
+    // Der Weiter-Schritt speichert den Entwurf; nach dem Neuladen aus dem gespeicherten Stand bleibt keine Farbe
+    await page.goto('/#/tournament/hallencup-entwurf/edit?step=5');
+    await neuLaden(page);
+    await page.getByRole('button', { name: /Farbe & Logo/ }).first().click();
+    const wieder = page.locator('button[aria-haspopup="true"]').first();
+    await expect(wieder).toHaveAccessibleName('Trikotfarbe unbekannt');
+    await expect(wieder).not.toContainText('#000000');
+  });
 });

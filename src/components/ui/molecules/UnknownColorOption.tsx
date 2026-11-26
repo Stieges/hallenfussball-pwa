@@ -4,8 +4,8 @@
  */
 import type { CSSProperties, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../design-tokens';
-import { ColorDot } from './atoms/ColorDot';
+import { cssVars } from '../../../design-tokens';
+import { ColorDot } from '../atoms/ColorDot';
 
 export interface UnknownColorOptionProps {
   selected: boolean;
@@ -38,7 +38,7 @@ export function UnknownColorOption({ selected, onSelect }: UnknownColorOptionPro
       style={style}
       data-testid="color-unknown-option"
     >
-      <span aria-hidden="true" style={{ display: 'inline-flex' }}><ColorDot label="" /></span>
+      <span aria-hidden="true" style={{ display: 'inline-flex' }}><ColorDot label="" size="md" /></span>
       <span>{t('teams.colorUnknown')}</span>
     </button>
   );

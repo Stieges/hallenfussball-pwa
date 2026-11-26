@@ -4,7 +4,7 @@ import { cssVars } from '../../design-tokens';
 import { wizardJerseyPresets } from '../../design-tokens/colors/palette';
 import { useTranslation } from 'react-i18next';
 import { ColorDot } from './atoms/ColorDot';
-import { UnknownColorOption } from './UnknownColorOption';
+import { UnknownColorOption } from './molecules/UnknownColorOption';
 
 /**
  * Default jersey color presets (common team colors)
@@ -210,10 +210,11 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
         disabled={disabled}
         aria-haspopup="true"
         aria-expanded={isOpen}
+        {...(unknown && onUnknown !== undefined ? { 'aria-label': t('matchCard.shirtUnknown') } : {})}
       >
         {unknown && onUnknown !== undefined ? (
           <>
-            <ColorDot label={t('matchCard.shirtUnknown')} testId="color-picker-unknown-dot" />
+            <span aria-hidden="true" style={{ display: 'inline-flex' }}><ColorDot label="" size="md" testId="color-picker-unknown-dot" /></span>
             <span style={nameStyles}>{t('teams.colorUnknown')}</span>
           </>
         ) : (

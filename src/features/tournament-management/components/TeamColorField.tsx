@@ -62,7 +62,7 @@ export function TeamColorField({ value, onCommit }: TeamColorFieldProps) {
     clearTimeout(timer.current);
     draftRef.current = undefined;
     setDraft(undefined);
-    if (valueRef.current !== undefined) { commitRef.current(undefined); }
+    commitRef.current(undefined);
   };
 
   const shown = draft ?? value;

@@ -461,7 +461,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                         )}
                       </div>
                       <div style={teamCardMetaStyle}>
-                        <ColorDot color={primaryColor} label={primaryColor === undefined ? t('matchCard.shirtUnknown') : t('teams.jerseyColor', { color: primaryColor })} testId={`team-color-dot-${team.id}`} />
+                        <ColorDot size="xs" color={primaryColor} label={primaryColor === undefined ? t('matchCard.shirtUnknown') : t('teams.jerseyColor', { color: primaryColor })} testId={`team-color-dot-${team.id}`} />
                         {analysis.matchesWithResults > 0 && (
                           <span>{t('teams.results', { count: analysis.matchesWithResults })}</span>
                         )}
