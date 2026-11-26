@@ -11,6 +11,12 @@ import { LocalMatchStore } from '../../../../core/match/client/LocalMatchStore';
 import type { EngineEvent, MatchContext } from '../../../../core/match/types';
 import { UserProfileScreen } from '../UserProfileScreen';
 
+// @AN-060: AuthSection/UserProfileScreen navigieren nach dem Abmelden; diese Tests prüfen anderes und brauchen keinen Router (Navigation: *.abmeldenStartseite.test.tsx).
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('react-router-dom')>()),
+  useNavigate: () => vi.fn(),
+}));
+
 const logout = vi.fn();
 
 const authState: { isGuest: boolean } = { isGuest: false };

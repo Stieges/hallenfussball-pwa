@@ -24,6 +24,7 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 import { useCompactHeader } from '../../hooks/useCompactHeader';
 import { MobileAuthBottomSheet } from '../../features/auth/components/MobileAuthBottomSheet';
 import type { WaitingEntriesSource } from '../../features/collaboration/outbox/countWaitingEntries';
+import { useNavigate } from 'react-router-dom';
 import { useGuardedLogout } from '../../features/collaboration/outbox/useGuardedLogout';
 import { LogoutWarningDialog } from '../../features/collaboration/outbox/LogoutWarningDialog';
 import { Button } from '../ui/Button';
@@ -131,6 +132,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
   createMatchStore,
 }) => {
   const { user, isAuthenticated, isGuest, isLoading, logout, connectionState, reconnect } = useAuth();
+  const navigate = useNavigate();
   const resyncNow = useResyncNow();
   const handleReconnect = () => { void reconnect(); void resyncNow(); };
   const isMobile = useIsMobile();
@@ -152,6 +154,8 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
     accountId: user?.id ?? '',
     logout,
     createMatchStore,
+    // @AN-060: nach dem Abmelden zur Startseite, nie auf der Turnierseite stehen bleiben (kein „Turnier nicht gefunden“)
+    onLoggedOut: () => void navigate('/', { replace: true }),
   });
 
   // Close dropdown on outside click

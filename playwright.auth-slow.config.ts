@@ -9,7 +9,7 @@ import { defineConfig } from '@playwright/test';
  *
  * Lauf: npx playwright test -c playwright.auth-slow.config.ts
  */
-const PORT = '3200';
+const PORT = process.env.AUTH_SLOW_PORT ?? '3200';
 
 export default defineConfig({
   testDir: './tests/e2e/auth-slow',

@@ -14,6 +14,12 @@ import type { MatchCopy } from '../../../../core/match/client/matchCopy';
 import type { EngineEvent, MatchContext } from '../../../../core/match/types';
 import { UserProfileScreen } from '../UserProfileScreen';
 
+// @AN-060: AuthSection/UserProfileScreen navigieren nach dem Abmelden; diese Tests prüfen anderes und brauchen keinen Router (Navigation: *.abmeldenStartseite.test.tsx).
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('react-router-dom')>()),
+  useNavigate: () => vi.fn(),
+}));
+
 vi.unmock('i18next');
 vi.unmock('react-i18next');
 

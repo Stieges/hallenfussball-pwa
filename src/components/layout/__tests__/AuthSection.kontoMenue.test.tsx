@@ -10,6 +10,12 @@ import { cssVars } from '../../../design-tokens';
 import { semanticColorsDark as semanticColors } from '../../../design-tokens/colors/semantic';
 import { semanticColorsLight } from '../../../design-tokens/colors/semantic-light';
 
+// @AN-060: AuthSection/UserProfileScreen navigieren nach dem Abmelden; diese Tests prüfen anderes und brauchen keinen Router (Navigation: *.abmeldenStartseite.test.tsx).
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('react-router-dom')>()),
+  useNavigate: () => vi.fn(),
+}));
+
 vi.mock('../../../features/auth/hooks/useAuth', () => ({
   useAuth: () => ({
     user: { id: 'acc-1', name: 'Olli Beispiel', email: 'olli@example.test' },

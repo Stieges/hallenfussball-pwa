@@ -8,6 +8,7 @@
 
 import React, { CSSProperties, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { safeLocalStorage } from '../../../core/utils/safeStorage';
 import type { WaitingEntriesSource } from '../../collaboration/outbox/countWaitingEntries';
 import { useGuardedLogout } from '../../collaboration/outbox/useGuardedLogout';
@@ -72,6 +73,7 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
   createMatchStore,
 }) => {
   const { t } = useTranslation('auth');
+  const navigate = useNavigate();
   const { user, isGuest, logout, resetPassword } = useAuth();
   const { showInfo, showSuccess, showError } = useToast();
   const { theme, toggleTheme } = useTheme(); // Use Theme Hook
@@ -93,7 +95,8 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
     accountId: user?.id ?? '',
     logout,
     createMatchStore,
-    onLoggedOut: onBack,
+    // @AN-060: nicht „Zurück“ (führt auf die Turnierseite), sondern zur Startseite
+    onLoggedOut: () => void navigate('/', { replace: true }),
   });
 
   // Check for existing cooldown on mount and handle countdown
