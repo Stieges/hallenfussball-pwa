@@ -5,7 +5,7 @@
  */
 import type { CSSProperties, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../../design-tokens';
+import { cssVars, iconSizeValues } from '../../../design-tokens';
 import type { SortColumn, SortState } from '../../../core/standings/tableSort';
 import { Icons } from '../Icons';
 
@@ -73,7 +73,7 @@ export function SortableHeader({ column, label, visual, state, onTap, testId, as
   const button = (
     <button type="button" style={buttonStyle} aria-label={accessibleName} data-testid={testId} data-sorted={active ? 'true' : 'false'} onClick={() => onTap(column)}>
       <span aria-hidden="true">{shown === column && visual ? visual : name}</span>
-      {active ? <Arrow size={16} /> : null}
+      {active ? <Arrow size={iconSizeValues.xs} /> : null}
     </button>
   );
   if (as === 'div') {

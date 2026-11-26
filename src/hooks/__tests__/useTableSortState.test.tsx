@@ -3,8 +3,8 @@
  * Der Provider ist der einzige Schreiber von `ts`; andere Parameter bleiben erhalten.
  */
 import { describe, expect, it, vi } from 'vitest';
-import { act, renderHook } from '@testing-library/react';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { act, render, renderHook, screen } from '@testing-library/react';
+import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { SortState, TableKind } from '../../core/standings/tableSort';
 import type { SortPreferenceStore } from '../../core/standings/tableSortPreference';
@@ -32,6 +32,12 @@ function setup(url: string, store: SortPreferenceStore, disabled = false) {
 function useBoth() {
   return { a: useTableSortState('gruppe', 'A'), b: useTableSortState('gruppe', 'B'), search: useLocation().search };
 }
+
+const Zeile = ({ id }: { id: string }) => {
+  const handle = useTableSortState('gruppe', id);
+  return <span data-testid={`z-${id}`}>{handle?.state?.column ?? 'platz'}</span>;
+};
+const Adresse = () => <span data-testid="adresse">{new URLSearchParams(useLocation().search).get('ts')}</span>;
 
 const TORE: SortState = { column: 'tore', reversed: false };
 
@@ -113,5 +119,30 @@ describe('useTableSortState', () => {
     expect(params.get('ts')).toBe('gB.team.r');
     expect(params.get('p')).toBe('1');
     expect(params.get('my')).toBe('2');
+  });
+
+  it('@TS-010 ts von außen (Navigation) wird übernommen; der nächste Tipp baut darauf auf', () => {
+    const store = memoryStore();
+    const { result } = renderHook(() => ({ ...useBoth(), navigate: useNavigate() }), { wrapper: setup('/?p=1', store) });
+    act(() => result.current.a?.tap('tore'));
+    act(() => { void result.current.navigate('/?p=1&ts=gB.pkt.r'); });
+    expect(result.current.a?.state).toBeNull();
+    expect(result.current.b?.state).toEqual({ column: 'pkt', reversed: true });
+    act(() => result.current.a?.tap('sp'));
+    const params = new URLSearchParams(result.current.search);
+    expect(params.get('ts')).toBe('gB.pkt.r,gA.sp');
+    expect(params.get('p')).toBe('1');
+  });
+
+  it('@TS-020 Gruppe B erst nach dem ersten commit angemeldet: Gerät tore, ts fehlte → beide Einträge, A bleibt', () => {
+    const store = memoryStore({ gruppe: TORE });
+    const Wrapper = setup('/', store);
+    const ui = (showB: boolean) => <Wrapper><Zeile id="A" />{showB ? <Zeile id="B" /> : null}<Adresse /></Wrapper>;
+    const { rerender } = render(ui(false));
+    expect(screen.getByTestId('adresse').textContent).toBe('gA.tore');
+    rerender(ui(true));
+    expect(screen.getByTestId('z-A').textContent).toBe('tore');
+    expect(screen.getByTestId('z-B').textContent).toBe('tore');
+    expect(screen.getByTestId('adresse').textContent).toBe('gA.tore,gB.tore');
   });
 });

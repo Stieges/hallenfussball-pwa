@@ -5,6 +5,9 @@
  * Vorrang: Fehlt `ts` beim Öffnen ganz, greifen die Gerätevorlieben (je Tabellenart, für alle Gruppen); sie werden
  * gebündelt in EINEM `setSearchParams` in die Adresse geschrieben, sobald sich die Tabellen angemeldet haben.
  * Steht `ts` in der Adresse (auch leer als `ts=`), gilt nur die Adresse; ein fehlender Eintrag heißt Platzierung.
+ * Die Gerätevorliebe wirkt auch für später angemeldete Tabellen weiter (z. B. Zuschauer-Seite, die auf dem Spielplan
+ * startet), solange `ts` beim Öffnen fehlte und noch niemand bedient hat. Sobald `ts` von außen kommt (Link, Hashwechsel,
+ * Zurück-Taste) oder bedient wurde, gilt sie nicht mehr. Eine Änderung von `ts` von außen wird übernommen.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useInRouterContext, useSearchParams } from 'react-router-dom';
@@ -45,6 +48,16 @@ function TableSortProviderInRouter({ children, store = deviceSortPreferences, di
       return copy;
     }, { replace: true });
   }, [setParams]);
+
+  // Änderung von `ts` von außen übernehmen. Keine Schleife: `commit` schreibt genau `encode(map)`.
+  const rawTs = params.get(SORT_PARAM);
+  useEffect(() => {
+    const external = decodeSortParam(rawTs);
+    if (external === null || rawTs === encodeSortParam(mapRef.current)) {return;}
+    deviceMayApply.current = false;
+    mapRef.current = external;
+    setMap(external);
+  }, [rawTs]);
 
   const register = useCallback((key: string, kind: TableKind) => {
     setTables((prev) => (prev.has(key) ? prev : new Map(prev).set(key, kind)));
