@@ -14,9 +14,9 @@ import { placeOriginLabel } from '../model/placeOrigin';
 import { shootoutNote, type ShootoutTournament } from '../model/finishSummary';
 import { ScorerList } from './ScorerList';
 import { TeamName } from './HyphenSafe';
-import { badge, goldRowFirst, goldWinnerCard, goldTrophy, placeNumber, pointsCell, standingsHeader, standingsRow, standingsRowFirst, valueCell, winnerCard, winnerName } from './finalStandingsStyles';
-import { heading, placeList, small, strong, tightStack } from './finishStyles';
-import { ShortLabel } from '../../../components/ui/atoms';
+import { badge, goldWinnerCard, goldTrophy, winnerCard, winnerName } from './finalStandingsStyles';
+import { heading, small, strong, tightStack } from './finishStyles';
+import { FinalStandingsList } from './FinalStandingsList';
 
 export type FinalStandingsViewTournament = Pick<Tournament, 'groups'> & ShootoutTournament;
 
@@ -77,35 +77,7 @@ export function FinalStandingsView({ tournament, ranking, scorers, provisional, 
           {t('finalStandings.title')}
           {provisional && <span style={badge} data-testid="final-standings-badge">{t('finalStandings.provisionalBadge')}</span>}
         </h3>
-        <div style={placeList}>
-          {withValues && (
-            <div style={standingsHeader(true)} data-testid="final-standings-header" aria-hidden="true">
-              <span>{t('finalStandings.columns.place')}</span>
-              <span>{t('finalStandings.columns.team')}</span>
-              <span style={valueCell}><ShortLabel term="played" /></span>
-              <span style={valueCell}><ShortLabel term="goalDifference" /></span>
-              <span style={valueCell}><ShortLabel term="points" /></span>
-            </div>
-          )}
-          <ol style={{ listStyle: 'none', margin: 0, padding: 0 }} data-testid="final-standings-list">
-            {ranking.map((row, index) => (
-              <li key={row.teamId} style={{ ...standingsRow(withValues), ...(!provisional && row.place === 1 ? (gold ? goldRowFirst : standingsRowFirst) : {}), ...(index === ranking.length - 1 ? { borderBottom: 'none' } : {}) }} data-testid="final-standing-row" data-place={row.place}>
-                <span style={placeNumber}>{row.place}</span>
-                <span style={{ display: 'grid', minWidth: 0 }}>
-                  <span style={strong}><TeamName name={row.teamName} /></span>
-                  {originOf(row) !== null && <span style={small} data-testid="final-standing-origin">{originOf(row)}</span>}
-                </span>
-                {withValues && (
-                  <>
-                    <span style={valueCell} data-testid="final-standing-games" aria-label={row.tableValues === undefined ? undefined : t('finalStandings.valueLabel.games', { value: row.tableValues.games })}>{row.tableValues?.games}</span>
-                    <span style={valueCell} data-testid="final-standing-diff" aria-label={row.tableValues === undefined ? undefined : t('finalStandings.valueLabel.goalDiff', { value: formatSigned(row.tableValues.goalDiff) })}>{row.tableValues === undefined ? null : formatSigned(row.tableValues.goalDiff)}</span>
-                    <span style={pointsCell} data-testid="final-standing-points" aria-label={row.tableValues === undefined ? undefined : t('finalStandings.valueLabel.points', { value: row.tableValues.points })}>{row.tableValues?.points}</span>
-                  </>
-                )}
-              </li>
-            ))}
-          </ol>
-        </div>
+        <FinalStandingsList ranking={ranking} withValues={withValues} provisional={provisional} gold={gold} originOf={originOf} />
       </section>
       {scorers !== undefined && <ScorerList scorers={scorers} provisional={provisional} incomplete={scorersIncomplete} />}
       {!provisional && (

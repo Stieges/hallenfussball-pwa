@@ -12,6 +12,8 @@ import { I18nextProvider } from 'react-i18next';
 import '@fontsource-variable/inter';
 import '../../../src/styles/global.css';
 import { ThemeProvider } from '../../../src/hooks/useTheme';
+import { BrowserRouter } from 'react-router-dom';
+import { TableSortProvider } from '../../../src/hooks/TableSortProvider';
 import { cssVars } from '../../../src/design-tokens';
 import { anzeigeI18n } from '../../../src/i18n/anzeigeSprache';
 import { buildTournamentView } from '../../../src/core/view';
@@ -72,7 +74,7 @@ const view = buildTournamentView({
 }, { audience: 'viewer', medium: 'app', locale: 'de', now: { date: '2026-11-28', time: '13:20' } });
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <ThemeProvider>
+  <BrowserRouter><TableSortProvider><ThemeProvider>
     <I18nextProvider i18n={anzeigeI18n()}>
       <div style={{ background: cssVars.colors.background, minHeight: '100vh', color: cssVars.colors.textPrimary }}>
         <div style={{ padding: cssVars.spacing.md, maxWidth: '720px', margin: '0 auto', display: 'grid', gap: cssVars.spacing.md }}>
@@ -83,5 +85,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         </div>
       </div>
     </I18nextProvider>
-  </ThemeProvider>,
+  </ThemeProvider></TableSortProvider></BrowserRouter>,
 );

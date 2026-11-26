@@ -92,7 +92,7 @@ describe('R3-5b @ET-001 Gruppen-Ausgeschiedene zeigen Spiele, Punkte und Tordiff
 });
 
 describe('R3-5b Screenreader: Wertzellen tragen einen zugänglichen Namen, der Kopf ist versteckt', () => {
-  it('Zeile mit Werten: „Spiele 3“, „Tordifferenz +1“, „Punkte 4“; Platzierungsspiel-Zeile ohne Namen; Kopf aria-hidden', async () => {
+  it('Zeile mit Werten: „Spiele 3“, „Tordifferenz +1“, „Punkte 4“; Platzierungsspiel-Zeile ohne Namen; Kopf sichtbar (seit @TS-021 bedienbar)', async () => {
     read.mockResolvedValue({ status: 'ok', snapshot: hallencup(), finishedAt: FINISHED_AT });
     render(<FinalStandingsPanel tournament={finished(fertig)} />);
     await screen.findByTestId('final-standings-list');
@@ -105,7 +105,8 @@ describe('R3-5b Screenreader: Wertzellen tragen einen zugänglichen Namen, der K
     for (const id of ['final-standing-games', 'final-standing-diff', 'final-standing-points']) {
       expect(ohne.getByTestId(id).hasAttribute('aria-label')).toBe(false);
     }
-    expect(screen.getByTestId('final-standings-header').getAttribute('aria-hidden')).toBe('true');
+    // Seit „Tabellen sortieren“ (@TS-021, Daniel 26.11.) ist der Kopf sichtbar und bedienbar, nicht mehr versteckt
+    expect(screen.getByTestId('final-standings-header').hasAttribute('aria-hidden')).toBe(false);
   });
 });
 
@@ -125,12 +126,12 @@ describe('R3-5b @ET-045 die gespeicherten Zahlen gelten, auch wenn das Turnierob
 });
 
 describe('R3-5b ohne gespeicherte Werte (älterer Stand) bleibt die Tabelle ohne Zahlenspalten, nie neu gerechnet', () => {
-  it('kein Kopf, keine Zellen, keine Neurechnung', async () => {
+  it('nur die Köpfe Platz und Team, keine Zahlenzellen, keine Neurechnung', async () => {
     const ohne = hallencup();
     read.mockResolvedValue({ status: 'ok', snapshot: { ...ohne, ranking: ohne.ranking.map(({ tableValues: _tableValues, ...row }) => row) }, finishedAt: FINISHED_AT });
     render(<FinalStandingsPanel tournament={finished(fertig)} />);
     await screen.findByTestId('final-standings-list');
-    expect(screen.queryByTestId('final-standings-header')).toBeNull();
+    expect(within(screen.getByTestId('final-standings-header')).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Platz', 'Team']);
     expect(screen.queryAllByTestId('final-standing-points')).toHaveLength(0);
     expect(recompute.calls).toBe(0);
   });

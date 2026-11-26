@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.unmock('i18next');
 vi.unmock('react-i18next');
 import { initRealDeI18n } from '../../../test/realDeI18n';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { Tournament } from '../../../types/tournament';
 import { buildLiveViewTournament, SHARE_CODE, TEAM_IDS } from '../../../screens/__tests__/liveViewFixture';
@@ -51,13 +51,13 @@ function stored(options: Options = {}): unknown {
   return { status: 'final', finishedAt: FINISHED_AT, standings };
 }
 
-async function renderWith(tournament: Tournament, reply: unknown) {
+async function renderWith(tournament: Tournament, reply: unknown, search = '') {
   supabaseGet.mockResolvedValue(tournament);
   localGet.mockResolvedValue(null);
   rpc.mockImplementation((name: string) => Promise.resolve(name === 'public_final_standings' ? { data: reply, error: null } : { data: null, error: { message: 'x' } }));
   const view = render(
     <RepositoryProvider user={null}>
-      <MemoryRouter initialEntries={[`/live/${SHARE_CODE}`]}><LiveViewScreen shareCode={SHARE_CODE} /></MemoryRouter>
+      <MemoryRouter initialEntries={[`/live/${SHARE_CODE}${search}`]}><LiveViewScreen shareCode={SHARE_CODE} /></MemoryRouter>
     </RepositoryProvider>,
   );
   await screen.findAllByRole('heading', { level: 1, name: tournament.title });
@@ -132,6 +132,39 @@ describe('R3-6 Zuschauer-Seite: Endstand', () => {
     expect(screen.queryByTestId('final-standings-winner-values')).toBeNull();
   });
 
+  it('@TS-002 @TS-016 Endstand der Zuschauer-Seite nach „Team“ sortiert: jede Zeile behält ihren Platz, Gold bleibt bei Platz 1', async () => {
+    await renderWith(buildLiveViewTournament(), stored());
+    await screen.findByTestId('final-standings-list');
+    fireEvent.click(screen.getByTestId('sort-head-end-team'));
+    const rows = screen.getAllByTestId('final-standing-row');
+    expect(rows.map((row) => row.getAttribute('data-place'))).toEqual(['6', '1', '4', '7', '2', '3', '8', '5']);
+    const gold = rows.filter((row) => (row.getAttribute('style') ?? '').includes('--color-medal-gold'));
+    expect(gold.map((row) => row.getAttribute('data-place'))).toEqual(['1']);
+    // Auch im Reiter „Tabelle“ gilt dieselbe Sortierung (ein Provider für die Seite)
+    fireEvent.click(screen.getByRole('button', { name: /^Tabelle/ }));
+    expect(screen.getByTestId('sort-reset-end')).toBeInTheDocument();
+    expect(screen.getAllByTestId('final-standing-row').map((row) => row.getAttribute('data-place'))).toEqual(['6', '1', '4', '7', '2', '3', '8', '5']);
+  });
+
+  it('@TS-013 Torschützen für Zuschauer aus und `ts=tor.team` in der Adresse: keine Torschützenliste, keine Sortierung dafür; der Endstand bleibt in der Vorgabe', async () => {
+    await renderWith(buildLiveViewTournament(), stored({ scorers: false }), '?ts=tor.team');
+    await screen.findByTestId('final-standings-list');
+    expect(screen.queryByTestId('final-scorers')).toBeNull();
+    expect(screen.queryByTestId('sort-head-tor-team')).toBeNull();
+    expect(screen.queryByTestId('sort-head-tor-tore')).toBeNull();
+    expect(screen.queryByTestId('sort-picker-tor')).toBeNull();
+    expect(screen.getAllByTestId('final-standing-row').map((row) => row.getAttribute('data-place'))).toEqual(['1', '2', '3', '4', '5', '6', '7', '8']);
+  });
+
+  it('@TS-013 Gegenbeispiel: Torschützen für Zuschauer an und `ts=tor.team`: die Liste ist nach „Team“ sortiert', async () => {
+    await renderWith(buildLiveViewTournament(), stored(), '?ts=tor.team');
+    const scorers = await screen.findByTestId('final-scorers');
+    const rows = within(scorers).getAllByTestId('final-scorer-row');
+    expect(rows[0]).toHaveTextContent('#9 FC Nord');
+    expect(rows[1]).toHaveTextContent('#7 SV Süd');
+    expect(screen.getByTestId('sort-reset-tor')).toBeInTheDocument();
+  });
+
   it('Gold nur für Platz 1: Sieger-Karte und erste Zeile tragen medalGold, Platz 2 nicht', async () => {
     await renderWith(buildLiveViewTournament(), stored());
     await screen.findByTestId('final-standings-list');
@@ -176,7 +209,8 @@ describe('R3-6 Zuschauer-Seite: Endstand', () => {
     await screen.findByTestId('final-standings-list');
     expect(screen.getAllByTestId('final-standing-row')).toHaveLength(8);
     expect(screen.getByTestId('final-standings-list').textContent).not.toMatch(/Gruppe|Tabelle/);
-    expect(screen.queryByTestId('final-standings-header')).toBeNull();
+    // Der Kopf zeigt nur „Platz“ und „Team“ (@TS-002), keine Zahlenspalten
+    expect(within(screen.getByTestId('final-standings-header')).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Platz', 'Team']);
     expect(screen.queryByTestId('final-standing-points')).toBeNull();
   });
 

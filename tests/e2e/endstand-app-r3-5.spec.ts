@@ -122,4 +122,64 @@ test.describe('R3-5 Endstand in der App (T2-UI)', () => {
     await expect(page.getByTestId('final-standings-badge')).toHaveText('provisional');
     await expect(page.getByTestId('final-standings-provisional')).toContainText('Provisional – the final standings are not fixed yet');
   });
+
+  // Task 7 „Tabellen sortieren“ (@TS-002, @TS-008, @TS-012, @TS-019, @TS-021): Endstand und Torschützenliste sortierbar
+  const SORT_BILDER = process.env.TS7_BILDER;
+  async function bild(page: Page, name: string): Promise<void> {
+    if (SORT_BILDER === undefined) { return; }
+    mkdirSync(SORT_BILDER, { recursive: true });
+    await page.screenshot({ path: join(SORT_BILDER, `${name}.png`), fullPage: true });
+  }
+  const teamNamen = (page: Page) => page.getByTestId('final-standing-team').allTextContents();
+  const plaetze = (page: Page) => page.getByTestId('final-standing-row').evaluateAll((rows) => rows.map((r) => r.getAttribute('data-place')));
+
+  for (const szene of ['klar', 'vor']) {
+    test(`@TS-002 @TS-021 ${szene} Laptop 1280: Endstand nach „Team“ sortiert, Platz bleibt am Team, „Nach Platzierung“ stellt die Vorgabe her; Torschützen nach „Team“ mit Sammelzeile am Ende`, async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name !== 'desktop', 'nur Projekt desktop (setzt Fenster selbst)');
+      await page.setViewportSize({ width: 1280, height: 720 });
+      await page.goto(`/tests/e2e/harness/endstand-app.html?szene=${szene}`);
+      await expect(page.getByTestId('final-standings-list')).toBeVisible();
+      const vorgabe = await teamNamen(page);
+      const vorgabePlaetze = await plaetze(page);
+      await bild(page, `leitung-${szene}-1280-1-vorgabe`);
+      await expect(page.getByTestId('final-standings-header').getByRole('columnheader').first()).toBeVisible();
+      await page.getByTestId('sort-head-end-team').click();
+      const nachTeam = await teamNamen(page);
+      expect(nachTeam).toEqual([...vorgabe].sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' })));
+      expect(await plaetze(page)).not.toEqual(vorgabePlaetze);
+      expect(new Set(await plaetze(page))).toEqual(new Set(vorgabePlaetze));
+      await expect(page.getByTestId('sort-head-end-team')).toHaveAccessibleName('Team, A bis Z sortiert');
+      await bild(page, `leitung-${szene}-1280-2-team`);
+      {
+        await page.getByTestId('sort-head-tor-team').click();
+        const zeilen = page.getByTestId('final-scorer-row');
+        if (szene === 'klar') {
+          await expect(zeilen.last()).toContainText('ohne Nummer');
+          await expect(zeilen.last().getByRole('cell').first()).toHaveText('');
+        }
+        await bild(page, `leitung-${szene}-1280-3-torschuetzen-team`);
+      }
+      await page.getByTestId('sort-reset-end').click();
+      expect(await teamNamen(page)).toEqual(vorgabe);
+    });
+
+    test(`@TS-012 ${szene} Handy 390: Köpfe nur Anzeige, sortiert über „Sortieren nach …“; Torschützen nach „Team“`, async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name !== 'desktop', 'nur Projekt desktop (setzt Fenster selbst)');
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto(`/tests/e2e/harness/endstand-app.html?szene=${szene}`);
+      await expect(page.getByTestId('final-standings-list')).toBeVisible();
+      const vorgabe = await teamNamen(page);
+      await bild(page, `leitung-${szene}-390-1-vorgabe`);
+      await expect(page.getByTestId('sort-head-end-team')).toHaveCount(0);
+      await page.getByTestId('sort-picker-end').selectOption('team');
+      expect(await teamNamen(page)).toEqual([...vorgabe].sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' })));
+      await expect(page.getByTestId('final-standings-header').getByRole('columnheader', { name: 'Team' })).toHaveAttribute('aria-sort', 'ascending');
+      await bild(page, `leitung-${szene}-390-2-team`);
+      {
+        await page.getByTestId('sort-picker-tor').selectOption('team');
+        if (szene === 'klar') { await expect(page.getByTestId('final-scorer-row').last()).toContainText('ohne Nummer'); }
+        await bild(page, `leitung-${szene}-390-3-torschuetzen-team`);
+      }
+    });
+  }
 });

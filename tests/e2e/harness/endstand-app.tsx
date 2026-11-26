@@ -10,6 +10,8 @@ import i18n from '../../../src/i18n';
 import '@fontsource-variable/inter';
 import '../../../src/styles/global.css';
 import { ThemeProvider } from '../../../src/hooks/useTheme';
+import { BrowserRouter } from 'react-router-dom';
+import { TableSortProvider } from '../../../src/hooks/TableSortProvider';
 import { cssVars } from '../../../src/design-tokens';
 import type { Tournament } from '../../../src/types/tournament';
 import type { FinalStandingRow, ScorerRow } from '../../../src/core/standings/finalStandings';
@@ -77,7 +79,7 @@ const vorlaeufig = szene === 'vor' || szene === 'vornetz';
 const gezeigteTore = vorlaeufig ? scorers.slice(0, 3) : szene === 'ohnenr' ? ohneNummer : scorers;
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <ThemeProvider>
+  <BrowserRouter><TableSortProvider><ThemeProvider>
     <div style={{ background: cssVars.colors.background, minHeight: '100vh', color: cssVars.colors.textPrimary }}>
       <div style={{ padding: cssVars.spacing.md, maxWidth: '720px', margin: '0 auto', display: 'grid', gap: cssVars.spacing.md }}>
         <h2 style={{ margin: 0 }}>Nikolaus-Turnier 2026</h2>
@@ -89,5 +91,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         )}
       </div>
     </div>
-  </ThemeProvider>,
+  </ThemeProvider></TableSortProvider></BrowserRouter>,
 );

@@ -20,7 +20,7 @@ export interface GroupStandingsMobileTableProps {
   /** Platzziffer je Team (siehe Desktop-Tabelle). */
   placeOf: (teamId: string) => string;
   sort?: GroupSort | null;
-  /** Bei Sortierung nach Tore/Gegentore: die Zahl im aufgeklappten Bereich ist unterstrichen markiert (@TS-014). */
+  /** Bei Sortierung nach Tore/Gegentore: die Zahl im aufgeklappten Bereich ist fett markiert (@TS-014). */
   goalsFocus?: 'for' | 'against';
   title: string;
   highlights: PlacementHighlights;
