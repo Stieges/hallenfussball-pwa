@@ -15,7 +15,6 @@ import { useState, CSSProperties, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, Input, Button, TeamAvatar, LogoUploadDialog } from '../../components/ui';
 import { TeamColorField } from './components/TeamColorField';
-import { ColorDot } from '../../components/ui/atoms/ColorDot';
 import { primaryColorOf, withPrimaryColor } from '../../core/models/teamColors';
 import { Tournament, Team, TeamLogo } from '../../types/tournament';
 import { cssVars, dialogWidths } from '../../design-tokens'
@@ -28,13 +27,15 @@ import {
   getRemovedTeams,
   TeamMatchAnalysis,
 } from '../../utils/teamHelpers';
-import { getGroupDisplayName } from '../../utils/displayNames';
 import { DialogSurface } from '../../components/ui/molecules/DialogSurface';
 import { LeadOnlyHint } from '../../components/ui/molecules/LeadOnlyHint';
 import { TournamentClosedHint } from '../../components/ui/molecules/TournamentClosedHint';
 import { useTournamentClosed } from '../../hooks/useTournamentClosed';
 import { useCan } from '../auth/hooks/useCan';
 import { ConfirmDialog, useConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { useRenameFeedback } from './hooks/useRenameFeedback';
+import { badgeStyle, buttonGroupStyle, teamNameStyle } from './teamsTabCardStyles';
+import { TeamCardHeader } from './components/TeamCardHeader';
 
 interface TeamsTabProps {
   tournament: Tournament;
@@ -49,6 +50,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
   // A-11 (@HE-042, L6): Umbenennen, Logo, Farbe = teams; Löschen, Wiederherstellen = restructure. Ohne Recht lesend + Hinweis.
   const canEditTeams = useCan('teams', tournament.id);
   const canRestructure = useCan('restructure', tournament.id);
+  const { notifySaved, isReopenLocked } = useRenameFeedback(); // @OB-091
   const closed = useTournamentClosed(tournament.id); // R3-3: nach dem Abschluss ist der Grund der Abschluss, nicht das Recht
   const restoreDialog = useConfirmDialog({
     title: t('teams.restoreDialog.title'),
@@ -99,6 +101,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
   // ============================================================================
 
   const handleStartEdit = (team: Team) => {
+    if (isReopenLocked()) { return; } // @OB-091: Doppeltipp nach „Speichern“ öffnet nicht erneut
     setEditingTeamId(team.id);
     setEditingName(team.name);
     setError(null);
@@ -124,6 +127,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
       };
 
       onTournamentUpdate(updatedTournament);
+      notifySaved();
       handleCancelEdit();
     } catch (err) {
       setError(err instanceof Error ? err.message : t('teams.renameError'));
@@ -264,24 +268,6 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     flex: 1,
   };
 
-  const teamNameStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.lg,
-    fontWeight: cssVars.fontWeights.bold,
-    color: cssVars.colors.textPrimary,
-    marginBottom: '4px',
-  };
-
-  const badgeStyle = (color: string, bgColor: string): CSSProperties => ({
-    fontSize: cssVars.fontSizes.xs,
-    padding: '2px 8px',
-    borderRadius: cssVars.borderRadius.sm,
-    background: bgColor,
-    color: color,
-    fontWeight: cssVars.fontWeights.medium,
-  });
-
-  const buttonGroupStyle: CSSProperties = { display: 'flex', gap: cssVars.spacing.sm };
-
   const actionButtonStyle = (variant: 'edit' | 'delete'): CSSProperties => ({
     padding: '6px 12px',
     fontSize: cssVars.fontSizes.sm,
@@ -307,42 +293,6 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     borderRadius: cssVars.borderRadius.lg,
     marginBottom: cssVars.spacing.md,
     transition: 'border-color 0.2s ease',
-  };
-
-  const teamCardHeaderStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: cssVars.spacing.lg, // Increased padding
-    cursor: 'pointer',
-    transition: 'background-color 0.15s ease',
-    minHeight: '80px', // Enforce height for logo space
-  };
-
-  const teamCardLeftStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.lg, // Increased gap
-    flex: 1,
-    minWidth: 0,
-  };
-
-  const teamCardMetaStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.sm,
-    fontSize: cssVars.fontSizes.xs,
-    color: cssVars.colors.textSecondary,
-  };
-
-  const expandButtonStyle: CSSProperties = {
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    padding: cssVars.spacing.xs,
-    color: cssVars.colors.primary,
-    fontSize: cssVars.fontSizes.lg,
-    transition: 'transform 0.2s ease',
   };
 
   // Die Karte schneidet nicht ab (der Farbwähler ragt über sie hinaus): der graue Bereich trägt die unteren Rundungen selbst
@@ -432,61 +382,16 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                   borderColor: isExpanded ? cssVars.colors.primary : cssVars.colors.border,
                 }}
               >
-                {/* Card Header */}
-                <div
-                  data-testid={`team-expand-toggle-${team.id}`}
-                  style={teamCardHeaderStyle}
-                  onClick={() => !isEditing && toggleExpanded(team.id)}
-                >
-                  <div style={teamCardLeftStyle}>
-                    {/* TeamAvatar with click to open logo dialog */}
-                    <div
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (canEditTeams) { setLogoUploadTeamId(team.id); }
-                      }}
-                      style={{ cursor: canEditTeams ? 'pointer' : 'default' }}
-                    >
-                      <TeamAvatar team={team} size="lg" showColorRing />
-                    </div>
-
-                    {/* Team Name and Badges */}
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
-                        <span style={teamNameStyle}>{team.name}</span>
-                        {team.group && (
-                          <span style={badgeStyle(cssVars.colors.primary, cssVars.colors.infoBadgeBg)}>
-                            {getGroupDisplayName(team.group, tournament)}
-                          </span>
-                        )}
-                      </div>
-                      <div style={teamCardMetaStyle}>
-                        <ColorDot size="xs" color={primaryColor} label={primaryColor === undefined ? t('matchCard.shirtUnknown') : t('teams.jerseyColor', { color: primaryColor })} testId={`team-color-dot-${team.id}`} />
-                        {analysis.matchesWithResults > 0 && (
-                          <span>{t('teams.results', { count: analysis.matchesWithResults })}</span>
-                        )}
-                        {analysis.matchesWithoutResults > 0 && (
-                          <span>{t('teams.planned', { count: analysis.matchesWithoutResults })}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Expand/Collapse Button */}
-                  <button
-                    style={{
-                      ...expandButtonStyle,
-                      transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleExpanded(team.id);
-                    }}
-                    aria-label={isExpanded ? t('teams.collapse') : t('teams.expand')}
-                  >
-                    ▼
-                  </button>
-                </div>
+                <TeamCardHeader
+                  team={team}
+                  tournament={tournament}
+                  analysis={analysis}
+                  isExpanded={isExpanded}
+                  canEditTeams={canEditTeams}
+                  onToggle={() => { if (!isEditing) { toggleExpanded(team.id); } }}
+                  onArrow={() => toggleExpanded(team.id)}
+                  onLogo={() => setLogoUploadTeamId(team.id)}
+                />
 
                 {/* Expanded Section */}
                 {
@@ -504,7 +409,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                               data-testid={`team-rename-input-${team.id}`}
                             />
                           </div>
-                          <div style={buttonGroupStyle}>
+                          <div style={buttonGroupStyle} data-testid={`team-rename-buttons-${team.id}`}>
                             <Button variant="secondary" onClick={handleCancelEdit}>
                               {t('common.cancel')}
                             </Button>

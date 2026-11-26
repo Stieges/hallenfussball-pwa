@@ -293,6 +293,7 @@
   "teams": {
     "title": "Manage Teams",
     "renameError": "Error renaming",
+    "renameSaved": "Name saved",
     "deleteError": "Error deleting",
     "restoreConfirm": "Do you want to restore this team?\n\nThe team will be shown again in the table and schedule.",
     "editInfo": {
