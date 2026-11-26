@@ -15,6 +15,8 @@ import { useState, CSSProperties, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, Input, Button, TeamAvatar, LogoUploadDialog } from '../../components/ui';
 import { TeamColorField } from './components/TeamColorField';
+import { ColorDot } from '../../components/ui/atoms/ColorDot';
+import { primaryColorOf, withPrimaryColor } from '../../core/models/teamColors';
 import { Tournament, Team, TeamLogo } from '../../types/tournament';
 import { cssVars, dialogWidths } from '../../design-tokens'
 import {
@@ -216,9 +218,9 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
   }, [tournament, onTournamentUpdate]);
 
   // Handle color change
-  const handleColorChange = useCallback((teamId: string, color: string) => {
+  const handleColorChange = useCallback((teamId: string, color: string | undefined) => {
     const updatedTeams = tournament.teams.map(t =>
-      t.id === teamId ? { ...t, colors: { ...t.colors, primary: color } } : t
+      t.id === teamId ? { ...t, colors: withPrimaryColor(t.colors, color) } : t
     );
 
     onTournamentUpdate({
@@ -361,14 +363,6 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     minWidth: '100px',
   };
 
-  const colorIndicatorStyle = (color: string): CSSProperties => ({
-    width: '16px',
-    height: '16px',
-    borderRadius: '50%',
-    backgroundColor: color,
-    border: '2px solid rgba(255,255,255,0.3)',
-    flexShrink: 0,
-  });
 
   // ============================================================================
   // RENDER
@@ -427,8 +421,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
             const analysis = teamAnalyses[team.id];
             const isEditing = editingTeamId === team.id;
             const isExpanded = expandedTeams.has(team.id);
-            // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty color should use fallback
-            const primaryColor = team.colors?.primary || '#CCCCCC';
+            const primaryColor = primaryColorOf(team.colors);
 
             return (
               <div
@@ -468,7 +461,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                         )}
                       </div>
                       <div style={teamCardMetaStyle}>
-                        <span style={colorIndicatorStyle(primaryColor)} title={t('teams.jerseyColor', { color: primaryColor })} />
+                        <ColorDot size="xs" color={primaryColor} label={primaryColor === undefined ? t('matchCard.shirtUnknown') : t('teams.jerseyColor', { color: primaryColor })} testId={`team-color-dot-${team.id}`} />
                         {analysis.matchesWithResults > 0 && (
                           <span>{t('teams.results', { count: analysis.matchesWithResults })}</span>
                         )}

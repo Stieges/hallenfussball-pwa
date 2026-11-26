@@ -875,3 +875,26 @@ describe('Tournament-Mapper Round-Trip: Monitore und Sponsoren (L3)', () => {
     expect(tournament.sponsors).toBeUndefined();
   });
 });
+
+// @W3-042: „Unbekannt“ stellt „keine Trikotfarbe“ wieder her – in der Cloud darf keine alte Farbe stehen bleiben
+describe('@W3-042 Team ohne Trikotfarbe im Mapper', () => {
+  it('colors: undefined wird als color_primary/color_secondary = null geschrieben (Schlüssel vorhanden, nie weggelassen)', () => {
+    const row = mapTeamToSupabase({ id: 'team-1', name: 'SV Süd', colors: undefined }, 'tournament-1');
+    expect('color_primary' in row).toBe(true);
+    expect(row.color_primary).toBeNull();
+    expect(row.color_secondary).toBeNull();
+  });
+
+  it('über mapTournamentToSupabase: vorher Schwarz, nach „Unbekannt“ geht null in die Zeile', () => {
+    const mitSchwarz = mapTournamentFromSupabase(createTournamentRow(), [createTeamRow({ id: TEAM_1, name: 'SV Süd', color_primary: '#000000' })], []);
+    expect(mapTournamentToSupabase(mitSchwarz, 'user-1').teamRows[0].color_primary).toBe('#000000');
+    const unbekannt = { ...mitSchwarz, teams: mitSchwarz.teams.map((t) => ({ ...t, colors: undefined })) };
+    const zeile = mapTournamentToSupabase(unbekannt, 'user-1').teamRows[0];
+    expect('color_primary' in zeile).toBe(true);
+    expect(zeile.color_primary).toBeNull();
+  });
+
+  it('color_primary null beim Lesen ergibt colors: undefined', () => {
+    expect(mapTeamFromSupabase(createTeamRow({ id: TEAM_1, name: 'SV Süd', color_primary: null })).colors).toBeUndefined();
+  });
+});

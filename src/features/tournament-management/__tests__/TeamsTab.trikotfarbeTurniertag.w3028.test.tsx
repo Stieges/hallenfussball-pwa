@@ -82,7 +82,7 @@ async function farbeEintragen(teamId: string, hex: string): Promise<void> {
   const user = userEvent.setup();
   await user.click(screen.getByTestId(`team-expand-toggle-${teamId}`));
   const karte = screen.getByTestId(`team-card-${teamId}`);
-  await user.click(within(karte).getByRole('button', { name: /#[0-9A-F]{6}/i })); // Auslöser des Farbwählers (zeigt die aktuelle Farbe)
+  await user.click(within(karte).getByRole('button', { name: /#[0-9A-F]{6}|Unbekannt/i })); // Auslöser des Farbwählers (zeigt die aktuelle Farbe oder, ohne Farbe, „Unbekannt“, @W3-042)
   await user.click(screen.getByRole('option', { name: NAME[hex] }));
 }
 

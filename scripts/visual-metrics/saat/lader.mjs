@@ -25,6 +25,13 @@ export function leseSaat(name) {
 /** Laeuft im Browser, vor jedem Skript der Seite. Muss ohne Schliessvariablen auskommen (wird serialisiert). */
 function ladeImBrowser(saat) {
   if (window.top !== window) return
+  // Option `nurErstesLaden` (nur wer sie setzt): die Saat gilt nur beim ersten Laden des Tabs; ein Neuladen behält, was die App gespeichert hat
+  if (saat.nurErstesLaden) {
+    try {
+      if (sessionStorage.getItem('saat-geladen') === '1') return
+      sessionStorage.setItem('saat-geladen', '1')
+    } catch { /* sessionStorage gesperrt: Saat wie sonst bei jedem Laden */ }
+  }
   const jetzt = Date.now()
   // Zeit-Marken: "@heute" -> heutiges Datum (JJJJ-MM-TT), "@jetzt-320s" -> ISO-Text, "@jetzt-ms-320000" -> Epoch-ms (Zahl, fuer Engine-Ereignisse).
   const loese = (wert) => {
@@ -64,6 +71,6 @@ function ladeImBrowser(saat) {
 }
 
 /** Haengt die Saat an einen Playwright-Kontext (vor dem ersten `goto`). */
-export async function installiereSaat(ctx, saat) {
-  await ctx.addInitScript(ladeImBrowser, saat)
+export async function installiereSaat(ctx, saat, optionen = {}) {
+  await ctx.addInitScript(ladeImBrowser, optionen.nurErstesLaden ? { ...saat, nurErstesLaden: true } : saat)
 }
