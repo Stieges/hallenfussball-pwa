@@ -36,8 +36,6 @@ const platzButton: CSSProperties = {
   cursor: 'pointer',
 };
 
-const compactButton: CSSProperties = { minWidth: cssVars.spacing.lg, width: '100%', padding: 0, flexDirection: 'column', justifyContent: 'center', gap: 0 };
-
 interface HeadCellProps {
   sort: GroupSort | null;
   column: SortedColumn | 'platz';
@@ -45,20 +43,39 @@ interface HeadCellProps {
   term?: TableHeadTerm;
   text?: string;
   style: CSSProperties;
-  /** Taste füllt die Zelle in der Breite (nur die Höhe hat das Touch-Maß), Pfeil unter dem Wort: die Spalten bleiben so schmal wie ohne Sortierung. */
-  compact?: boolean;
+  /** Handy-Tabelle: kein Bedienelement, nur Anzeige (Pfeil unter dem Wort, `aria-sort` am Kopf); bedient wird über „Sortieren nach …“. */
+  indicator?: boolean;
+}
+
+const FEWEST_FIRST: readonly SortColumn[] = ['team', 'n', 'gegentore'];
+
+/** Handy-Kopf: Text wie ohne Sortierung, bei aktiver Sortierung der Pfeil unter dem Wort (die Spalte wird nicht breiter). */
+function IndicatorHead({ sort, column, visual, style }: { sort: GroupSort; column: SortedColumn | 'platz'; visual: ReactNode; style: CSSProperties }) {
+  const active = column === 'platz' ? sort.state === null : sort.state?.column === column;
+  const descending = column === 'platz' || sort.state === null ? false : FEWEST_FIRST.includes(column) === sort.state.reversed;
+  const Arrow = descending ? Icons.ArrowDown : Icons.ArrowUp;
+  const ariaSort = !active ? 'none' : descending ? 'descending' : 'ascending';
+  return (
+    <th style={style} scope="col" aria-sort={ariaSort} data-sort-indicator={active ? (descending ? 'desc' : 'asc') : undefined}>
+      <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: style.textAlign === 'left' ? 'flex-start' : 'center' }}>
+        {visual}
+        {active ? <Arrow size={iconSizeValues.xs} /> : null}
+      </span>
+    </th>
+  );
 }
 
 /** Ein Spaltenkopf: mit Sortierung eine Taste, sonst Text. Der Kopf „Platz“ trägt die Platzierung (Pfeil, Tipp = zurück). */
-export function GroupHeadCell({ sort, column, term, text, style, compact = false }: HeadCellProps) {
+export function GroupHeadCell({ sort, column, term, text, style, indicator = false }: HeadCellProps) {
   const { t } = useTranslation();
   const visual: ReactNode = term ? <ShortLabel term={term} /> : text;
   if (sort === null) {return <th style={style}>{visual}</th>;}
-  const testId = `sort-head-${sort.key}-${column}${compact ? '-m' : ''}`;
+  if (indicator) {return <IndicatorHead sort={sort} column={column} visual={visual} style={style} />;}
+  const testId = `sort-head-${sort.key}-${column}`;
   if (column === 'platz') {
     return (
       <th style={style} scope="col" aria-sort={sort.state === null ? 'ascending' : 'none'}>
-        <button type="button" style={compact ? { ...platzButton, ...compactButton } : platzButton} data-testid={testId} data-sorted={sort.state === null ? 'true' : 'false'} onClick={() => sort.onTap('platz')}>
+        <button type="button" style={platzButton} data-testid={testId} data-sorted={sort.state === null ? 'true' : 'false'} onClick={() => sort.onTap('platz')}>
           {visual}
           {sort.state === null ? <Icons.ArrowUp size={iconSizeValues.xs} /> : null}
         </button>
@@ -66,7 +83,7 @@ export function GroupHeadCell({ sort, column, term, text, style, compact = false
     );
   }
   const label = term ? (t as (key: string) => string)(SHORT_TERMS[term].long) : (text ?? '');
-  return <SortableHeader column={column} label={label} visual={term ? visual : undefined} state={sort.state} onTap={sort.onTap} testId={testId} style={style} compact={compact} />;
+  return <SortableHeader column={column} label={label} visual={term ? visual : undefined} state={sort.state} onTap={sort.onTap} testId={testId} style={style} />;
 }
 
 /** Spalten und Richtungen der Handy-Auswahl (die Köpfe der Handy-Tabelle zeigen nur einen Teil). */

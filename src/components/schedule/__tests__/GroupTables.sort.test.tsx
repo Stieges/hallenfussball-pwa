@@ -4,6 +4,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { initRealDeI18n } from '../../../test/realDeI18n';
@@ -56,7 +57,9 @@ describe('GroupTables sortierbar', () => {
     const heads = Array.from(container.querySelectorAll('.desktop-view [data-testid^="sort-head-g-"]'));
     expect(heads.map((h) => h.getAttribute('data-sorted'))).toEqual(['true', ...Array<string>(8).fill('false')]);
     expect(screen.getByTestId('sort-head-g-platz')).toBeInTheDocument();
-    expect(screen.getByTestId('sort-head-g-platz-m')).toBeInTheDocument(); // Handy-Köpfe tragen den Zusatz -m
+    // Handy: Kopf ist kein Bedienelement, nur Anzeige (Pfeil bei „Platz“)
+    expect(container.querySelectorAll('.mobile-view thead button')).toHaveLength(0);
+    expect(container.querySelector('.mobile-view thead th[data-sort-indicator="asc"]')).not.toBeNull();
     expect(screen.queryByTestId('sort-reset-g')).toBeNull();
     expect(screen.queryByText('Nach Platzierung', { selector: 'button' })).toBeNull();
   });
@@ -166,6 +169,30 @@ describe('GroupTables sortierbar', () => {
     fireEvent.click(desktop().getByTestId('sort-head-g-platz'));
     expect(names('.desktop-view', container)[0]).toBe('SV Ahorn');
     expect(screen.queryByTestId('sort-reset-g')).toBeNull();
+  });
+
+  it('Handy-Köpfe sind keine Tasten; der Pfeil wandert mit der Sortierung (Picker), aria-sort bleibt am th', () => {
+    const { container } = wrap(<GroupTables standings={standings} teams={standings.map((s) => s.team)} />);
+    const mobilKoepfe = () => container.querySelectorAll('.mobile-view thead th');
+    fireEvent.change(screen.getByTestId('sort-picker-g'), { target: { value: 'pkt' } });
+    expect(container.querySelectorAll('.mobile-view thead button')).toHaveLength(0);
+    const pkt = container.querySelector('.mobile-view thead th[data-sort-indicator]')!;
+    expect(pkt.getAttribute('aria-sort')).toBe('descending');
+    expect(pkt.textContent).toContain('Pkt');
+    expect(container.querySelectorAll('.mobile-view thead th[data-sort-indicator]')).toHaveLength(1);
+    fireEvent.change(screen.getByTestId('sort-picker-g'), { target: { value: 'team.r' } });
+    expect(container.querySelector('.mobile-view thead th[data-sort-indicator]')!.getAttribute('aria-sort')).toBe('descending');
+    expect(mobilKoepfe()[1].getAttribute('data-sort-indicator')).toBe('desc');
+  });
+
+  it('@TS-021 Desktop-Kopf per Tastatur: Enter sortiert, Name nennt Richtung', async () => {
+    const user = userEvent.setup();
+    const { container } = wrap(<GroupTables standings={standings} teams={standings.map((s) => s.team)} />);
+    const kopf = within(container.querySelector('.desktop-view')!).getByTestId('sort-head-g-tore');
+    kopf.focus();
+    await user.keyboard('{Enter}');
+    expect(kopf).toHaveAccessibleName('Tore, meiste zuerst sortiert');
+    expect(names('.desktop-view', container)[0]).toBe('FC Nordstern');
   });
 
   it('ohne Router/Provider (Spielplan, Vorschau): keine Sortierköpfe, Köpfe wie bisher', () => {

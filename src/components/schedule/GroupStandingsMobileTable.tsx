@@ -79,11 +79,11 @@ export function GroupStandingsMobileTable({ standings, placeOf, sort = null, goa
       <table style={tableStyle}>
         <thead>
           <tr>
-            <GroupHeadCell compact sort={sort} column="platz" term="rank" style={mobileFixedColStyle} />
-            <GroupHeadCell compact sort={sort} column="team" text={t('groupTables.columns.team')} style={mobileThStyle} />
-            <GroupHeadCell compact sort={sort} column="sp" term="played" style={mobileFixedColStyle} />
-            <GroupHeadCell compact sort={sort} column="diff" term="goalDifference" style={mobileFixedColStyle} />
-            <GroupHeadCell compact sort={sort} column="pkt" term="points" style={mobileFixedColStyle} />
+            <GroupHeadCell indicator sort={sort} column="platz" term="rank" style={mobileFixedColStyle} />
+            <GroupHeadCell indicator sort={sort} column="team" text={t('groupTables.columns.team')} style={mobileThStyle} />
+            <GroupHeadCell indicator sort={sort} column="sp" term="played" style={mobileFixedColStyle} />
+            <GroupHeadCell indicator sort={sort} column="diff" term="goalDifference" style={mobileFixedColStyle} />
+            <GroupHeadCell indicator sort={sort} column="pkt" term="points" style={mobileFixedColStyle} />
             <th style={mobileFixedColStyle}><span style={hiddenStyle}>{t('groupTables.details.column')}</span></th>
           </tr>
         </thead>
