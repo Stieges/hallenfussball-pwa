@@ -10,6 +10,12 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { AuthSection } from '../AuthSection';
 import { ResyncNowContext } from '../../../features/match-engine/resyncNowContext';
 
+// @AN-060: AuthSection/UserProfileScreen navigieren nach dem Abmelden; diese Tests prüfen anderes und brauchen keinen Router (Navigation: *.abmeldenStartseite.test.tsx).
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('react-router-dom')>()),
+  useNavigate: () => vi.fn(),
+}));
+
 const logout = vi.fn();
 const reconnect = vi.fn();
 const resyncNow = vi.fn((): Promise<void> => Promise.resolve());

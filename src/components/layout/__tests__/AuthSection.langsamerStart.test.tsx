@@ -8,6 +8,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import { AuthSection } from '../AuthSection';
 
+// @AN-060: AuthSection/UserProfileScreen navigieren nach dem Abmelden; diese Tests prüfen anderes und brauchen keinen Router (Navigation: *.abmeldenStartseite.test.tsx).
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('react-router-dom')>()),
+  useNavigate: () => vi.fn(),
+}));
+
 const CACHED_USER = { id: 'user-a', name: 'Olli Beispiel', email: 'olli@example.test', globalRole: 'user' };
 
 const store = vi.hoisted(() => {
