@@ -245,7 +245,17 @@ for (const a of PICKER_GERAETE) {
         const karte0 = await oeffneFarbwahl(page, teamId);
         expect(await unverschoben(page.getByRole('dialog', { name: 'Farbauswahl' })), 'keine Karte in sich gerollt').toEqual([]);
         expect(await kopfInKarte(page.getByTestId(`team-expand-toggle-${teamId}`), karte0), 'Kopf der Karte bleibt in der Karte').toBe(true);
-        const felder = page.getByRole('option');
+        // @W3-042: „Unbekannt“ ist das ERSTE Feld und wird getrennt erfasst; die zwölf Palettenfelder werden weiter genau gezählt
+        const unbekannt = page.getByTestId('color-unknown-option');
+        await expect(page.getByRole('option').first()).toHaveAttribute('data-testid', 'color-unknown-option');
+        expect(await page.getByRole('option').count()).toBe(13);
+        expect(await sichtbarImFenster(unbekannt), 'Feld „Unbekannt“ ganz im Fenster').toBe(true);
+        const boxU = (await unbekannt.boundingBox())!;
+        expect(Math.min(boxU.width, boxU.height), 'Feld „Unbekannt“ mindestens 44 px').toBeGreaterThanOrEqual(44);
+        await expect(unbekannt).toHaveAccessibleName('Trikotfarbe unbekannt');
+        const mitte = await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.closest('[data-testid="color-unknown-option"]') !== null, [boxU.x + boxU.width / 2, boxU.y + boxU.height / 2]);
+        expect(mitte, 'Feld „Unbekannt“ nicht verdeckt').toBe(true);
+        const felder = page.locator('[role="option"]:not([data-testid="color-unknown-option"])');
         expect(await felder.count()).toBe(12);
         for (let i = 0; i < 12; i++) {
           const feld = felder.nth(i);
@@ -294,6 +304,10 @@ for (const a of PICKER_GERAETE) {
       await expect(dialog).toHaveCount(0);
       await karte.locator('button[aria-haspopup="true"]').click();
       await page.keyboard.press('Tab');
+      const unbekannt = page.getByTestId('color-unknown-option'); // @W3-042: erster Tab auf „Unbekannt“, sichtbarer Fokus
+      await expect(unbekannt).toBeFocused();
+      expect(await unbekannt.evaluate((el) => getComputedStyle(el).outlineStyle), 'sichtbarer Fokusring auf „Unbekannt“').not.toBe('none');
+      await page.keyboard.press('Tab'); // nächster Tab: erstes Farbfeld
       const fokus = page.getByRole('option', { name: 'Weiß', exact: true });
       await expect(fokus).toBeFocused();
       expect(await fokus.evaluate((el) => getComputedStyle(el).outlineStyle), 'sichtbarer Fokusring').not.toBe('none');
