@@ -48,10 +48,12 @@ const SORTED_KEY = {
 
 const buttonStyle: CSSProperties = {
   display: 'inline-flex',
+  flexDirection: 'column', // der Pfeil steht unter dem Wort: die Spalte wird nicht breiter (Teamspalte braucht die Breite)
+  justifyContent: 'center',
   alignItems: 'center',
-  gap: cssVars.spacing.xs,
+  gap: 0,
   minHeight: cssVars.touchTargets.minimum,
-  minWidth: cssVars.touchTargets.minimum,
+  minWidth: cssVars.spacing.lg, // 24 px (WCAG 2.5.8), sonst so breit wie der Inhalt
   padding: `0 ${cssVars.spacing.xs}`,
   background: 'transparent',
   border: 0,

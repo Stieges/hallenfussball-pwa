@@ -23,10 +23,12 @@ export interface GroupSort {
 
 const platzButton: CSSProperties = {
   display: 'inline-flex',
+  flexDirection: 'column', // der Pfeil steht unter dem Wort: die Spalte wird nicht breiter (Teamspalte braucht die Breite)
+  justifyContent: 'center',
   alignItems: 'center',
-  gap: cssVars.spacing.xs,
+  gap: 0,
   minHeight: cssVars.touchTargets.minimum,
-  minWidth: cssVars.touchTargets.minimum,
+  minWidth: cssVars.spacing.lg, // 24 px (WCAG 2.5.8), sonst so breit wie der Inhalt
   padding: `0 ${cssVars.spacing.xs}`,
   background: 'transparent',
   border: 0,
@@ -72,9 +74,11 @@ export function GroupHeadCell({ sort, column, term, text, style, indicator = fal
   if (sort === null) {return <th style={style}>{visual}</th>;}
   if (indicator) {return <IndicatorHead sort={sort} column={column} visual={visual} style={style} />;}
   const testId = `sort-head-${sort.key}-${column}`;
+  // Spaltenbreite wie ohne Sortierung: die Taste (mindestens 24 px breit) ersetzt das waagerechte Polster der Zelle (Teamspalte behält links ihr Polster)
+  const cellStyle: CSSProperties = { ...style, paddingLeft: column === 'team' ? style.paddingLeft : 0, paddingRight: 0 };
   if (column === 'platz') {
     return (
-      <th style={style} scope="col" aria-sort={sort.state === null ? 'ascending' : 'none'}>
+      <th style={cellStyle} scope="col" aria-sort={sort.state === null ? 'ascending' : 'none'}>
         <button type="button" style={platzButton} data-testid={testId} data-sorted={sort.state === null ? 'true' : 'false'} onClick={() => sort.onTap('platz')}>
           {visual}
           {sort.state === null ? <Icons.ArrowUp size={iconSizeValues.xs} /> : null}
@@ -83,7 +87,7 @@ export function GroupHeadCell({ sort, column, term, text, style, indicator = fal
     );
   }
   const label = term ? (t as (key: string) => string)(SHORT_TERMS[term].long) : (text ?? '');
-  return <SortableHeader column={column} label={label} visual={term ? visual : undefined} state={sort.state} onTap={sort.onTap} testId={testId} style={style} />;
+  return <SortableHeader column={column} label={label} visual={term ? visual : undefined} state={sort.state} onTap={sort.onTap} testId={testId} style={cellStyle} />;
 }
 
 /** Spalten und Richtungen der Handy-Auswahl (die Köpfe der Handy-Tabelle zeigen nur einen Teil). */
