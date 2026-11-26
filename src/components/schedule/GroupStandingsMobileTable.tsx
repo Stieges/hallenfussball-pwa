@@ -13,15 +13,13 @@ import { monitorTeamName } from '../../core/models/teamNameAbbrev';
 import { goalDiffLabel } from '../../core/standings/goalDiffLabel';
 import { StandingNameCell } from './StandingNameCell';
 import { GroupHeadCell, type GroupSort } from './GroupSortHeads';
-import { focusStyle, goalDiffColor, hiddenStyle, highlightStyle, mobileFixedColStyle, mobileTdStyle, mobileThStyle, tableStyle, type PlacementHighlights } from './groupTablesStyle';
+import { goalDiffColor, hiddenStyle, highlightStyle, mobileFixedColStyle, mobileTdStyle, mobileThStyle, tableStyle, type PlacementHighlights } from './groupTablesStyle';
 
 export interface GroupStandingsMobileTableProps {
   standings: readonly Standing[];
   /** Platzziffer je Team (siehe Desktop-Tabelle). */
   placeOf: (teamId: string) => string;
   sort?: GroupSort | null;
-  /** Bei Sortierung nach Tore/Gegentore: die Zahl im aufgeklappten Bereich ist unterstrichen markiert (@TS-014). */
-  goalsFocus?: 'for' | 'against';
   title: string;
   highlights: PlacementHighlights;
   activeMatchTeamIds?: Set<string>;
@@ -52,16 +50,16 @@ const detailCell: CSSProperties = { textAlign: 'center' };
 const detailLabel: CSSProperties = { color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: cssVars.spacing.xs };
 const detailValue: CSSProperties = { fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary };
 
-function Detail({ label, value, span, active, focus }: { label: string; value: ReactNode; span: number; active?: boolean; focus?: 'for' | 'against' }) {
+function Detail({ label, value, span, active }: { label: string; value: ReactNode; span: number; active?: boolean }) {
   return (
     <div style={{ ...detailCell, gridColumn: `span ${String(span)}` }}>
       <div style={detailLabel}>{label}</div>
-      <div style={{ ...detailValue, ...highlightStyle(active === true), ...(focus === undefined ? {} : focusStyle), display: 'inline-block' }} data-goals-focus={focus}>{value}</div>
+      <div style={{ ...detailValue, ...highlightStyle(active === true), display: 'inline-block' }}>{value}</div>
     </div>
   );
 }
 
-export function GroupStandingsMobileTable({ standings, placeOf, sort = null, goalsFocus, title, highlights, activeMatchTeamIds, publicTieMarker, tieMarker }: GroupStandingsMobileTableProps) {
+export function GroupStandingsMobileTable({ standings, placeOf, sort = null, title, highlights, activeMatchTeamIds, publicTieMarker, tieMarker }: GroupStandingsMobileTableProps) {
   const { t } = useTranslation('tournament');
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const toggle = (teamId: string) => {
@@ -139,8 +137,8 @@ export function GroupStandingsMobileTable({ standings, placeOf, sort = null, goa
                         <Detail label={t('groupTables.details.wins')} value={standing.won} span={2} active={highlights.wins} />
                         <Detail label={t('groupTables.details.draws')} value={standing.drawn} span={2} />
                         <Detail label={t('groupTables.details.losses')} value={standing.lost} span={2} />
-                        <Detail label={t('groupTables.details.goalsFor')} value={standing.goalsFor} span={3} active={highlights.goalsFor} focus={goalsFocus === 'for' ? 'for' : undefined} />
-                        <Detail label={t('groupTables.details.goalsAgainst')} value={standing.goalsAgainst} span={3} active={highlights.goalsAgainst} focus={goalsFocus === 'against' ? 'against' : undefined} />
+                        <Detail label={t('groupTables.details.goalsFor')} value={standing.goalsFor} span={3} active={highlights.goalsFor} />
+                        <Detail label={t('groupTables.details.goalsAgainst')} value={standing.goalsAgainst} span={3} active={highlights.goalsAgainst} />
                       </div>
                     </td>
                   </tr>

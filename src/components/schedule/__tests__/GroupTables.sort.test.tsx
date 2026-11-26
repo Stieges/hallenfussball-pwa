@@ -9,7 +9,6 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { initRealDeI18n } from '../../../test/realDeI18n';
 import { createMockTeam } from '../../../test/factories';
-import type { ScheduleSource } from '../scheduleSource';
 import type { Standing, Team } from '../../../types/tournament';
 import type { SortPreferenceStore } from '../../../core/standings/tableSortPreference';
 import { TableSortProvider } from '../../../hooks/TableSortProvider';
@@ -75,23 +74,26 @@ describe('GroupTables sortierbar', () => {
     expect(screen.getByTestId('sort-reset-g')).toBeInTheDocument();
   });
 
-  it('@TS-014 Tore: erste Zahl hervorgehoben; zweiter Tipp „Gegentore“ mit zweiter Zahl; dritter zurück', () => {
+  it('@TS-014 Kopf „Tore“: Pfeil, zweiter Tipp „Gegentore“ mit Pfeil, dritter zurück; keine Hervorhebung einer Zahl', () => {
     const { container } = wrap(<GroupTables standings={standings} teams={standings.map((s) => s.team)} />);
     const head = () => within(container.querySelector('.desktop-view')!).getByTestId('sort-head-g-tore');
+    const pfeile = () => head().querySelectorAll('svg').length;
+    expect(pfeile()).toBe(0);
     fireEvent.click(head());
-    const focused = () => Array.from(container.querySelectorAll('.desktop-view [data-goals-focus]'));
-    expect(focused()).toHaveLength(4);
-    expect(focused().every((e) => e.getAttribute('data-goals-focus') === 'for')).toBe(true);
-    expect(focused()[0].textContent).toBe('11');
+    expect(head()).toHaveAccessibleName('Tore, meiste zuerst sortiert');
+    expect(pfeile()).toBe(1);
+    expect(names('.desktop-view', container)[0]).toBe('FC Nordstern');
     fireEvent.click(head());
-    expect(head()).toHaveAccessibleName(/Gegentore/);
+    expect(head()).toHaveAccessibleName(/^Gegentore, wenigste zuerst/);
+    expect(pfeile()).toBe(1);
     expect(names('.desktop-view', container)).toEqual(['TSV Mitte', 'SV Ahorn', 'Zeta Ost', 'FC Nordstern']);
-    expect(focused().every((e) => e.getAttribute('data-goals-focus') === 'against')).toBe(true);
-    expect(focused()[0].textContent).toBe('2');
     fireEvent.click(head());
-    expect(head()).toHaveAccessibleName(/^Tore/);
-    expect(focused()).toHaveLength(0);
+    expect(head()).toHaveAccessibleName('Tore');
+    expect(pfeile()).toBe(0);
     expect(names('.desktop-view', container)[0]).toBe('SV Ahorn');
+    // Gegenbeispiel: nie eine hervorgehobene Zahl in „9:4“
+    expect(container.querySelector('[data-goals-focus]')).toBeNull();
+    expect(container.querySelector('.desktop-view tbody td:nth-child(7) [style*="underline"]')).toBeNull();
   });
 
   it('@TS-016 Gleichstand-Marke bleibt am Team, wenn nach Team sortiert ist', () => {
@@ -132,24 +134,6 @@ describe('GroupTables sortierbar', () => {
     expect(screen.getByTestId('where').textContent).toBe('?ts=gA.tore');
     fireEvent.click(screen.getByTestId('sort-reset-gA'));
     expect(order(cards[0])).toEqual(['A Eins', 'A Zwei']);
-  });
-
-  it('@TS-014 Markierung der Sortierung (Unterstrich, data-goals-focus) ist von der Wertungsfläche goalsFor unterscheidbar; Handy trägt dieselben Werte', () => {
-    const tournament = { placementLogic: [{ id: 'goalsFor', enabled: true }] } as unknown as ScheduleSource;
-    const { container } = wrap(<GroupTables standings={standings} teams={standings.map((s) => s.team)} tournament={tournament} />);
-    const vorher = container.querySelector<HTMLElement>('.desktop-view tbody tr td:nth-child(7) > span')!;
-    expect(vorher.style.background).not.toBe('transparent'); // Wertungsfläche vorhanden
-    expect(container.querySelector('[data-goals-focus]')).toBeNull();
-    fireEvent.click(within(container.querySelector('.desktop-view')!).getByTestId('sort-head-g-tore'));
-    const marke = container.querySelector<HTMLElement>('.desktop-view [data-goals-focus="for"]')!;
-    expect(marke.style.textDecoration).toBe('underline');
-    expect(marke.parentElement!.style.background).not.toBe('transparent');
-    expect(marke.parentElement!.style.textDecoration).toBe('');
-    // Handy: aufgeklappt, gleiche Markierung und gleiche Werte
-    fireEvent.click(screen.getByTestId('standing-toggle-nordstern'));
-    const mobil = container.querySelector<HTMLElement>('.mobile-view [data-goals-focus="for"]')!;
-    expect(mobil.style.textDecoration).toBe('underline');
-    expect(mobil.textContent).toBe('11');
   });
 
   it('@ZM-198 vor dem ersten Spiel bleibt „–“ auch bei Sortierung nach Team', () => {
