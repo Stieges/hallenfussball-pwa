@@ -4,7 +4,7 @@
  * (Speichern/Abbrechen), Logo entfernen, Teamfarbe, Wiederherstellen und
  * Löschen mit Ergebnissen („Als entfernt markieren").
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Match, Tournament } from '../../../types/tournament';
@@ -24,10 +24,12 @@ function tournamentWith(teams: Array<{ id: string; name: string; isRemoved?: boo
 }
 
 beforeEach(() => vi.clearAllMocks());
+afterEach(() => vi.useRealTimers());
 
 describe('TeamsTab — Hauptpfade (Abdeckung)', () => {
   it('Umbenennen speichert und bricht ab', async () => {
-    const user = userEvent.setup();
+    vi.useFakeTimers({ toFake: ['Date'] });
+    const user = userEvent.setup({ advanceTimers: () => undefined });
     const onTournamentUpdate = vi.fn();
     render(<TeamsTab tournament={tournamentWith([{ id: 'ufer', name: 'VfB Ufer' }])} onTournamentUpdate={onTournamentUpdate} />);
 
@@ -37,6 +39,8 @@ describe('TeamsTab — Hauptpfade (Abdeckung)', () => {
     await user.click(screen.getByTestId('team-rename-save-ufer'));
     expect(onTournamentUpdate).toHaveBeenCalledTimes(1);
 
+    // @OB-091: gleich nach „Speichern“ ist „Umbenennen“ kurz gesperrt; die Zeit läuft über eingefrorenes Date weiter
+    vi.setSystemTime(Date.now() + 5000);
     await user.click(screen.getByTestId('team-edit-button-ufer'));
     await user.click(within(screen.getByTestId('team-card-ufer')).getByRole('button', { name: /common\.cancel/ }));
     expect(onTournamentUpdate).toHaveBeenCalledTimes(1);

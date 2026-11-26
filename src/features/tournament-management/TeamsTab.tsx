@@ -36,6 +36,7 @@ import { useTournamentClosed } from '../../hooks/useTournamentClosed';
 import { useCan } from '../auth/hooks/useCan';
 import { ConfirmDialog, useConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { SlashBreaks } from '../../components/ui/atoms/TeamName';
+import { useRenameFeedback } from './hooks/useRenameFeedback';
 import { teamNameStyle, teamNameRowStyle, expandButtonStyle, buttonGroupStyle, keepShortHyphenWord } from './teamsTabCardStyles';
 
 interface TeamsTabProps {
@@ -51,6 +52,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
   // A-11 (@HE-042, L6): Umbenennen, Logo, Farbe = teams; Löschen, Wiederherstellen = restructure. Ohne Recht lesend + Hinweis.
   const canEditTeams = useCan('teams', tournament.id);
   const canRestructure = useCan('restructure', tournament.id);
+  const { notifySaved, isReopenLocked } = useRenameFeedback(); // @OB-091
   const closed = useTournamentClosed(tournament.id); // R3-3: nach dem Abschluss ist der Grund der Abschluss, nicht das Recht
   const restoreDialog = useConfirmDialog({
     title: t('teams.restoreDialog.title'),
@@ -101,6 +103,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
   // ============================================================================
 
   const handleStartEdit = (team: Team) => {
+    if (isReopenLocked()) { return; } // @OB-091: Doppeltipp nach „Speichern“ öffnet nicht erneut
     setEditingTeamId(team.id);
     setEditingName(team.name);
     setError(null);
@@ -126,6 +129,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
       };
 
       onTournamentUpdate(updatedTournament);
+      notifySaved();
       handleCancelEdit();
     } catch (err) {
       setError(err instanceof Error ? err.message : t('teams.renameError'));
