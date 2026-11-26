@@ -51,8 +51,10 @@ describe('@HE-042 Teams – nur die Turnierleitung ändert', () => {
     expect(screen.queryByTestId('lead-only-hint')).not.toBeInTheDocument();
     await user.click(screen.getByTestId('team-expand-toggle-sg'));
     await user.click(screen.getByTestId('team-edit-button-sg'));
-    await user.type(screen.getByTestId('team-rename-input-sg'), '{selectall}SG Mitte 2');
+    await user.clear(screen.getByTestId('team-rename-input-sg'));
+    await user.type(screen.getByTestId('team-rename-input-sg'), 'SG Mitte 2');
     await user.click(screen.getByTestId('team-rename-save-sg'));
     expect(onTournamentUpdate).toHaveBeenCalledTimes(1);
+    expect(onTournamentUpdate).toHaveBeenCalledWith(expect.objectContaining({ teams: expect.arrayContaining([expect.objectContaining({ id: 'sg', name: 'SG Mitte 2' })]) }));
   });
 });

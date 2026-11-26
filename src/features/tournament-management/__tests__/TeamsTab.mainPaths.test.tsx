@@ -35,9 +35,11 @@ describe('TeamsTab — Hauptpfade (Abdeckung)', () => {
 
     await user.click(screen.getByTestId('team-expand-toggle-ufer'));
     await user.click(screen.getByTestId('team-edit-button-ufer'));
-    await user.type(screen.getByTestId('team-rename-input-ufer'), '{selectall}FC Neu');
+    await user.clear(screen.getByTestId('team-rename-input-ufer'));
+    await user.type(screen.getByTestId('team-rename-input-ufer'), 'FC Neu');
     await user.click(screen.getByTestId('team-rename-save-ufer'));
     expect(onTournamentUpdate).toHaveBeenCalledTimes(1);
+    expect(onTournamentUpdate).toHaveBeenCalledWith(expect.objectContaining({ teams: expect.arrayContaining([expect.objectContaining({ id: 'ufer', name: 'FC Neu' })]) }));
 
     // @OB-091: gleich nach „Speichern“ ist „Umbenennen“ kurz gesperrt; die Zeit läuft über eingefrorenes Date weiter
     vi.setSystemTime(Date.now() + 5000);

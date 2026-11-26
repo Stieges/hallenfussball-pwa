@@ -24,7 +24,8 @@ function Huelle() {
 async function umbenennenUndSpeichern(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByTestId('team-expand-toggle-ufer'));
   await user.click(screen.getByTestId('team-edit-button-ufer'));
-  await user.type(screen.getByTestId('team-rename-input-ufer'), '{selectall}SG Tengling/Taching');
+  await user.clear(screen.getByTestId('team-rename-input-ufer'));
+  await user.type(screen.getByTestId('team-rename-input-ufer'), 'SG Tengling/Taching');
   await user.click(screen.getByTestId('team-rename-save-ufer'));
 }
 
@@ -38,8 +39,7 @@ describe('TeamsTab @OB-091', () => {
     await umbenennenUndSpeichern(user);
     expect(screen.queryByTestId('team-rename-input-ufer')).toBeNull();
     expect(await screen.findByText('tournament:teams.renameSaved')).toBeTruthy();
-    // endet auf den neuen Namen: mit eingefrorenem Date bleibt in diesem Aufbau der alte Textknoten stehen (Baustein allein ohne Fake-Date: TeamName.namenswechsel.test.tsx, vollständiger Name; im Browser prüft das Playwright-Stück den vollen Text)
-    expect(screen.getByTestId('team-name-ufer').textContent).toMatch(/SG Tengling\/Taching$/);
+    expect(screen.getByTestId('team-name-ufer')).toHaveTextContent('SG Tengling/Taching');
   });
 
   it('@OB-091 ein zweiter Tipp gleich danach auf „Umbenennen“ öffnet die Bearbeitung nicht erneut', async () => {
@@ -55,6 +55,15 @@ describe('TeamsTab @OB-091', () => {
     render(<Huelle />);
     await umbenennenUndSpeichern(user);
     vi.setSystemTime(new Date('2026-11-26T10:00:05Z'));
+    await user.click(screen.getByTestId('team-edit-button-ufer'));
+    expect(screen.getByTestId('team-rename-input-ufer')).toBeTruthy();
+  });
+
+  it('@OB-091 Gegenbeispiel: eine zurückgestellte Uhr sperrt „Umbenennen“ nicht dauerhaft', async () => {
+    const user = userEvent.setup({ advanceTimers: () => undefined });
+    render(<Huelle />);
+    await umbenennenUndSpeichern(user);
+    vi.setSystemTime(new Date('2026-11-26T09:00:00Z'));
     await user.click(screen.getByTestId('team-edit-button-ufer'));
     expect(screen.getByTestId('team-rename-input-ufer')).toBeTruthy();
   });

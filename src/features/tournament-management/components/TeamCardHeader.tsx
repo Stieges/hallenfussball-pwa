@@ -70,6 +70,7 @@ export function TeamCardHeader({ team, tournament, analysis, isExpanded, canEdit
       style={{ ...expandButtonStyle, transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
       onClick={(e) => { e.stopPropagation(); onArrow(); }}
       aria-label={isExpanded ? t('teams.collapse') : t('teams.expand')}
+      aria-expanded={isExpanded}
     >
       <Icons.ChevronDown size={iconSizeValues.sm} />
     </button>

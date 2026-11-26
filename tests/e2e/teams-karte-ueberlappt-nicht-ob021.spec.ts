@@ -15,7 +15,7 @@ import { installiereSaat } from '../../scripts/visual-metrics/saat/lader.mjs';
 import { messSaat, SCHRAEGSTRICH_NAME, TURNIER_ID } from './helpers/messlaufTaching';
 import { animationenFertig } from './helpers/animationenFertig';
 
-const BREITEN = [360, 412] as const;
+const BREITEN = [360, 412, 768, 1280] as const;
 
 interface Rechteck { links: number; rechts: number; oben: number; unten: number; breite: number; hoehe: number }
 

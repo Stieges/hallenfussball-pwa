@@ -21,8 +21,10 @@ test('@OB-091 nach „Speichern“: Meldung „Name gespeichert“, neuer Name, 
   await page.getByTestId(`team-expand-arrow-${id}`).click();
   await page.getByTestId(`team-edit-button-${id}`).click();
   await page.getByTestId(`team-rename-input-${id}`).fill('SG Tengling/Taching');
+  // Uhr einfrieren: der zweite Tipp liegt sicher innerhalb der Sperre, auch auf einem langsamen Rechner
+  await page.clock.setFixedTime(new Date('2026-11-26T10:00:00Z'));
   await page.getByTestId(`team-rename-save-${id}`).click();
-  // zweiter Tipp gleich danach auf „Umbenennen“ (vor allen Prüfungen, damit die Sperre noch gilt)
+  // zweiter Tipp gleich danach auf „Umbenennen“
   await page.getByTestId(`team-edit-button-${id}`).click();
 
   await expect(page.getByTestId(`team-rename-input-${id}`)).toHaveCount(0);

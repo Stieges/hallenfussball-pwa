@@ -21,10 +21,12 @@ export function useRenameFeedback(): { notifySaved: () => void; isReopenLocked: 
     toast?.showSuccess(t('teams.renameSaved'), { id: 'team-rename-saved' });
   }, [toast, t]);
 
-  const isReopenLocked = useCallback(
-    () => savedAt.current !== null && Date.now() - savedAt.current < RENAME_REOPEN_LOCK_MS,
-    [],
-  );
+  // Eine zurückgestellte Uhr (negative Differenz) sperrt nie dauerhaft.
+  const isReopenLocked = useCallback(() => {
+    if (savedAt.current === null) { return false; }
+    const vergangen = Date.now() - savedAt.current;
+    return vergangen >= 0 && vergangen < RENAME_REOPEN_LOCK_MS;
+  }, []);
 
   return { notifySaved, isReopenLocked };
 }

@@ -5,14 +5,15 @@
 import type { CSSProperties } from 'react';
 import { cssVars } from '../../design-tokens';
 
-/** Umbruch nur an Leerzeichen und nach „/“ (kein Wortbruch, `titel.wortbruch`): ein langes Wort bekommt Platz über die Spaltenbreite des Kopfes. */
+/** Umbruch an Leerzeichen und nach „/“; Wörter mit Bindestrich bleiben ganz. Nur ein einzelnes Wort, das länger ist als die Zeile, bricht als letzte Möglichkeit an beliebiger Stelle (@ZM-207). */
 export const teamNameStyle: CSSProperties = {
   fontSize: cssVars.fontSizes.lg,
   fontWeight: cssVars.fontWeights.bold,
   color: cssVars.colors.textPrimary,
-  marginBottom: '4px',
+  marginBottom: cssVars.spacing.xs,
   minWidth: 0,
-  };
+  overflowWrap: 'anywhere',
+};
 
 /** Zeile aus Teamname und (am Tablet/Desktop) Gruppen-Abzeichen: bricht um, statt über den Pfeil zu laufen. */
 export const teamNameRowStyle: CSSProperties = { display: 'flex', alignItems: 'center', flexWrap: 'wrap', minWidth: 0, gap: cssVars.spacing.sm };
@@ -35,10 +36,9 @@ export const expandButtonStyle: CSSProperties = {
 
 export const buttonGroupStyle: CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: cssVars.spacing.sm, maxWidth: '100%' };
 
-
 export const badgeStyle = (color: string, bgColor: string): CSSProperties => ({
   fontSize: cssVars.fontSizes.xs,
-  padding: '2px 8px',
+  padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
   borderRadius: cssVars.borderRadius.sm,
   background: bgColor,
   color,
@@ -53,7 +53,6 @@ export const teamCardHeaderStyle: CSSProperties = {
   gap: cssVars.spacing.md,
   cursor: 'pointer',
   transition: 'background-color 0.15s ease',
-  minHeight: '80px', // Platz für das Logo
 };
 
 export const teamCardLeftStyle: CSSProperties = { display: 'flex', alignItems: 'center', gap: cssVars.spacing.md, flex: 1, minWidth: 0 };
