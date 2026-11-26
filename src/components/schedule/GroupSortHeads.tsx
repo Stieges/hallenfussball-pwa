@@ -50,7 +50,7 @@ interface HeadCellProps {
   indicator?: boolean;
 }
 
-const FEWEST_FIRST: readonly SortColumn[] = ['team', 'n', 'gegentore'];
+const FEWEST_FIRST: readonly SortColumn[] = ['team', 'gruppe', 'n', 'gegentore'];
 
 /** Handy-Kopf: Text wie ohne Sortierung, bei aktiver Sortierung der Pfeil unter dem Wort (die Spalte wird nicht breiter). */
 function IndicatorHead({ sort, column, visual, style }: { sort: GroupSort; column: SortedColumn | 'platz'; visual: ReactNode; style: CSSProperties }) {
@@ -97,30 +97,39 @@ const PICKER_COLUMNS: ReadonlyArray<{ column: SortedColumn; term?: TableHeadTerm
   { column: 'tore' }, { column: 'gegentore' }, { column: 'diff', term: 'goalDifference' }, { column: 'pkt', term: 'points' },
 ];
 
+const GROUP_PICKER_COLUMN = { column: 'gruppe', term: 'group' } as const;
+
 interface BarProps {
   sort: GroupSort;
   onChange: (state: SortState) => void;
   onReset: () => void;
+  /** Auswahl auch mit „Gruppe“ (Platzierung über alle Gruppen bei einem Turnier mit Gruppen). */
+  withGroup?: boolean;
+  /** Auswahl „Sortieren nach …“ anzeigen (Vorgabe: ja, am Handy per CSS der Karte). Die Platzierung entscheidet selbst, ob Handy. */
+  picker?: boolean;
 }
 
 /** Einmal je Karte: „Nach Platzierung“ (nur wenn sortiert) und am Handy die Auswahl „Sortieren nach …“. */
-export function GroupSortBar({ sort, onChange, onReset }: BarProps) {
+export function GroupSortBar({ sort, onChange, onReset, withGroup = false, picker = true }: BarProps) {
   const { t } = useTranslation('tournament');
   const long = t as unknown as (key: string, options?: Record<string, string>) => string;
   const name = (column: SortedColumn, term?: TableHeadTerm): string => {
     if (term) {return long(SHORT_TERMS[term].long);}
     return column === 'team' ? long('groupTables.columns.team') : column === 'tore' ? long('groupTables.columns.goals') : long('tableSort.gegentore');
   };
-  const options: SortPickerOption[] = PICKER_COLUMNS.flatMap(({ column, term }) => [
+  const columns = withGroup ? [PICKER_COLUMNS[0], GROUP_PICKER_COLUMN, ...PICKER_COLUMNS.slice(1)] : PICKER_COLUMNS;
+  const options: SortPickerOption[] = columns.flatMap(({ column, term }) => [
     { value: { column, reversed: false }, label: name(column, term) },
     { value: { column, reversed: true }, label: long('tableSort.optionReversed', { label: name(column, term) }) },
   ]);
   return (
     <>
       {/* Die Auswahl gibt es nur am Handy (CSS der Karte); das Maß hängt am Wrapper, damit ohne Auswahl keine Lücke bleibt */}
-      <div className="sort-picker-mobile" style={{ marginBottom: cssVars.spacing.md }}>
-        <SortPicker options={options} state={sort.state} onChange={onChange} testId={`sort-picker-${sort.key}`} />
-      </div>
+      {picker && (
+        <div className="sort-picker-mobile" style={{ marginBottom: cssVars.spacing.md }}>
+          <SortPicker options={options} state={sort.state} onChange={onChange} testId={`sort-picker-${sort.key}`} />
+        </div>
+      )}
       {sort.state !== null && (
         <div className="sort-reset-bar" style={{ marginBottom: cssVars.spacing.md }}>
           <SortReset visible onReset={onReset} testId={`sort-reset-${sort.key}`} />

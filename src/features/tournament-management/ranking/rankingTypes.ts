@@ -10,6 +10,8 @@ export interface RankingRow {
   standing: Standing | undefined;
   /** Kurzform der Gruppe („A“); leer ohne Gruppe. */
   groupCode: string;
+  /** Sortierwert „Gruppe“: Kürzel, bei gleichem Kürzel (z. B. „GR“ für „Gruppe A“ und „Gruppe B“) die Gruppen-ID. */
+  groupSortKey: string;
 }
 
 export interface RankingTableProps {
