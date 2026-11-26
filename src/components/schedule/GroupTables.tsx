@@ -4,7 +4,7 @@
  * Uses CSS media queries for responsive layout (no isMobile prop needed)
  */
 
-import { ReactNode } from 'react';
+import { ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens'
 import { Standing, TeamLogo, TeamColors } from '../../types/tournament';
@@ -49,7 +49,7 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
   renderGroupState,
 }) => {
   const { t } = useTranslation('tournament');
-  const groupStandings = getGroupStandings(standings, teams);
+  const groupStandings = useMemo(() => getGroupStandings(standings, teams), [standings, teams]);
   const tieApp = tieDisplay === 'app';
   const tieMarkerFor = (group: string): ((teamId: string) => ReactNode) | undefined =>
     tieApp && renderTieMarker ? (teamId) => renderTieMarker(teamId, group) : undefined;
@@ -84,6 +84,7 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
         {groupStandings.map(({ group, groupStandings: groupTeams }) => (
           <GroupStandingsCard
             key={group}
+            groupId={group}
             standings={groupTeams}
             title={group === OVERALL_GROUP ? t('groupTables.overall') : getGroupDisplayName(group, tournament)}
             tournament={tournament}

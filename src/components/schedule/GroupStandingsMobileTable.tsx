@@ -8,16 +8,20 @@ import { Fragment, useState, type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars, iconSizeValues } from '../../design-tokens';
 import type { Standing } from '../../types/tournament';
-import { ShortLabel } from '../ui/atoms';
 import { Icons } from '../ui/Icons';
 import { monitorTeamName } from '../../core/models/teamNameAbbrev';
-import { placeLabel } from '../../core/standings/placeLabel';
 import { goalDiffLabel } from '../../core/standings/goalDiffLabel';
 import { StandingNameCell } from './StandingNameCell';
+import { GroupHeadCell, type GroupSort } from './GroupSortHeads';
 import { goalDiffColor, hiddenStyle, highlightStyle, mobileFixedColStyle, mobileTdStyle, mobileThStyle, tableStyle, type PlacementHighlights } from './groupTablesStyle';
 
 export interface GroupStandingsMobileTableProps {
-  standings: Standing[];
+  standings: readonly Standing[];
+  /** Platzziffer je Team (siehe Desktop-Tabelle). */
+  placeOf: (teamId: string) => string;
+  sort?: GroupSort | null;
+  /** Bei Sortierung nach Tore/Gegentore: die Zahl im aufgeklappten Bereich ist unterstrichen markiert (@TS-014). */
+  goalsFocus?: 'for' | 'against';
   title: string;
   highlights: PlacementHighlights;
   activeMatchTeamIds?: Set<string>;
@@ -48,16 +52,18 @@ const detailCell: CSSProperties = { textAlign: 'center' };
 const detailLabel: CSSProperties = { color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: cssVars.spacing.xs };
 const detailValue: CSSProperties = { fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary };
 
-function Detail({ label, value, span, active }: { label: string; value: ReactNode; span: number; active?: boolean }) {
+const focusStyle: CSSProperties = { textDecoration: 'underline', textUnderlineOffset: cssVars.spacing.xs };
+
+function Detail({ label, value, span, active, focus }: { label: string; value: ReactNode; span: number; active?: boolean; focus?: boolean }) {
   return (
     <div style={{ ...detailCell, gridColumn: `span ${String(span)}` }}>
       <div style={detailLabel}>{label}</div>
-      <div style={{ ...detailValue, ...highlightStyle(active === true), display: 'inline-block' }}>{value}</div>
+      <div style={{ ...detailValue, ...highlightStyle(active === true), ...(focus === true ? focusStyle : {}), display: 'inline-block' }} data-goals-focus={focus === true ? 'true' : undefined}>{value}</div>
     </div>
   );
 }
 
-export function GroupStandingsMobileTable({ standings, title, highlights, activeMatchTeamIds, publicTieMarker, tieMarker }: GroupStandingsMobileTableProps) {
+export function GroupStandingsMobileTable({ standings, placeOf, sort = null, goalsFocus, title, highlights, activeMatchTeamIds, publicTieMarker, tieMarker }: GroupStandingsMobileTableProps) {
   const { t } = useTranslation('tournament');
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const toggle = (teamId: string) => {
@@ -75,16 +81,16 @@ export function GroupStandingsMobileTable({ standings, title, highlights, active
       <table style={tableStyle}>
         <thead>
           <tr>
-            <th style={mobileFixedColStyle}><ShortLabel term="rank" /></th>
-            <th style={mobileThStyle}>{t('groupTables.columns.team')}</th>
-            <th style={mobileFixedColStyle}><ShortLabel term="played" /></th>
-            <th style={mobileFixedColStyle}><ShortLabel term="goalDifference" /></th>
-            <th style={mobileFixedColStyle}><ShortLabel term="points" /></th>
+            <GroupHeadCell compact sort={sort} column="platz" term="rank" style={mobileFixedColStyle} />
+            <GroupHeadCell compact sort={sort} column="team" text={t('groupTables.columns.team')} style={mobileThStyle} />
+            <GroupHeadCell compact sort={sort} column="sp" term="played" style={mobileFixedColStyle} />
+            <GroupHeadCell compact sort={sort} column="diff" term="goalDifference" style={mobileFixedColStyle} />
+            <GroupHeadCell compact sort={sort} column="pkt" term="points" style={mobileFixedColStyle} />
             <th style={mobileFixedColStyle}><span style={hiddenStyle}>{t('groupTables.details.column')}</span></th>
           </tr>
         </thead>
         <tbody>
-          {standings.map((standing, index) => {
+          {standings.map((standing) => {
             const goalDiff = standing.goalsFor - standing.goalsAgainst;
             const teamKey = standing.team.id;
             const isExpanded = expanded.has(teamKey);
@@ -93,7 +99,7 @@ export function GroupStandingsMobileTable({ standings, title, highlights, active
             return (
               <Fragment key={teamKey}>
                 <tr onClick={() => { toggle(teamKey); }} style={{ cursor: 'pointer' }}>
-                  <td style={{ ...center, fontWeight: cssVars.fontWeights.bold }}>{placeLabel(standings, index)}</td>
+                  <td style={{ ...center, fontWeight: cssVars.fontWeights.bold }}>{placeOf(standing.team.id)}</td>
                   <td style={{ ...mobileTdStyle, fontWeight: cssVars.fontWeights.semibold, fontSize: cssVars.fontSizes.md }}>
                     {/* @ZM-169: nur hier Vereinskürzel nach der Monitor-Liste; Desktop-Tabelle und Spielkarten zeigen den vollen Namen */}
                     <StandingNameCell team={standing.team} label={monitorTeamName(standing.team.name)} playing={activeMatchTeamIds?.has(teamKey) === true} gap={cssVars.spacing.xs} />
@@ -135,8 +141,8 @@ export function GroupStandingsMobileTable({ standings, title, highlights, active
                         <Detail label={t('groupTables.details.wins')} value={standing.won} span={2} active={highlights.wins} />
                         <Detail label={t('groupTables.details.draws')} value={standing.drawn} span={2} />
                         <Detail label={t('groupTables.details.losses')} value={standing.lost} span={2} />
-                        <Detail label={t('groupTables.details.goalsFor')} value={standing.goalsFor} span={3} active={highlights.goalsFor} />
-                        <Detail label={t('groupTables.details.goalsAgainst')} value={standing.goalsAgainst} span={3} active={highlights.goalsAgainst} />
+                        <Detail label={t('groupTables.details.goalsFor')} value={standing.goalsFor} span={3} active={highlights.goalsFor} focus={goalsFocus === 'for'} />
+                        <Detail label={t('groupTables.details.goalsAgainst')} value={standing.goalsAgainst} span={3} active={highlights.goalsAgainst} focus={goalsFocus === 'against'} />
                       </div>
                     </td>
                   </tr>

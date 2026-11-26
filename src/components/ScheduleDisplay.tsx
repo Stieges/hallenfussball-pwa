@@ -12,6 +12,7 @@
 import type { ScoreCommitResult } from './ui/molecules';
 import { CSSProperties, useMemo } from 'react';
 import { cssVars } from '../design-tokens'
+import { TableSortProvider } from '../hooks/TableSortProvider';
 import { GeneratedSchedule } from '../core/generators';
 import { effectiveFieldCount, type TournamentView, type ViewLocale } from '../core/view';
 import { Standing, Match, Team } from '../types/tournament';
@@ -287,12 +288,15 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
 
       {/* Group Tables */}
       {hasGroups && showGroupTables && (
-        <GroupTables
-          standings={standings}
-          teams={schedule.teams}
-          tournament={groupsOnly}
-          activeMatchTeamIds={activeMatchTeamIds}
-        />
+        // Der Spielplan hat keine Sortierköpfe (@TS-013): auch im Reiter „Spiele“ der Zuschauer-Seite, der im selben Provider liegt
+        <TableSortProvider disabled>
+          <GroupTables
+            standings={standings}
+            teams={schedule.teams}
+            tournament={groupsOnly}
+            activeMatchTeamIds={activeMatchTeamIds}
+          />
+        </TableSortProvider>
       )}
 
       {/* Final Stage Schedule */}

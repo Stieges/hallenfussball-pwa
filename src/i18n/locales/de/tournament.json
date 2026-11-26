@@ -2136,6 +2136,7 @@
   },
   "tableSort": {
     "reset": "Nach Platzierung",
+    "optionReversed": "{{label}} (umgekehrt)",
     "pickerLabel": "Sortieren nach …",
     "gegentore": "Gegentore",
     "sortedBestFirst": "{{label}}, meiste zuerst sortiert",

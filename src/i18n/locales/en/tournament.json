@@ -2136,6 +2136,7 @@
   },
   "tableSort": {
     "reset": "By ranking",
+    "optionReversed": "{{label}} (reversed)",
     "pickerLabel": "Sort by …",
     "gegentore": "Goals against",
     "sortedBestFirst": "{{label}}, sorted most first",

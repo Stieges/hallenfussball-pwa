@@ -1,16 +1,24 @@
 /**
  * Karte einer Gruppentabelle (Titel, Zustandsmarken, breite und Handy-Tabelle). Aus `GroupTables.tsx` herausgelöst.
  */
-import { CSSProperties, ReactNode } from 'react';
+import { CSSProperties, ReactNode, useMemo } from 'react';
 import { cssVars, breakpointValues } from '../../design-tokens';
 import type { Standing } from '../../types/tournament';
 import type { ScheduleSource } from './scheduleSource';
 import { GroupStandingsDesktopTable } from './GroupStandingsDesktopTable';
 import { GroupStandingsMobileTable } from './GroupStandingsMobileTable';
 import { placementHighlights } from './groupTablesStyle';
+import { placeLabel } from '../../core/standings/placeLabel';
+import { tableKey } from '../../core/standings/tableSortAddress';
+import { useTableSort } from '../../hooks/useTableSort';
+import { useTableSortState } from '../../hooks/useTableSortState';
+import { groupSortColumns } from './groupSortColumns';
+import { GroupSortBar, type GroupSort } from './GroupSortHeads';
 
 export interface GroupStandingsCardProps {
   standings: Standing[];
+  /** Gruppe der Tabelle (`''` = Jeder gegen jeden); bestimmt den Schlüssel in der Adresse (`gA`, `g`). */
+  groupId: string;
   title: string;
   tournament?: ScheduleSource;
   activeMatchTeamIds?: Set<string>;
@@ -39,8 +47,17 @@ const titleStyle: CSSProperties = {
   marginBottom: cssVars.spacing.md,
 };
 
-export const GroupStandingsCard: React.FC<GroupStandingsCardProps> = ({ standings, title, tournament, activeMatchTeamIds, tieHint, tieMarker, publicTieMarker, groupState }) => {
+export const GroupStandingsCard: React.FC<GroupStandingsCardProps> = ({ standings, groupId, title, tournament, activeMatchTeamIds, tieHint, tieMarker, publicTieMarker, groupState }) => {
   const highlights = placementHighlights(tournament);
+  // Sortiert wird einmal je Karte; breite und Handy-Tabelle bekommen dieselbe Zeilenliste (@TS-004).
+  const handle = useTableSortState('gruppe', groupId);
+  const rows = useTableSort(standings, groupSortColumns, handle?.state ?? null);
+  const placeOf = useMemo(() => {
+    const map = new Map(standings.map((s, index) => [s.team.id, placeLabel(standings, index)]));
+    return (teamId: string) => map.get(teamId) ?? '';
+  }, [standings]);
+  const sort: GroupSort | null = handle === null ? null : { key: tableKey('gruppe', groupId), state: handle.state, onTap: handle.tap };
+  const goalsFocus = handle?.state?.column === 'tore' ? 'for' : handle?.state?.column === 'gegentore' ? 'against' : undefined;
   return (
     <div style={containerStyle} className="standings-table">
       {groupState === undefined ? <h3 style={titleStyle}>{title}</h3> : (
@@ -53,11 +70,15 @@ export const GroupStandingsCard: React.FC<GroupStandingsCardProps> = ({ standing
         </>
       )}
       {tieHint}
+      {sort !== null && handle !== null && <GroupSortBar sort={sort} onChange={handle.set} onReset={handle.reset} />}
 
       {/* Breite Ansicht - am Handy per CSS ausgeblendet */}
       <div className="desktop-view" style={{ overflowX: 'auto', position: 'relative' }}>
         <GroupStandingsDesktopTable
-          standings={standings}
+          standings={rows}
+          placeOf={placeOf}
+          sort={sort}
+          goalsFocus={goalsFocus}
           highlights={highlights}
           activeMatchTeamIds={activeMatchTeamIds}
           nameMark={tieMarker ?? publicTieMarker}
@@ -66,7 +87,10 @@ export const GroupStandingsCard: React.FC<GroupStandingsCardProps> = ({ standing
 
       {/* Handy-Ansicht - in der breiten Ansicht per CSS ausgeblendet */}
       <GroupStandingsMobileTable
-        standings={standings}
+        standings={rows}
+        placeOf={placeOf}
+        sort={sort}
+        goalsFocus={goalsFocus}
         title={title}
         highlights={highlights}
         activeMatchTeamIds={activeMatchTeamIds}
@@ -77,7 +101,8 @@ export const GroupStandingsCard: React.FC<GroupStandingsCardProps> = ({ standing
       {/* CSS for responsive view switching */}
       <style>{`
         /* Hide mobile view by default (desktop first) */
-        .standings-table .mobile-view {
+        .standings-table .mobile-view,
+        .standings-table .sort-picker-mobile {
           display: none;
         }
 
@@ -93,7 +118,8 @@ export const GroupStandingsCard: React.FC<GroupStandingsCardProps> = ({ standing
           .standings-table .desktop-view {
             display: none;
           }
-          .standings-table .mobile-view {
+          .standings-table .mobile-view,
+          .standings-table .sort-picker-mobile {
             display: block;
           }
           .standings-table table {
@@ -117,6 +143,9 @@ export const GroupStandingsCard: React.FC<GroupStandingsCardProps> = ({ standing
         }
 
         @media print {
+          .standings-table .sort-picker-mobile {
+            display: none !important;
+          }
           .standings-table .mobile-view {
             display: none !important;
           }

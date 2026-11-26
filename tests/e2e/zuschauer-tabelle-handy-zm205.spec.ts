@@ -109,7 +109,7 @@ test.describe('@ZM-205 Tabelle der Zuschauer-Seite am Handy', () => {
     test.skip(handy, 'die breite Tabelle gilt ab 769 Pixel Breite');
     const kopf = await page.locator('.standings-table .desktop-view thead tr').first().locator('th [aria-hidden="true"]').allTextContents();
     expect(kopf).toEqual(['#', 'Sp.', 'S', 'U', 'N', 'Diff.', 'Pkt.']);
-    await expect(page.locator('.standings-table .desktop-view button')).toHaveCount(0);
+    await expect(page.locator('.standings-table .desktop-view [data-testid^="standing-toggle-"]')).toHaveCount(0);
   });
 });
 

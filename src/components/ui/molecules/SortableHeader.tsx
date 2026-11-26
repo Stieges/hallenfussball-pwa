@@ -19,6 +19,10 @@ export interface SortableHeaderProps {
   onTap: (column: SortColumn) => void;
   testId?: string;
   as?: 'th' | 'div';
+  /** Stil der Kopfzelle (Farbe, Polster der Tabelle); die Taste darin erbt Farbe und Schrift. */
+  style?: CSSProperties;
+  /** Schmale Spalte (Handy-Tabelle): die Taste füllt die Zelle in der Breite, nur die Höhe hat das Touch-Maß. */
+  compact?: boolean;
 }
 
 type Direction = 'bestFirst' | 'fewestFirst' | 'atoZ' | 'ztoA';
@@ -59,7 +63,18 @@ const buttonStyle: CSSProperties = {
   cursor: 'pointer',
 };
 
-export function SortableHeader({ column, label, visual, state, onTap, testId, as = 'th' }: SortableHeaderProps) {
+/** Schmale Spalte: der Pfeil steht unter dem Wort statt daneben, damit die Spalte nicht breiter wird (die Teamspalte braucht die Breite, @ZM-088). */
+const compactStyle = (textAlign: CSSProperties['textAlign']): CSSProperties => ({
+  minWidth: 0,
+  width: '100%',
+  padding: 0,
+  flexDirection: 'column',
+  justifyContent: 'center',
+  alignItems: textAlign === 'left' ? 'flex-start' : 'center',
+  gap: 0,
+});
+
+export function SortableHeader({ column, label, visual, state, onTap, testId, as = 'th', style, compact = false }: SortableHeaderProps) {
   const { t } = useTranslation('tournament');
   // Kopf „Tore“ steht nach dem zweiten Tipp auf „Gegentore“.
   const shown = column === 'tore' && state?.column === 'gegentore' ? 'gegentore' : column;
@@ -71,13 +86,13 @@ export function SortableHeader({ column, label, visual, state, onTap, testId, as
   const Arrow = ariaSort === 'descending' ? Icons.ArrowDown : Icons.ArrowUp;
 
   const button = (
-    <button type="button" style={buttonStyle} aria-label={accessibleName} data-testid={testId} data-sorted={active ? 'true' : 'false'} onClick={() => onTap(column)}>
-      <span aria-hidden="true">{shown === column && visual ? visual : name}</span>
+    <button type="button" style={compact ? { ...buttonStyle, ...compactStyle(style?.textAlign) } : buttonStyle} aria-label={accessibleName} data-testid={testId} data-sorted={active ? 'true' : 'false'} onClick={() => onTap(column)}>
+      <span>{shown === column && visual ? visual : name}</span>
       {active ? <Arrow size={iconSizeValues.xs} /> : null}
     </button>
   );
   if (as === 'div') {
-    return <div role="columnheader" aria-sort={ariaSort}>{button}</div>;
+    return <div role="columnheader" aria-sort={ariaSort} style={style}>{button}</div>;
   }
-  return <th scope="col" aria-sort={ariaSort}>{button}</th>;
+  return <th scope="col" aria-sort={ariaSort} style={style}>{button}</th>;
 }
