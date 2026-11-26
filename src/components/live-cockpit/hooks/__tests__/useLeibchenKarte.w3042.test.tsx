@@ -22,29 +22,34 @@ const spiel = (extra: Partial<Match> = {}): Match => ({
   id: 'm1', round: 1, field: 1, matchNumber: 1, slotA: teamSlot(SUED), slotB: teamSlot(NORD), matchStatus: 'scheduled', ...extra,
 });
 const turnier = (teams: Team[], match: Match): Tournament => ({ id: 't', title: 'Hallencup Nord', teams, matches: [match] }) as unknown as Tournament;
-const karte = (t: Tournament) => renderHook(() => useLeibchenKarte({
-  tournament: t, matchId: 'm1', zustand: 'vorAnpfiff', melde: vi.fn(), meldungText: () => '',
-})).result.current;
+const melde = vi.fn();
+const meldungText = () => '';
+/** Ein Hook für den ganzen Ablauf: `rerender` mit dem geänderten Turnier – so rechnet die offene Karte im Cockpit neu. */
+const zeigeKarte = (t: Tournament) => renderHook(({ tournament }: { tournament: Tournament }) => useLeibchenKarte({
+  tournament, matchId: 'm1', zustand: 'vorAnpfiff', melde, meldungText,
+}), { initialProps: { tournament: t } });
 
 const mitSchwarz: Team[] = [{ id: SUED, name: 'SV Süd', colors: { primary: SCHWARZ } }, { id: NORD, name: 'FC Nord', colors: { primary: SCHWARZ } }];
 const sueedUnbekannt: Team[] = [{ id: SUED, name: 'SV Süd' }, { id: NORD, name: 'FC Nord', colors: { primary: SCHWARZ } }];
 
 describe('@W3-042 Leibchen-Karte nach „Unbekannt“', () => {
-  it('offene Karte: vorher Karte nötig, danach rechnet sie ohne Farbe für SV Süd neu (kein Konflikt mehr)', () => {
-    const vorher = karte(turnier(mitSchwarz, spiel()));
-    expect(vorher?.trikot).toEqual({ a: SCHWARZ, b: SCHWARZ });
-    expect(vorher?.nurFestlegen).toBe(false);
-    const nachher = karte(turnier(sueedUnbekannt, spiel()));
-    expect(nachher?.trikot).toEqual({ b: SCHWARZ });
-    expect(nachher?.trikot.a).toBeUndefined();
-    expect(nachher?.nurFestlegen).toBe(true);
-    expect(nachher?.gewaehlt).toBeNull();
+  it('offene Karte: vorher Karte nötig, nach „Unbekannt“ rechnet derselbe Hook ohne Farbe für SV Süd neu (kein Konflikt mehr)', () => {
+    const { result, rerender } = zeigeKarte(turnier(mitSchwarz, spiel()));
+    expect(result.current?.trikot).toEqual({ a: SCHWARZ, b: SCHWARZ });
+    expect(result.current?.nurFestlegen).toBe(false);
+    rerender({ tournament: turnier(sueedUnbekannt, spiel()) });
+    expect(result.current?.trikot).toEqual({ b: SCHWARZ });
+    expect(result.current?.trikot.a).toBeUndefined();
+    expect(result.current?.nurFestlegen).toBe(true);
+    expect(result.current?.gewaehlt).toBeNull();
   });
 
-  it('bestätigte Wahl bleibt stehen, auch wenn SV Süd wieder „Unbekannt“ ist', () => {
+  it('bestätigte Wahl bleibt stehen: nach „Unbekannt“ zeigt derselbe Hook weiter Gelb auf Seite a', () => {
     const bestaetigt = spiel({ kitDecision: 'bib', kit: { a: GELB, b: SCHWARZ, bibSide: 'a' } });
-    const nachher = karte(turnier(sueedUnbekannt, bestaetigt));
-    expect(nachher?.gewaehlt).toEqual({ art: 'bestaetigt', seite: 'a', farbe: GELB });
-    expect(nachher?.trikot.a).toBeUndefined();
+    const { result, rerender } = zeigeKarte(turnier(mitSchwarz, bestaetigt));
+    expect(result.current?.gewaehlt).toEqual({ art: 'bestaetigt', seite: 'a', farbe: GELB });
+    rerender({ tournament: turnier(sueedUnbekannt, bestaetigt) });
+    expect(result.current?.gewaehlt).toEqual({ art: 'bestaetigt', seite: 'a', farbe: GELB });
+    expect(result.current?.trikot.a).toBeUndefined();
   });
 });
