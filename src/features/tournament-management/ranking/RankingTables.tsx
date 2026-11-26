@@ -6,7 +6,7 @@
 import type { ReactNode } from 'react';
 import type { Standing, Tournament } from '../../../types/tournament';
 import type { FinalPlacement } from '../../../utils/calculations';
-import { getGroupShortCode } from '../../../utils/displayNames';
+import { getGroupDisplayName, getGroupShortCode } from '../../../utils/displayNames';
 import { tableKey } from '../../../core/standings/tableSortAddress';
 import { useTableSort } from '../../../hooks/useTableSort';
 import { useTableSortState } from '../../../hooks/useTableSortState';
@@ -36,11 +36,13 @@ export function RankingTables({ finalRanking, getStanding, isMobile, expandedRow
   const base: RankingRow[] = finalRanking.map((placement) => {
     const group = placement.team.group;
     const groupCode = group ? getGroupShortCode(group, rest.tournament) : '';
-    return { placement, standing: getStanding(placement.team), groupCode, groupSortKey: `${groupCode} ${group ?? ''}` };
+    return { placement, standing: getStanding(placement.team), groupCode, groupSortKey: `${group ? getGroupDisplayName(group, rest.tournament) : ''} ${group ?? ''}` };
   });
-  const rows = useTableSort(base, rankingSortColumns(rest.hasGroups), handle?.state ?? null);
-  const sort: GroupSort | null = handle === null ? null : { key: tableKey('gesamt'), state: handle.state, onTap: handle.tap };
-  const goalsFocus = handle?.state?.column === 'tore' ? 'for' : handle?.state?.column === 'gegentore' ? 'against' : undefined;
+  // `ts=gesamt.gruppe` in der Adresse bei einem Turnier ohne Gruppen: gilt als Platzierung (keine Taste „Nach Platzierung“ ohne Pfeil)
+  const state = handle?.state?.column === 'gruppe' && !rest.hasGroups ? null : handle?.state ?? null;
+  const rows = useTableSort(base, rankingSortColumns(rest.hasGroups), state);
+  const sort: GroupSort | null = handle === null ? null : { key: tableKey('gesamt'), state, onTap: handle.tap };
+  const goalsFocus = state?.column === 'tore' ? 'for' : state?.column === 'gegentore' ? 'against' : undefined;
   return (
     <div className="ranking-tables">
       {sort !== null && handle !== null && (

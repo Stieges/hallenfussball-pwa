@@ -10,7 +10,7 @@ export interface RankingRow {
   standing: Standing | undefined;
   /** Kurzform der Gruppe („A“); leer ohne Gruppe. */
   groupCode: string;
-  /** Sortierwert „Gruppe“: Kürzel, bei gleichem Kürzel (z. B. „GR“ für „Gruppe A“ und „Gruppe B“) die Gruppen-ID. */
+  /** Sortierwert „Gruppe“: angezeigter Gruppenname (nicht das Kürzel, das bei „Gruppe A“/„Gruppe B“ beide Male „GR“ lautet), bei gleichem Namen die Gruppen-ID. */
   groupSortKey: string;
 }
 

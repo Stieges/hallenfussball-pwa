@@ -10,6 +10,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { initRealDeI18n } from '../../../test/realDeI18n';
 import type { SortPreferenceStore } from '../../../core/standings/tableSortPreference';
 import { TableSortProvider } from '../../../hooks/TableSortProvider';
+import type { Tournament } from '../../../types/tournament';
 import { TabellenTab } from '../TabellenTab';
 import { scheduleAndStandings, tournamentGroupOnly } from './openPlacementTestHelpers';
 
@@ -28,11 +29,11 @@ const DEISENHOFEN = 'FC Deisenhofen';
 const BAYERN = 'FC Bayern München II';
 const VORGABE = [TSV1860, GRUENWALD, FUERSTEN, UNTERHACHING, HEIMSTETTEN, DEISENHOFEN, BAYERN];
 
-function zeigePlatzierung(): void {
-  const tournament = tournamentGroupOnly();
+function zeigePlatzierung(aendern: (t: Tournament) => Tournament = (t) => t, url = '/'): void {
+  const tournament = aendern(tournamentGroupOnly());
   const { schedule, standings } = scheduleAndStandings(tournament);
   render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[url]}>
       <TableSortProvider store={emptyStore}>
         <TabellenTab tournament={tournament} schedule={schedule} currentStandings={standings} />
       </TableSortProvider>
@@ -118,5 +119,21 @@ describe('TabellenTab: Platzierung über alle Gruppen sortierbar', () => {
       'sort-head-gesamt-platz', 'sort-head-gesamt-team', 'sort-head-gesamt-gruppe', 'sort-head-gesamt-sp', 'sort-head-gesamt-s',
       'sort-head-gesamt-u', 'sort-head-gesamt-n', 'sort-head-gesamt-tore', 'sort-head-gesamt-diff', 'sort-head-gesamt-pkt',
     ]);
+  });
+
+  it('@TS-002 „Gruppe“ sortiert nach dem angezeigten Gruppennamen, nicht nach Kürzel oder ID: „Gruppe Nord“ (ID B) vor „Gruppe Süd“ (ID A)', () => {
+    zeigePlatzierung((t) => ({
+      ...t,
+      groups: t.groups?.map((g) => ({ ...g, customName: g.id === 'A' ? 'Gruppe Süd' : 'Gruppe Nord', shortCode: undefined })),
+    }));
+    fireEvent.click(kopf('gruppe'));
+    expect(namen()).toEqual([TSV1860, FUERSTEN, DEISENHOFEN, GRUENWALD, UNTERHACHING, HEIMSTETTEN, BAYERN]);
+  });
+
+  it('@TS-005 „ts=gesamt.gruppe“ in der Adresse bei einem Turnier ohne Gruppen gilt als Platzierung, ohne Taste „Nach Platzierung“', () => {
+    zeigePlatzierung((t) => ({ ...t, groupSystem: 'roundRobin', groups: [], teams: t.teams.map((team) => ({ ...team, group: undefined })) }), '/?ts=gesamt.gruppe');
+    expect(screen.queryByTestId('sort-head-gesamt-gruppe')).toBeNull();
+    expect(screen.queryByTestId('sort-reset-gesamt')).toBeNull();
+    expect(kopf('platz')).toHaveAttribute('data-sorted', 'true');
   });
 });
