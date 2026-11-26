@@ -43,6 +43,8 @@ export interface DesktopCardProps {
   renderExpandContent: (match: ScheduledMatch) => React.ReactNode;
   /** Whether the match has events (goals, cards, etc.) - shows chevron indicator */
   hasEvents?: boolean;
+  /** Zuschauer-Seite: symmetrische Zeile (@ZM-218) */
+  symmetric?: boolean;
   /** Restzeit eines laufenden Spiels beim Stand (@ZM-162) */
   clock?: SpectatorClock | null;
 }
@@ -63,6 +65,7 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
   onCircleClick,
   renderExpandContent,
   hasEvents = false,
+  symmetric = false,
   clock,
 }) => {
   const sides = sideContext ?? buildSideContext(tournament, [match]);
@@ -102,6 +105,7 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
         isExpanded={isExpanded}
         expandContent={renderExpandContent(match)}
         hasEvents={hasEvents}
+        symmetric={symmetric}
       />
     </div>
   );

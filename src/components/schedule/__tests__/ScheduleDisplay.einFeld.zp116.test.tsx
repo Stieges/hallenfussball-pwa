@@ -41,16 +41,14 @@ describe('@ZP-116 Zeile am Laptop (MatchCardDesktop): keine Spalte ohne Feldanga
     <MatchCardDesktop matchId="m1" homeTeam={{ id: 'nord', name: 'FC Nord' }} awayTeam={{ id: 'berg', name: 'DJK Berg' }} scheduledTime="10:00" field={field} status="scheduled" />,
   );
 
-  it('ohne Feld: die Zeile nennt kein Feld, der Raster der Zeile bleibt in beiden Fällen gleich (Hälfte, Stand, Hälfte; @ZM-218)', () => {
-    const mit = zeile(1);
-    expect(mit.container.textContent).toContain('Feld');
+  it('ohne Feld: die Zeile hat eine Zelle weniger und nennt kein Feld', () => {
+    const mit = zeile(1).container.querySelector('[role="article"]')!.children.length;
     const ohneZeile = zeile(undefined);
     expect(ohneZeile.container.textContent).not.toContain('Feld');
-    const zeileMit = mit.container.querySelector('[role="article"]')!;
-    const zeileOhne = ohneZeile.container.querySelector('[role="article"]')!;
-    // dasselbe Raster mit und ohne Feld, nie eine Spalte mehr oder weniger (die Feldangabe liegt in der linken Hälfte)
-    expect(zeileOhne.children.length).toBe(zeileMit.children.length);
-    expect(zeileOhne.children.length).toBe(3);
-    expect(getComputedStyle(zeileOhne).gridTemplateColumns).toBe(getComputedStyle(zeileMit).gridTemplateColumns);
+    const ohne = ohneZeile.container.querySelector('[role="article"]')!.children.length;
+    expect(ohne).toBe(mit - 1);
+    // das Spaltenraster hat genau so viele Spalten wie die Zeile Zellen hat (sonst rutschen die Zellen)
+    const spalten = (r: HTMLElement) => getComputedStyle(r).gridTemplateColumns.split(' ').length;
+    expect(spalten(ohneZeile.container.querySelector('[role="article"]')!)).toBe(ohne);
   });
 });

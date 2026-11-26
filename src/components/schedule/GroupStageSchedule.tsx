@@ -495,6 +495,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             onCircleClick={handleCircleClick}
             renderExpandContent={renderExpandContent}
             hasEvents={hasEvents}
+            symmetric={!_editable}
             clock={clockOf?.(match.id) ?? null}
           />
         );
