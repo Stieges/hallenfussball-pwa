@@ -79,7 +79,7 @@ describe('Zuschauer-Seite: Tabellen sortieren', () => {
   it('@TS-001 ohne Adresse und Gerätewert: Platzierung, keine Taste „Nach Platzierung“', async () => {
     await renderWith(buildLiveViewTournament(), '?tab=standings');
     expect(screen.queryByTestId('sort-reset-gA')).toBeNull();
-    expect(screen.getAllByTestId('sort-head-gA-platz')[0]).toHaveAttribute('data-sorted', 'true');
+    expect(screen.getByTestId('sort-head-gA-platz')).toHaveAttribute('data-sorted', 'true');
   });
 
   it('@TS-013 hideRankingsForPublic mit ?ts=gA.tore: Hinweis statt Tabelle, keine Sortierung', async () => {

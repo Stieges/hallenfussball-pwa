@@ -8,6 +8,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { initRealDeI18n } from '../../../test/realDeI18n';
 import { createMockTeam } from '../../../test/factories';
+import type { ScheduleSource } from '../scheduleSource';
 import type { Standing, Team } from '../../../types/tournament';
 import type { SortPreferenceStore } from '../../../core/standings/tableSortPreference';
 import { TableSortProvider } from '../../../hooks/TableSortProvider';
@@ -54,7 +55,8 @@ describe('GroupTables sortierbar', () => {
     expect(names('.desktop-view', container)).toEqual(['SV Ahorn', 'TSV Mitte', 'FC Nordstern', 'Zeta Ost']);
     const heads = Array.from(container.querySelectorAll('.desktop-view [data-testid^="sort-head-g-"]'));
     expect(heads.map((h) => h.getAttribute('data-sorted'))).toEqual(['true', ...Array<string>(8).fill('false')]);
-    expect(screen.getAllByTestId('sort-head-g-platz').length).toBe(2);
+    expect(screen.getByTestId('sort-head-g-platz')).toBeInTheDocument();
+    expect(screen.getByTestId('sort-head-g-platz-m')).toBeInTheDocument(); // Handy-Köpfe tragen den Zusatz -m
     expect(screen.queryByTestId('sort-reset-g')).toBeNull();
     expect(screen.queryByText('Nach Platzierung', { selector: 'button' })).toBeNull();
   });
@@ -65,7 +67,7 @@ describe('GroupTables sortierbar', () => {
     expect(names('.desktop-view', container).slice(0, 2)).toEqual(['FC Nordstern', 'SV Ahorn']);
     expect(platz('.desktop-view', container).slice(0, 2)).toEqual(['3', '1']);
     // Handy-Tabelle zeigt dieselbe Zeilenliste und dieselben Plätze
-    expect(names('.mobile-view', container).filter((n) => n !== '').slice(0, 2).join('|')).toContain('Nordstern');
+    expect(names('.mobile-view', container).slice(0, 2)).toEqual(['FC Nordstern', 'SV Ahorn']);
     expect(platz('.mobile-view', container).slice(0, 2)).toEqual(['3', '1']);
     expect(screen.getByTestId('sort-reset-g')).toBeInTheDocument();
   });
@@ -127,6 +129,43 @@ describe('GroupTables sortierbar', () => {
     expect(screen.getByTestId('where').textContent).toBe('?ts=gA.tore');
     fireEvent.click(screen.getByTestId('sort-reset-gA'));
     expect(order(cards[0])).toEqual(['A Eins', 'A Zwei']);
+  });
+
+  it('@TS-014 Markierung der Sortierung (Unterstrich, data-goals-focus) ist von der Wertungsfläche goalsFor unterscheidbar; Handy trägt dieselben Werte', () => {
+    const tournament = { placementLogic: [{ id: 'goalsFor', enabled: true }] } as unknown as ScheduleSource;
+    const { container } = wrap(<GroupTables standings={standings} teams={standings.map((s) => s.team)} tournament={tournament} />);
+    const vorher = container.querySelector<HTMLElement>('.desktop-view tbody tr td:nth-child(7) > span')!;
+    expect(vorher.style.background).not.toBe('transparent'); // Wertungsfläche vorhanden
+    expect(container.querySelector('[data-goals-focus]')).toBeNull();
+    fireEvent.click(within(container.querySelector('.desktop-view')!).getByTestId('sort-head-g-tore'));
+    const marke = container.querySelector<HTMLElement>('.desktop-view [data-goals-focus="for"]')!;
+    expect(marke.style.textDecoration).toBe('underline');
+    expect(marke.parentElement!.style.background).not.toBe('transparent');
+    expect(marke.parentElement!.style.textDecoration).toBe('');
+    // Handy: aufgeklappt, gleiche Markierung und gleiche Werte
+    fireEvent.click(screen.getByTestId('standing-toggle-nordstern'));
+    const mobil = container.querySelector<HTMLElement>('.mobile-view [data-goals-focus="for"]')!;
+    expect(mobil.style.textDecoration).toBe('underline');
+    expect(mobil.textContent).toBe('11');
+  });
+
+  it('@ZM-198 vor dem ersten Spiel bleibt „–“ auch bei Sortierung nach Team', () => {
+    const leer = standings.map((s) => ({ ...s, played: 0, won: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0, place: undefined }));
+    const { container } = wrap(<GroupTables standings={leer} teams={leer.map((s) => s.team)} />);
+    fireEvent.click(within(container.querySelector('.desktop-view')!).getByTestId('sort-head-g-team'));
+    expect(names('.desktop-view', container)[0]).toBe('FC Nordstern');
+    expect(platz('.desktop-view', container)).toEqual(['–', '–', '–', '–']);
+    expect(platz('.mobile-view', container)).toEqual(['–', '–', '–', '–']);
+  });
+
+  it('@TS-005 Tipp auf „Platz“ setzt die Sortierung zurück', () => {
+    const { container } = wrap(<GroupTables standings={standings} teams={standings.map((s) => s.team)} />);
+    const desktop = () => within(container.querySelector('.desktop-view')!);
+    fireEvent.click(desktop().getByTestId('sort-head-g-tore'));
+    expect(screen.getByTestId('sort-reset-g')).toBeInTheDocument();
+    fireEvent.click(desktop().getByTestId('sort-head-g-platz'));
+    expect(names('.desktop-view', container)[0]).toBe('SV Ahorn');
+    expect(screen.queryByTestId('sort-reset-g')).toBeNull();
   });
 
   it('ohne Router/Provider (Spielplan, Vorschau): keine Sortierköpfe, Köpfe wie bisher', () => {

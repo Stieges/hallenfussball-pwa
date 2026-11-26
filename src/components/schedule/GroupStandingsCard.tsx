@@ -143,7 +143,8 @@ export const GroupStandingsCard: React.FC<GroupStandingsCardProps> = ({ standing
         }
 
         @media print {
-          .standings-table .sort-picker-mobile {
+          .standings-table .sort-picker-mobile,
+          .standings-table .sort-reset-bar {
             display: none !important;
           }
           .standings-table .mobile-view {

@@ -34,15 +34,15 @@ export function GroupStandingsDesktopTable({ standings, placeOf, sort = null, go
     <table style={tableStyle}>
       <thead>
         <tr>
-          <GroupHeadCell compact sort={sort} column="platz" term="rank" style={fixedColStyle} />
-          <GroupHeadCell compact sort={sort} column="team" text={t('groupTables.columns.team')} style={thStyle} />
-          <GroupHeadCell compact sort={sort} column="sp" term="played" style={fixedColStyle} />
-          <GroupHeadCell compact sort={sort} column="s" term="won" style={fixedColStyle} />
-          <GroupHeadCell compact sort={sort} column="u" term="drawn" style={fixedColStyle} />
-          <GroupHeadCell compact sort={sort} column="n" term="lost" style={fixedColStyle} />
-          <GroupHeadCell compact sort={sort} column="tore" text={t('groupTables.columns.goals')} style={fixedColStyle} />
-          <GroupHeadCell compact sort={sort} column="diff" term="goalDifference" style={fixedColStyle} />
-          <GroupHeadCell compact sort={sort} column="pkt" term="points" style={fixedColStyle} />
+          <GroupHeadCell sort={sort} column="platz" term="rank" style={fixedColStyle} />
+          <GroupHeadCell sort={sort} column="team" text={t('groupTables.columns.team')} style={thStyle} />
+          <GroupHeadCell sort={sort} column="sp" term="played" style={fixedColStyle} />
+          <GroupHeadCell sort={sort} column="s" term="won" style={fixedColStyle} />
+          <GroupHeadCell sort={sort} column="u" term="drawn" style={fixedColStyle} />
+          <GroupHeadCell sort={sort} column="n" term="lost" style={fixedColStyle} />
+          <GroupHeadCell sort={sort} column="tore" text={t('groupTables.columns.goals')} style={fixedColStyle} />
+          <GroupHeadCell sort={sort} column="diff" term="goalDifference" style={fixedColStyle} />
+          <GroupHeadCell sort={sort} column="pkt" term="points" style={fixedColStyle} />
         </tr>
       </thead>
       <tbody>

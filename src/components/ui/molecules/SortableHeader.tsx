@@ -65,7 +65,7 @@ const buttonStyle: CSSProperties = {
 
 /** Schmale Spalte: der Pfeil steht unter dem Wort statt daneben, damit die Spalte nicht breiter wird (die Teamspalte braucht die Breite, @ZM-088). */
 const compactStyle = (textAlign: CSSProperties['textAlign']): CSSProperties => ({
-  minWidth: 0,
+  minWidth: cssVars.spacing.lg, // mindestens 24 px (WCAG 2.5.8)
   width: '100%',
   padding: 0,
   flexDirection: 'column',

@@ -2,10 +2,7 @@
  * Torzahlen „9:4“ der Gruppentabelle. Bei Sortierung nach Tore (erste Zahl) oder Gegentore (zweite Zahl) ist genau diese Zahl
  * unterstrichen und trägt `data-goals-focus` – nie nur Farbe, und getrennt von der Fläche der Wertung (`placementHighlights`, @TS-014).
  */
-import type { CSSProperties } from 'react';
-import { cssVars } from '../../design-tokens';
-
-const focusStyle: CSSProperties = { textDecoration: 'underline', textUnderlineOffset: cssVars.spacing.xs, fontWeight: cssVars.fontWeights.bold };
+import { focusStyle } from './groupTablesStyle';
 
 export interface GoalsPairProps {
   goalsFor: number;

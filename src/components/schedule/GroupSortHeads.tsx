@@ -36,7 +36,7 @@ const platzButton: CSSProperties = {
   cursor: 'pointer',
 };
 
-const compactButton: CSSProperties = { minWidth: 0, width: '100%', padding: 0, flexDirection: 'column', justifyContent: 'center', gap: 0 };
+const compactButton: CSSProperties = { minWidth: cssVars.spacing.lg, width: '100%', padding: 0, flexDirection: 'column', justifyContent: 'center', gap: 0 };
 
 interface HeadCellProps {
   sort: GroupSort | null;
@@ -54,7 +54,7 @@ export function GroupHeadCell({ sort, column, term, text, style, compact = false
   const { t } = useTranslation();
   const visual: ReactNode = term ? <ShortLabel term={term} /> : text;
   if (sort === null) {return <th style={style}>{visual}</th>;}
-  const testId = `sort-head-${sort.key}-${column}`;
+  const testId = `sort-head-${sort.key}-${column}${compact ? '-m' : ''}`;
   if (column === 'platz') {
     return (
       <th style={style} scope="col" aria-sort={sort.state === null ? 'ascending' : 'none'}>
@@ -100,7 +100,7 @@ export function GroupSortBar({ sort, onChange, onReset }: BarProps) {
         <SortPicker options={options} state={sort.state} onChange={onChange} testId={`sort-picker-${sort.key}`} />
       </div>
       {sort.state !== null && (
-        <div style={{ marginBottom: cssVars.spacing.md }}>
+        <div className="sort-reset-bar" style={{ marginBottom: cssVars.spacing.md }}>
           <SortReset visible onReset={onReset} testId={`sort-reset-${sort.key}`} />
         </div>
       )}
