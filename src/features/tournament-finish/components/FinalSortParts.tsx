@@ -32,6 +32,9 @@ export interface HeadSpec {
   align: 'start' | 'end';
 }
 
+/** Schlüssel aus `SHORT_TERMS` (Gleichlauf geprüft in `kurzformen.test.ts`); die Union aller Schlüssel ist für den typisierten `t` zu groß. */
+type Translate = (key: string, options?: Record<string, string>) => string;
+
 const FEWEST_FIRST: readonly SortColumn[] = ['team', 'gruppe', 'n', 'gegentore'];
 
 /** Die Taste hat links und rechts `spacing.xs` Polster: der Rand der Zelle rückt um dasselbe Maß hinaus, damit das Wort auf der Kante der Zeilen steht. */
@@ -48,6 +51,7 @@ const platzButton: CSSProperties = {
 
 function Head({ spec, sort, mobile }: { spec: HeadSpec; sort: ListSort | null; mobile: boolean }) {
   const { t } = useTranslation();
+  const long = t as unknown as Translate;
   const visual: ReactNode = spec.term ? <ShortLabel term={spec.term} /> : spec.text;
   const style = cellStyle(spec.align, sort !== null && spec.column !== 'plain' && !mobile);
   if (sort === null || spec.column === 'plain') {return <div role="columnheader" style={style}>{visual}</div>;}
@@ -77,7 +81,7 @@ function Head({ spec, sort, mobile }: { spec: HeadSpec; sort: ListSort | null; m
       </div>
     );
   }
-  const label = spec.term ? (t as (key: string) => string)(SHORT_TERMS[spec.term].long) : (spec.text ?? '');
+  const label = spec.term ? long(SHORT_TERMS[spec.term].long) : (spec.text ?? '');
   return <SortableHeader as="div" column={column} label={label} visual={spec.term ? visual : undefined} state={sort.state} onTap={sort.onTap} testId={testId} style={style} />;
 }
 
@@ -94,7 +98,7 @@ export interface PickerColumn { column: SortedColumn; term?: TableHeadTerm; text
 /** „Sortieren nach …“ (nur Handy) und „Nach Platzierung“ (nur wenn sortiert); beides im Druck ausgeblendet. */
 export function SortBar({ sort, columns, mobile, scope }: { sort: ListSort; columns: readonly PickerColumn[]; mobile: boolean; scope: string }) {
   const { t } = useTranslation('tournament');
-  const long = t as unknown as (key: string, options?: Record<string, string>) => string;
+  const long = t as unknown as Translate;
   const name = ({ term, text }: PickerColumn): string => (term ? long(SHORT_TERMS[term].long) : (text ?? ''));
   const options: SortPickerOption[] = columns.flatMap((c) => [
     { value: { column: c.column, reversed: false }, label: name(c) },

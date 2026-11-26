@@ -85,6 +85,23 @@ describe('Endstand sortierbar', () => {
     expect(namen()).toEqual(['AC Alt', 'SV Röthenbach', 'SV Roethenbach']);
   });
 
+  it('@TS-002 Zeilen ohne Tabellenwerte (Platzierungsspiele) stehen beim Sortieren nach Sp./Diff./Pkt. in beiden Richtungen am Ende, in Reihenfolge des Endstands', () => {
+    const gemischt = [row(1, 1, 'FC Zell'), row(2, 2, 'SV Oberau'), row(3, 3, 'sc Nord', tv(3, 0, 3)), row(4, 4, 'SV Ölberg', tv(3, 2, 7)), row(5, 5, 'AC Alt', tv(4, -2, 1))];
+    zeige(gemischt);
+    for (const spalte of ['pkt', 'diff', 'sp']) {
+      fireEvent.click(kopf(spalte));
+      expect(namen().slice(3), `${spalte} meiste zuerst`).toEqual(['FC Zell', 'SV Oberau']);
+      expect(namen().slice(0, 3)).not.toContain('FC Zell');
+      fireEvent.click(kopf(spalte));
+      expect(namen().slice(3), `${spalte} wenigste zuerst`).toEqual(['FC Zell', 'SV Oberau']);
+      fireEvent.click(kopf(spalte));
+    }
+    fireEvent.click(kopf('pkt'));
+    expect(namen()).toEqual(['SV Ölberg', 'sc Nord', 'AC Alt', 'FC Zell', 'SV Oberau']);
+    fireEvent.click(kopf('team'));
+    expect(namen()).toEqual(['AC Alt', 'FC Zell', 'sc Nord', 'SV Oberau', 'SV Ölberg']);
+  });
+
   it('@TS-005 „Nach Platzierung“ und Tipp auf „Platz“ stellen die Vorgabe wieder her; Gespeichertes wird in der Vorgabe nie umgeordnet', () => {
     zeige();
     fireEvent.click(kopf('diff'));

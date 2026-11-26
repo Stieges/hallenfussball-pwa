@@ -3,6 +3,7 @@
  * Die Zeilen kommen in der Reihenfolge des Endstands; sortiert wird nur die Anzeige, der Rang hängt am Team (Gold-Zeile bei Platz 1
  * bleibt bei Platz 1, nicht bei der obersten Zeile). Gespeicherte Zeilen werden in der Vorgabe nie umgeordnet (@ET-045).
  */
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { FinalStandingRow } from '../../../core/standings/finalStandings';
 import { tableKey } from '../../../core/standings/tableSortAddress';
@@ -11,7 +12,7 @@ import { useTableSort } from '../../../hooks/useTableSort';
 import { useTableSortState } from '../../../hooks/useTableSortState';
 import { formatSigned } from '../model/finishFormat';
 import { TeamName } from './HyphenSafe';
-import { finalSortColumns } from './finalSortColumns';
+import { finalSortableColumns, finalTeamColumns, finalValueColumns, hasValues } from './finalSortColumns';
 import { SortBar, SortHeadRow, type HeadSpec, type ListSort, type PickerColumn } from './FinalSortParts';
 import { goldRowFirst, placeNumber, pointsCell, standingsHeader, standingsRow, standingsRowFirst, valueCell } from './finalStandingsStyles';
 import { placeList, small, strong } from './finishStyles';
@@ -30,11 +31,16 @@ export function FinalStandingsList({ ranking, withValues, provisional, gold, ori
   const { t } = useTranslation('tournament');
   const mobile = useIsMobile();
   const handle = useTableSortState('end');
-  const columns = finalSortColumns(withValues);
+  const sortable = finalSortableColumns(withValues);
   // Eine Spalte, die es hier nicht gibt (Adresse oder Gerät: `end.pkt` ohne Tabellenwerte), zählt nicht: Platzierung.
   const current = handle?.state ?? null;
-  const state = current !== null && columns.some((c) => c.column === current.column) ? current : null;
-  const rows = useTableSort(ranking, columns, state);
+  const state = current !== null && sortable.includes(current.column) ? current : null;
+  // Zeilen ohne Tabellenwerte stehen beim Sortieren nach Zahlen immer am Ende, in Reihenfolge des Endstands
+  const valued = useMemo(() => ranking.filter(hasValues), [ranking]);
+  const unvalued = useMemo(() => ranking.filter((row) => !hasValues(row)), [ranking]);
+  const byTeam = useTableSort(ranking, finalTeamColumns, state?.column === 'team' ? state : null);
+  const byValue = useTableSort(valued, finalValueColumns, state !== null && state.column !== 'team' ? state : null);
+  const rows: readonly FinalStandingRow[] = state === null ? ranking : state.column === 'team' ? byTeam : [...byValue, ...unvalued];
   const sort: ListSort | null = handle === null ? null : { key: tableKey('end'), state, onTap: handle.tap, onChange: handle.set, onReset: handle.reset };
   const teamText = t('finalStandings.columns.team');
   const specs: HeadSpec[] = [
