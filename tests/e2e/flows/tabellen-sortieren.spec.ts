@@ -110,14 +110,22 @@ test.describe('Tabellen sortieren – Laptop 1280 (Zuschauer-Seite, Turnierleitu
     expect(await namen(page, 'gB'), 'Gruppe B blieb die ganze Zeit in der Platzierung').toEqual(gruppeB);
   });
 
-  test('@TS-014 Gehört „Tore“ zur Platzierungsregel (Saat unverändert), ist die gemeinte Zahl fett – die Wertungsfläche macht aber auch die andere Zahl fett (Befund, siehe Bericht)', async ({ page }) => {
+  test('@TS-014 Torspalte (Saat mit „Tore“ in der Platzierungsregel): nach Gegentore sortiert ist nur die gemeinte Zahl fett, die Zelle trägt keine Wertungsfläche', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await oeffne(page, 'hallencup-messlauf', ZUSCHAUER, 'sort-head-gA-tore');
-    await page.getByTestId('sort-head-gA-tore').click();
-    const fuer = breiteTabelle(page, 'gA').locator('[data-goals-focus="for"]');
-    expect(await schriftgewicht(fuer.first())).toBeGreaterThanOrEqual(600);
-    const zelle = breiteTabelle(page, 'gA').locator('tbody tr').first().locator('td:has([data-goals-focus="for"])');
-    test.info().annotations.push({ type: 'Befund', description: `Zelle „Tore“ insgesamt fett: ${String(await schriftgewicht(zelle.locator('span').first()) >= 600)}` });
+    const kopf = page.getByTestId('sort-head-gA-tore');
+    await kopf.click(); await kopf.click(); await kopf.click(); // Tore meiste, Tore wenigste, Gegentore wenigste
+    await expect(kopf).toHaveAccessibleName('Gegentore, wenigste zuerst sortiert');
+    const zellen = breiteTabelle(page, 'gA').locator('tbody tr td:has([data-goals-focus="against"])');
+    await expect(zellen).toHaveCount(4);
+    for (const zelle of await zellen.all()) {
+      const gemeint = zelle.locator('[data-goals-focus="against"]');
+      const andere = zelle.locator('span:not([data-goals-focus])');
+      expect(await schriftgewicht(gemeint), 'gemeinte Zahl fett').toBeGreaterThanOrEqual(700);
+      for (const nicht of await andere.all()) { expect(await schriftgewicht(nicht), 'andere Zahl nicht fett').toBeLessThan(600); }
+      const flaeche = await zelle.locator('span').first().evaluate((el) => getComputedStyle(el).backgroundColor);
+      expect(flaeche, 'keine Wertungsfläche').toBe('rgba(0, 0, 0, 0)');
+    }
   });
 
   test('@TS-003 Kopfmaße: Kurzformen im Kopf, jede Taste 44 px hoch und mindestens 24 px breit mit begründeter Ausnahme `data-touch-ok`, Pfeil am aktiven Kopf', async ({ page }) => {
