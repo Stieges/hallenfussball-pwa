@@ -3,7 +3,7 @@
  * `MatchCardDesktop` ohne Sichtänderung): Heim rechtsbündig, das Ergebnis in der Mitte (mit Restzeit), Gast linksbündig.
  * Liefert drei Zellen für das Raster der Zeile (`MatchCardDesktop`).
  */
-import { type CSSProperties } from 'react';
+import { type CSSProperties, type ReactNode } from 'react';
 import { cssVars } from '../../../design-tokens';
 import { TeamAvatar } from '../../ui/TeamAvatar';
 import { SlashBreaks } from '../../ui/atoms/TeamName';
@@ -25,27 +25,41 @@ export interface MatchCardSidesProps {
   disabled: boolean;
   hasEvents: boolean;
   isExpanded: boolean;
+  /** Inhalt links neben dem Heim-Team (Uhrzeit, Feld): liegt in der linken Hälfte, damit der Stand in der Kartenmitte steht (@ZM-218) */
+  leading?: ReactNode;
+  /** Inhalt rechts neben dem Gast-Team (Gruppe, Menü): liegt in der rechten Hälfte */
+  trailing?: ReactNode;
 }
 
+const halfStyle: CSSProperties = { display: 'flex', alignItems: 'center', gap: cssVars.spacing.md, minWidth: 0 };
 const teamStyle = (align: 'left' | 'right'): CSSProperties => ({
   display: 'flex',
+  flex: 1,
+  minWidth: 0,
   alignItems: 'center',
   gap: cssVars.spacing.sm,
   justifyContent: align === 'right' ? 'flex-end' : 'flex-start',
 });
 
-const PFEIL_PLATZ = cssVars.spacing.md; // Pfeil ist nur `fontSizes.sm`: 16 statt 24 spart den Teamspalten Platz
+// Mitte: nur der Stand, mit fester Mindestbreite für „12:3“ (tabular-nums); gleicher Abstand zu beiden Logos (Zeilenabstand des Rasters)
 const standZelleStyle: CSSProperties = {
-  display: 'grid',
-  // links und rechts gleich viel Platz, die Mitte hat eine Mindestbreite für „12:3“ (tabular-nums)
-  gridTemplateColumns: `${PFEIL_PLATZ} minmax(calc(${cssVars.spacing.xxl} + ${cssVars.spacing.xl}), auto) ${PFEIL_PLATZ}`,
+  display: 'flex',
   alignItems: 'center',
-  justifyItems: 'stretch',
+  justifyContent: 'center',
+  minWidth: `calc(${cssVars.spacing.xxl} + ${cssVars.spacing.xl})`,
 };
-const pfeilPlatzStyle: CSSProperties = { cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' };
+// Pfeil: eigene Spalte am rechten Zeilenende, in jeder Zeile reserviert (leer ohne Pfeil), Tippfläche mindestens 44 px, tippbar zum Auf- und Zuklappen
+const pfeilPlatzStyle: CSSProperties = {
+  flexShrink: 0,
+  minWidth: cssVars.touchTargets.minimum,
+  minHeight: cssVars.touchTargets.minimum,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
 
 export const MatchCardSides: React.FC<MatchCardSidesProps> = ({
-  matchId, homeTeam, awayTeam, result, status, clock, viewStatus, onCircleClick, disabled, hasEvents, isExpanded,
+  matchId, homeTeam, awayTeam, result, status, clock, viewStatus, onCircleClick, disabled, hasEvents, isExpanded, leading, trailing,
 }) => {
   const isLive = status === 'running';
   const decided = result?.winner !== undefined && result.winner !== null;
@@ -64,40 +78,41 @@ export const MatchCardSides: React.FC<MatchCardSidesProps> = ({
 
   return (
     <>
-      {/* Home Team (right-aligned) */}
+      {/* Linke Hälfte: Uhrzeit und Feld, dann das Heim-Team rechtsbündig; beide Hälften sind gleich breit (1fr), der Stand liegt in der Kartenmitte */}
+      <div style={halfStyle}>
+      {leading}
       <div style={teamStyle('right')}>
         <ZeitstrafeHinweis liste={clock?.zeitstrafen?.home} testId={`match-time-penalty-${matchId}-home`} align="end">
           <span style={teamNameStyle('a')} data-testid={`match-name-${matchId}-home`} data-teamname data-winner={decided && result?.winner === 'a' ? 'true' : undefined}><SlashBreaks text={homeTeam.name} /></span>
         </ZeitstrafeHinweis>
         <TeamAvatar team={homeTeam} size="sm" />
       </div>
-
-      {/* Stand mit Pfeil-Platz: links ein leerer Platz, rechts der Pfeil (immer reserviert), damit der Stand mittig bleibt und die Logos in jeder Zeile gleich stehen (@ZM-218) */}
-      <div data-score-circle style={standZelleStyle} onClick={() => { if (!disabled) { onCircleClick(); } }}>
-        <span aria-hidden="true" />
-        <MatchCardScore result={result} status={status} clock={clock} viewStatus={viewStatus} onClick={onCircleClick} disabled={disabled} matchId={matchId} />
-        <span style={pfeilPlatzStyle} aria-hidden="true">
-          {hasEvents && !isLive && (
-            <span
-              style={{
-                color: cssVars.colors.textMuted,
-                fontSize: cssVars.fontSizes.sm,
-                transition: 'transform 0.2s ease',
-                transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-              }}
-            >
-              ▼
-            </span>
-          )}
-        </span>
       </div>
 
-      {/* Away Team (left-aligned) */}
+      {/* Mitte: der Stand (Klickfläche fürs Aufklappen), links und rechts gleicher Abstand zum Logo (@ZM-218) */}
+      <div data-score-circle style={standZelleStyle}>
+        <MatchCardScore result={result} status={status} clock={clock} viewStatus={viewStatus} onClick={onCircleClick} disabled={disabled} matchId={matchId} />
+      </div>
+
+      {/* Rechte Hälfte: Gast-Team linksbündig, dann Gruppe und Menü */}
+      <div style={halfStyle}>
       <div style={teamStyle('left')}>
         <TeamAvatar team={awayTeam} size="sm" />
         <ZeitstrafeHinweis liste={clock?.zeitstrafen?.away} testId={`match-time-penalty-${matchId}-away`}>
           <span style={teamNameStyle('b')} data-testid={`match-name-${matchId}-away`} data-teamname data-winner={decided && result?.winner === 'b' ? 'true' : undefined}><SlashBreaks text={awayTeam.name} /></span>
         </ZeitstrafeHinweis>
+      </div>
+      {trailing}
+      <div
+        data-score-circle
+        style={{ ...pfeilPlatzStyle, cursor: hasEvents && !isLive && !disabled ? 'pointer' : 'default' }}
+        onClick={() => { if (!disabled) { onCircleClick(); } }}
+        aria-hidden="true"
+      >
+        {hasEvents && !isLive && (
+          <span style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm, transition: 'transform 0.2s ease', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+        )}
+      </div>
       </div>
     </>
   );

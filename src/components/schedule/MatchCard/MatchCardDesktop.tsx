@@ -144,8 +144,8 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
   const hasFieldColumn = field !== undefined || Boolean(matchNumber && matchNumber > 0 && referee);
   const rowStyle: CSSProperties = {
     display: 'grid',
-    // ohne Feld-Spalte (ein Feld, @ZP-116) eine Spalte weniger, sonst rutschen alle Zellen eine Spalte nach links
-    gridTemplateColumns: hasFieldColumn ? 'auto auto 1fr auto 1fr auto' : 'auto 1fr auto 1fr auto',
+    // zwei gleich breite Hälften um den Stand: Uhrzeit und Feld links, Gruppe und Menü rechts (@ZM-218)
+    gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)',
     alignItems: 'center',
     gap: cssVars.spacing.md,
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
@@ -164,18 +164,21 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
     fontWeight: cssVars.fontWeights.medium,
     color: isLive ? cssVars.colors.primary : cssVars.colors.textSecondary,
     fontVariantNumeric: 'tabular-nums',
+    flexShrink: 0,
     width: '11em', // fest: Uhrzeit und Abzeichen teilen die Spalte, die Feld-Spalte steht in jeder Zeile gleich (@OB-065)
   };
 
   const fieldStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.textSecondary,
+    flexShrink: 0,
     minWidth: cssVars.touchTargets.primary,
   };
 
   const groupStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.xs,
     color: cssVars.colors.textSecondary,
+    flexShrink: 0,
     textAlign: 'right',
     minWidth: cssVars.touchTargets.minimum,
   };
@@ -204,6 +207,11 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
         // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty matchNumber should display as empty
         aria-label={t('matchCard.ariaLabel', { matchNumber: matchNumber || '', homeTeam: homeTeam.name, awayTeam: awayTeam.name })}
       >
+        <MatchCardSides
+          matchId={matchId} homeTeam={homeTeam} awayTeam={awayTeam} result={result} status={status} clock={clock}
+          viewStatus={viewStatus} onCircleClick={handleCircleClick} disabled={disabled} hasEvents={hasEvents} isExpanded={isExpanded}
+          leading={
+            <>
         {/* Time */}
         <div style={timeStyle} data-testid={`match-row-time-${matchId}`}>
           {badge?.kind === 'badge'
@@ -222,16 +230,18 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
           </div>
         )}
 
-        <MatchCardSides
-          matchId={matchId} homeTeam={homeTeam} awayTeam={awayTeam} result={result} status={status} clock={clock}
-          viewStatus={viewStatus} onCircleClick={handleCircleClick} disabled={disabled} hasEvents={hasEvents} isExpanded={isExpanded}
-        />
-
+            </>
+          }
+          trailing={
+            <>
         {/* Group */}
         <div style={groupStyle}>
           {showGroupLabel && group && group !== 'all' ? t('matchCard.groupShort', { group }) : ''}
         </div>
         <MatchMenuSlot matchId={matchId} />
+            </>
+          }
+        />
       </div>
 
       {/* Expand Content */}

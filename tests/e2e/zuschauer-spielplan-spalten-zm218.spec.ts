@@ -14,7 +14,7 @@ import { animationenFertig } from './helpers/animationenFertig';
 const TOLERANZ = 1;
 const ZWEISTELLIG = '00000003-0000-4000-8000-000000000009';
 
-interface Zeile { stand: number; logoHeim: number; logoGast: number; teamHeim: number; teamGast: number; pfeil: boolean; text: string }
+interface Zeile { pfeilX: number; stand: number; logoHeim: number; logoGast: number; teamHeim: number; teamGast: number; pfeil: boolean; text: string }
 
 async function oeffne(page: Page, breite: number): Promise<void> {
   await page.setViewportSize({ width: breite, height: 900 });
@@ -52,9 +52,11 @@ async function zeilen(page: Page): Promise<Zeile[]> {
       const k = erstes ? kinder[0] : kinder[kinder.length - 1];
       return k === undefined ? Number.NaN : mitte(k);
     };
-    const pfeil = (a.querySelector('[data-score-circle]')?.textContent ?? '').includes('▼');
+    const kreise = a.querySelectorAll('[data-score-circle]');
+    const pfeil = (kreise[kreise.length - 1]?.textContent ?? '').includes('▼');
+    const pfeilX = mitte(kreise[kreise.length - 1]);
     return [{
-      stand: mitte(kreis), logoHeim: logo(heimZelle, false), logoGast: logo(gastZelle, true),
+      pfeilX, stand: mitte(kreis), logoHeim: logo(heimZelle, false), logoGast: logo(gastZelle, true),
       teamHeim: mitte(heim), teamGast: mitte(gast), pfeil, text: kreis.textContent?.trim() ?? '',
     }];
   }));
@@ -77,7 +79,31 @@ test.describe('@ZM-218 Stand und Logos im Spielplan der Zuschauer-Seite in feste
         expect(Math.abs(z.logoHeim - ref.logoHeim), `Logo Heim ${z.text}: ${beleg}`).toBeLessThanOrEqual(TOLERANZ);
         expect(Math.abs(z.logoGast - ref.logoGast), `Logo Gast ${z.text}: ${beleg}`).toBeLessThanOrEqual(TOLERANZ);
         expect(Math.abs(z.stand - (z.logoHeim + z.logoGast) / 2), `Stand ${z.text} mittig zwischen den Logos: ${beleg}`).toBeLessThanOrEqual(TOLERANZ);
+        expect(Math.abs((z.stand - z.logoHeim) - (z.logoGast - z.stand)), `Abstand Logo–Stand links = rechts: ${beleg}`).toBeLessThanOrEqual(TOLERANZ);
+        expect(Math.abs(z.pfeilX - ref.pfeilX), `Pfeil-Spalte in allen Zeilen an derselben Stelle: ${beleg}`).toBeLessThanOrEqual(TOLERANZ);
+        expect(Math.abs(z.stand - (liste[0].stand)), 'Stand in der Kartenmitte: gleich in jeder Zeile').toBeLessThanOrEqual(TOLERANZ);
       }
+    });
+  }
+
+  for (const breite of [1280, 1024]) {
+    test(`@ZM-218 bei ${String(breite)} Pixeln: der große Stand der aufgeklappten Ereignisse steht genau unter dem Stand der Zeile`, async ({ page }) => {
+      test.skip(test.info().project.name !== 'desktop', 'setzt das Fenster selbst');
+      await oeffne(page, breite);
+      const erste = page.locator('[role="article"]').filter({ has: page.locator('[data-testid^="match-circle-"]') }).filter({ hasText: '▼' }).first();
+      const standZeile = erste.locator('[data-testid^="match-circle-"]');
+      await standZeile.click();
+      await expect(page.locator('[data-expand-content]').filter({ visible: true })).toHaveCount(1);
+      const gross = await page.locator('[data-expand-content]').filter({ visible: true }).evaluate((el) => {
+        const treffer = Array.from(el.querySelectorAll('*')).filter((n) => /^\d+\s*:\s*\d+$/.test((n.textContent ?? '').trim()));
+        const innerstes = treffer[treffer.length - 1];
+        const r = innerstes.getBoundingClientRect();
+        return r.left + r.width / 2;
+      });
+      const kasten = await standZeile.boundingBox();
+      expect(kasten).not.toBeNull();
+      const zeileX = (kasten?.x ?? 0) + (kasten?.width ?? 0) / 2;
+      expect(Math.abs(gross - zeileX), `großer Stand x=${String(gross)}, Stand der Zeile x=${String(zeileX)}`).toBeLessThanOrEqual(2);
     });
   }
 });
