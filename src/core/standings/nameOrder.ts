@@ -10,7 +10,7 @@ const REPLACEMENTS: Readonly<Record<string, string>> = {
 };
 
 function din5007Variant2(name: string): string {
-  return name.replace(/[äÄöÖüÜß]/g, (ch) => REPLACEMENTS[ch]);
+  return name.normalize('NFC').replace(/[äÄöÖüÜß]/g, (ch) => REPLACEMENTS[ch]);
 }
 
 export function compareNames(a: string, b: string): number {

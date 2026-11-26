@@ -26,4 +26,10 @@ describe('compareNames (DIN 5007-2)', () => {
     expect(compareNames('Straße', 'Strasse')).toBe(0);
     expect(compareNames('Ärger', 'Aeger')).toBeGreaterThan(0);
   });
+
+  it('@TS-008 zerlegtes Ö (O + Trema, wie macOS es liefert) sortiert wie Oe', () => {
+    const zerlegt = 'SV O\u0308lberg';
+    expect(compareNames(zerlegt, 'SV Ofenbach')).toBeLessThan(0);
+    expect(compareNames(zerlegt, 'SV Oelberg')).toBe(0);
+  });
 });
