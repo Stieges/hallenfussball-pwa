@@ -22,14 +22,9 @@ interface Zeile { name: string; tore: number; gegentore: number }
 /** Die breite Tabelle einer Gruppe (steht auch am Handy im DOM, dort nur ausgeblendet). */
 const breiteTabelle = (page: Page, schluessel: string): Locator => page.getByTestId(`sort-head-${schluessel}-platz`).locator('xpath=ancestor::table[1]');
 
-/** `ohneToreInRegel`: „Tore“ gehört dann nicht zur Platzierungsregel – die Wertungsfläche (fette Zahl, grüner Grund) fehlt und die fette gemeinte Zahl ist allein erkennbar. */
-async function oeffne(page: Page, saat: string, adresse: string, warteAuf: string, ohneToreInRegel = false): Promise<void> {
+/** Öffnet die Seite mit der Standard-Saat (echte Standardregel, „Tore“ gehört zur Platzierungsregel). */
+async function oeffne(page: Page, saat: string, adresse: string, warteAuf: string): Promise<void> {
   const daten = leseSaat(saat);
-  if (ohneToreInRegel) {
-    for (const turnier of daten.datenbanken[0].eintraege.tournaments as Array<{ placementLogic: Array<{ id: string; enabled: boolean }> }>) {
-      for (const regel of turnier.placementLogic) { if (regel.id === 'goalsFor') { regel.enabled = false; } }
-    }
-  }
   await installiereSaat(page.context(), daten, NUR_ERSTES_LADEN);
   await page.goto(adresse);
   await expect(page.getByTestId(warteAuf)).toBeAttached({ timeout: 25000 });
@@ -68,7 +63,7 @@ test.describe('Tabellen sortieren – Laptop 1280 (Zuschauer-Seite, Turnierleitu
 
   test('@TS-014 Kopf „Tore“ schaltet in fünf Tipps durch (Tore meiste, wenigste, Gegentore wenigste, meiste, zurück); die gemeinte Zahl ist fett', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
-    await oeffne(page, 'hallencup-messlauf', ZUSCHAUER, 'sort-head-gA-tore', true);
+    await oeffne(page, 'hallencup-messlauf', ZUSCHAUER, 'sort-head-gA-tore');
     const vorgabe = await namen(page, 'gA');
     const kopf = page.getByTestId('sort-head-gA-tore');
     const gruppeB = await namen(page, 'gB');

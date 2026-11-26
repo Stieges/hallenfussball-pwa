@@ -105,17 +105,28 @@ describe('GroupTables sortierbar', () => {
     stufe('Tore', ['SV Ahorn', 'TSV Mitte', 'FC Nordstern', 'Zeta Ost'], null, null);
   });
 
-  it('@TS-014 Markierung (fett, data-goals-focus) ist von der Wertungsfläche goalsFor unterscheidbar; Handy zeigt dieselbe Zahl fett', () => {
+  it('@TS-014 „Tore“ in der Platzierungsregel: ohne Sortierung Wertungsfläche; bei Sortierung nach Gegentore nur die zweite Zahl fett, keine Fläche (Desktop und Handy)', () => {
     const tournament = { placementLogic: [{ id: 'goalsFor', enabled: true }] } as unknown as ScheduleSource;
     const { container } = wrap(<GroupTables standings={standings} teams={standings.map((s) => s.team)} tournament={tournament} />);
+    const zelle = () => container.querySelector<HTMLElement>('.desktop-view tbody tr td:nth-child(7) > span')!;
+    expect(zelle().style.background).not.toBe('transparent'); // wie bisher: Wertungsfläche
+    expect(zelle().style.background).not.toBe('');
     expect(container.querySelector('[data-goals-focus]')).toBeNull();
-    fireEvent.click(within(container.querySelector('.desktop-view')!).getByTestId('sort-head-g-tore'));
-    const marke = container.querySelector<HTMLElement>('.desktop-view [data-goals-focus="for"]')!;
-    expect(marke.parentElement!.style.background).not.toBe('transparent'); // Wertungsfläche bleibt am Umschlag
-    expect(marke.style.background).toBe('');
-    fireEvent.click(screen.getByTestId('standing-toggle-nordstern'));
-    const mobil = container.querySelector<HTMLElement>('.mobile-view [data-goals-focus="for"]')!;
-    expect(mobil.textContent).toBe('11');
+    const kopf = () => within(container.querySelector('.desktop-view')!).getByTestId('sort-head-g-tore');
+    fireEvent.click(kopf()); fireEvent.click(kopf()); fireEvent.click(kopf()); // Gegentore, wenigste zuerst
+    expect(zelle().style.background).toBe('transparent');
+    expect(zelle().style.fontWeight).not.toBe('700');
+    const fokus = Array.from(container.querySelectorAll<HTMLElement>('.desktop-view [data-goals-focus]'));
+    expect(fokus.every((e) => e.getAttribute('data-goals-focus') === 'against')).toBe(true);
+    expect(fokus).toHaveLength(4);
+    fireEvent.click(screen.getByTestId('standing-toggle-mitte'));
+    const mobil = container.querySelectorAll<HTMLElement>('.mobile-view [data-goals-focus]');
+    expect(mobil).toHaveLength(1);
+    expect(mobil[0].getAttribute('data-goals-focus')).toBe('against');
+    expect(mobil[0].style.background).toBe('transparent');
+    // zurück zur Platzierung: Wertungsfläche wieder da
+    fireEvent.click(kopf()); fireEvent.click(kopf());
+    expect(zelle().style.background).not.toBe('transparent');
   });
 
   it('@TS-016 Gleichstand-Marke bleibt am Team, wenn nach Team sortiert ist', () => {

@@ -48,7 +48,8 @@ export function GroupStandingsDesktopTable({ standings, placeOf, sort = null, go
       <tbody>
         {standings.map((standing) => {
           const goalDiff = standing.goalsFor - standing.goalsAgainst;
-          const goalsHighlighted = highlights.goalsFor || highlights.goalsAgainst;
+          // Solange nach Tore/Gegentore sortiert ist, setzt die Wertungsfläche der Torspalte aus: nur die gemeinte Zahl ist fett (@TS-014)
+          const goalsHighlighted = goalsFocus === undefined && (highlights.goalsFor || highlights.goalsAgainst);
           return (
             <tr key={standing.team.id}>
               {/* Paket TB: gemeinsame Ziffer mit Sprung (2, 2, 4), @W2A-047; vor dem ersten Spiel „–“ (@ZM-198) */}

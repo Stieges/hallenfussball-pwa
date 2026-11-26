@@ -139,8 +139,8 @@ export function GroupStandingsMobileTable({ standings, placeOf, sort = null, goa
                         <Detail label={t('groupTables.details.wins')} value={standing.won} span={2} active={highlights.wins} />
                         <Detail label={t('groupTables.details.draws')} value={standing.drawn} span={2} />
                         <Detail label={t('groupTables.details.losses')} value={standing.lost} span={2} />
-                        <Detail label={t('groupTables.details.goalsFor')} value={standing.goalsFor} span={3} active={highlights.goalsFor} focus={goalsFocus === 'for' ? 'for' : undefined} />
-                        <Detail label={t('groupTables.details.goalsAgainst')} value={standing.goalsAgainst} span={3} active={highlights.goalsAgainst} focus={goalsFocus === 'against' ? 'against' : undefined} />
+                        <Detail label={t('groupTables.details.goalsFor')} value={standing.goalsFor} span={3} active={highlights.goalsFor && goalsFocus === undefined} focus={goalsFocus === 'for' ? 'for' : undefined} />
+                        <Detail label={t('groupTables.details.goalsAgainst')} value={standing.goalsAgainst} span={3} active={highlights.goalsAgainst && goalsFocus === undefined} focus={goalsFocus === 'against' ? 'against' : undefined} />
                       </div>
                     </td>
                   </tr>

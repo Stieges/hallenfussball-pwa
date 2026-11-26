@@ -92,7 +92,7 @@ export function RankingDesktopTable({ rows, tournament, hasGroups, hasPlayoffs, 
               <td style={{ ...td, textAlign: 'center' }}>{standing?.drawn ?? '-'}</td>
               <td style={{ ...td, textAlign: 'center' }}>{standing?.lost ?? '-'}</td>
               <td style={{ ...td, textAlign: 'center' }}>
-                <HighlightedCell highlight={highlightGoals}>
+                <HighlightedCell highlight={highlightGoals && goalsFocus === undefined}>
                   {standing ? <GoalsPair goalsFor={standing.goalsFor} goalsAgainst={standing.goalsAgainst} focus={goalsFocus} /> : '-'}
                 </HighlightedCell>
               </td>
