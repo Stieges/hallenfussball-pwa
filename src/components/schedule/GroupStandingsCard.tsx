@@ -57,6 +57,7 @@ export const GroupStandingsCard: React.FC<GroupStandingsCardProps> = ({ standing
     return (teamId: string) => map.get(teamId) ?? '';
   }, [standings]);
   const sort: GroupSort | null = handle === null ? null : { key: tableKey('gruppe', groupId), state: handle.state, onTap: handle.tap };
+  const goalsFocus = handle?.state?.column === 'tore' ? 'for' : handle?.state?.column === 'gegentore' ? 'against' : undefined;
   return (
     <div style={containerStyle} className="standings-table">
       {groupState === undefined ? <h3 style={titleStyle}>{title}</h3> : (
@@ -77,6 +78,7 @@ export const GroupStandingsCard: React.FC<GroupStandingsCardProps> = ({ standing
           standings={rows}
           placeOf={placeOf}
           sort={sort}
+          goalsFocus={goalsFocus}
           highlights={highlights}
           activeMatchTeamIds={activeMatchTeamIds}
           nameMark={tieMarker ?? publicTieMarker}
@@ -88,6 +90,7 @@ export const GroupStandingsCard: React.FC<GroupStandingsCardProps> = ({ standing
         standings={rows}
         placeOf={placeOf}
         sort={sort}
+        goalsFocus={goalsFocus}
         title={title}
         highlights={highlights}
         activeMatchTeamIds={activeMatchTeamIds}

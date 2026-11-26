@@ -8,6 +8,7 @@ import { cssVars } from '../../design-tokens';
 import type { Standing } from '../../types/tournament';
 import { goalDiffLabel } from '../../core/standings/goalDiffLabel';
 import { StandingNameCell } from './StandingNameCell';
+import { GoalsPair } from './GoalsPair';
 import { GroupHeadCell, type GroupSort } from './GroupSortHeads';
 import { fixedColStyle, goalDiffColor, highlightStyle, tableStyle, tdStyle, thStyle, type PlacementHighlights } from './groupTablesStyle';
 
@@ -17,6 +18,8 @@ export interface GroupStandingsTableProps {
   placeOf: (teamId: string) => string;
   /** Sortierung der Karte; `null` = ohne Sortierung (Spielplan, Vorschau). */
   sort?: GroupSort | null;
+  /** Hervorgehobene Torzahl bei Sortierung nach Tore (erste Zahl) oder Gegentore (zweite Zahl), @TS-014. */
+  goalsFocus?: 'for' | 'against';
   highlights: PlacementHighlights;
   activeMatchTeamIds?: Set<string>;
   /** Marke unter dem Teamnamen (Verwaltung: Gleichstand; Zuschauer: offener Gleichstand, @W2A-059). */
@@ -25,7 +28,7 @@ export interface GroupStandingsTableProps {
 
 const center: CSSProperties = { ...tdStyle, textAlign: 'center' };
 
-export function GroupStandingsDesktopTable({ standings, placeOf, sort = null, highlights, activeMatchTeamIds, nameMark }: GroupStandingsTableProps) {
+export function GroupStandingsDesktopTable({ standings, placeOf, sort = null, goalsFocus, highlights, activeMatchTeamIds, nameMark }: GroupStandingsTableProps) {
   const { t } = useTranslation('tournament');
   return (
     <table style={tableStyle}>
@@ -62,7 +65,7 @@ export function GroupStandingsDesktopTable({ standings, placeOf, sort = null, hi
               <td style={center}>{standing.lost}</td>
               <td style={center}>
                 <span style={{ fontWeight: goalsHighlighted ? cssVars.fontWeights.bold : cssVars.fontWeights.normal, ...highlightStyle(goalsHighlighted) }}>
-                  {standing.goalsFor}:{standing.goalsAgainst}
+                  <GoalsPair goalsFor={standing.goalsFor} goalsAgainst={standing.goalsAgainst} focus={goalsFocus} />
                 </span>
               </td>
               <td style={{ ...center, color: goalDiffColor(goalDiff) }}>

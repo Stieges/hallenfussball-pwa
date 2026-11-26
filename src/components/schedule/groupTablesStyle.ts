@@ -77,3 +77,6 @@ export const liveDotStyle: CSSProperties = {
 
 /** Nur zum Vorlesen (Spaltenkopf der Aufklapp-Taste). */
 export const hiddenStyle: CSSProperties = { position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap' };
+
+/** Markierung der Zahl, nach der sortiert ist (Tore/Gegentore, @TS-014): Fettschrift, getrennt von der Wertungsfläche (`highlightStyle`). Desktop und Handy teilen sie. */
+export const focusStyle: CSSProperties = { fontWeight: cssVars.fontWeights.bold };

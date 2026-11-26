@@ -34,14 +34,14 @@ export function parseSortToken(token: string): SortState {
 /**
  * Nächster Zustand nach einem Tipp auf einen Kopf.
  * Standard: 1. Tipp erste Richtung, 2. umgekehrt, 3. zurück zur Platzierung (@TS-003).
- * Kopf „Tore“ in Gruppen-/Platzierungstabelle: Tore → Gegentore → zurück (@TS-014); „Gegentore“ hat dort keinen eigenen Kopf.
+ * Kopf „Tore“ in Gruppen-/Platzierungstabelle: fünf Stufen Tore meiste → Tore wenigste → Gegentore wenigste → Gegentore meiste → zurück (@TS-014); „Gegentore“ hat dort keinen eigenen Kopf.
  * Anderer Kopf ersetzt die Sortierung (@TS-015); Tipp auf „Platz“ = Platzierung (@TS-005).
  */
 export function nextSortState(kind: TableKind, current: SortState, tapped: SortColumn): SortState {
   if (tapped === 'platz') {return null;}
   if (tapped === 'tore' && (kind === 'gruppe' || kind === 'gesamt')) {
-    if (current?.column === 'tore') {return { column: 'gegentore', reversed: false };}
-    if (current?.column === 'gegentore') {return null;}
+    if (current?.column === 'tore') {return current.reversed ? { column: 'gegentore', reversed: false } : { column: 'tore', reversed: true };}
+    if (current?.column === 'gegentore') {return current.reversed ? null : { column: 'gegentore', reversed: true };}
     return { column: 'tore', reversed: false };
   }
   if (current?.column !== tapped) {return { column: tapped, reversed: false };}

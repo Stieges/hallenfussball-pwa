@@ -23,9 +23,13 @@ describe('nextSortState', () => {
     expect(folge('tor', 'tore', 3)).toEqual([{ column: 'tore', reversed: false }, { column: 'tore', reversed: true }, null]);
   });
 
-  it('@TS-014 Gruppentabelle: Tore → Gegentore → zurück zur Platzierung', () => {
-    expect(folge('gruppe', 'tore', 3)).toEqual([{ column: 'tore', reversed: false }, { column: 'gegentore', reversed: false }, null]);
-    expect(folge('gesamt', 'tore', 3)).toEqual([{ column: 'tore', reversed: false }, { column: 'gegentore', reversed: false }, null]);
+  it('@TS-014 Gruppentabelle: fünf Stufen Tore meiste → Tore wenigste → Gegentore wenigste → Gegentore meiste → Platzierung', () => {
+    const fuenf = [
+      { column: 'tore', reversed: false }, { column: 'tore', reversed: true },
+      { column: 'gegentore', reversed: false }, { column: 'gegentore', reversed: true }, null,
+    ];
+    expect(folge('gruppe', 'tore', 5)).toEqual(fuenf);
+    expect(folge('gesamt', 'tore', 5)).toEqual(fuenf);
   });
 
   it('@TS-014 Endstand kennt keine Gegentore-Stufe', () => {
