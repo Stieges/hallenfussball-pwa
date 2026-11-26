@@ -4,6 +4,7 @@
  */
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { TableSortProvider } from '../../hooks/TableSortProvider';
 import { TabellenTab, type TabellenTabProps } from './TabellenTab';
 import { TABELLEN_ANSICHT_PARAM, tabellenAnsichtAusAdresse, tabellenAnsichtInAdresse, tabellenAnsichtVorgabe, type TabellenAnsicht } from './tabellenAnsicht';
 
@@ -17,5 +18,9 @@ export const TabellenTabMitAdresse: React.FC<Omit<TabellenTabProps, 'view' | 'on
       return neu;
     }, { replace: true });
   };
-  return <TabellenTab {...props} view={view} onViewChange={onViewChange} />;
+  return (
+    <TableSortProvider>
+      <TabellenTab {...props} view={view} onViewChange={onViewChange} />
+    </TableSortProvider>
+  );
 };

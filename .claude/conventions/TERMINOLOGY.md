@@ -64,6 +64,17 @@ Wie es umgesetzt wird:
   `sport.json`) und – falls eine Kurzform erlaubt sein soll – `short` samt Eintrag in `short.json` und `SHORT_TERMS`
   (`ui/atoms/shortTerms.ts`; der Gleichlauftest `kurzformen.test.ts` prüft es).
 
+### Tabellen sortieren (@TS-005, @TS-014, @TS-021)
+
+Bedienbegriffe der Sortierung (`tournament:tableSort.*`, `de`/`en`), ausgeschrieben, keine Kurzform:
+
+| de | en | Wo |
+|---|---|---|
+| „Nach Platzierung“ | „By ranking“ | Taste, die die Sortierung zurücknimmt; Option der Handy-Auswahl |
+| „Sortieren nach …“ | „Sort by …“ | Beschriftung der Handy-Auswahl |
+| „Gegentore“ | „Goals against“ | Kopf „Tore“ nach dem zweiten Tipp (Gruppen-/Platzierungstabelle) |
+| „<Spalte>, meiste zuerst sortiert“ u. ä. | „<column>, sorted most first“ u. ä. | Vorlesetext des Kopfs (meiste/wenigste zuerst, A bis Z / Z bis A) |
+
 ### Neue Sprache hinzufügen
 
 `scripts/check-terminology.cjs` erkennt Sprachverzeichnisse und Namespaces

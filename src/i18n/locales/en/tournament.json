@@ -2133,5 +2133,14 @@
       "save": "Apply",
       "cancel": "Cancel"
     }
+  },
+  "tableSort": {
+    "reset": "By ranking",
+    "pickerLabel": "Sort by …",
+    "gegentore": "Goals against",
+    "sortedBestFirst": "{{label}}, sorted most first",
+    "sortedFewestFirst": "{{label}}, sorted fewest first",
+    "sortedAtoZ": "{{label}}, sorted A to Z",
+    "sortedZtoA": "{{label}}, sorted Z to A"
   }
 }

@@ -36,6 +36,7 @@ import {
   effectiveNavTab,
 } from '../features/public-view/publicScheduleFilters';
 import { useTheme } from '../hooks/useTheme';
+import { TableSortProvider } from '../hooks/TableSortProvider';
 import { PublicStandingsTab } from '../features/public-view/components/PublicStandingsTab';
 import { PublicInfoTab } from '../features/public-view/components/PublicInfoTab';
 import { PublicConnectionHint } from '../features/public-view/components/PublicConnectionHint';
@@ -111,6 +112,7 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
   const pdfRow = <PublicPdfRow tournament={tournament} schedule={schedule} standings={currentStandings} view={view} finalStandings={finalStandings} />;
 
   return (
+    <TableSortProvider>
     <NowSourceContext.Provider value={nowMs}>
     <div
       ref={containerRef}
@@ -232,6 +234,7 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
       />
     </div>
     </NowSourceContext.Provider>
+    </TableSortProvider>
   );
 };
 
