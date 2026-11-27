@@ -93,7 +93,7 @@ export function GroupHeadCell({ sort, column, term, text, style, indicator = fal
 }
 
 /** Begriff je Spalte, nur für den Namen einer Spalte, die am Handy nicht sichtbar ist, aber (Adresse, Gerät) schon sortiert. */
-const TERM_OF: Partial<Record<SortedColumn, TableHeadTerm>> = { sp: 'played', s: 'won', u: 'drawn', n: 'lost', diff: 'goalDifference', pkt: 'points' };
+const TERM_OF: Partial<Record<SortedColumn, TableHeadTerm>> = { sp: 'played', s: 'won', u: 'drawn', n: 'lost', diff: 'goalDifference', pkt: 'points', gruppe: 'group' };
 
 const GROUP_PICKER_COLUMN = { column: 'gruppe', term: 'group' } as const;
 

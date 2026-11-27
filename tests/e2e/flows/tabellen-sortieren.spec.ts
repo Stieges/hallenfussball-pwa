@@ -252,8 +252,7 @@ test.describe('Tabellen sortieren – Laptop 1280 (Zuschauer-Seite, Turnierleitu
 });
 
 test.describe('Tabellen sortieren – Handy (Fenster des Profils, im Projekt desktop 390 Pixel)', () => {
-  // @TS-012 geparkt (Daniel 27.11.): Die Handy-Auswahl bietet nur die am Handy sichtbaren Spalten; „Gegentore“ gehört nicht dazu.
-  test.skip('@TS-012 geparkt (Daniel 27.11.) Köpfe sind nur Anzeige; „Sortieren nach …“ → „Gegentore“ sortiert auch ohne sichtbare Torspalte, „Nach Platzierung“ stellt die Vorgabe her', async ({ page }, testInfo) => {
+  test('@TS-004 @TS-005 @TS-020 am Handy: Köpfe nur Anzeige; „Sortieren nach …“ → „Tordifferenz“ sortiert, Gruppe B bleibt, „Nach Platzierung“ stellt die Vorgabe her', async ({ page }, testInfo) => {
     if (testInfo.project.name === 'desktop') { await page.setViewportSize({ width: 390, height: 844 }); }
     await oeffne(page, 'hallencup-messlauf', ZUSCHAUER, 'sort-picker-gA');
     const auswahl = page.getByTestId('sort-picker-gA');
@@ -268,13 +267,13 @@ test.describe('Tabellen sortieren – Handy (Fenster des Profils, im Projekt des
     expect((await auswahl.boundingBox())?.height ?? 0, 'Auswahl ≥ 44 px hoch').toBeGreaterThanOrEqual(44);
     await expect(page.getByTestId('sort-reset-gA'), 'ohne Sortierung keine Taste „Nach Platzierung“').toHaveCount(0);
 
-    await auswahl.selectOption({ label: 'Gegentore' });
-    await expect(page).toHaveURL(/ts=gA\.gegentore(&|$)/);
+    await auswahl.selectOption({ label: 'Tordifferenz' });
+    await expect(page).toHaveURL(/ts=gA\.diff(&|$)/);
     const sortiert = await zeilen(page, 'gA');
-    expect(aufsteigend(sortiert.map((z) => z.gegentore)), 'wenigste Gegentore zuerst').toBe(true);
+    expect(absteigend(sortiert.map((z) => z.tore - z.gegentore)), 'beste Tordifferenz zuerst').toBe(true);
     expect(sortiert.map((z) => z.name)).not.toEqual(vorgabe);
-    expect(gleichstandNachVorgabe(sortiert, vorgabe, (z) => z.gegentore)).toBe(true);
-    // Der Pfeil steht am aktiven Kopf der Handy-Tabelle (nur Anzeige): „Tore“ ist am Handy kein Kopf, also zeigt kein Kopf Pfeil und keine Taste ist da
+    expect(gleichstandNachVorgabe(sortiert, vorgabe, (z) => z.tore - z.gegentore)).toBe(true);
+    // Der Pfeil steht am aktiven Kopf „Diff.“ der Handy-Tabelle (nur Anzeige), keine Taste
     await expect(tabelle.locator('.mobile-view thead button')).toHaveCount(0);
     expect(await namen(page, 'gB'), 'Gruppe B blieb in der Platzierung').toEqual(vorgabeB);
 
@@ -285,6 +284,11 @@ test.describe('Tabellen sortieren – Handy (Fenster des Profils, im Projekt des
     expect(await namen(page, 'gA')).toEqual(vorgabe);
     await expect(page).not.toHaveURL(/ts=gA/);
     await expect(page.getByTestId('sort-reset-gA')).toHaveCount(0);
+  });
+
+  // @TS-012 geparkt (Daniel 27.11.): Die Handy-Auswahl bietet nur die am Handy sichtbaren Spalten; „Gegentore“ gehört nicht dazu.
+  test.skip('@TS-012 geparkt (Daniel 27.11.) „Sortieren nach …“ → „Gegentore“ sortiert auch ohne sichtbare Torspalte', async ({ page }) => {
+    await page.getByTestId('sort-picker-gA').selectOption({ label: 'Gegentore' });
   });
 
   test('@TS-012 @TS-014 am Handy: „Sortieren nach …“ „Punkte“ zeigt den Pfeil am Kopf „Pkt.“ (nur Anzeige)', async ({ page }, testInfo) => {

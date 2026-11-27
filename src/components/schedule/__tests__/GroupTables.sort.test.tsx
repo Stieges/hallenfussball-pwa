@@ -163,6 +163,12 @@ describe('GroupTables sortierbar', () => {
     expect(screen.getByTestId('sort-picker-g')).toHaveValue('gegentore');
   });
 
+  it('@TS-010 @TS-012 Handy: Adresse auf „Gruppe“ (dort keine Spalte) zeigt in der Auswahl den Namen „Gruppe“', () => {
+    wrap(<GroupTables standings={standings} teams={standings.map((s) => s.team)} />, '/?ts=g.gruppe');
+    const gewaehlt = screen.getByTestId('sort-picker-g').querySelector('option:checked');
+    expect(gewaehlt?.textContent).toBe('Gruppe');
+  });
+
   it('@TS-020 zwei Gruppen werden getrennt sortiert, die Adresse trägt nur Gruppe A', () => {
     const a1 = createMockTeam({ id: 'a1', name: 'A Eins', group: 'A' });
     const a2 = createMockTeam({ id: 'a2', name: 'A Zwei', group: 'A' });
