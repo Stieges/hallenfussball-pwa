@@ -165,26 +165,29 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
     transition: 'background-color 0.15s ease',
   };
 
+  // Zuschauer-Seite: die Zellen in den Hälften schrumpfen nie; die Turnierleitung behält ihre Zeile unverändert
+  const schrumpfNie: CSSProperties = symmetric ? { flexShrink: 0 } : {};
+
   const timeStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.sm,
     fontWeight: cssVars.fontWeights.medium,
     color: isLive ? cssVars.colors.primary : cssVars.colors.textSecondary,
     fontVariantNumeric: 'tabular-nums',
-    flexShrink: 0,
+    ...schrumpfNie,
     width: '11em', // fest: Uhrzeit und Abzeichen teilen die Spalte, die Feld-Spalte steht in jeder Zeile gleich (@OB-065)
   };
 
   const fieldStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.textSecondary,
-    flexShrink: 0,
+    ...schrumpfNie,
     minWidth: cssVars.touchTargets.primary,
   };
 
   const groupStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.xs,
     color: cssVars.colors.textSecondary,
-    flexShrink: 0,
+    ...schrumpfNie,
     textAlign: 'right',
     minWidth: cssVars.touchTargets.minimum,
   };
@@ -198,33 +201,28 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
   };
 
   const timeCell = (
-        <div style={timeStyle} data-testid={`match-row-time-${matchId}`}>
-          {badge?.kind === 'badge'
-            ? <MatchStatusBadge model={badge} size="row" testId={isLive ? `match-row-live-${matchId}` : undefined} />
-            : formatTime(scheduledTime)}
-          <OriginalTimeNote matchId={matchId} />
-        </div>
+    <div style={timeStyle} data-testid={`match-row-time-${matchId}`}>
+      {badge?.kind === 'badge'
+        ? <MatchStatusBadge model={badge} size="row" testId={isLive ? `match-row-live-${matchId}` : undefined} />
+        : formatTime(scheduledTime)}
+      <OriginalTimeNote matchId={matchId} />
+    </div>
   );
 
-  const fieldCell = (
-    <>
-{/* Field – bei einem Feld (ohne Feldangabe) steht keine Spalte, nur der Schiedsrichter behält seinen Platz (@ZP-116) */}
-        {hasFieldColumn && (
-          <div style={fieldStyle}>
-            {field !== undefined ? t('matchCard.field', { field }) : ''}
-            {matchNumber && matchNumber > 0 && referee && (
-              <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>{t('matchCard.refereeSR', { referee })}</div>
-            )}
-          </div>
-        )}
-    </>
+  // Field – bei einem Feld (ohne Feldangabe) steht keine Spalte, nur der Schiedsrichter behält seinen Platz (@ZP-116)
+  const fieldCell = hasFieldColumn && (
+    <div style={fieldStyle}>
+      {field !== undefined ? t('matchCard.field', { field }) : ''}
+      {matchNumber && matchNumber > 0 && referee && (
+        <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>{t('matchCard.refereeSR', { referee })}</div>
+      )}
+    </div>
   );
 
   const groupCell = (
-        <div style={groupStyle}>
-          {showGroupLabel && group && group !== 'all' ? t('matchCard.groupShort', { group }) : ''}
-        </div>
-        
+    <div style={groupStyle}>
+      {showGroupLabel && group && group !== 'all' ? t('matchCard.groupShort', { group }) : ''}
+    </div>
   );
   const menuCell = <MatchMenuSlot matchId={matchId} />;
 
@@ -255,11 +253,10 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
           <>
             {timeCell}
             {fieldCell}
-        <MatchCardSides
-          matchId={matchId} homeTeam={homeTeam} awayTeam={awayTeam} result={result} status={status} clock={clock}
-          viewStatus={viewStatus} onCircleClick={handleCircleClick} disabled={disabled} hasEvents={hasEvents} isExpanded={isExpanded}
-        />
-
+            <MatchCardSides
+              matchId={matchId} homeTeam={homeTeam} awayTeam={awayTeam} result={result} status={status} clock={clock}
+              viewStatus={viewStatus} onCircleClick={handleCircleClick} disabled={disabled} hasEvents={hasEvents} isExpanded={isExpanded}
+            />
             {groupCell}
             {menuCell}
           </>
