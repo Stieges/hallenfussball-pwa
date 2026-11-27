@@ -86,13 +86,16 @@ function HallLayout({ props, inhalt }: { props: HallBandProps; inhalt: BandInhal
   // Strafstoßschießen: das Wort steht über dem Zwischenstand in der Mitte (Mockup „schiessen“), nicht links (es ist breiter als die Seitenspalte)
   const mitteAbzeichen = slot?.kind === 'shootout';
   // Nach dem Abpfiff steht „Endstand“ (bzw. das Strafstoßergebnis) groß an der Stelle der Uhr: das Abzeichen „Ende“ entfällt, jede Angabe nur an einer Stelle (@ZM-214, Daniel 2026-11-19)
-  const ohneAbzeichen = slot?.kind === 'word' && badge.kind === 'badge' && badge.state === 'ended';
+  const ohneEndeAbzeichen = slot?.kind === 'word' && badge.kind === 'badge' && badge.state === 'ended';
+  // Solange das Spiel läuft (auch Uhr angehalten, Halbzeitpause, Verlängerung) steht kein Abzeichen „Live“; „Nächstes Spiel“, „Strafstoßschießen“ und „Endstand“ bleiben (@ZM-220, Daniel 2026-11-27)
+  const ohneLive = badge.kind === 'badge' && badge.state === 'live';
+  const ohneAbzeichen = ohneEndeAbzeichen || ohneLive;
   const abzeichen = ohneAbzeichen ? null : <MatchStatusBadge model={badge} size="halle" tone={monitorBadgeTone(colors)} />;
   return (
     <>
       <div style={barRowStyle} data-testid="hall-bar-row">{inhalt.bar}</div>
       <div ref={bandRef} style={bandStyle} data-testid="hall-band">
-        {/* Nah-Information: Live-Abzeichen und Feld (8 % der Höhe, @ZM-213); das Feld nur bei mehr als einem Feld (@ZM-215) */}
+        {/* Nah-Information: Abzeichen (nicht „Live“, @ZM-220) und Feld (8 % der Höhe, @ZM-213); das Feld nur bei mehr als einem Feld (@ZM-215) */}
         <div ref={linksRef} style={sideColumnStyle('start')} data-monitor="nah" data-testid="hall-side-left">
           {!mitteAbzeichen && abzeichen}
           {showField && <FeldSymbol number={match.field ?? 1} label={t('fieldSelector.field', { field: match.field ?? 1 })} size={symbols.field} color={colors.textSecondary} testId="hall-field" />}

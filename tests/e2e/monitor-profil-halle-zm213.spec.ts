@@ -473,10 +473,10 @@ for (const { w, h } of GROESSEN) {
           const m = await messeInNeuemKontext(browser, baseURL ?? undefined, async (seite) => {
             await oeffne(seite, fall, w, h, rand, optionen);
             // die Zustände sind wirklich da (kein stilles Ausweichen auf „läuft“)
-            // @ZM-215 (Daniel 2026-11-19): die Verlängerung steht nur an der Uhr (Kreis mit Plus), das Abzeichen bleibt „Live“
+            // @ZM-215 (Daniel 2026-11-19): die Verlängerung steht nur an der Uhr (Kreis mit Plus), das Abzeichen „Live“ steht nicht (umgestellt wegen @ZM-220, Daniel 2026-11-27)
             if (optionen.verlaengerung === true) {
               await expect(seite.getByTestId('hall-phase-text').getByRole('img', { name: 'Verlängerung' })).toBeVisible();
-              await expect(seite.getByTestId('match-status-badge')).toHaveText('Live');
+              await expect(seite.getByTestId('match-status-badge')).toHaveCount(0);
             }
             if (optionen.zehnMinuten === true) { await expect(seite.getByTestId('hall-clock')).toHaveText(/^\d\d:\d\d$/); }
             if (optionen.rest !== undefined) { await expect(seite.getByTestId('hall-clock')).toHaveText('18:00'); }
