@@ -15,7 +15,8 @@ import { useTableSortState } from '../../../hooks/useTableSortState';
 import { Icons } from '../../../components/ui/Icons';
 import { TeamName } from './HyphenSafe';
 import { scorerSortColumns, type PlayerRow } from './finalSortColumns';
-import { SortBar, SortHeadRow, type HeadSpec, type ListSort, type PickerColumn } from './FinalSortParts';
+import { SortBar, SortHeadRow, type HeadSpec, type ListSort } from './FinalSortParts';
+import { pickerColumnsOf } from './pickerColumnsOf';
 import { heading, placeList, secondaryButton, small, strong, tightStack } from './finishStyles';
 import { scorerGoals, scorerHeader, scorerName, scorerRank, scorerRow } from './finalStandingsStyles';
 
@@ -49,7 +50,7 @@ export function ScorerList({ scorers, provisional, incomplete = false }: { score
     { column: 'team', text: teamText, align: 'start' },
     { column: 'tore', text: goalsText, align: 'end' },
   ];
-  const pickerColumns: PickerColumn[] = [{ column: 'tore', text: goalsText }, { column: 'team', text: teamText }];
+  const pickerColumns = pickerColumnsOf(specs);
   const label = (row: ScorerRow) => {
     if (row.kind === 'player') {
       return <><span>#{row.number} </span><TeamName name={row.teamName} /></>;

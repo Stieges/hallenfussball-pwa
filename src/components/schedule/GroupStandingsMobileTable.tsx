@@ -13,6 +13,7 @@ import { monitorTeamName } from '../../core/models/teamNameAbbrev';
 import { goalDiffLabel } from '../../core/standings/goalDiffLabel';
 import { StandingNameCell } from './StandingNameCell';
 import { GroupHeadCell, type GroupSort } from './GroupSortHeads';
+import { GROUP_MOBILE_COLUMNS } from './mobileSortColumns';
 import { focusStyle, goalDiffColor, hiddenStyle, highlightStyle, mobileFixedColStyle, mobileTdStyle, mobileThStyle, tableStyle, type PlacementHighlights } from './groupTablesStyle';
 
 export interface GroupStandingsMobileTableProps {
@@ -80,10 +81,9 @@ export function GroupStandingsMobileTable({ standings, placeOf, sort = null, goa
         <thead>
           <tr>
             <GroupHeadCell indicator sort={sort} column="platz" term="rank" style={mobileFixedColStyle} />
-            <GroupHeadCell indicator sort={sort} column="team" text={t('groupTables.columns.team')} style={mobileThStyle} />
-            <GroupHeadCell indicator sort={sort} column="sp" term="played" style={mobileFixedColStyle} />
-            <GroupHeadCell indicator sort={sort} column="diff" term="goalDifference" style={mobileFixedColStyle} />
-            <GroupHeadCell indicator sort={sort} column="pkt" term="points" style={mobileFixedColStyle} />
+            {GROUP_MOBILE_COLUMNS.map(({ column, term }) => (
+              <GroupHeadCell key={column} indicator sort={sort} column={column} term={term} text={column === 'team' ? t('groupTables.columns.team') : undefined} style={column === 'team' ? mobileThStyle : mobileFixedColStyle} />
+            ))}
             <th style={mobileFixedColStyle}><span style={hiddenStyle}>{t('groupTables.details.column')}</span></th>
           </tr>
         </thead>

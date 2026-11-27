@@ -14,6 +14,7 @@ import { useTableSort } from '../../hooks/useTableSort';
 import { useTableSortState } from '../../hooks/useTableSortState';
 import { groupSortColumns } from './groupSortColumns';
 import { GroupSortBar, type GroupSort } from './GroupSortHeads';
+import { GROUP_MOBILE_COLUMNS } from './mobileSortColumns';
 
 export interface GroupStandingsCardProps {
   standings: Standing[];
@@ -70,7 +71,7 @@ export const GroupStandingsCard: React.FC<GroupStandingsCardProps> = ({ standing
         </>
       )}
       {tieHint}
-      {sort !== null && handle !== null && <GroupSortBar sort={sort} onChange={handle.set} onReset={handle.reset} />}
+      {sort !== null && handle !== null && <GroupSortBar sort={sort} columns={GROUP_MOBILE_COLUMNS} onChange={handle.set} onReset={handle.reset} />}
 
       {/* Breite Ansicht - am Handy per CSS ausgeblendet */}
       <div className="desktop-view" style={{ overflowX: 'auto', position: 'relative' }}>

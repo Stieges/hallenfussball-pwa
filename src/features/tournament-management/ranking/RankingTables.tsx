@@ -11,6 +11,7 @@ import { tableKey } from '../../../core/standings/tableSortAddress';
 import { useTableSort } from '../../../hooks/useTableSort';
 import { useTableSortState } from '../../../hooks/useTableSortState';
 import { GroupSortBar, type GroupSort } from '../../../components/schedule/GroupSortHeads';
+import { RANKING_MOBILE_COLUMNS } from '../../../components/schedule/mobileSortColumns';
 import type { Medal } from '../tabellenAnsicht';
 import { RankingDesktopTable } from './RankingDesktopTable';
 import { RankingMobileTable } from './RankingMobileTable';
@@ -46,7 +47,7 @@ export function RankingTables({ finalRanking, getStanding, isMobile, expandedRow
   return (
     <div className="ranking-tables">
       {sort !== null && handle !== null && (
-        <GroupSortBar sort={sort} onChange={handle.set} onReset={handle.reset} withGroup={rest.hasGroups} picker={isMobile} />
+        <GroupSortBar sort={sort} columns={RANKING_MOBILE_COLUMNS} onChange={handle.set} onReset={handle.reset} withGroup={rest.hasGroups} picker={isMobile} />
       )}
       {isMobile
         ? <RankingMobileTable rows={rows} expandedRows={expandedRows} onToggleRow={onToggleRow} sort={sort} goalsFocus={goalsFocus} {...rest} />

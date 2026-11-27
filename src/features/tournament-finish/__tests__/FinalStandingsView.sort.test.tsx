@@ -169,6 +169,8 @@ describe('Endstand sortierbar', () => {
       expect(screen.queryByTestId('sort-head-end-team')).toBeNull();
       const auswahl = screen.getByTestId('sort-picker-end');
       expect(auswahl).toBeInTheDocument();
+      // genau die Spalten der Handy-Kopfzeile (Team, Sp., Diff., Pkt.) plus „Nach Platzierung“
+      expect(Array.from(auswahl.querySelectorAll('option')).map((o) => o.getAttribute('value'))).toEqual(['platz', 'team', 'team.r', 'sp', 'sp.r', 'diff', 'diff.r', 'pkt', 'pkt.r']);
       fireEvent.change(auswahl, { target: { value: 'team' } });
       expect(namen()).toEqual(NACH_TEAM);
       const teamKopf = screen.getAllByRole('columnheader').find((k) => k.textContent === 'Team');

@@ -141,13 +141,26 @@ describe('GroupTables sortierbar', () => {
     expect(markeRow.querySelectorAll('td')[0].textContent).toBe('2');
   });
 
-  it('@TS-012 Handy: „Gegentore“ ist über die Auswahl wählbar und sortiert beide Tabellen', () => {
+  it.skip('@TS-012 geparkt (Daniel 27.11.): Handy: „Gegentore“ ist über die Auswahl wählbar und sortiert beide Tabellen', () => {
     const { container } = wrap(<GroupTables standings={standings} teams={standings.map((s) => s.team)} />);
     const picker = screen.getByTestId('sort-picker-g');
     fireEvent.change(picker, { target: { value: 'gegentore' } });
     expect(names('.desktop-view', container)[0]).toBe('TSV Mitte');
     expect(platz('.mobile-view', container)[0]).toBe('2');
     expect(screen.getByTestId('where').textContent).toContain('ts=g.gegentore');
+  });
+
+  it('@TS-004 @TS-012 Handy: „Sortieren nach …“ bietet genau die Spalten der Handy-Tabelle (Team, Spiele, Tordifferenz, Punkte) und „Nach Platzierung“', () => {
+    wrap(<GroupTables standings={standings} teams={standings.map((s) => s.team)} />);
+    const optionen = Array.from(screen.getByTestId('sort-picker-g').querySelectorAll('option')).map((o) => o.textContent);
+    expect(optionen).toEqual([
+      'Nach Platzierung', 'Team', 'Team (umgekehrt)', 'Spiele', 'Spiele (umgekehrt)', 'Tordifferenz', 'Tordifferenz (umgekehrt)', 'Punkte', 'Punkte (umgekehrt)',
+    ]);
+  });
+
+  it('@TS-010 @TS-012 Handy: steht die Sortierung (Adresse) auf einer dort unsichtbaren Spalte, zeigt die Auswahl sie weiter an', () => {
+    wrap(<GroupTables standings={standings} teams={standings.map((s) => s.team)} />, '/?ts=g.gegentore');
+    expect(screen.getByTestId('sort-picker-g')).toHaveValue('gegentore');
   });
 
   it('@TS-020 zwei Gruppen werden getrennt sortiert, die Adresse trägt nur Gruppe A', () => {

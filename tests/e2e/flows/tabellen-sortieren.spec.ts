@@ -252,7 +252,8 @@ test.describe('Tabellen sortieren – Laptop 1280 (Zuschauer-Seite, Turnierleitu
 });
 
 test.describe('Tabellen sortieren – Handy (Fenster des Profils, im Projekt desktop 390 Pixel)', () => {
-  test('@TS-012 Köpfe sind nur Anzeige; „Sortieren nach …“ → „Gegentore“ sortiert auch ohne sichtbare Torspalte, „Nach Platzierung“ stellt die Vorgabe her', async ({ page }, testInfo) => {
+  // @TS-012 geparkt (Daniel 27.11.): Die Handy-Auswahl bietet nur die am Handy sichtbaren Spalten; „Gegentore“ gehört nicht dazu.
+  test.skip('@TS-012 geparkt (Daniel 27.11.) Köpfe sind nur Anzeige; „Sortieren nach …“ → „Gegentore“ sortiert auch ohne sichtbare Torspalte, „Nach Platzierung“ stellt die Vorgabe her', async ({ page }, testInfo) => {
     if (testInfo.project.name === 'desktop') { await page.setViewportSize({ width: 390, height: 844 }); }
     await oeffne(page, 'hallencup-messlauf', ZUSCHAUER, 'sort-picker-gA');
     const auswahl = page.getByTestId('sort-picker-gA');

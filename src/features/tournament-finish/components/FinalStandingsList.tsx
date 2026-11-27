@@ -13,7 +13,8 @@ import { useTableSortState } from '../../../hooks/useTableSortState';
 import { formatSigned } from '../model/finishFormat';
 import { TeamName } from './HyphenSafe';
 import { finalSortableColumns, finalTeamColumns, finalValueColumns, hasValues } from './finalSortColumns';
-import { SortBar, SortHeadRow, type HeadSpec, type ListSort, type PickerColumn } from './FinalSortParts';
+import { SortBar, SortHeadRow, type HeadSpec, type ListSort } from './FinalSortParts';
+import { pickerColumnsOf } from './pickerColumnsOf';
 import { goldRowFirst, placeNumber, pointsCell, standingsHeader, standingsRow, standingsRowFirst, valueCell } from './finalStandingsStyles';
 import { placeList, small, strong } from './finishStyles';
 
@@ -52,10 +53,7 @@ export function FinalStandingsList({ ranking, withValues, provisional, gold, ori
       { column: 'pkt', term: 'points', align: 'end' },
     ] as const) : []),
   ];
-  const pickerColumns: PickerColumn[] = [
-    { column: 'team', text: teamText },
-    ...(withValues ? ([{ column: 'sp', term: 'played' }, { column: 'diff', term: 'goalDifference' }, { column: 'pkt', term: 'points' }] as const) : []),
-  ];
+  const pickerColumns = pickerColumnsOf(specs);
   return (
     <>
       {sort !== null && <SortBar sort={sort} columns={pickerColumns} mobile={mobile} scope="final-standings-sort" />}

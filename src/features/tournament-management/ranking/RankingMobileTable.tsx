@@ -6,6 +6,7 @@ import React, { type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { GroupHeadCell, type GroupSort } from '../../../components/schedule/GroupSortHeads';
+import { RANKING_MOBILE_COLUMNS } from '../../../components/schedule/mobileSortColumns';
 import { focusStyle, goalDiffColor } from '../../../components/schedule/groupTablesStyle';
 import { goalDiffLabel } from '../../../core/standings/goalDiffLabel';
 import { placementBadgeText, placementRankText } from '../../../utils/calculations';
@@ -52,9 +53,9 @@ export function RankingMobileTable({ rows, tournament, hasGroups, medalOf, tieMa
       <thead>
         <tr>
           <GroupHeadCell indicator sort={sort} column="platz" term="rank" style={fixedTh} />
-          <GroupHeadCell indicator sort={sort} column="team" text={t('ranking.headers.team')} style={th} />
-          <GroupHeadCell indicator sort={sort} column="pkt" term="points" style={fixedTh} />
-          <GroupHeadCell indicator sort={sort} column="diff" term="goalDifference" style={fixedTh} />
+          {RANKING_MOBILE_COLUMNS.map(({ column, term }) => (
+            <GroupHeadCell key={column} indicator sort={sort} column={column} term={term} text={column === 'team' ? t('ranking.headers.team') : undefined} style={column === 'team' ? th : fixedTh} />
+          ))}
           <th style={{ ...th, width: '30px', textAlign: 'center' }}></th>
         </tr>
       </thead>

@@ -133,6 +133,7 @@ describe('Torschützenliste sortierbar', () => {
     try {
       zeige();
       expect(screen.queryByTestId('sort-head-tor-team')).toBeNull();
+      expect(Array.from(screen.getByTestId('sort-picker-tor').querySelectorAll('option')).map((o) => o.getAttribute('value'))).toEqual(['platz', 'team', 'team.r', 'tore', 'tore.r']);
       fireEvent.change(screen.getByTestId('sort-picker-tor'), { target: { value: 'team' } });
       expect(zeilen()[1]).toContain('sc Nord');
     } finally {

@@ -64,8 +64,10 @@ test('@TS-012 @TS-005 Platzierung am Handy: Köpfe nur Anzeige, „Sortieren nac
   expect(await plaetze(page)).not.toEqual(vorgabe);
   if (BILDER) {await page.screenshot({ path: `${BILDER}/leitung-390-2-gruppe.png` });}
 
-  await auswahl.selectOption('gegentore');
-  if (BILDER) {await page.screenshot({ path: `${BILDER}/leitung-390-3-gegentore.png` });}
+  // „Gegentore“ ist am Handy keine sichtbare Spalte und steht nicht in der Auswahl (@TS-012 geparkt, Daniel 27.11.): stattdessen „Punkte“
+  await auswahl.selectOption('pkt');
+  await expect(page).toHaveURL(/ts=gesamt\.pkt/);
+  if (BILDER) {await page.screenshot({ path: `${BILDER}/leitung-390-3-punkte.png` });}
 
   await auswahl.selectOption('platz');
   expect(await plaetze(page)).toEqual(vorgabe);

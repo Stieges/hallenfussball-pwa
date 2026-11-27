@@ -14,6 +14,7 @@ import { SORT_HEAD_TOUCH_OK } from '../ui/molecules/sortTouchExemption';
 import { SortableHeader } from '../ui/molecules/SortableHeader';
 import { SortPicker, type SortPickerOption } from '../ui/molecules/SortPicker';
 import { SortReset } from '../ui/molecules/SortReset';
+import type { MobileSortColumn } from './mobileSortColumns';
 
 /** Sortierung einer Gruppentabelle, wie sie die Karte an die Tabellen reicht. `key` = Tabellenschlüssel (`tableKey`). */
 export interface GroupSort {
@@ -52,7 +53,7 @@ interface HeadCellProps {
 
 const FEWEST_FIRST: readonly SortColumn[] = ['team', 'gruppe', 'n', 'gegentore'];
 
-/** Handy-Kopf: Text wie ohne Sortierung, bei aktiver Sortierung der Pfeil unter dem Wort (die Spalte wird nicht breiter). */
+/** Handy-Kopf: Text wie ohne Sortierung, bei aktiver Sortierung der Pfeil unter dem Wort: die schmalen Spalten (Platz 32 px) werden nicht breiter, das Wort „Platz“ ragte sonst über die Zelle (Entscheidung 27.11., Messung). */
 function IndicatorHead({ sort, column, visual, style }: { sort: GroupSort; column: SortedColumn | 'platz'; visual: ReactNode; style: CSSProperties }) {
   const active = column === 'platz' ? sort.state === null : sort.state?.column === column;
   const descending = column === 'platz' || sort.state === null ? false : FEWEST_FIRST.includes(column) === sort.state.reversed;
@@ -91,16 +92,15 @@ export function GroupHeadCell({ sort, column, term, text, style, indicator = fal
   return <SortableHeader column={column} label={label} visual={term ? visual : undefined} state={sort.state} onTap={sort.onTap} testId={testId} style={cellStyle} />;
 }
 
-/** Spalten und Richtungen der Handy-Auswahl (die Köpfe der Handy-Tabelle zeigen nur einen Teil). */
-const PICKER_COLUMNS: ReadonlyArray<{ column: SortedColumn; term?: TableHeadTerm }> = [
-  { column: 'team' }, { column: 'sp', term: 'played' }, { column: 's', term: 'won' }, { column: 'u', term: 'drawn' }, { column: 'n', term: 'lost' },
-  { column: 'tore' }, { column: 'gegentore' }, { column: 'diff', term: 'goalDifference' }, { column: 'pkt', term: 'points' },
-];
+/** Begriff je Spalte, nur für den Namen einer Spalte, die am Handy nicht sichtbar ist, aber (Adresse, Gerät) schon sortiert. */
+const TERM_OF: Partial<Record<SortedColumn, TableHeadTerm>> = { sp: 'played', s: 'won', u: 'drawn', n: 'lost', diff: 'goalDifference', pkt: 'points' };
 
 const GROUP_PICKER_COLUMN = { column: 'gruppe', term: 'group' } as const;
 
 interface BarProps {
   sort: GroupSort;
+  /** Spalten, die die Handy-Tabelle zeigt (dieselbe Liste wie ihre Köpfe, `mobileSortColumns.ts`); nur sie stehen in der Auswahl. */
+  columns: readonly MobileSortColumn[];
   onChange: (state: SortState) => void;
   onReset: () => void;
   /** Auswahl auch mit „Gruppe“ (Platzierung über alle Gruppen bei einem Turnier mit Gruppen). */
@@ -110,18 +110,24 @@ interface BarProps {
 }
 
 /** Einmal je Karte: „Nach Platzierung“ (nur wenn sortiert) und am Handy die Auswahl „Sortieren nach …“. */
-export function GroupSortBar({ sort, onChange, onReset, withGroup = false, picker = true }: BarProps) {
+export function GroupSortBar({ sort, columns: shown, onChange, onReset, withGroup = false, picker = true }: BarProps) {
   const { t } = useTranslation('tournament');
   const long = t as unknown as (key: string, options?: Record<string, string>) => string;
   const name = (column: SortedColumn, term?: TableHeadTerm): string => {
     if (term) {return long(SHORT_TERMS[term].long);}
     return column === 'team' ? long('groupTables.columns.team') : column === 'tore' ? long('groupTables.columns.goals') : long('tableSort.gegentore');
   };
-  const columns = withGroup ? [PICKER_COLUMNS[0], GROUP_PICKER_COLUMN, ...PICKER_COLUMNS.slice(1)] : PICKER_COLUMNS;
+  const columns: readonly MobileSortColumn[] = withGroup ? [shown[0], GROUP_PICKER_COLUMN, ...shown.slice(1)] : shown;
   const options: SortPickerOption[] = columns.flatMap(({ column, term }) => [
     { value: { column, reversed: false }, label: name(column, term) },
     { value: { column, reversed: true }, label: long('tableSort.optionReversed', { label: name(column, term) }) },
   ]);
+  // Steht die Sortierung (Adresse, Gerät) auf einer Spalte, die am Handy fehlt, zeigt die Auswahl sie weiter als gewählt – nie still „Nach Platzierung“.
+  const current = sort.state;
+  if (current !== null && !options.some((o) => o.value?.column === current.column && o.value.reversed === current.reversed)) {
+    const label = name(current.column, TERM_OF[current.column]);
+    options.push({ value: current, label: current.reversed ? long('tableSort.optionReversed', { label }) : label });
+  }
   return (
     <>
       {/* Die Auswahl gibt es nur am Handy (CSS der Karte); das Maß hängt am Wrapper, damit ohne Auswahl keine Lücke bleibt */}
