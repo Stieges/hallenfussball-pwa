@@ -132,10 +132,12 @@ describe('@ZM-213 Anordnung und Mindestgrößen (Anteil der Höhe der Folienflä
     expect(screen.getByTestId('hall-teamname-home')).toHaveAttribute('data-teamname');
   });
 
-  it('Live-Abzeichen, Feld und Gruppe stehen klein links und rechts neben der Restzeit (Restzeit 5:50, Gruppe A, Feld 1)', () => {
+  // umgestellt wegen @ZM-220 (Daniel 2026-11-27): im Profil „Halle (sehr fern)“ steht kein Abzeichen „Live“ mehr
+  it('Feld und Gruppe stehen klein links und rechts neben der Restzeit, kein Abzeichen „Live“ (Restzeit 5:50, Gruppe A, Feld 1)', () => {
     zeige({ patch: laeuft() });
     expect(screen.getByTestId('hall-clock')).toHaveTextContent('5:50');
-    expect(within(screen.getByTestId('hall-side-left')).getByText('Live')).toBeInTheDocument();
+    expect(within(screen.getByTestId('hall-side-left')).queryByText('Live')).toBeNull();
+    expect(screen.queryByTestId('match-status-badge')).toBeNull();
     // @ZM-215 (Daniel 2026-11-19): Feld als Spielfeld-Symbol mit Nummer, Gruppe als Buchstabe im Kasten; die Wörter stehen als zugängliche Namen da
     expect(screen.getByTestId('hall-field')).toHaveAttribute('aria-label', 'Feld 1');
     expect(screen.getByTestId('hall-field')).toHaveTextContent(/^1$/);
@@ -197,14 +199,15 @@ describe('@ZM-214 Zustände ohne Sprung', () => {
   });
 
   // Umgestellt wegen @ZM-215 (Daniel 2026-11-19: Symbole statt Text, „Ziffern gedämpft“): bisher stand „angehalten“ als Wort neben der Uhr und die Restzeit blieb weiß
-  it('Uhr angehalten: neben der Restzeit das Pause-Symbol „angehalten“, der Zeitbalken ist grau, die Ziffern sind gedämpft; das Abzeichen bleibt „Live“', () => {
+  it('Uhr angehalten: neben der Restzeit das Pause-Symbol „angehalten“, der Zeitbalken ist grau, die Ziffern sind gedämpft; kein Abzeichen „Live“', () => {
+    // umgestellt wegen @ZM-220 (Daniel 2026-11-27): im Profil „Halle (sehr fern)“ steht kein Abzeichen „Live“ mehr
     zeige({ patch: { scoreA: 1, scoreB: 0, liveState: ANGEHALTEN, matchStatus: 'paused' } });
     expect(symbolNamen('hall-phase-text')).toBe('angehalten');
     expect(screen.getByTestId('hall-phase-text-pause')).toHaveAttribute('data-symbol', 'pause');
     expect(screen.getByTestId('hall-zeitbalken')).toHaveAttribute('data-ton', 'grau');
     expect(screen.getByTestId('hall-clock')).toHaveTextContent('5:50');
     expect(screen.getByTestId('hall-slot').style.color).toBe(rgbVon(monitorThemes.dark.textSecondary)); // gedämpft statt der Farbe der laufenden Uhr
-    expect(within(screen.getByTestId('hall-side-left')).getByText('Live')).toBeInTheDocument();
+    expect(within(screen.getByTestId('hall-side-left')).queryByText('Live')).toBeNull();
     expect(within(screen.getByTestId('hall-side-left')).queryByText('Pause')).toBeNull();
   });
 
@@ -217,25 +220,27 @@ describe('@ZM-214 Zustände ohne Sprung', () => {
   });
 
   // Umgestellt wegen @ZM-215 (Daniel 2026-11-19): bisher „Pause“ als Wort neben der Uhr und „Halbzeit“ im Abzeichen; jetzt der halbe Kreis an der Uhr und „Live“ oben links
-  it('Halbzeitpause: die Pausenzeit steht an der Stelle der Restzeit, daneben der halbe Kreis „Pause · Halbzeit“; das Abzeichen bleibt „Live“ (nicht „Halbzeit“, nicht „Pause“)', () => {
+  it('Halbzeitpause: die Pausenzeit steht an der Stelle der Restzeit, daneben der halbe Kreis „Pause · Halbzeit“; kein Abzeichen „Live“ (auch nicht „Halbzeit“ oder „Pause“)', () => {
+    // umgestellt wegen @ZM-220 (Daniel 2026-11-27): im Profil „Halle (sehr fern)“ steht kein Abzeichen „Live“ mehr
     zeige({ patch: { scoreA: 1, scoreB: 0, liveState: HALBZEIT } });
     expect(screen.getByTestId('hall-clock')).toHaveTextContent('0:40');
     expect(symbolNamen('hall-phase-text')).toBe('Pause · Halbzeit');
     expect(screen.getByTestId('hall-phase-text-halbzeit')).toHaveAttribute('data-symbol', 'halbzeit');
     const links = within(screen.getByTestId('hall-side-left'));
-    expect(links.getByText('Live')).toBeInTheDocument();
+    expect(links.queryByText('Live')).toBeNull();
     expect(links.queryByText('Halbzeit')).toBeNull();
     expect(links.queryByText('Pause')).toBeNull();
   });
 
   // Review PR #563 D2: Pause ohne Pausen-Daten (keine Pausenlänge im Feinstatus, Restzeit unbekannt): keine Ziffern, aber der halbe Kreis muss stehen, sonst steht die Pause nirgends
-  it('Halbzeitpause ohne Pausen-Daten: keine Ziffern, aber der halbe Kreis („Pause · Halbzeit“) steht; das Abzeichen bleibt „Live“', () => {
+  it('Halbzeitpause ohne Pausen-Daten: keine Ziffern, aber der halbe Kreis („Pause · Halbzeit“) steht; kein Abzeichen „Live“', () => {
+    // umgestellt wegen @ZM-220 (Daniel 2026-11-27): im Profil „Halle (sehr fern)“ steht kein Abzeichen „Live“ mehr
     const ohnePausenlaenge: Record<string, unknown> = { ...HALBZEIT };
     Reflect.deleteProperty(ohnePausenlaenge, 'breakSeconds');
     zeige({ patch: { scoreA: 1, scoreB: 0, liveState: ohnePausenlaenge } });
     expect(screen.queryByTestId('hall-clock')).toBeNull();
     expect(symbolNamen('hall-phase-text')).toBe('Pause · Halbzeit');
-    expect(within(screen.getByTestId('hall-side-left')).getByText('Live')).toBeInTheDocument();
+    expect(within(screen.getByTestId('hall-side-left')).queryByText('Live')).toBeNull();
   });
 
   it('Gegenbeispiel: läuft die Uhr, steht auch ohne Ziffern-Rückfall kein Symbol (keine Uhr ohne Zustand)', () => {
@@ -256,9 +261,10 @@ describe('@ZM-214 Zustände ohne Sprung', () => {
   });
 
   // Daniel 2026-11-19 („Ja zum Hallenprofil“, Delta-Review PR #563 D5): „Endstand“ steht groß, das Abzeichen „Ende“ entfällt (jede Angabe nur an einer Stelle)
-  it('Nach dem Abpfiff steht kein Abzeichen „Ende“, nur „Endstand“ bzw. das Strafstoßergebnis; Gegenbeispiel: im Spiel bleibt das Abzeichen „Live“', () => {
+  it('Nach dem Abpfiff steht kein Abzeichen „Ende“, nur „Endstand“ bzw. das Strafstoßergebnis; Gegenbeispiel: im Spiel steht kein „Live“ (@ZM-220)', () => {
+    // umgestellt wegen @ZM-220 (Daniel 2026-11-27): im Profil „Halle (sehr fern)“ steht kein Abzeichen „Live“ mehr
     const lauf = zeige({ patch: laeuft() });
-    expect(within(screen.getByTestId('hall-side-left')).getByText('Live')).toBeInTheDocument();
+    expect(within(screen.getByTestId('hall-side-left')).queryByText('Live')).toBeNull();
     lauf.unmount();
     const ende = zeige({ patch: { matchStatus: 'finished', scoreA: 2, scoreB: 1, decidedBy: 'regular', liveState: undefined }, pinned: 'match-7' });
     expect(screen.getByTestId('hall-endstand')).toHaveTextContent('Endstand');
@@ -490,10 +496,10 @@ describe('@ZM-215 Die Live-Sicht zeigt nur, was man aus der Ferne braucht, und d
     expect(screen.getByTestId('hall-clock')).toBeInTheDocument();
     expect(screen.queryByTestId('hall-section')).toBeNull();
     expect(screen.queryByText(/Halbzeit|Abschnitt/)).toBeNull();
-    // @ZM-215 (Daniel 2026-11-19): die Verlängerung steht nur noch an der Uhr (Kreis mit Plus), nie im Abzeichen; angehalten daneben das Pause-Symbol; oben links bleibt „Live“
+    // @ZM-215 (Daniel 2026-11-19): die Verlängerung steht nur noch an der Uhr (Kreis mit Plus), nie im Abzeichen; angehalten daneben das Pause-Symbol; oben links steht kein „Live“ (umgestellt wegen @ZM-220, Daniel 2026-11-27)
     expect(symbolNamen('hall-phase-text')).toBe(status === 'paused' ? 'angehalten + Verlängerung' : 'Verlängerung');
     const links = within(screen.getByTestId('hall-side-left'));
-    expect(links.getByText('Live')).toBeInTheDocument();
+    expect(links.queryByText('Live')).toBeNull();
     expect(links.queryByText('Verlängerung')).toBeNull();
     expect(screen.queryByTestId('hall-overtime-text')).toBeNull();
   });
