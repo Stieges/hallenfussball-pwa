@@ -106,13 +106,14 @@ test.describe('@ZM-218 Stand und Logos im Spielplan der Zuschauer-Seite in feste
   for (const breite of [1280, 1024]) {
     test(`@ZM-218 bei ${String(breite)} Pixeln: Logos in den Zeilen „ausgefallen“ und „gewertet“ stehen wie in den normalen Zeilen`, async ({ page }) => {
       test.skip(test.info().project.name !== 'desktop', 'setzt das Fenster selbst');
-      test.fail(true, 'Befund C-ZUSCHAUER-STAND-SONDERTEXT, @ZM-218');
       await oeffne(page, breite, true);
       const liste = await zeilen(page);
       const normal = liste.find((z) => /^\d+:\d+$/.test(z.text));
       if (normal === undefined) { throw new Error('keine normale Zeile gefunden'); }
       const sonder = liste.filter((z) => z.text.startsWith('ausgefallen') || z.text.startsWith('cancelled') || /gewertet|awarded/i.test(z.text));
       expect(sonder.length, 'Zeilen „ausgefallen“ und „gewertet“ sind da').toBeGreaterThanOrEqual(2);
+      // erst nach den Vorbedingungen: nur die Logo-Abweichung ist der erwartete Fehlschlag
+      test.fail(true, 'Befund C-ZUSCHAUER-STAND-SONDERTEXT, @ZM-218');
       for (const z of sonder) {
         expect(Math.abs(z.logoHeim - normal.logoHeim), `Logo Heim ${z.text}: ${JSON.stringify(z)}`).toBeLessThanOrEqual(TOLERANZ);
         expect(Math.abs(z.logoGast - normal.logoGast), `Logo Gast ${z.text}: ${JSON.stringify(z)}`).toBeLessThanOrEqual(TOLERANZ);
