@@ -219,6 +219,18 @@ export default tseslint.config(
     },
   },
 
+  // TanStack Table ist gekapselt: nur der Sortier-Hook darf es importieren (Record tabellen-sortieren)
+  {
+    files: ['**/*.ts', '**/*.tsx'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [
+          { group: ['@tanstack/*'], message: 'TanStack Table nur über src/hooks/useTableSort.ts (gekapselter Sortier-Baustein).' },
+        ],
+      }],
+    },
+  },
+
   // Layering-Override: core/ ist framework-free — KEINE features/hooks/components/react Imports
   {
     files: ['src/core/**/*.ts', 'src/core/**/*.tsx'],
@@ -229,6 +241,7 @@ export default tseslint.config(
           { group: ['**/hooks/**', '@/hooks/**'],         message: 'core/ darf nicht aus hooks/ importieren (core ist React-frei).' },
           { group: ['**/components/**', '@/components/**'], message: 'core/ darf nicht aus components/ importieren.' },
           { group: ['react', 'react-dom', 'react/*'],     message: 'core/ ist framework-free, kein React.' },
+          { group: ['@tanstack/*'],                       message: 'TanStack Table nur über src/hooks/useTableSort.ts (gekapselter Sortier-Baustein).' },
         ],
       }],
     },
@@ -245,6 +258,14 @@ export default tseslint.config(
     files: ['src/features/hallenton/runtime/ausgang/ausgangListe.ts'],
     rules: {
       'no-restricted-syntax': ['error', ...SUPABASE_RESTRICTED_SYNTAX],
+    },
+  },
+
+  // Einzige Stelle mit TanStack Table (Sortier-Baustein)
+  {
+    files: ['src/hooks/useTableSort.ts'],
+    rules: {
+      'no-restricted-imports': 'off',
     },
   },
 

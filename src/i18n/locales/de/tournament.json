@@ -2134,5 +2134,15 @@
       "save": "Übernehmen",
       "cancel": "Abbrechen"
     }
+  },
+  "tableSort": {
+    "reset": "Nach Platzierung",
+    "optionReversed": "{{label}} (umgekehrt)",
+    "pickerLabel": "Sortieren nach …",
+    "gegentore": "Gegentore",
+    "sortedBestFirst": "{{label}}, meiste zuerst sortiert",
+    "sortedFewestFirst": "{{label}}, wenigste zuerst sortiert",
+    "sortedAtoZ": "{{label}}, A bis Z sortiert",
+    "sortedZtoA": "{{label}}, Z bis A sortiert"
   }
 }

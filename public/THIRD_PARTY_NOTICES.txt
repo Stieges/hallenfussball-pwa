@@ -17,3 +17,15 @@ Generator-Kommentars sowie das Schreiben von style="fill:..." als fill-Attribut 
 Modified only by removing the root id, the XML header and the generator comment, and by writing style="fill:..." as a fill attribute.
 
 Schrift Bebas Neue: siehe /lizenzen/BebasNeue-OFL-1.1.txt
+
+TanStack Table und Store (Sortier-Baustein; @tanstack/react-table, table-core, react-store, store)
+--------------------------------------------------------------------------------------------
+Copyright (c) 2016 Tanner Linsley (react-table, table-core); Copyright (c) 2021 Tanner Linsley (react-store, store)
+
+Pakete / Packages: @tanstack/react-table 9.3.1, @tanstack/table-core 9.3.1, @tanstack/react-store 0.11.4, @tanstack/store 0.11.3
+Quelle / Source: https://github.com/TanStack/table, https://github.com/TanStack/store
+Lizenz / License: MIT
+Den vollständigen Lizenztext liefert diese App mit: /lizenzen/MIT-TanStack.txt
+The full license text is shipped with this app: /lizenzen/MIT-TanStack.txt
+
+Änderungen / Changes: keine, unverändert eingebunden (src/hooks/useTableSort.ts) / none, used unmodified.

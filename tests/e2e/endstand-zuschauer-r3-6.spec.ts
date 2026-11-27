@@ -30,7 +30,7 @@ const SZENEN: Szene[] = [
   { id: 'ps', kennung: '@LZ-074 @ET-044 (Strafstoßschießen)', text: /Platz 1 per Strafstoßschießen entschieden: 4:3 gegen SV Süd/, da: ['final-standings-winner'] },
   { id: 'lang', kennung: '@LZ-074 (50-Zeichen-Namen)', text: /Spielvereinigung Grün-Gelb Kleinstadt-Neudorf 1921/, da: ['final-standings-winner', 'final-standings-header'] },
   { id: 'ohnetor', kennung: '@ZM-012 (Torschützen-Schalter aus)', text: /Gespeichert am/, da: ['final-standings-list'], nicht: ['final-scorers'] },
-  { id: 'ohnetab', kennung: '@ZM-102 (Tabellen für Zuschauer aus)', text: /Gespeichert am/, da: ['final-standings-list'], nicht: ['final-standings-header', 'final-standing-points'] },
+  { id: 'ohnetab', kennung: '@ZM-102 (Tabellen für Zuschauer aus)', text: /Gespeichert am/, da: ['final-standings-list'], nicht: ['final-standing-points'] },
   { id: 'kinder', kennung: 'E7 Kindermodus', text: /Turnier beendet – danke fürs Mitspielen/, warte: 'final-standings-kids', da: ['tournament-ended'], nicht: ['final-standings-list', 'final-scorers'] },
   { id: 'vor', kennung: '@LZ-075 (vor dem Abschluss kein Endstand)', text: /Spielplan/, warte: 'spielplan-platzhalter', nicht: ['final-standings', 'tournament-ended', 'final-standings-list'] },
 ];
@@ -125,4 +125,62 @@ test.describe('R3-6 Endstand auf der Zuschauer-Seite (T2-UI)', () => {
     await page.getByTestId('final-scorers-toggle').click();
     await expect(page.getByTestId('final-scorer-row')).toHaveCount(5);
   });
+
+  // Task 7 „Tabellen sortieren“ (@TS-002, @TS-008, @TS-012, @TS-019, @TS-021): Endstand und Torschützenliste sortierbar
+  const SORT_BILDER = process.env.TS7_BILDER;
+  async function bild(page: Page, name: string): Promise<void> {
+    if (SORT_BILDER === undefined) { return; }
+    mkdirSync(SORT_BILDER, { recursive: true });
+    await page.screenshot({ path: join(SORT_BILDER, `${name}.png`), fullPage: true });
+  }
+  const teamNamen = (page: Page) => page.getByTestId('final-standing-team').allTextContents();
+  const plaetze = (page: Page) => page.getByTestId('final-standing-row').evaluateAll((rows) => rows.map((r) => r.getAttribute('data-place')));
+
+  for (const szene of ['klar', 'ohnetab']) {
+    test(`@TS-002 @TS-021 ${szene} Laptop 1280: Endstand nach „Team“ sortiert, Platz bleibt am Team, „Nach Platzierung“ stellt die Vorgabe her; Torschützen nach „Team“ mit Sammelzeile am Ende`, async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name !== 'desktop', 'nur Projekt desktop (setzt Fenster selbst)');
+      await page.setViewportSize({ width: 1280, height: 720 });
+      await page.goto(`/tests/e2e/harness/endstand-zuschauer.html?szene=${szene}`);
+      await expect(page.getByTestId('final-standings-list')).toBeVisible();
+      const vorgabe = await teamNamen(page);
+      const vorgabePlaetze = await plaetze(page);
+      await bild(page, `zuschauer-${szene}-1280-1-vorgabe`);
+      await expect(page.getByTestId('final-standings-header').getByRole('columnheader').first()).toBeVisible();
+      await page.getByTestId('sort-head-end-team').click();
+      const nachTeam = await teamNamen(page);
+      expect(nachTeam).toEqual([...vorgabe].sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' })));
+      expect(await plaetze(page)).not.toEqual(vorgabePlaetze);
+      expect(new Set(await plaetze(page))).toEqual(new Set(vorgabePlaetze));
+      await expect(page.getByTestId('sort-head-end-team')).toHaveAccessibleName('Team, A bis Z sortiert');
+      await bild(page, `zuschauer-${szene}-1280-2-team`);
+      {
+        await page.getByTestId('sort-head-tor-team').click();
+        const zeilen = page.getByTestId('final-scorer-row');
+        await expect(zeilen.last()).toContainText('ohne Nummer');
+        await expect(zeilen.last().getByRole('cell').first()).toHaveText('');
+        await bild(page, `zuschauer-${szene}-1280-3-torschuetzen-team`);
+      }
+      await page.getByTestId('sort-reset-end').click();
+      expect(await teamNamen(page)).toEqual(vorgabe);
+    });
+
+    test(`@TS-012 ${szene} Handy 390: Köpfe nur Anzeige, sortiert über „Sortieren nach …“; Torschützen nach „Team“`, async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name !== 'desktop', 'nur Projekt desktop (setzt Fenster selbst)');
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto(`/tests/e2e/harness/endstand-zuschauer.html?szene=${szene}`);
+      await expect(page.getByTestId('final-standings-list')).toBeVisible();
+      const vorgabe = await teamNamen(page);
+      await bild(page, `zuschauer-${szene}-390-1-vorgabe`);
+      await expect(page.getByTestId('sort-head-end-team')).toHaveCount(0);
+      await page.getByTestId('sort-picker-end').selectOption('team');
+      expect(await teamNamen(page)).toEqual([...vorgabe].sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' })));
+      await expect(page.getByTestId('final-standings-header').getByRole('columnheader', { name: 'Team' })).toHaveAttribute('aria-sort', 'ascending');
+      await bild(page, `zuschauer-${szene}-390-2-team`);
+      {
+        await page.getByTestId('sort-picker-tor').selectOption('team');
+        await expect(page.getByTestId('final-scorer-row').last()).toContainText('ohne Nummer');
+        await bild(page, `zuschauer-${szene}-390-3-torschuetzen-team`);
+      }
+    });
+  }
 });

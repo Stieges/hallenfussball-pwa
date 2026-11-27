@@ -117,6 +117,13 @@ describe('A-20b computeScorers', () => {
     expect(kurz(rows)).toEqual([[1, 'FC Nord', 2, 3], [1, 'FC Öhringen', 5, 3], [1, 'FC Pfalz', 9, 3]]);
   });
 
+  it('@TS-008 Torschützen: #7 SV Ölberg (3) steht vor #9 SV Ofenbach (3), Ö wie Oe', () => {
+    const teams: Team[] = [{ id: ID.nord, name: 'SV Ofenbach' }, { id: ID.mitte, name: 'SV Ölberg' }];
+    const tore = [...mal(3, { team: ID.nord, nr: 9 }), ...mal(3, { team: ID.mitte, nr: 7 })];
+    const rows = computeScorers({ teams, matches: [spiel(tore)] });
+    expect(kurz(rows)).toEqual([[1, 'SV Ölberg', 7, 3], [1, 'SV Ofenbach', 9, 3]]);
+  });
+
   it('Spieler im Rang danach: nach Nummer, wenn Team und Tore gleich', () => {
     const rows = liste([spiel([...mal(2, { team: ID.nord, nr: 12 }), ...mal(2, { team: ID.nord, nr: 3 })])]);
     expect(kurz(rows)).toEqual([[1, 'FC Nord', 3, 2], [1, 'FC Nord', 12, 2]]);

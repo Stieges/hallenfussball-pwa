@@ -36,6 +36,7 @@ import {
   effectiveNavTab,
 } from '../features/public-view/publicScheduleFilters';
 import { useTheme } from '../hooks/useTheme';
+import { TableSortProvider } from '../hooks/TableSortProvider';
 import { PublicStandingsTab } from '../features/public-view/components/PublicStandingsTab';
 import { PublicInfoTab } from '../features/public-view/components/PublicInfoTab';
 import { PublicConnectionHint } from '../features/public-view/components/PublicConnectionHint';
@@ -111,127 +112,129 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
   const pdfRow = <PublicPdfRow tournament={tournament} schedule={schedule} standings={currentStandings} view={view} finalStandings={finalStandings} />;
 
   return (
-    <NowSourceContext.Provider value={nowMs}>
-    <div
-      ref={containerRef}
-      style={{ ...publicPageContainerStyle, position: 'relative', overflowY: 'auto' }}
-      onTouchStart={pullHandlers.onTouchStart}
-      onTouchMove={pullHandlers.onTouchMove}
-      onTouchEnd={pullHandlers.onTouchEnd}
-    >
-      {/* Pull-to-refresh indicator */}
-      <div style={getRefreshIndicatorStyle(pullDistance, isRefreshing)}>
-        <div style={getRefreshSpinnerStyle(pullDistance, isRefreshing)} />
-        {pullDistance >= PULL_THRESHOLD && !isRefreshing && (
-          <span style={{
-            marginLeft: cssVars.spacing.sm,
-            fontSize: cssVars.fontSizes.sm,
-            color: cssVars.colors.textMuted,
-          }}>
-            {t('liveView.pullRelease')}
-          </span>
-        )}
-      </div>
-
-      <div style={{ ...publicPageContentStyle, transform: `translateY(${pullDistance}px)`, transition: pullDistance > 0 ? 'none' : 'transform 0.3s ease' }}>
-        <PublicPageHeader tournament={tournament} matches={view.matches} shareCode={shareCode} ended={ended} />
-
-        {/* Ohne Netz bleibt der letzte Stand stehen, mit Hinweis (B-15, @ZM-032) */}
-        {connectionHint !== null && (
-          <div style={{ marginBottom: cssVars.spacing.md }}>
-            <PublicConnectionHint hint={connectionHint} />
-          </div>
-        )}
-
-        {/* Kopfblock (@ZM-141): läuft gerade / als Nächstes / zuletzt beendet, ohne Scrollen sichtbar; nach dem Abschluss steht der Endstand */}
-        {tab === 'schedule' && !ended && (
-          <PublicCurrentBlock view={view} schedule={schedule} tournament={tournament} currentMatches={currentMatches} locale={ANZEIGE_SPRACHE} />
-        )}
-
-        {/* Endstand oben (R3-6), Spielplan darunter wie heute */}
-        {tab === 'schedule' && (
-          <PublicFinalStandingsBlock tournament={tournament} view={view} finalStandings={finalStandings} />
-        )}
-        {/* „Als PDF“ (@BM-057, @BM-041): mit Endstand direkt darunter, sonst unter dem Spielplan */}
-        {tab !== 'settings' && finalShown && pdfRow}
-
-        {/* Der Weg zum Spielplan: Mein Team, Filterzeile, eingeklappte Teilnehmer (@ZM-196) */}
-        {tab === 'schedule' && (
-          <PublicWegBlock
-            tournament={tournament}
-            view={view}
-            standings={currentStandings}
-            filters={filters}
-            showTeamSelector={showTeamSelector}
-            onShowTeamSelector={setShowTeamSelector}
-            onSelectTeam={selectMyTeam}
-            onGroupChange={handleGroupChange}
-            onPhaseChange={handlePhaseChange}
-            onStatusChange={handleStatusChange}
-            onResetHidden={handleResetHiddenFilters}
-            onOnlyMineChange={handleShowOnlyMyTeamChange}
-          />
-        )}
-
-        {/* Tab Content */}
-        {tab === 'schedule' && (
-          <>
-            {/* Schedule Display */}
-            <Card style={{ padding: cssVars.spacing.sm }}>
-              <ScheduleDisplay
-                schedule={filteredSchedule}
-                view={view}
-                locale={ANZEIGE_SPRACHE}
-                currentStandings={filteredStandings}
-                showGroupTables={standingsTabAvailable(view.rules)}
-                participantStandings={view.rules.results ? undefined : schedule.initialStandings}
-                currentMatches={currentMatches}
-                tournamentTeams={tournament.teams}
-                showTournamentHeader={false}
-                showParticipants={false}
-                compact
-                editable={false}
-              />
-            </Card>
-            {!finalShown && pdfRow}
-          </>
-        )}
-
-        {/* Nach dem Abschluss steht im Reiter „Tabellen“ der gespeicherte Endstand, nie eine zweite, live gerechnete Platzierung (@ET-044) */}
-        {tab === 'standings' && (showsFinalStandings(view, finalStandings)
-          ? <PublicFinalStandingsBlock tournament={tournament} view={view} finalStandings={finalStandings} scheduleTitle={false} />
-          : <PublicStandingsTab tournament={tournament} standings={currentStandings} />)}
-
-        {tab === 'settings' && (
-          <PublicInfoTab
-            tournament={tournament}
-            theme={theme}
-            setTheme={setTheme}
-            resolvedTheme={resolvedTheme}
-          />
-        )}
-
-        {/* Footer */}
-        <div
-          style={{
-            marginTop: cssVars.spacing.xxl,
-            textAlign: 'center',
-            color: cssVars.colors.textMuted,
-            fontSize: cssVars.fontSizes.xs,
-          }}
-        >
-          <p>{t('liveView.footer')}</p>
+    <TableSortProvider>
+      <NowSourceContext.Provider value={nowMs}>
+      <div
+        ref={containerRef}
+        style={{ ...publicPageContainerStyle, position: 'relative', overflowY: 'auto' }}
+        onTouchStart={pullHandlers.onTouchStart}
+        onTouchMove={pullHandlers.onTouchMove}
+        onTouchEnd={pullHandlers.onTouchEnd}
+      >
+        {/* Pull-to-refresh indicator */}
+        <div style={getRefreshIndicatorStyle(pullDistance, isRefreshing)}>
+          <div style={getRefreshSpinnerStyle(pullDistance, isRefreshing)} />
+          {pullDistance >= PULL_THRESHOLD && !isRefreshing && (
+            <span style={{
+              marginLeft: cssVars.spacing.sm,
+              fontSize: cssVars.fontSizes.sm,
+              color: cssVars.colors.textMuted,
+            }}>
+              {t('liveView.pullRelease')}
+            </span>
+          )}
         </div>
-      </div>
 
-      {/* Bottom Navigation */}
-      <PublicBottomNav
-        activeTab={tab}
-        onTabChange={handleTabChange}
-        hiddenTabs={standingsTabAvailable(view.rules) ? [] : ['standings']}
-      />
-    </div>
-    </NowSourceContext.Provider>
+        <div style={{ ...publicPageContentStyle, transform: `translateY(${pullDistance}px)`, transition: pullDistance > 0 ? 'none' : 'transform 0.3s ease' }}>
+          <PublicPageHeader tournament={tournament} matches={view.matches} shareCode={shareCode} ended={ended} />
+
+          {/* Ohne Netz bleibt der letzte Stand stehen, mit Hinweis (B-15, @ZM-032) */}
+          {connectionHint !== null && (
+            <div style={{ marginBottom: cssVars.spacing.md }}>
+              <PublicConnectionHint hint={connectionHint} />
+            </div>
+          )}
+
+          {/* Kopfblock (@ZM-141): läuft gerade / als Nächstes / zuletzt beendet, ohne Scrollen sichtbar; nach dem Abschluss steht der Endstand */}
+          {tab === 'schedule' && !ended && (
+            <PublicCurrentBlock view={view} schedule={schedule} tournament={tournament} currentMatches={currentMatches} locale={ANZEIGE_SPRACHE} />
+          )}
+
+          {/* Endstand oben (R3-6), Spielplan darunter wie heute */}
+          {tab === 'schedule' && (
+            <PublicFinalStandingsBlock tournament={tournament} view={view} finalStandings={finalStandings} />
+          )}
+          {/* „Als PDF“ (@BM-057, @BM-041): mit Endstand direkt darunter, sonst unter dem Spielplan */}
+          {tab !== 'settings' && finalShown && pdfRow}
+
+          {/* Der Weg zum Spielplan: Mein Team, Filterzeile, eingeklappte Teilnehmer (@ZM-196) */}
+          {tab === 'schedule' && (
+            <PublicWegBlock
+              tournament={tournament}
+              view={view}
+              standings={currentStandings}
+              filters={filters}
+              showTeamSelector={showTeamSelector}
+              onShowTeamSelector={setShowTeamSelector}
+              onSelectTeam={selectMyTeam}
+              onGroupChange={handleGroupChange}
+              onPhaseChange={handlePhaseChange}
+              onStatusChange={handleStatusChange}
+              onResetHidden={handleResetHiddenFilters}
+              onOnlyMineChange={handleShowOnlyMyTeamChange}
+            />
+          )}
+
+          {/* Tab Content */}
+          {tab === 'schedule' && (
+            <>
+              {/* Schedule Display */}
+              <Card style={{ padding: cssVars.spacing.sm }}>
+                <ScheduleDisplay
+                  schedule={filteredSchedule}
+                  view={view}
+                  locale={ANZEIGE_SPRACHE}
+                  currentStandings={filteredStandings}
+                  showGroupTables={standingsTabAvailable(view.rules)}
+                  participantStandings={view.rules.results ? undefined : schedule.initialStandings}
+                  currentMatches={currentMatches}
+                  tournamentTeams={tournament.teams}
+                  showTournamentHeader={false}
+                  showParticipants={false}
+                  compact
+                  editable={false}
+                />
+              </Card>
+              {!finalShown && pdfRow}
+            </>
+          )}
+
+          {/* Nach dem Abschluss steht im Reiter „Tabellen“ der gespeicherte Endstand, nie eine zweite, live gerechnete Platzierung (@ET-044) */}
+          {tab === 'standings' && (showsFinalStandings(view, finalStandings)
+            ? <PublicFinalStandingsBlock tournament={tournament} view={view} finalStandings={finalStandings} scheduleTitle={false} />
+            : <PublicStandingsTab tournament={tournament} standings={currentStandings} />)}
+
+          {tab === 'settings' && (
+            <PublicInfoTab
+              tournament={tournament}
+              theme={theme}
+              setTheme={setTheme}
+              resolvedTheme={resolvedTheme}
+            />
+          )}
+
+          {/* Footer */}
+          <div
+            style={{
+              marginTop: cssVars.spacing.xxl,
+              textAlign: 'center',
+              color: cssVars.colors.textMuted,
+              fontSize: cssVars.fontSizes.xs,
+            }}
+          >
+            <p>{t('liveView.footer')}</p>
+          </div>
+        </div>
+
+        {/* Bottom Navigation */}
+        <PublicBottomNav
+          activeTab={tab}
+          onTabChange={handleTabChange}
+          hiddenTabs={standingsTabAvailable(view.rules) ? [] : ['standings']}
+        />
+      </div>
+      </NowSourceContext.Provider>
+    </TableSortProvider>
   );
 };
 

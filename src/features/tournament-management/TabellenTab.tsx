@@ -17,26 +17,22 @@ import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens'
 import { Card } from '../../components/ui';
 import { GroupTables } from '../../components/schedule';
-import { HighlightedCell } from './components';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { Tournament, Standing } from '../../types/tournament';
 import { GeneratedSchedule } from '../../core/generators';
 import {
   calculateStandings,
-  getMergedFinalRanking, hasFinalRound, placementBadgeText, placementRankText,
+  getMergedFinalRanking, hasFinalRound,
 } from '../../utils/calculations';
 import { groupKeyOf } from '../../core/models/standingsGroups';
-import { getGroupShortCode } from '../../utils/displayNames';
 import { computeFinalStandings } from '../../core/standings/finalStandings';
 import { resolvePlacementCriterionLabel } from '../tournament-creation/components/placementLogicLabels';
 import { useTieRenderers } from './standings/useTieRenderers';
 import { GroupCompletionTop } from './group-completion/GroupCompletionTop';
 import { GroupStateDetails, GroupStateMarks } from './group-completion/GroupStateHead';
 import { istEineTabelle, medalForRank, type Medal, tabellenAnsichtVorgabe, type TabellenAnsicht } from './tabellenAnsicht';
+import { RankingTables } from './ranking/RankingTables';
 import { FinalStandingsPanel } from '../tournament-finish/components/FinalStandingsPanel';
-import { ShortLabel } from '../../components/ui/atoms';
-import { goalDiffLabel } from '../../core/standings/goalDiffLabel';
-import { goalDiffColor } from '../../components/schedule/groupTablesStyle';
 
 export interface TabellenTabProps {
   tournament: Tournament;
@@ -49,14 +45,6 @@ export interface TabellenTabProps {
   view?: TabellenAnsicht;
   onViewChange?: (view: TabellenAnsicht) => void;
 }
-
-/** Volle Zeile unter einer Tabellenzeile für die Marke (Handy); ohne Marke keine Zeile. */
-const tieMarkerRow = (marker: React.ReactNode, columns: number): React.ReactNode =>
-  marker === null ? null : (
-    <tr data-testid="tie-marker-row">
-      <td colSpan={columns} style={{ padding: `0 ${cssVars.spacing.sm} ${cssVars.spacing.sm}`, borderBottom: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}` }}>{marker}</td>
-    </tr>
-  );
 
 export const TabellenTab: React.FC<TabellenTabProps> = ({
   tournament,
@@ -306,49 +294,9 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
     textAlign: 'center',
   };
 
-  const rankingTableStyle: CSSProperties = {
-    width: '100%',
-    borderCollapse: 'collapse',
-    fontSize: isMobile ? '14px' : cssVars.fontSizes.md,
-  };
-
-  const thStyle: CSSProperties = {
-    background: cssVars.colors.primary,
-    color: cssVars.colors.background,
-    padding: isMobile ? '8px 6px' : '12px 16px',
-    textAlign: 'left',
-    fontWeight: cssVars.fontWeights.semibold,
-    borderBottom: `2px solid ${cssVars.colors.border}`,
-    fontSize: isMobile ? '12px' : cssVars.fontSizes.md,
-  };
-
-  // Spalten mit Kurzform im Kopf (@OB-075) nehmen nur so viel Breite wie ihr Inhalt, statt fester Pixelbreiten.
-  const fixedThStyle: CSSProperties = { ...thStyle, width: '1%', textAlign: 'center', whiteSpace: 'nowrap' };
-
-  const tdStyle: CSSProperties = {
-    padding: isMobile ? '10px 6px' : '12px 16px',
-    borderBottom: `1px solid ${cssVars.colors.border}`,
-    color: cssVars.colors.textPrimary,
-  };
-
   // @W2A-076: Solange der Platz als „Gleichstand – Entscheidung nötig“ / „Strafstoßschießen nötig“ offen ist, gibt es keine Medaille
   const medalOf = (placement: { rank: number; team: { id: string; group?: string }; decidedBy: string }): Medal =>
     placement.decidedBy === 'groupStage' && tieUi.isOpen(placement.team.id, hasGroups ? groupKeyOf(placement.team.group) : '') ? 'none' : medalForRank(placement.rank);
-  const medalColor: Record<Medal, string> = {
-    gold: cssVars.colors.medalGold, silver: cssVars.colors.medalSilver, bronze: cssVars.colors.medalBronze, none: cssVars.colors.surface,
-  };
-  const medalStyle = (medal: Medal): CSSProperties => ({
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: isMobile ? '28px' : '32px',
-    height: isMobile ? '28px' : '32px',
-    borderRadius: '50%',
-    fontWeight: cssVars.fontWeights.bold,
-    fontSize: isMobile ? '12px' : cssVars.fontSizes.md,
-    background: medalColor[medal],
-    color: medal === 'none' ? cssVars.colors.textPrimary : cssVars.colors.onWarning,
-  });
 
   const fullscreenButtonStyle: CSSProperties = {
     position: 'fixed',
@@ -447,250 +395,18 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
           </div>
         )}
 
-        {/* Desktop Table View */}
-        {!isMobile && (
-          <table style={rankingTableStyle}>
-            <thead>
-              <tr>
-                <th style={{ ...thStyle, width: '60px', textAlign: 'center' }}>{t('ranking.headers.rank')}</th>
-                <th style={thStyle}>{t('ranking.headers.team')}</th>
-                {hasPlayoffs && <th style={{ ...thStyle, width: '120px', textAlign: 'center' }}>{t('ranking.headers.decidedBy')}</th>}
-                {hasGroups && <th style={{ ...thStyle, width: '80px', textAlign: 'center' }}><ShortLabel term="group" /></th>}
-                <th style={fixedThStyle}><ShortLabel term="played" /></th>
-                <th style={fixedThStyle}><ShortLabel term="won" /></th>
-                <th style={fixedThStyle}><ShortLabel term="drawn" /></th>
-                <th style={fixedThStyle}><ShortLabel term="lost" /></th>
-                <th style={{ ...thStyle, width: '100px', textAlign: 'center' }}>{t('ranking.headers.goals')}</th>
-                <th style={fixedThStyle}><ShortLabel term="goalDifference" /></th>
-                <th style={fixedThStyle}><ShortLabel term="points" /></th>
-              </tr>
-            </thead>
-            <tbody>
-              {finalRanking.map((placement) => {
-                const standing = getStanding(placement.team);
-                const medal = medalOf(placement);
-                const goalDiff = standing ? standing.goalsFor - standing.goalsAgainst : 0;
-
-                const enabledCriteria = tournament.placementLogic.filter(c => c.enabled && c.id !== 'directComparison');
-                const highlightPoints = enabledCriteria.some(c => c.id === 'points');
-                const highlightWins = enabledCriteria.some(c => c.id === 'wins');
-                const highlightGoalDiff = enabledCriteria.some(c => c.id === 'goalDifference');
-                const highlightGoalsFor = enabledCriteria.some(c => c.id === 'goalsFor');
-                const highlightGoalsAgainst = enabledCriteria.some(c => c.id === 'goalsAgainst');
-
-                return (
-                  <tr key={`${placement.team.id}-${placement.rank}`}>
-                    <td style={{ ...tdStyle, textAlign: 'center' }}>
-                      <div style={medalStyle(medal)} data-testid="place-medal" data-medal={medal}>{placementRankText(placement)}</div>
-                    </td>
-                    <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold }}>
-                      {placement.team.name}
-                      {!hasGroups && tieUi.marker(placement.team.id, '')}
-                    </td>
-                    {hasPlayoffs && (
-                      <td style={{ ...tdStyle, textAlign: 'center' }}>
-                        {placement.decidedBy !== 'groupStage' ? (
-                          <span style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            padding: '2px 8px',
-                            background: cssVars.colors.primaryLight,
-                            borderRadius: '12px',
-                            fontSize: cssVars.fontSizes.xs,
-                            color: cssVars.colors.primary,
-                            fontWeight: cssVars.fontWeights.semibold,
-                          }}>
-                            {placementBadgeText(placement, t)}
-                          </span>
-                        ) : (
-                          <span style={{
-                            fontSize: cssVars.fontSizes.xs,
-                            color: cssVars.colors.textSecondary,
-                          }}>
-                            {t('ranking.groupStage')}
-                          </span>
-                        )}
-                      </td>
-                    )}
-                    {hasGroups && (
-                      <td style={{ ...tdStyle, textAlign: 'center', fontWeight: cssVars.fontWeights.semibold }}>
-                        {placement.team.group ? getGroupShortCode(placement.team.group, tournament) : '-'}
-                      </td>
-                    )}
-                    <td style={{ ...tdStyle, textAlign: 'center' }}>
-                      {standing?.played ?? '-'}
-                    </td>
-                    <td style={{ ...tdStyle, textAlign: 'center' }}>
-                      <HighlightedCell highlight={highlightWins}>
-                        {standing?.won ?? '-'}
-                      </HighlightedCell>
-                    </td>
-                    <td style={{ ...tdStyle, textAlign: 'center' }}>
-                      {standing?.drawn ?? '-'}
-                    </td>
-                    <td style={{ ...tdStyle, textAlign: 'center' }}>
-                      {standing?.lost ?? '-'}
-                    </td>
-                    <td style={{ ...tdStyle, textAlign: 'center' }}>
-                      <HighlightedCell highlight={highlightGoalsFor || highlightGoalsAgainst}>
-                        {standing ? `${standing.goalsFor}:${standing.goalsAgainst}` : '-'}
-                      </HighlightedCell>
-                    </td>
-                    <td style={{
-                      ...tdStyle,
-                      textAlign: 'center',
-                      color: goalDiffColor(goalDiff),
-                    }}>
-                      <HighlightedCell highlight={highlightGoalDiff} baseWeight="semibold">
-                        {standing ? goalDiffLabel(goalDiff) : '-'}
-                      </HighlightedCell>
-                    </td>
-                    <td style={{ ...tdStyle, textAlign: 'center' }}>
-                      <HighlightedCell highlight={highlightPoints} baseWeight="bold" fontSize="lg">
-                        {standing?.points ?? '-'}
-                      </HighlightedCell>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-
-        {/* Mobile Condensed View */}
-        {isMobile && (
-          <table style={rankingTableStyle}>
-            <thead>
-              <tr>
-                <th style={fixedThStyle}><ShortLabel term="rank" /></th>
-                <th style={thStyle}>{t('ranking.headers.team')}</th>
-                <th style={fixedThStyle}><ShortLabel term="points" /></th>
-                <th style={fixedThStyle}><ShortLabel term="goalDifference" /></th>
-                <th style={{ ...thStyle, width: '30px', textAlign: 'center' }}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {finalRanking.map((placement) => {
-                const standing = getStanding(placement.team);
-                const goalDiff = standing ? standing.goalsFor - standing.goalsAgainst : 0;
-                const teamKey = `${placement.team.id}-${placement.rank}`;
-                const isExpanded = expandedRows.has(teamKey);
-
-                const enabledCriteria = tournament.placementLogic.filter(c => c.enabled && c.id !== 'directComparison');
-                const highlightPoints = enabledCriteria.some(c => c.id === 'points');
-                const highlightGoalDiff = enabledCriteria.some(c => c.id === 'goalDifference');
-                const medal = medalOf(placement);
-
-                return (
-                  <React.Fragment key={teamKey}>
-                    <tr
-                      onClick={() => toggleRowExpansion(teamKey)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <td style={{ ...tdStyle, textAlign: 'center' }}>
-                        <div style={medalStyle(medal)} data-testid="place-medal" data-medal={medal}>{placementRankText(placement)}</div>
-                      </td>
-                      <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold, fontSize: cssVars.fontSizes.md }}>
-                        {placement.team.name}
-                        {placement.decidedBy !== 'groupStage' ? (
-                          <div style={{
-                            fontSize: cssVars.fontSizes.xs, // F1-W3a: ≥ 11 px (grenzwerte schrift.min)
-                            color: cssVars.colors.primary,
-                            marginTop: '2px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '2px',
-                          }}>
-                            {placementBadgeText(placement, t)}
-                          </div>
-                        ) : hasGroups && placement.team.group ? (
-                          <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary, marginTop: '2px' }}>
-                            {getGroupShortCode(placement.team.group, tournament)}
-                          </div>
-                        ) : null}
-                      </td>
-                      <td style={{ ...tdStyle, textAlign: 'center' }}>
-                        <HighlightedCell highlight={highlightPoints} baseWeight="bold" fontSize="lg">
-                          {standing?.points ?? '-'}
-                        </HighlightedCell>
-                      </td>
-                      <td style={{
-                        ...tdStyle,
-                        textAlign: 'center',
-                        color: goalDiffColor(goalDiff),
-                      }}>
-                        <HighlightedCell highlight={highlightGoalDiff} baseWeight="semibold" fontSize="md">
-                          {standing ? goalDiffLabel(goalDiff) : '-'}
-                        </HighlightedCell>
-                      </td>
-                      <td style={{ ...tdStyle, textAlign: 'center', padding: '10px 4px' }}>
-                        <span style={{ fontSize: cssVars.fontSizes.lg, color: cssVars.colors.primary }}>
-                          {isExpanded ? '▼' : '▶'}
-                        </span>
-                      </td>
-                    </tr>
-                    {/* Paket TB-B: auf dem Handy steht die Marke als eigene Zeile über die volle Breite, nie in der schmalen Teamspalte */}
-                    {!hasGroups && tieMarkerRow(tieUi.marker(placement.team.id, ''), 5)}
-                    {isExpanded && standing && (
-                      <tr key={`${teamKey}-details`}>
-                        <td colSpan={5} style={{
-                          padding: '12px',
-                          background: cssVars.colors.rankingExpandedBg,
-                          borderBottom: `1px solid ${cssVars.colors.border}`,
-                        }}>
-                          <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(4, 1fr)',
-                            gap: '12px',
-                            fontSize: cssVars.fontSizes.sm,
-                          }}>
-                            <div style={{ textAlign: 'center' }}>
-                              <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>{t('ranking.details.matches')}</div>
-                              <div style={{ fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }}>
-                                {standing.played}
-                              </div>
-                            </div>
-                            <div style={{ textAlign: 'center' }}>
-                              <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>{t('ranking.details.wins')}</div>
-                              <div style={{ fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }}>
-                                {standing.won}
-                              </div>
-                            </div>
-                            <div style={{ textAlign: 'center' }}>
-                              <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>{t('ranking.details.draws')}</div>
-                              <div style={{ fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }}>
-                                {standing.drawn}
-                              </div>
-                            </div>
-                            <div style={{ textAlign: 'center' }}>
-                              <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>{t('ranking.details.losses')}</div>
-                              <div style={{ fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }}>
-                                {standing.lost}
-                              </div>
-                            </div>
-                            <div style={{ textAlign: 'center', gridColumn: 'span 2' }}>
-                              <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>{t('ranking.details.goalsScored')}</div>
-                              <div style={{ fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }}>
-                                {standing.goalsFor}
-                              </div>
-                            </div>
-                            <div style={{ textAlign: 'center', gridColumn: 'span 2' }}>
-                              <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>{t('ranking.details.goalsConceded')}</div>
-                              <div style={{ fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }}>
-                                {standing.goalsAgainst}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
+        <RankingTables
+          finalRanking={finalRanking}
+          getStanding={getStanding}
+          tournament={tournament}
+          hasGroups={hasGroups}
+          hasPlayoffs={hasPlayoffs}
+          isMobile={isMobile}
+          medalOf={medalOf}
+          tieMarker={(teamId) => tieUi.marker(teamId, '')}
+          expandedRows={expandedRows}
+          onToggleRow={toggleRowExpansion}
+        />
 
         {finalRanking.length === 0 && (
           <div style={{

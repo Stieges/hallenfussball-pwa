@@ -7,8 +7,8 @@
  * Spiele, die nicht ausgetragen/annulliert sind (`skipped`), nie Wertungen (sie haben keine Tor-Ereignisse, @ET-035).
  * Ein Eigentor steht bei keinem Schützen, sondern in der Zeile „Eigentore“ des begünstigten Teams. Tore ohne gültige
  * Rückennummer (1–99, @SL-172; Altdaten außerhalb inklusive) stehen gesammelt je Team in „ohne Nummer“. Beide Sammelzeilen
- * haben keinen Rang und stehen am Ende. Rang: absteigend nach Toren, Gleichstand = gleicher Rang; darin deutsche
- * Sortierung nach Teamname, dann Nummer. Laufende und nicht beendete Spiele zählen mit (nur `skipped` und Wertungen nicht);
+ * haben keinen Rang und stehen am Ende. Rang: absteigend nach Toren, Gleichstand = gleicher Rang; darin Namensregel DIN 5007-2
+ * (Ö wie Oe, @TS-008) nach Teamname, dann Nummer. Laufende und nicht beendete Spiele zählen mit (nur `skipped` und Wertungen nicht);
  * für das abgeschlossene Turnier ist das gleichwertig, eine Live-Liste müsste das wissen. Rein, ohne React.
  */
 import type { Tournament } from '../../types/tournament';
@@ -17,14 +17,14 @@ import { isJerseyNumber } from '../match/jerseyNumber';
 import { isForfeitMatch } from '../models/forfeit';
 import type { TeamId } from '../models/schemas/MatchSlotSchema';
 import type { ScorerRow } from './finalStandings/types';
+import { compareNames } from './nameOrder';
 
 type PlayerRow = Extract<ScorerRow, { kind: 'player' }>;
 type CollectiveRow = Extract<ScorerRow, { kind: 'noNumber' | 'ownGoals' }>;
 
-const collator = new Intl.Collator('de', { sensitivity: 'base' });
 const byTeamThenNumber = (a: PlayerRow, b: PlayerRow): number =>
-  b.goals - a.goals || collator.compare(a.teamName, b.teamName) || a.number - b.number;
-const byTeam = (a: CollectiveRow, b: CollectiveRow): number => collator.compare(a.teamName, b.teamName);
+  b.goals - a.goals || compareNames(a.teamName, b.teamName) || a.number - b.number;
+const byTeam = (a: CollectiveRow, b: CollectiveRow): number => compareNames(a.teamName, b.teamName);
 
 function getOrAdd<R>(map: Map<string, R>, key: string, make: () => R): R {
   const existing = map.get(key);

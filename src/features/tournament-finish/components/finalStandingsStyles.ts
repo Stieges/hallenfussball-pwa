@@ -30,6 +30,8 @@ export const standingsRowFirst: CSSProperties = {
 export const scorerRow: CSSProperties = {
   ...placeRow, display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: cssVars.spacing.sm, minHeight: cssVars.touchTargets.minimum,
 };
+/** Kopfzeile der Torschützen: Rang, Team, Tore (die Tore stehen in der Zeile rechts außen). */
+export const scorerHeader: CSSProperties = { ...standingsHeader(false), gridTemplateColumns: `${cssVars.spacing.xl} minmax(0, 1fr) auto` };
 export const scorerRank: CSSProperties = { ...placeNumber, width: cssVars.spacing.xl, flex: 'none' };
 /** Grundbreite des Namens: reicht sie neben Rang und Tore nicht, stehen die Tore in der nächsten Zeile (Name bricht nur an Leerzeichen). */
 export const scorerName: CSSProperties = { flex: `1 1 calc(${cssVars.spacing.xxl} * 4)`, minWidth: 0 };
