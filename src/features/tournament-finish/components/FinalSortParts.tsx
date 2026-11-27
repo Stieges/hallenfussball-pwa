@@ -12,6 +12,7 @@ import { ShortLabel } from '../../../components/ui/atoms';
 import { SHORT_TERMS, type TableHeadTerm } from '../../../components/ui/atoms/shortTerms';
 import { Icons } from '../../../components/ui/Icons';
 import { SORT_HEAD_TOUCH_OK } from '../../../components/ui/molecules/sortTouchExemption';
+import { MobileSortHeadWord } from '../../../components/ui/molecules/MobileSortHeadWord';
 import { SortableHeader } from '../../../components/ui/molecules/SortableHeader';
 import { SortPicker, type SortPickerOption } from '../../../components/ui/molecules/SortPicker';
 import { SortReset } from '../../../components/ui/molecules/SortReset';
@@ -54,20 +55,19 @@ function Head({ spec, sort, mobile }: { spec: HeadSpec; sort: ListSort | null; m
   const long = t as unknown as Translate;
   const visual: ReactNode = spec.term ? <ShortLabel term={spec.term} /> : spec.text;
   const style = cellStyle(spec.align, sort !== null && spec.column !== 'plain' && !mobile);
-  if (sort === null || spec.column === 'plain') {return <div role="columnheader" style={style}>{visual}</div>;}
+  if (sort === null) {return <div role="columnheader" style={style}>{visual}</div>;}
+  // Handy mit Sortierung: auch der nicht sortierbare Kopf trägt die Pfeilreihe, damit alle Wörter auf einer Linie stehen
+  if (spec.column === 'plain') {return <div role="columnheader" style={style}>{mobile ? <MobileSortHeadWord visual={visual} arrow={null} /> : visual}</div>;}
   const column = spec.column;
   const active = column === 'platz' ? sort.state === null : sort.state?.column === column;
   const descending = column === 'platz' || sort.state === null ? false : FEWEST_FIRST.includes(column) === sort.state.reversed;
-  const Arrow = descending ? Icons.ArrowDown : Icons.ArrowUp;
   const testId = `sort-head-${sort.key}-${column}`;
   if (mobile) {
     const ariaSort = !active ? 'none' : descending ? 'descending' : 'ascending';
+    const arrow = column === 'platz' || !active ? null : descending ? 'desc' : 'asc';
     return (
-      <div role="columnheader" aria-sort={ariaSort} style={style} data-sort-indicator={active ? (descending ? 'desc' : 'asc') : undefined}>
-        <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: spec.align === 'end' ? 'flex-end' : 'flex-start' }}>
-          {visual}
-          {active ? <Arrow size={iconSizeValues.xs} /> : null}
-        </span>
+      <div role="columnheader" aria-sort={ariaSort} style={style} data-sort-indicator={arrow ?? undefined}>
+        <MobileSortHeadWord visual={visual} arrow={arrow} />
       </div>
     );
   }

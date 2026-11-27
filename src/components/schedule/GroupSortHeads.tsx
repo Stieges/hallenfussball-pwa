@@ -13,6 +13,7 @@ import { Icons } from '../ui/Icons';
 import { SORT_HEAD_TOUCH_OK } from '../ui/molecules/sortTouchExemption';
 import { SortableHeader } from '../ui/molecules/SortableHeader';
 import { SortPicker, type SortPickerOption } from '../ui/molecules/SortPicker';
+import { MobileSortHeadWord } from '../ui/molecules/MobileSortHeadWord';
 import { SortReset } from '../ui/molecules/SortReset';
 import type { MobileSortColumn } from './mobileSortColumns';
 
@@ -47,24 +48,21 @@ interface HeadCellProps {
   term?: TableHeadTerm;
   text?: string;
   style: CSSProperties;
-  /** Handy-Tabelle: kein Bedienelement, nur Anzeige (Pfeil unter dem Wort, `aria-sort` am Kopf); bedient wird über „Sortieren nach …“. */
+  /** Handy-Tabelle: kein Bedienelement, nur Anzeige (Wort oben, Pfeilreihe darunter, `aria-sort` am Kopf); bedient wird über „Sortieren nach …“. */
   indicator?: boolean;
 }
 
 const FEWEST_FIRST: readonly SortColumn[] = ['team', 'gruppe', 'n', 'gegentore'];
 
-/** Handy-Kopf: Text wie ohne Sortierung, bei aktiver Sortierung der Pfeil unter dem Wort: die schmalen Spalten (Platz 32 px) werden nicht breiter, das Wort „Platz“ ragte sonst über die Zelle (Entscheidung 27.11., Messung). */
+/** Handy-Kopf (nur Anzeige): Wort oben, darunter die feste Pfeilreihe; Pfeil nur bei Sortierung unter der gewählten Spalte, bei „Nach Platzierung“ keiner (Entscheidung 27.11.). */
 function IndicatorHead({ sort, column, visual, style }: { sort: GroupSort; column: SortedColumn | 'platz'; visual: ReactNode; style: CSSProperties }) {
   const active = column === 'platz' ? sort.state === null : sort.state?.column === column;
   const descending = column === 'platz' || sort.state === null ? false : FEWEST_FIRST.includes(column) === sort.state.reversed;
-  const Arrow = descending ? Icons.ArrowDown : Icons.ArrowUp;
   const ariaSort = !active ? 'none' : descending ? 'descending' : 'ascending';
+  const arrow = column === 'platz' || !active ? null : descending ? 'desc' : 'asc';
   return (
-    <th style={style} scope="col" aria-sort={ariaSort} data-sort-indicator={active ? (descending ? 'desc' : 'asc') : undefined}>
-      <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: style.textAlign === 'left' ? 'flex-start' : 'center' }}>
-        {visual}
-        {active ? <Arrow size={iconSizeValues.xs} /> : null}
-      </span>
+    <th style={style} scope="col" aria-sort={ariaSort} data-sort-indicator={arrow ?? undefined}>
+      <MobileSortHeadWord visual={visual} arrow={arrow} />
     </th>
   );
 }

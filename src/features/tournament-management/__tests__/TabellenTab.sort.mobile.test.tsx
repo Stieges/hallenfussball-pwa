@@ -45,10 +45,12 @@ const plaetze = () => zeilen().map((r) => r.querySelectorAll('td')[0]?.textConte
 const wahl = (label: string) => fireEvent.change(screen.getByTestId('sort-picker-gesamt'), { target: { value: label } });
 
 describe('TabellenTab Handy: Platzierung über alle Gruppen sortierbar', () => {
-  it('@TS-012 Köpfe sind nur Anzeige (kein Button, Pfeil bei „Platz“, aria-sort), Auswahl „Sortieren nach …“ ist da', () => {
+  it('@TS-012 Köpfe sind nur Anzeige (kein Button, kein Pfeil unsortiert, aria-sort bei „Platz“), Auswahl „Sortieren nach …“ ist da', () => {
     zeigePlatzierung();
     expect(document.querySelectorAll('thead button')).toHaveLength(0);
-    expect(document.querySelector('thead th[data-sort-indicator="asc"]')).not.toBeNull();
+    expect(document.querySelector('thead th[data-sort-indicator]')).toBeNull();
+    expect(document.querySelectorAll('thead svg')).toHaveLength(0);
+    expect(document.querySelector('thead th')?.getAttribute('aria-sort')).toBe('ascending');
     expect(screen.getByLabelText('Sortieren nach …')).toBe(screen.getByTestId('sort-picker-gesamt'));
     expect(screen.queryByTestId('sort-reset-gesamt')).toBeNull();
   });

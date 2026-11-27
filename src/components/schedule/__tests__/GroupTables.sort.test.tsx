@@ -57,9 +57,11 @@ describe('GroupTables sortierbar', () => {
     const heads = Array.from(container.querySelectorAll('.desktop-view [data-testid^="sort-head-g-"]'));
     expect(heads.map((h) => h.getAttribute('data-sorted'))).toEqual(['true', ...Array<string>(8).fill('false')]);
     expect(screen.getByTestId('sort-head-g-platz')).toBeInTheDocument();
-    // Handy: Kopf ist kein Bedienelement, nur Anzeige (Pfeil bei „Platz“)
+    // Handy: Kopf ist kein Bedienelement, nur Anzeige; unsortiert steht kein Pfeil (Entscheidung 27.11.), „Platz“ trägt aria-sort
     expect(container.querySelectorAll('.mobile-view thead button')).toHaveLength(0);
-    expect(container.querySelector('.mobile-view thead th[data-sort-indicator="asc"]')).not.toBeNull();
+    expect(container.querySelector('.mobile-view thead th[data-sort-indicator]')).toBeNull();
+    expect(container.querySelectorAll('.mobile-view thead svg')).toHaveLength(0);
+    expect(container.querySelector('.mobile-view thead th')?.getAttribute('aria-sort')).toBe('ascending');
     expect(screen.queryByTestId('sort-reset-g')).toBeNull();
     expect(screen.queryByText('Nach Platzierung', { selector: 'button' })).toBeNull();
   });
