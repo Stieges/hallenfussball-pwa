@@ -44,7 +44,7 @@ const cellStyle = (align: HeadSpec['align'], withButton: boolean): CSSProperties
 });
 
 const platzButton: CSSProperties = {
-  display: 'inline-flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 0,
+  display: 'inline-flex', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: cssVars.spacing.xs,
   minHeight: cssVars.touchTargets.minimum, minWidth: cssVars.spacing.lg, padding: `0 ${cssVars.spacing.xs}`,
   background: 'transparent', border: 0, color: 'inherit', font: 'inherit', fontWeight: 'inherit', cursor: 'pointer',
 };

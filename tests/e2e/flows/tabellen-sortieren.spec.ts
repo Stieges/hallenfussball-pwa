@@ -149,6 +149,26 @@ test.describe('Tabellen sortieren – Laptop 1280 (Zuschauer-Seite, Turnierleitu
     await expect(page.getByTestId('sort-head-gA-sp').locator('svg')).toHaveCount(0);
   });
 
+  test('@TS-003 Pfeil steht rechts neben dem Wort; die Kopfzeile ist sortiert so hoch wie unsortiert, die Teamnamen brechen nicht um (Entscheidung 26.11.)', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await oeffne(page, 'hallencup-messlauf', ZUSCHAUER, 'sort-head-gA-tore');
+    const tabelle = breiteTabelle(page, 'gA');
+    const zeilenHoehe = async (): Promise<number[]> => tabelle.locator('tbody tr').evaluateAll((trs) => trs.map((tr) => tr.getBoundingClientRect().height));
+    const kopfHoehe = async (): Promise<number> => (await tabelle.locator('thead tr').first().boundingBox())?.height ?? 0;
+    const vorherKopf = await kopfHoehe();
+    const vorherZeilen = await zeilenHoehe();
+    await page.getByTestId('sort-head-gA-pkt').click();
+    await expect(page.getByTestId('sort-head-gA-pkt').locator('svg')).toHaveCount(1);
+    expect(Math.abs((await kopfHoehe()) - vorherKopf), 'Kopfzeile sortiert == unsortiert (±1 px)').toBeLessThanOrEqual(1);
+    const wort = (await page.getByTestId('sort-head-gA-pkt').locator('span').first().boundingBox())!;
+    const pfeil = (await page.getByTestId('sort-head-gA-pkt').locator('svg').boundingBox())!;
+    expect(pfeil.x, 'Pfeil rechts neben dem Wort').toBeGreaterThanOrEqual(wort.x + wort.width - 1);
+    expect(Math.abs((pfeil.y + pfeil.height / 2) - (wort.y + wort.height / 2)), 'Pfeil auf Höhe des Wortes').toBeLessThanOrEqual(4);
+    const nachherZeilen = await zeilenHoehe();
+    expect(nachherZeilen.length).toBe(vorherZeilen.length);
+    expect(Math.max(...nachherZeilen) - Math.max(...vorherZeilen), 'Teamnamen brechen nicht um (Zeilen werden nicht höher)').toBeLessThanOrEqual(1);
+  });
+
   test('@TS-010 @TS-011 Sortierung nach Tore bleibt nach dem Neuladen; neu geöffnet ohne `ts` setzt das Gerät Tore; ein Link geht vor; eine unbekannte Spalte ergibt die Platzierung', async ({ page, context }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await oeffne(page, 'hallencup-messlauf', ZUSCHAUER, 'sort-head-gA-tore');

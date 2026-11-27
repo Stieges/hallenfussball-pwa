@@ -24,10 +24,10 @@ export interface GroupSort {
 
 const platzButton: CSSProperties = {
   display: 'inline-flex',
-  flexDirection: 'column', // der Pfeil steht unter dem Wort: die Spalte wird nicht breiter (Teamspalte braucht die Breite)
+  flexDirection: 'row', // der Pfeil steht klein neben dem Wort: die Kopfzeile bleibt so hoch wie ohne Sortierung (Entscheidung 26.11.)
   justifyContent: 'center',
   alignItems: 'center',
-  gap: 0,
+  gap: cssVars.spacing.xs,
   minHeight: cssVars.touchTargets.minimum,
   minWidth: cssVars.spacing.lg, // 24 px (WCAG 2.5.8), sonst so breit wie der Inhalt
   padding: `0 ${cssVars.spacing.xs}`,

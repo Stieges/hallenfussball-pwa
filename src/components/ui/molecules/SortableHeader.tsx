@@ -1,6 +1,6 @@
 /**
  * Sortierkopf einer Tabellenspalte (@TS-001, @TS-021): Taste im Kopf (`th`, oder `div role="columnheader"` für die
- * Tabellen ohne `<table>`), `aria-sort` am Kopf, Pfeil-Symbol + Text (Farbe trägt nie allein), Touch-Ziel 24 × 44 px (WCAG 2.5.8; begründete Ausnahme der 44-px-Regel, `sortTouchExemption.ts`).
+ * Tabellen ohne `<table>`), `aria-sort` am Kopf, Pfeil-Symbol klein neben dem Wort (Kopfzeile bleibt gleich hoch) + Text (Farbe trägt nie allein), Touch-Ziel 24 × 44 px (WCAG 2.5.8; begründete Ausnahme der 44-px-Regel, `sortTouchExemption.ts`).
  * Vorlesetext je Richtung: „Tore, meiste zuerst sortiert“. Kopf „Tore“ zeigt „Gegentore“, solange danach sortiert ist (@TS-014).
  */
 import type { CSSProperties, ReactNode } from 'react';
@@ -49,10 +49,10 @@ const SORTED_KEY = {
 
 const buttonStyle: CSSProperties = {
   display: 'inline-flex',
-  flexDirection: 'column', // der Pfeil steht unter dem Wort: die Spalte wird nicht breiter (Teamspalte braucht die Breite)
+  flexDirection: 'row', // der Pfeil steht klein neben dem Wort: die Kopfzeile bleibt so hoch wie ohne Sortierung (Entscheidung 26.11.)
   justifyContent: 'center',
   alignItems: 'center',
-  gap: 0,
+  gap: cssVars.spacing.xs,
   minHeight: cssVars.touchTargets.minimum,
   minWidth: cssVars.spacing.lg, // 24 px (WCAG 2.5.8), sonst so breit wie der Inhalt
   padding: `0 ${cssVars.spacing.xs}`,
