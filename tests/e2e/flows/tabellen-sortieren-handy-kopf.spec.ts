@@ -11,6 +11,8 @@ import { installiereSaat, leseSaat } from '../../../scripts/visual-metrics/saat/
 
 const ID = 'hallencup-messlauf';
 const BILDER = process.env.BILDER_ORDNER;
+/** Vor-Push und CI prüfen den gebauten Stand (Preview); die Prüfstände unter `tests/e2e/harness/` gibt es nur am Dev-Server (wie `endstand-app-r3-5.spec.ts`). */
+const imGebautenStand = !!process.env.CI_E2E_USE_PREVIEW;
 
 interface Kopf { kopf: Locator; zeile: Locator; woerter: Locator; pfeile: Locator }
 
@@ -20,7 +22,6 @@ async function messe(k: Kopf) {
 }
 
 async function pruefe(k: Kopf, waehle: () => Promise<unknown>, indexSortiert: number, name: string) {
-  test.skip(test.info().project.name !== 'desktop', 'setzt das Fenster selbst (390 Pixel)');
   const vorher = await messe(k);
   if (BILDER && process.env.PREFIX) { await k.zeile.screenshot({ path: `${BILDER}/${process.env.PREFIX}-kopf-${name}-unsortiert.png` }); }
   expect(vorher.pfeile, `${name}: unsortiert kein Pfeil im Handy-Kopf`).toBe(0);
@@ -40,7 +41,10 @@ async function pruefe(k: Kopf, waehle: () => Promise<unknown>, indexSortiert: nu
 }
 
 test.describe('Handy-Kopf: Wörter auf einer Linie, Pfeilreihe darunter (390 Pixel)', () => {
-  test.beforeEach(async ({ page }) => { await page.setViewportSize({ width: 390, height: 844 }); });
+  test.beforeEach(async ({ page, browserName }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop' || browserName !== 'chromium', 'setzt das Fenster selbst (390 Pixel)');
+    await page.setViewportSize({ width: 390, height: 844 });
+  });
 
   test('@TS-003 Gruppentabelle (Zuschauer-Seite): Wörter auf einer Linie, Pfeil nur bei Sortierung unter „Pkt.“', async ({ page }) => {
     await installiereSaat(page.context(), leseSaat(ID), { nurErstesLaden: true });
@@ -55,7 +59,7 @@ test.describe('Handy-Kopf: Wörter auf einer Linie, Pfeilreihe darunter (390 Pix
     await installiereSaat(page.context(), leseSaat(ID));
     await page.goto(`/#/tournament/${ID}/standings?ansicht=platzierung`);
     await expect(page.getByTestId('sort-picker-gesamt')).toBeVisible({ timeout: 25000 });
-    const tabelle = page.locator('table:visible');
+    const tabelle = page.locator('table:visible').first();
     const k: Kopf = { kopf: tabelle.locator('thead th'), zeile: tabelle.locator('thead tr'), woerter: tabelle.locator('thead [data-sort-word]'), pfeile: tabelle.locator('thead svg') };
     await pruefe(k, () => page.getByTestId('sort-picker-gesamt').selectOption('pkt'), 2, 'gesamt');
   });
@@ -65,6 +69,7 @@ test.describe('Handy-Kopf: Wörter auf einer Linie, Pfeilreihe darunter (390 Pix
     ['endstand-app', 'final-scorers-header', 'sort-picker-tor', 'tore', 2, 'torschuetzen'],
   ] as const) {
     test(`@TS-003 ${name} (Harness): Wörter auf einer Linie, Pfeil nur bei Sortierung`, async ({ page }) => {
+      test.skip(imGebautenStand, 'Prüfstand nur am Dev-Server (gehört nicht in den Build)');
       await page.goto(`/tests/e2e/harness/${harness}.html?szene=klar`);
       await expect(page.getByTestId(picker)).toBeVisible({ timeout: 25000 });
       const zeile = page.getByTestId(liste);
