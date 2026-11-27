@@ -14,9 +14,9 @@ import { animationenFertig } from './helpers/animationenFertig';
 const TOLERANZ = 1;
 const ZWEISTELLIG = '00000003-0000-4000-8000-000000000009';
 
-interface Zeile { pfeilX: number; stand: number; logoHeim: number; logoGast: number; teamHeim: number; teamGast: number; pfeil: boolean; text: string }
+interface Zeile { artikelMitte: number; pfeilRand: number; pfeilBreite: number; innenabstand: number; pfeilX: number; stand: number; logoHeim: number; logoGast: number; teamHeim: number; teamGast: number; pfeil: boolean; text: string }
 
-async function oeffne(page: Page, breite: number): Promise<void> {
+async function oeffne(page: Page, breite: number, sonderzeilen = false): Promise<void> {
   await page.setViewportSize({ width: breite, height: 900 });
   const saat = messSaat();
   const turniere = saat.datenbanken.find((db) => db.store === 'cache')?.eintraege.tournaments as Array<{ id: string; matches: Array<Record<string, unknown>> }>;
@@ -30,6 +30,14 @@ async function oeffne(page: Page, breite: number): Promise<void> {
       m.events = [{ id: `ereignis-${String(i)}`, matchId: String(m.id), timestampSeconds: 180, type: 'GOAL', payload: { direction: 'INC' }, scoreAfter: { home: 1, away: 0 } }];
     }
   });
+  // Sonderzeilen „ausgefallen“ und „gewertet“ (Hinweis unter dem Stand): ungerade Spiele, also ohne Ereignisse; nur für den Test des Befunds C-ZUSCHAUER-STAND-SONDERTEXT
+  const spiele = turniere.find((t) => t.id === TURNIER_ID)?.matches ?? [];
+  if (sonderzeilen) {
+    const ungerade = spiele.filter((m, i) => i % 2 === 1 && m.id !== ZWEISTELLIG);
+    if (ungerade.length < 2) { throw new Error('zu wenige Spiele in der Saat'); }
+    ungerade[0].matchStatus = 'skipped';
+    Object.assign(ungerade[1], { matchStatus: 'finished', scoreA: 0, scoreB: 2, decidedBy: 'forfeit', forfeitAbsent: 'A' });
+  }
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await installiereSaat(page.context(), saat);
   await page.goto(`/#/live/${ZUSCHAUER_CODE}`);
@@ -54,8 +62,14 @@ async function zeilen(page: Page): Promise<Zeile[]> {
     };
     const kreise = a.querySelectorAll('[data-score-circle]');
     const pfeil = a.querySelector('[data-testid^="match-arrow-"]') !== null;
-    const pfeilX = mitte(kreise[kreise.length - 1]);
+    const pfeilZelle = kreise[kreise.length - 1];
+    const pfeilX = mitte(pfeilZelle);
+    const zeileEl = pfeilZelle.parentElement?.parentElement;
+    const artikel = a.getBoundingClientRect();
+    const pfeilFlaeche = pfeilZelle.getBoundingClientRect();
     return [{
+      artikelMitte: artikel.left + artikel.width / 2, pfeilRand: artikel.right - pfeilFlaeche.right, pfeilBreite: pfeilFlaeche.width,
+      innenabstand: zeileEl === undefined || zeileEl === null ? Number.NaN : parseFloat(getComputedStyle(zeileEl).paddingRight),
       pfeilX, stand: mitte(kreis), logoHeim: logo(heimZelle, false), logoGast: logo(gastZelle, true),
       teamHeim: mitte(heim), teamGast: mitte(gast), pfeil, text: kreis.textContent?.trim() ?? '',
     }];
@@ -81,7 +95,28 @@ test.describe('@ZM-218 Stand und Logos im Spielplan der Zuschauer-Seite in feste
         expect(Math.abs(z.stand - (z.logoHeim + z.logoGast) / 2), `Stand ${z.text} mittig zwischen den Logos: ${beleg}`).toBeLessThanOrEqual(TOLERANZ);
         expect(Math.abs((z.stand - z.logoHeim) - (z.logoGast - z.stand)), `Abstand Logo–Stand links = rechts: ${beleg}`).toBeLessThanOrEqual(TOLERANZ);
         expect(Math.abs(z.pfeilX - ref.pfeilX), `Pfeil-Spalte in allen Zeilen an derselben Stelle: ${beleg}`).toBeLessThanOrEqual(TOLERANZ);
-        expect(Math.abs(z.stand - (liste[0].stand)), 'Stand in der Kartenmitte: gleich in jeder Zeile').toBeLessThanOrEqual(TOLERANZ);
+        expect(Math.abs(z.stand - z.artikelMitte), `Stand ${z.text} in der Kartenmitte (Mitte der Karte ${String(z.artikelMitte)}): ${beleg}`).toBeLessThanOrEqual(TOLERANZ);
+        expect(z.pfeilX, `Pfeil ${z.text} rechts vom Gast-Logo: ${beleg}`).toBeGreaterThan(z.logoGast);
+        expect(z.pfeilRand, `Pfeil ${z.text} am Zeilenende (Rand ${String(z.pfeilRand)}): ${beleg}`).toBeLessThan(z.pfeilBreite + z.innenabstand);
+      }
+    });
+  }
+
+  // Befund C-ZUSCHAUER-STAND-SONDERTEXT: „ausgefallen“/„gewertet“ machen die Stand-Zelle breiter, die Logos dieser Zeilen rücken nach außen (Entscheidung Product Owner: nach dem Turnier)
+  for (const breite of [1280, 1024]) {
+    test(`@ZM-218 bei ${String(breite)} Pixeln: Logos in den Zeilen „ausgefallen“ und „gewertet“ stehen wie in den normalen Zeilen`, async ({ page }) => {
+      test.skip(test.info().project.name !== 'desktop', 'setzt das Fenster selbst');
+      await oeffne(page, breite, true);
+      const liste = await zeilen(page);
+      const normal = liste.find((z) => /^\d+:\d+$/.test(z.text));
+      if (normal === undefined) { throw new Error('keine normale Zeile gefunden'); }
+      const sonder = liste.filter((z) => z.text.startsWith('ausgefallen') || z.text.startsWith('cancelled') || /gewertet|awarded/i.test(z.text));
+      expect(sonder.length, 'Zeilen „ausgefallen“ und „gewertet“ sind da').toBeGreaterThanOrEqual(2);
+      // erst nach den Vorbedingungen: nur die Logo-Abweichung ist der erwartete Fehlschlag
+      test.fail(true, 'Befund C-ZUSCHAUER-STAND-SONDERTEXT, @ZM-218');
+      for (const z of sonder) {
+        expect(Math.abs(z.logoHeim - normal.logoHeim), `Logo Heim ${z.text}: ${JSON.stringify(z)}`).toBeLessThanOrEqual(TOLERANZ);
+        expect(Math.abs(z.logoGast - normal.logoGast), `Logo Gast ${z.text}: ${JSON.stringify(z)}`).toBeLessThanOrEqual(TOLERANZ);
       }
     });
   }
