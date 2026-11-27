@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import type { MatchCardStatus } from './MatchCardScore';
 import { MatchCardSides } from './MatchCardSides';
+import { MatchCardSidesSymmetric } from './MatchCardSidesSymmetric';
 import { formatTime } from './utils';
 import { MatchStatusBadge } from '../../ui/molecules/MatchStatusBadge';
 import type { MatchBadgeModel, SpectatorClock, ViewMatchStatus } from '../../../core/view';
@@ -74,6 +75,8 @@ export interface MatchCardDesktopProps {
   disabled?: boolean;
   /** Whether the match has events (goals, cards, etc.) - shows chevron indicator */
   hasEvents?: boolean;
+  /** Zuschauer-Seite (@ZM-218): zwei gleich breite Hälften um den Stand, Pfeil am Zeilenende; die Turnierleitung behält ihre Zeile */
+  symmetric?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -101,6 +104,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
   expandContent,
   disabled = false,
   hasEvents = false,
+  symmetric = false,
 }) => {
   const { t } = useTranslation('tournament');
   const [isHovered, setIsHovered] = useState(false);
@@ -145,7 +149,9 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
   const rowStyle: CSSProperties = {
     display: 'grid',
     // ohne Feld-Spalte (ein Feld, @ZP-116) eine Spalte weniger, sonst rutschen alle Zellen eine Spalte nach links
-    gridTemplateColumns: hasFieldColumn ? 'auto auto 1fr auto 1fr auto' : 'auto 1fr auto 1fr auto',
+    gridTemplateColumns: symmetric
+      ? 'minmax(0, 1fr) auto minmax(0, 1fr)'
+      : hasFieldColumn ? 'auto auto 1fr auto 1fr auto' : 'auto 1fr auto 1fr auto',
     alignItems: 'center',
     gap: cssVars.spacing.md,
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
@@ -164,18 +170,21 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
     fontWeight: cssVars.fontWeights.medium,
     color: isLive ? cssVars.colors.primary : cssVars.colors.textSecondary,
     fontVariantNumeric: 'tabular-nums',
+    flexShrink: 0,
     width: '11em', // fest: Uhrzeit und Abzeichen teilen die Spalte, die Feld-Spalte steht in jeder Zeile gleich (@OB-065)
   };
 
   const fieldStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.textSecondary,
+    flexShrink: 0,
     minWidth: cssVars.touchTargets.primary,
   };
 
   const groupStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.xs,
     color: cssVars.colors.textSecondary,
+    flexShrink: 0,
     textAlign: 'right',
     minWidth: cssVars.touchTargets.minimum,
   };
@@ -187,6 +196,37 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
     backgroundColor: cssVars.colors.surfaceVariant,
     padding: cssVars.spacing.md,
   };
+
+  const timeCell = (
+        <div style={timeStyle} data-testid={`match-row-time-${matchId}`}>
+          {badge?.kind === 'badge'
+            ? <MatchStatusBadge model={badge} size="row" testId={isLive ? `match-row-live-${matchId}` : undefined} />
+            : formatTime(scheduledTime)}
+          <OriginalTimeNote matchId={matchId} />
+        </div>
+  );
+
+  const fieldCell = (
+    <>
+{/* Field – bei einem Feld (ohne Feldangabe) steht keine Spalte, nur der Schiedsrichter behält seinen Platz (@ZP-116) */}
+        {hasFieldColumn && (
+          <div style={fieldStyle}>
+            {field !== undefined ? t('matchCard.field', { field }) : ''}
+            {matchNumber && matchNumber > 0 && referee && (
+              <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>{t('matchCard.refereeSR', { referee })}</div>
+            )}
+          </div>
+        )}
+    </>
+  );
+
+  const groupCell = (
+        <div style={groupStyle}>
+          {showGroupLabel && group && group !== 'all' ? t('matchCard.groupShort', { group }) : ''}
+        </div>
+        
+  );
+  const menuCell = <MatchMenuSlot matchId={matchId} />;
 
   // ---------------------------------------------------------------------------
   // Render
@@ -204,34 +244,26 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
         // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty matchNumber should display as empty
         aria-label={t('matchCard.ariaLabel', { matchNumber: matchNumber || '', homeTeam: homeTeam.name, awayTeam: awayTeam.name })}
       >
-        {/* Time */}
-        <div style={timeStyle} data-testid={`match-row-time-${matchId}`}>
-          {badge?.kind === 'badge'
-            ? <MatchStatusBadge model={badge} size="row" testId={isLive ? `match-row-live-${matchId}` : undefined} />
-            : formatTime(scheduledTime)}
-          <OriginalTimeNote matchId={matchId} />
-        </div>
-
-        {/* Field – bei einem Feld (ohne Feldangabe) steht keine Spalte, nur der Schiedsrichter behält seinen Platz (@ZP-116) */}
-        {hasFieldColumn && (
-          <div style={fieldStyle}>
-            {field !== undefined ? t('matchCard.field', { field }) : ''}
-            {matchNumber && matchNumber > 0 && referee && (
-              <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>{t('matchCard.refereeSR', { referee })}</div>
-            )}
-          </div>
-        )}
-
+        {symmetric ? (
+          <MatchCardSidesSymmetric
+            matchId={matchId} homeTeam={homeTeam} awayTeam={awayTeam} result={result} status={status} clock={clock}
+            viewStatus={viewStatus} onCircleClick={handleCircleClick} disabled={disabled} hasEvents={hasEvents} isExpanded={isExpanded}
+            leading={<>{timeCell}{fieldCell}</>}
+            trailing={<>{groupCell}{menuCell}</>}
+          />
+        ) : (
+          <>
+            {timeCell}
+            {fieldCell}
         <MatchCardSides
           matchId={matchId} homeTeam={homeTeam} awayTeam={awayTeam} result={result} status={status} clock={clock}
           viewStatus={viewStatus} onCircleClick={handleCircleClick} disabled={disabled} hasEvents={hasEvents} isExpanded={isExpanded}
         />
 
-        {/* Group */}
-        <div style={groupStyle}>
-          {showGroupLabel && group && group !== 'all' ? t('matchCard.groupShort', { group }) : ''}
-        </div>
-        <MatchMenuSlot matchId={matchId} />
+            {groupCell}
+            {menuCell}
+          </>
+        )}
       </div>
 
       {/* Expand Content */}
