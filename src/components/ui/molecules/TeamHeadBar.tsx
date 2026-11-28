@@ -66,6 +66,8 @@ function Streifen({ fill }: { fill: BoxFill }): ReactElement | null {
 
 /** Ab dieser Wortlänge (z. B. „Oberweiler-Niederstetten“) wird die Schrift am Handy noch kleiner, damit das Wort in eine Zeile passt (kleiner statt getrennt). */
 const LANGES_WORT = 18;
+/** Normal-Kopf (Tablet/Laptop): mehr Platz, ein Wort wie „Oberweiler-Niederstetten“ (24) passt noch in normaler Schrift; erst darüber wird kleiner statt getrennt */
+const LANGES_WORT_NORMAL = 26;
 
 /**
  * Handy-Kopf: Name mit Wörtern, die nie umbrechen (`titel.wortbruch`, @OB-058), auch nicht am Bindestrich („Nordheim-/Süd“). Umgebrochen wird nur zwischen
@@ -118,7 +120,7 @@ function TeamHeadBarKompakt({ name, label, fill, bib = null, fuellend = false, t
 
 function TeamHeadBarNormal({ name, label, fill, bib = null, breit = false, fuellend = false, testId, nameTestId }: TeamHeadBarProps): ReactElement {
   const text = fillTextColor(fill);
-  const langesWort = Math.max(...name.split(' ').map((wort) => wort.length)) > LANGES_WORT; // ein sehr langes Einzelwort wird kleiner statt getrennt (wie im Handy-Kopf)
+  const langesWort = Math.max(...name.split(' ').map((wort) => wort.length)) > LANGES_WORT_NORMAL; // ein sehr langes Einzelwort wird kleiner statt getrennt (wie im Handy-Kopf)
   // @SL-245: am Laptop/Tablet immer „Heim“/„Gast“ in der ersten Zeile, der Name darunter – unabhängig von der Namenslänge, damit beide Köpfe gleich aufgebaut sind
   // (und der Name die ganze Breite bekommt und nur zwischen Wörtern bricht, VISUAL-DESIGN § 2, `titel.wortbruch`)
   const kopf: CSSProperties = {

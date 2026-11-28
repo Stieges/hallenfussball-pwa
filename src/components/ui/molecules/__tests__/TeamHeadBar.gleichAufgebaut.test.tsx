@@ -70,4 +70,9 @@ describe('TeamHeadBar @SL-245: gleicher Aufbau in beiden Köpfen', () => {
     expect(nameEl.style.fontSize).toBe('var(--font-size-sm)');
     expect(nameEl.textContent).toBe('Sportfreundeoberweilerniederstetten');
   });
+
+  it('Laptop/Tablet: ein Bindestrich-Wort wie „Oberweiler-Niederstetten“ bleibt in normaler Schrift (beide Köpfe gleich groß)', () => {
+    zeige('Eintracht Oberweiler-Niederstetten 1919 e. V.', 'Gast', 'kopf', false, false);
+    expect(screen.getByTestId('kopf-name').style.fontSize).not.toBe('var(--font-size-sm)');
+  });
 });
