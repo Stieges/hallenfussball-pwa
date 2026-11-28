@@ -138,8 +138,13 @@ test.describe('@ZM-210 Wann und Wo im Kopf, Einzelheiten zuklappbar', () => {
 test.describe('@ZM-221 Wertung in den Einzelheiten und unter der Tabelle', () => {
   test('aufgeklappt: „Wertung“ und „Bei Punktgleichheit“ nach der Spielzeit; zugeklappt: nicht sichtbar', async ({ page }) => {
     await oeffne(page, 'vor-gleiche-farbe', { width: 390, height: 844 });
-    await expect(page.getByTestId('public-head-scoring')).toHaveText('Wertung: Sieg 3 · Unentschieden 1 · Niederlage 0 Punkte');
-    await expect(page.getByTestId('public-head-tiebreak')).toHaveText('Bei Punktgleichheit: 1. direkter Vergleich · 2. Tordifferenz · 3. mehr Tore');
+    await expect(page.getByTestId('public-head-scoring').locator('dt')).toHaveText('Wertung');
+    await expect(page.getByTestId('public-head-scoring').locator('dd')).toHaveText(/^Sieg 3\s·\sUnentschieden 1\s·\sNiederlage 0 Punkte$/);
+    await expect(page.getByTestId('public-head-tiebreak').locator('dt')).toHaveText('Bei Punktgleichheit');
+    await expect(page.getByTestId('public-head-tiebreak').locator('dd')).toHaveText(/^1\.\sdirekter Vergleich\s·\s2\.\sTordifferenz\s·\s3\.\smehr Tore$/);
+    // Spalte der Bezeichnungen: alle Angaben beginnen links an derselben Stelle wie die übrigen Einzelheiten
+    const links = await page.locator('[data-testid^="public-head-"] dd').evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().left)));
+    expect(new Set(links).size).toBe(1);
     expect(await page.getByTestId('public-head-details').evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
     await bild(page, 'zm221-aufgeklappt');
     await page.getByTestId('public-head-when-where').click();

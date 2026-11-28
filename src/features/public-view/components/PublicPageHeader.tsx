@@ -38,9 +38,8 @@ const detailsStyle: CSSProperties = {
   background: cssVars.colors.surface, border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`, borderRadius: cssVars.borderRadius.lg,
   fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textPrimary,
 };
-const rowStyle: CSSProperties = { display: 'grid', gridTemplateColumns: 'minmax(6rem, auto) minmax(0, 1fr)', columnGap: cssVars.spacing.md, margin: 0 };
+const rowStyle: CSSProperties = { display: 'grid', gridTemplateColumns: '8.5rem minmax(0, 1fr)', columnGap: cssVars.spacing.md, margin: 0 };
 const labelStyle: CSSProperties = { margin: 0, color: cssVars.colors.textSecondary };
-const wideRowStyle: CSSProperties = { margin: 0, overflowWrap: 'anywhere' };
 const valueStyle: CSSProperties = { margin: 0, overflowWrap: 'anywhere' };
 
 export function PublicPageHeader({ tournament, matches, shareCode, ended, showScoring = false }: PublicPageHeaderProps): ReactElement {
@@ -66,13 +65,14 @@ export function PublicPageHeader({ tournament, matches, shareCode, ended, showSc
     ['teams', t('head.teamsLabel'), tournament.teams.length > 0 ? t('head.teams', { count: tournament.teams.length }) : ''],
     ['organizer', t('head.organizer'), organizer ?? ''],
   ];
-  const shown = rows.filter(([, , value]) => value !== '');
+  const shownBase = rows.filter(([, , value]) => value !== '');
   const wertung = showScoring && tournament.pointSystem !== undefined && tournament.placementLogic !== undefined
     ? wertungLines(t, { pointSystem: tournament.pointSystem, placementLogic: tournament.placementLogic }) : undefined;
-  const wide: Array<[string, string]> = wertung === undefined ? [] : [
-    ['scoring', wertung.points],
-    ...(wertung.tiebreakNumbered === undefined ? [] : [['tiebreak', wertung.tiebreakNumbered] as [string, string]]),
+  const extra: Array<[string, string, string]> = wertung === undefined ? [] : [
+    ['scoring', wertung.pointsLabel, wertung.pointsValue],
+    ...(wertung.tiebreakValue === undefined ? [] : [['tiebreak', wertung.tiebreakLabel, wertung.tiebreakValue] as [string, string, string]]),
   ];
+  const shown = [...shownBase, ...extra];
 
   return (
     <div style={headerStyle}>
@@ -83,14 +83,13 @@ export function PublicPageHeader({ tournament, matches, shareCode, ended, showSc
           <span style={arrowStyle}><Chevron up={open} /></span>
         </button>
       )}
-      <div id="public-head-details" data-testid="public-head-details" style={{ ...detailsStyle, display: open && shown.length + wide.length > 0 ? detailsStyle.display : 'none' }} role="group" aria-label={t('head.toggleLabel')}>
+      <div id="public-head-details" data-testid="public-head-details" style={{ ...detailsStyle, display: open && shown.length > 0 ? detailsStyle.display : 'none' }} role="group" aria-label={t('head.toggleLabel')}>
         {shown.map(([key, label, value]) => (
           <dl key={key} style={rowStyle} data-testid={`public-head-${key}`}>
             <dt style={labelStyle}>{label}</dt>
             <dd style={valueStyle}>{value}</dd>
           </dl>
         ))}
-        {wide.map(([key, text]) => <p key={key} style={wideRowStyle} data-testid={`public-head-${key}`}>{text}</p>)}
       </div>
       {ended && <div style={{ marginTop: cssVars.spacing.sm }}><PublicEndedBadge /></div>}
     </div>

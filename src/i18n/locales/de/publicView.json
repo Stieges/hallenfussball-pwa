@@ -97,8 +97,10 @@
     "organizer": "Veranstalter"
   },
   "wertung": {
-    "points_one": "Wertung: Sieg {{win}} · Unentschieden {{draw}} · Niederlage {{count}} Punkt",
-    "points_other": "Wertung: Sieg {{win}} · Unentschieden {{draw}} · Niederlage {{count}} Punkte",
+    "label": "Wertung",
+    "tiebreakLabel": "Bei Punktgleichheit",
+    "pointsValue_one": "Sieg {{win}} · Unentschieden {{draw}} · Niederlage {{count}} Punkt",
+    "pointsValue_other": "Sieg {{win}} · Unentschieden {{draw}} · Niederlage {{count}} Punkte",
     "tiebreak": "Bei Punktgleichheit: {{list}}",
     "criterion": {
       "directComparison": "direkter Vergleich",

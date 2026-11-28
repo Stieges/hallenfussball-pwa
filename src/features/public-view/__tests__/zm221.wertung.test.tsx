@@ -38,31 +38,33 @@ const alle = [
 ];
 const ohneDirekt = alle.map((c) => (c.id === 'directComparison' ? { ...c, enabled: false } : c));
 const t = i18n.getFixedT('de', 'publicView');
+const N = '\u00a0'; // geschütztes Leerzeichen vor „·“: ein Umbruch beginnt nie mit „·“
 const f1 = { pointSystem: { win: 3, draw: 1, loss: 0 }, placementLogic: alle };
 
 describe('@ZM-221 wertungLines (reine Rechnung)', () => {
   it('Standard F1: Sieg 3 · Unentschieden 1 · Niederlage 0 Punkte; Reihenfolge nummeriert und kurz', () => {
     const l = wertungLines(t, f1);
-    expect(l.points).toBe('Wertung: Sieg 3 · Unentschieden 1 · Niederlage 0 Punkte');
-    expect(l.tiebreakNumbered).toBe('Bei Punktgleichheit: 1. direkter Vergleich · 2. Tordifferenz · 3. mehr Tore');
+    expect([l.pointsLabel, l.tiebreakLabel]).toEqual(['Wertung', 'Bei Punktgleichheit']);
+    expect(l.pointsValue).toBe(`Sieg 3${N}· Unentschieden 1${N}· Niederlage 0 Punkte`);
+    expect(l.tiebreakValue).toBe(`1.${N}direkter Vergleich${N}· 2.${N}Tordifferenz${N}· 3.${N}mehr Tore`);
     expect(l.tiebreakShort).toBe('Bei Punktgleichheit: direkter Vergleich, Tordifferenz, mehr Tore');
   });
   it('die Reihenfolge des Turniers gilt (Tordifferenz vor direktem Vergleich)', () => {
     const l = wertungLines(t, { ...f1, placementLogic: [alle[0], alle[2], alle[1], alle[3]] });
-    expect(l.tiebreakNumbered).toBe('Bei Punktgleichheit: 1. Tordifferenz · 2. direkter Vergleich · 3. mehr Tore');
+    expect(l.tiebreakValue).toBe(`1.${N}Tordifferenz${N}· 2.${N}direkter Vergleich${N}· 3.${N}mehr Tore`);
   });
   it('ausgeschaltete Regel fehlt in beiden Angaben, die Nummern rücken nach', () => {
     const l = wertungLines(t, { ...f1, placementLogic: ohneDirekt });
-    expect(l.tiebreakNumbered).toBe('Bei Punktgleichheit: 1. Tordifferenz · 2. mehr Tore');
+    expect(l.tiebreakValue).toBe(`1.${N}Tordifferenz${N}· 2.${N}mehr Tore`);
     expect(l.tiebreakShort).toBe('Bei Punktgleichheit: Tordifferenz, mehr Tore');
   });
   it('Einzahl: Niederlage 1 Punkt; Gegenprobe Mehrzahl bei 0 und 2', () => {
-    expect(wertungLines(t, { ...f1, pointSystem: { win: 2, draw: 1, loss: 1 } }).points).toBe('Wertung: Sieg 2 · Unentschieden 1 · Niederlage 1 Punkt');
-    expect(wertungLines(t, { ...f1, pointSystem: { win: 1, draw: 0, loss: 0 } }).points).toBe('Wertung: Sieg 1 · Unentschieden 0 · Niederlage 0 Punkte');
+    expect(wertungLines(t, { ...f1, pointSystem: { win: 2, draw: 1, loss: 1 } }).pointsValue).toBe(`Sieg 2${N}· Unentschieden 1${N}· Niederlage 1 Punkt`);
+    expect(wertungLines(t, { ...f1, pointSystem: { win: 1, draw: 0, loss: 0 } }).pointsValue).toBe(`Sieg 1${N}· Unentschieden 0${N}· Niederlage 0 Punkte`);
   });
   it('nur „Punkte“ eingeschaltet: keine Zeile zur Punktgleichheit', () => {
     const l = wertungLines(t, { ...f1, placementLogic: [alle[0]] });
-    expect(l.tiebreakNumbered).toBeUndefined();
+    expect(l.tiebreakValue).toBeUndefined();
     expect(l.tiebreakShort).toBeUndefined();
   });
 });
@@ -88,13 +90,17 @@ describe('@ZM-221 Einzelheiten unter dem Turniernamen', () => {
   it('aufgeklappt: nach der Spielzeit „Wertung“ und „Bei Punktgleichheit“ mit Nummern', () => {
     zeige(true);
     const text = screen.getByTestId('public-head-details').textContent ?? '';
-    expect(screen.getByTestId('public-head-scoring')).toHaveTextContent('Wertung: Sieg 3 · Unentschieden 1 · Niederlage 0 Punkte');
-    expect(screen.getByTestId('public-head-tiebreak')).toHaveTextContent('Bei Punktgleichheit: 1. direkter Vergleich · 2. Tordifferenz · 3. mehr Tore');
-    expect(text.indexOf('9 Minuten')).toBeLessThan(text.indexOf('Wertung:'));
+    const zeile = (id: string) => ({ links: screen.getByTestId(id).querySelector('dt')?.textContent, rechts: screen.getByTestId(id).querySelector('dd')?.textContent });
+    expect(zeile('public-head-scoring')).toEqual({ links: 'Wertung', rechts: `Sieg 3${N}· Unentschieden 1${N}· Niederlage 0 Punkte` });
+    expect(zeile('public-head-tiebreak')).toEqual({ links: 'Bei Punktgleichheit', rechts: `1.${N}direkter Vergleich${N}· 2.${N}Tordifferenz${N}· 3.${N}mehr Tore` });
+    expect(text.indexOf('9 Minuten')).toBeLessThan(text.indexOf('Wertung'));
+    // Kein „·“ steht am Anfang eines Zeilenumbruchs: vor jedem „·“ steht ein geschütztes Leerzeichen
+    expect(text).not.toMatch(/[^\u00a0]·/);
+    expect(text).not.toMatch(/\d\. /); // auch die Nummer bleibt an ihrem Eintrag
   });
   it('ausgeschaltete Regel: Nummern rücken nach', () => {
     zeige(true, { ...kopf, placementLogic: ohneDirekt });
-    expect(screen.getByTestId('public-head-tiebreak')).toHaveTextContent('Bei Punktgleichheit: 1. Tordifferenz · 2. mehr Tore');
+    expect(screen.getByTestId('public-head-tiebreak').querySelector('dd')?.textContent).toBe(`1.${N}Tordifferenz${N}· 2.${N}mehr Tore`);
   });
   it('Kindermodus oder Tabellen aus (showScoring=false): weder „Wertung“ noch „Bei Punktgleichheit“', () => {
     const { container } = zeige(false);

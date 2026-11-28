@@ -97,8 +97,10 @@
     "organizer": "Organiser"
   },
   "wertung": {
-    "points_one": "Scoring: win {{win}} · draw {{draw}} · loss {{count}} point",
-    "points_other": "Scoring: win {{win}} · draw {{draw}} · loss {{count}} points",
+    "label": "Scoring",
+    "tiebreakLabel": "If level on points",
+    "pointsValue_one": "Win {{win}} · Draw {{draw}} · Loss {{count}} point",
+    "pointsValue_other": "Win {{win}} · Draw {{draw}} · Loss {{count}} points",
     "tiebreak": "If level on points: {{list}}",
     "criterion": {
       "directComparison": "head-to-head",
