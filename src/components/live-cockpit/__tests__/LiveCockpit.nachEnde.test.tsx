@@ -111,3 +111,29 @@ describe('@SL-159 / @SL-045 / @HE-043 „Korrigieren“ nur für die Turnierleit
     expect(screen.queryByRole('button', { name: 'Korrigieren' })).toBeNull();
   });
 });
+
+describe('@SL-245 Endstand: Köpfe am Handy und gleiche Schrift', () => {
+  const breite = (px: number): void => { Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: px }); };
+  const alt = window.innerWidth;
+
+  it('Handy (390 px): der Endstand zeigt den flachen Kopf (data-kompakt), nicht den gestapelten', () => {
+    breite(390);
+    try {
+      render(<LiveCockpit {...makeProps(beendet())} />);
+      for (const seite of ['home', 'away']) {
+        expect(screen.getByTestId(`team-head-${seite}`)).toHaveAttribute('data-kompakt', 'true');
+        expect(screen.getByTestId(`team-head-${seite}`)).not.toHaveAttribute('data-gestapelt');
+      }
+    } finally { breite(alt); }
+  });
+
+  it('Laptop (1440 px): der Endstand zeigt den gestapelten Kopf, und beide Köpfe haben dieselbe Schrift, auch wenn nur ein Name ein sehr langes Wort hat', () => {
+    breite(1440);
+    try {
+      const wort = 'Sportfreundeoberweilerniedersx';
+      render(<LiveCockpit {...makeProps(makeLiveMatch({ status: 'FINISHED', homeScore: 2, awayScore: 1, events: alsKern(EVENTS), awayTeam: { id: 'sv-sued', name: wort } }))} />);
+      expect(screen.getByTestId('team-head-home')).toHaveAttribute('data-gestapelt', 'true');
+      expect(screen.getByTestId('team-name-home').style.fontSize).toBe(screen.getByTestId('team-name-away').style.fontSize);
+    } finally { breite(alt); }
+  });
+});

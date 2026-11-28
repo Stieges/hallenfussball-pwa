@@ -29,13 +29,20 @@ export interface TeamHeadBarProps {
    * (kurze Namen einzeilig), die Weste als schmale Streifen am Rand, damit der Name die Breite behält und nie im Wort bricht.
    */
   kompakt?: boolean;
+  /**
+   * Beide Namen des Spiels (@SL-245: beide Köpfe in gleicher Schriftgröße, der längste Name entscheidet). Ohne Angabe entscheidet nur der eigene Name.
+   */
+  namen?: readonly string[];
 }
 
 /**
- * Ab dieser Länge steht „Heim“/„Gast“ über dem Namen statt neben ihm: der Name bekommt die ganze Breite und bricht nur zwischen Wörtern um
+ * Handy: ab dieser Länge wird die Schrift kleiner und die Zeilenhöhe enger (am Laptop steht „Heim“/„Gast“ immer über dem Namen, @SL-245): der Name bekommt die ganze Breite und bricht nur zwischen Wörtern um
  * (nie mitten im Wort, VISUAL-DESIGN § 2; gemessen am Handy mit 50 Zeichen, `titel.wortbruch`).
  */
 const LANGER_NAME = 16;
+
+const laengstes = (namen: readonly string[], mass: (name: string) => number): number => Math.max(...namen.map(mass));
+const laengstesWort = (name: string): number => Math.max(...name.split(' ').map((wort) => wort.length));
 
 export function TeamHeadBar(props: TeamHeadBarProps): ReactElement {
   return props.kompakt ? <TeamHeadBarKompakt {...props} /> : <TeamHeadBarNormal {...props} />;
@@ -66,6 +73,8 @@ function Streifen({ fill }: { fill: BoxFill }): ReactElement | null {
 
 /** Ab dieser Wortlänge (z. B. „Oberweiler-Niederstetten“) wird die Schrift am Handy noch kleiner, damit das Wort in eine Zeile passt (kleiner statt getrennt). */
 const LANGES_WORT = 18;
+/** Normal-Kopf (Tablet/Laptop): mehr Platz, ein Wort wie „Oberweiler-Niederstetten“ (24) passt noch in normaler Schrift; erst darüber wird kleiner statt getrennt */
+const LANGES_WORT_NORMAL = 26;
 
 /**
  * Handy-Kopf: Name mit Wörtern, die nie umbrechen (`titel.wortbruch`, @OB-058), auch nicht am Bindestrich („Nordheim-/Süd“). Umgebrochen wird nur zwischen
@@ -83,10 +92,10 @@ function Woerter({ name }: { name: string }): ReactElement {
   );
 }
 
-function TeamHeadBarKompakt({ name, label, fill, bib = null, fuellend = false, testId, nameTestId }: TeamHeadBarProps): ReactElement {
+function TeamHeadBarKompakt({ name, label, fill, bib = null, fuellend = false, testId, nameTestId, namen = [name] }: TeamHeadBarProps): ReactElement {
   const text = fillTextColor(fill);
-  const lang = name.length > LANGER_NAME;
-  const langesWort = Math.max(...name.split(' ').map((wort) => wort.length)) > LANGES_WORT;
+  const lang = laengstes(namen, (n) => n.length) > LANGER_NAME; // der längste Name beider Köpfe entscheidet (@SL-245)
+  const langesWort = laengstes(namen, laengstesWort) > LANGES_WORT;
   const rand = fill.kind === 'vest' ? `calc(${cssVars.spacing.sm} + ${cssVars.spacing.xs})` : cssVars.spacing.sm;
   const kopf: CSSProperties = {
     display: 'block', boxSizing: 'border-box', minWidth: 0, padding: `${cssVars.spacing.xs} ${rand}`, borderRadius: cssVars.borderRadius.md,
@@ -116,26 +125,28 @@ function TeamHeadBarKompakt({ name, label, fill, bib = null, fuellend = false, t
   );
 }
 
-function TeamHeadBarNormal({ name, label, fill, bib = null, breit = false, fuellend = false, testId, nameTestId }: TeamHeadBarProps): ReactElement {
+function TeamHeadBarNormal({ name, label, fill, bib = null, breit = false, fuellend = false, testId, nameTestId, namen = [name] }: TeamHeadBarProps): ReactElement {
   const text = fillTextColor(fill);
-  const gestapelt = name.length > LANGER_NAME; // auch am Laptop: „Heim“/„Gast“ über dem langen Namen, sonst bricht er am Bindestrich (VISUAL-DESIGN § 2, `titel.wortbruch`)
+  const langesWort = laengstes(namen, laengstesWort) > LANGES_WORT_NORMAL; // ein sehr langes Einzelwort in EINEM der Namen macht beide Köpfe kleiner statt getrennt (wie im Handy-Kopf)
+  // @SL-245: am Laptop/Tablet immer „Heim“/„Gast“ in der ersten Zeile, der Name darunter – unabhängig von der Namenslänge, damit beide Köpfe gleich aufgebaut sind
+  // (und der Name die ganze Breite bekommt und nur zwischen Wörtern bricht, VISUAL-DESIGN § 2, `titel.wortbruch`)
   const kopf: CSSProperties = {
-    display: 'flex', flexDirection: gestapelt ? 'column-reverse' : 'row', alignItems: gestapelt ? 'stretch' : 'flex-start', justifyContent: 'space-between', gap: gestapelt ? (breit ? 0 : cssVars.spacing.xs) : cssVars.spacing.sm, boxSizing: 'border-box', minWidth: 0,
+    display: 'flex', flexDirection: 'column-reverse', alignItems: 'stretch', justifyContent: 'center', gap: breit ? 0 : cssVars.spacing.xs, boxSizing: 'border-box', minWidth: 0,
     // Die Schrift bleibt von den Weste-Streifen weg (N3: „Gast“ auf dem Streifen fiele unter 4,5 : 1)
     padding: `${cssVars.spacing.xs} ${fill.kind === 'vest' ? `calc(${cssVars.spacing.sm} + ${cssVars.spacing.sm})` : cssVars.spacing.sm}`, borderRadius: cssVars.borderRadius.md,
     border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderSolid}`, color: text, hyphens: 'manual',
     ...(fuellend ? { flex: '1 1 auto' } : {}),
-    ...(breit ? { minHeight: 'var(--cockpit-kopf, var(--sizing-cockpit-kopf-normal))', alignItems: 'center' } : {}),
+    ...(breit ? { minHeight: 'var(--cockpit-kopf, var(--sizing-cockpit-kopf-normal))' } : {}),
     ...schmaleWeste(fill),
   };
   const nameStil: CSSProperties = {
-    margin: 0, flex: gestapelt ? 'none' : '1 1 0', minWidth: 0, hyphens: 'manual', overflowWrap: 'normal', wordBreak: 'normal', lineHeight: cssVars.lineHeights.bodyMd,
-    fontSize: breit ? 'var(--cockpit-kopf-schrift, var(--font-size-title-lg))' : `clamp(${cssVars.fontSizes.md}, 4vw, ${cssVars.fontSizes.lg})`, fontWeight: cssVars.fontWeights.bold,
+    margin: 0, flex: 'none', minWidth: 0, hyphens: 'manual', overflowWrap: 'normal', wordBreak: 'normal', lineHeight: cssVars.lineHeights.bodyMd,
+    fontSize: langesWort ? cssVars.fontSizes.sm : breit ? 'var(--cockpit-kopf-schrift, var(--font-size-title-lg))' : `clamp(${cssVars.fontSizes.md}, 4vw, ${cssVars.fontSizes.lg})`, fontWeight: cssVars.fontWeights.bold,
     display: 'flex', alignItems: 'flex-start', gap: cssVars.spacing.xs,
   };
-  const seite: CSSProperties = { flex: 'none', textAlign: gestapelt ? 'right' : undefined, fontSize: cssVars.fontSizes.labelMd, fontWeight: cssVars.fontWeights.bold, textTransform: 'uppercase', lineHeight: cssVars.lineHeights.bodyMd };
+  const seite: CSSProperties = { flex: 'none', textAlign: 'right', fontSize: cssVars.fontSizes.labelMd, fontWeight: cssVars.fontWeights.bold, textTransform: 'uppercase', lineHeight: cssVars.lineHeights.label }; // eng: hält den Kopf bei Laptop-Fensterhöhe 620 px möglichst niedrig; er wird mit `breit` trotzdem etwas höher (knapp +6 px, normal +2 px), das fängt der Überschuss der Tor-Taste auf (@SL-187)
   return (
-    <div style={kopf} data-testid={testId} data-fill={fill.kind} data-gestapelt={gestapelt ? 'true' : undefined} data-color={fillBaseColor(fill)}>
+    <div style={kopf} data-testid={testId} data-fill={fill.kind} data-gestapelt="true" data-color={fillBaseColor(fill)}>
       <Streifen fill={fill} />
       <p data-teamname="" data-testid={nameTestId} style={nameStil}>
         {bib && (
@@ -143,7 +154,7 @@ function TeamHeadBarNormal({ name, label, fill, bib = null, breit = false, fuell
             <MatchIcons.Shirt size={iconSizeValues.xs} />
           </span>
         )}
-        <span style={{ minWidth: 0 }}>{name}</span>
+        <span style={{ minWidth: 0 }}><Woerter name={name} /></span>
       </p>
       <span style={seite}>{label}</span>
     </div>

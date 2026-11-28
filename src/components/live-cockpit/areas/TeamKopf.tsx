@@ -21,13 +21,15 @@ export interface TeamKopfProps {
   fuellend?: boolean;
   /** Handy: flacher Kopf, „Heim“/„Gast“ rechts in der ersten Zeile (K5/K11). */
   kompakt?: boolean;
+  /** Beide Namen des Spiels: die Schrift richtet sich nach dem längsten (@SL-245). */
+  namen?: readonly string[];
 }
 
-export function TeamKopf({ seite, name, kasten, breit = false, fuellend = false, kompakt = false }: TeamKopfProps): ReactElement {
+export function TeamKopf({ seite, name, kasten, breit = false, fuellend = false, kompakt = false, namen }: TeamKopfProps): ReactElement {
   const { t } = useTranslation('cockpit');
   return (
     <TeamHeadBar
-      name={name} label={t(seite === 'home' ? 'spalte.heim' : 'spalte.gast')} fill={kasten.fill} breit={breit} fuellend={fuellend} kompakt={kompakt}
+      name={name} label={t(seite === 'home' ? 'spalte.heim' : 'spalte.gast')} fill={kasten.fill} breit={breit} fuellend={fuellend} kompakt={kompakt} namen={namen}
       bib={kasten.bib ? { ariaLabel: t('spalte.leibchen') } : null}
       testId={`team-head-${seite}`} nameTestId={`team-name-${seite}`}
     />

@@ -16,10 +16,16 @@ export interface TeamSummaryProps {
   model: TeamSummaryModel;
   /** Ab 1024 px größere Schrift im Kopf (wie `TeamColumn`). */
   breit?: boolean;
+  /** Handy: flacher Kopf wie bisher (@SL-245) */
+  kompakt?: boolean;
+  /** Beide Namen des Spiels für die gleiche Schrift der Köpfe (@SL-245). */
+  namen?: readonly string[];
 }
 
-const spalteStil: CSSProperties = { display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm, minWidth: 0 };
+// @SL-245: wie die Tastenspalte auf den vier Zeilen der Zeilenfläche (Subgrid): der Kopf teilt seine Zeile mit dem Kopf der anderen Spalte, beide sind gleich hoch
+const spalteStil: CSSProperties = { display: 'grid', gridTemplateRows: 'subgrid', gridRow: 'span 4', rowGap: cssVars.spacing.sm, minWidth: 0 };
 const flaecheStil: CSSProperties = {
+  gridRow: '2 / span 3',
   display: 'flex', flexDirection: 'column', gap: cssVars.spacing.xs, padding: cssVars.spacing.sm, minWidth: 0,
   border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`, borderRadius: cssVars.borderRadius.md, background: cssVars.colors.surface,
   fontSize: cssVars.fontSizes.md, color: cssVars.colors.textPrimary,
@@ -44,7 +50,7 @@ function Abschnitt({ titel, leerTitel, testId, eintraege }: { titel: string; lee
   );
 }
 
-export function TeamSummary({ model, breit = false }: TeamSummaryProps): ReactElement {
+export function TeamSummary({ model, breit = false, kompakt = false, namen }: TeamSummaryProps): ReactElement {
   const { t } = useTranslation('cockpit');
   const { seite, name } = model;
   const nummerText = (nummer: number | null, zeit: string): string => (nummer === null ? t('zusammenfassung.ohneNr', { zeit }) : t('zusammenfassung.nr', { nummer, zeit }));
@@ -69,7 +75,7 @@ export function TeamSummary({ model, breit = false }: TeamSummaryProps): ReactEl
   );
   return (
     <section style={spalteStil} data-testid={`team-summary-${seite}`} aria-label={name} tabIndex={0}>
-      <TeamKopf seite={seite} name={name} kasten={model.kasten} breit={breit} />
+      <TeamKopf seite={seite} name={name} kasten={model.kasten} breit={breit} kompakt={kompakt} namen={namen} />
       <div style={flaecheStil}>
         <Abschnitt testId={`team-summary-tore-${seite}`} titel={t('zusammenfassung.tore', { count: model.tore.length })} leerTitel={t('zusammenfassung.toreKeine')} eintraege={model.tore.map(tor)} />
         <Abschnitt testId={`team-summary-karten-${seite}`} titel={t('zusammenfassung.karten', { count: model.karten.length })} leerTitel={t('zusammenfassung.kartenKeine')} eintraege={model.karten.map(karte)} />

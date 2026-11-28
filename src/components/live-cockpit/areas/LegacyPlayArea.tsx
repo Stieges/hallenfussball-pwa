@@ -33,7 +33,7 @@ export interface LegacyPlayAreaProps {
   /** Form des Strafstoßschießens (B-09b); ohne sie bleiben im Zustand `strafstoss` die Spalten stehen. */
   strafstossForm?: ReactNode;
   /** Die beiden Spalten in Anzeige-Reihenfolge (`useSideOrder`): wer links, wer rechts steht. */
-  columns: { links: Omit<TeamColumnProps, 'kompakt' | 'breit'>; rechts: Omit<TeamColumnProps, 'kompakt' | 'breit'> };
+  columns: { links: Omit<TeamColumnProps, 'kompakt' | 'breit' | 'namen'>; rechts: Omit<TeamColumnProps, 'kompakt' | 'breit' | 'namen'> };
   /** Nach dem Abpfiff statt der Tastenblöcke: Tore, Karten, Zeitstrafen, Fouls je Team (@SL-048); in Anzeige-Reihenfolge. */
   zusammenfassung?: { links: TeamSummaryModel; rechts: TeamSummaryModel } | null;
   sidebar: {
@@ -47,8 +47,9 @@ const cls = (...names: Array<string | false>): string => names.filter(Boolean).j
 
 export function LegacyPlayArea(props: LegacyPlayAreaProps): ReactElement {
   const { match, naechstes, karte = null, isMobile, isDesktop, kopf, zustand, strafstossForm, columns, zusammenfassung, sidebar } = props;
+  const namen = [columns.links.model.name, columns.rechts.model.name]; // beide Köpfe in gleicher Schrift: der längste Name entscheidet (@SL-245)
   const spalte = (spaltenProps: LegacyPlayAreaProps['columns']['links']): ReactElement => (
-    <TeamColumn {...spaltenProps} kompakt={isMobile} breit={isDesktop} strafenInTafel={!isDesktop} />
+    <TeamColumn {...spaltenProps} namen={namen} kompakt={isMobile} breit={isDesktop} strafenInTafel={!isDesktop} />
   );
 
   return (
@@ -60,8 +61,8 @@ export function LegacyPlayArea(props: LegacyPlayAreaProps): ReactElement {
           {zustand === 'strafstoss' && strafstossForm ? strafstossForm : zustand !== 'entscheidung' && (
             /* Team-Spalten – „Seiten tauschen“ vertauscht nur die Anzeige */
             <div className={cls(styles.scoreRow, isMobile && styles.scoreRowMobile, isDesktop && styles.scoreRowBreit)}>
-              {zusammenfassung ? <TeamSummary model={zusammenfassung.links} breit={isDesktop} /> : spalte(columns.links)}
-              {zusammenfassung ? <TeamSummary model={zusammenfassung.rechts} breit={isDesktop} /> : spalte(columns.rechts)}
+              {zusammenfassung ? <TeamSummary model={zusammenfassung.links} breit={isDesktop} kompakt={isMobile} namen={namen} /> : spalte(columns.links)}
+              {zusammenfassung ? <TeamSummary model={zusammenfassung.rechts} breit={isDesktop} kompakt={isMobile} namen={namen} /> : spalte(columns.rechts)}
             </div>
           )}
         </Rollbar>

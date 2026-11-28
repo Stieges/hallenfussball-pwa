@@ -26,8 +26,7 @@ describe('TeamSummary (@SL-048)', () => {
   it('FC Nord: Tore (2) mit Nummer und Zeit, „Karten (0): keine“, Zeitstrafen (1), Fouls: 3 – und keine Tasten', () => {
     render(<TeamSummary model={nord} />);
     const feld = screen.getByTestId('team-summary-home');
-    expect(within(feld).getByText('FC Nord')).toBeInTheDocument();
-    expect(screen.getByTestId('team-name-home')).toHaveTextContent('FC Nord'); // dieselbe Kennung wie die Spalte (E2E-Anker)
+    expect(screen.getByTestId('team-name-home')).toHaveTextContent('FC Nord'); // dieselbe Kennung wie die Spalte (E2E-Anker); der Name steht wortweise in nowrap-Spans (@SL-245), daher über den Gesamttext
     expect(within(feld).getByText('Heim')).toBeInTheDocument();
     expect(within(feld).getByText('Tore (2)')).toBeInTheDocument();
     expect(within(feld).getByText('#9, 1:50')).toBeInTheDocument();
@@ -72,5 +71,30 @@ describe('TeamSummary (@SL-048)', () => {
     render(<TeamSummary model={sued} />);
     expect(screen.getByTestId('team-head-away')).toHaveAttribute('data-color', '#C62828');
     expect(screen.getByTestId('team-summary-away')).toHaveAttribute('tabindex', '0');
+  });
+
+  it('@SL-245: die Köpfe beider Zusammenfassungen teilen sich eine Zeile des Rasters (gleich hoch, auch wenn nur ein Name umbricht), wie die Tastenspalten', () => {
+    render(<TeamSummary model={nord} />);
+    const feld = screen.getByTestId('team-summary-home');
+    expect(feld.style.display).toBe('grid');
+    expect(feld.style.gridTemplateRows).toBe('subgrid');
+    expect(feld.style.gridRow).toBe('span 4');
+    expect(screen.getByTestId('team-head-home').style.gridRow).toBe('');
+    expect(feld.children[1]).not.toBe(screen.getByTestId('team-head-home')); // die Fläche mit Tore/Karten steht in den Zeilen darunter
+    expect((feld.children[1] as HTMLElement).style.gridRow).toBe('2 / span 3');
+  });
+
+  it('@SL-245 Handy (kompakt): der Endstand behält den flachen Kopf, nicht den gestapelten', () => {
+    render(<TeamSummary model={nord} kompakt />);
+    const kopf = within(screen.getByTestId('team-summary-home')).getByTestId('team-head-home');
+    expect(kopf).toHaveAttribute('data-kompakt', 'true');
+    expect(kopf).not.toHaveAttribute('data-gestapelt');
+  });
+
+  it('@SL-245 gleiche Schrift: ein 27-Zeichen-Wort im Namen des anderen Teams macht beide Köpfe gleich klein', () => {
+    const wort = 'Sportfreundeoberweilerniedersx';
+    render(<><TeamSummary model={nord} namen={['FC Nord', wort]} /><TeamSummary model={sued} namen={['FC Nord', wort]} /></>);
+    expect(screen.getByTestId('team-name-home').style.fontSize).toBe(screen.getByTestId('team-name-away').style.fontSize);
+    expect(screen.getByTestId('team-name-home').style.fontSize).toBe('var(--font-size-sm)');
   });
 });

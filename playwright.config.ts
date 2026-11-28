@@ -215,7 +215,7 @@ export default defineConfig({
     {
       // Cockpit Scheibe 3 (Plan Abschluss PR 2): kleinstes Handy mit 360 × 640, nur die Cockpit-Specs (@SL-061, @OB-025).
       name: 'cockpit-360x640',
-      testMatch: /cockpit-(s3|laptop|endstand|fortsetzen|tasten|handy-platz|handy-waechter|tafel-masse|teamfarben)\.spec\.ts/,
+      testMatch: /cockpit-(s3|laptop|endstand|fortsetzen|tasten|handy-platz|handy-waechter|tafel-masse|teamfarben|kopf-schrift)\.spec\.ts/,
       use: {
         viewport: { width: 360, height: 640 },
         deviceScaleFactor: 3,
@@ -274,7 +274,7 @@ export default defineConfig({
       // createImageBitmap verhalten sich in WebKit anders, @W3-030). Die übrige Suite
       // bleibt bei Chromium. Lokal vorher: `npx playwright install webkit`.
       name: 'desktop-webkit',
-      testMatch: /(monitor-dauerbetrieb|cockpit-tasten|cockpit-hoehen|turnierlogo-pdf)\.spec\.ts$/,
+      testMatch: /(monitor-dauerbetrieb|cockpit-tasten|cockpit-hoehen|cockpit-kopf-schrift|turnierlogo-pdf)\.spec\.ts$/,
       use: {
         ...devices['Desktop Safari'],
         viewport: { width: 1280, height: 720 },
