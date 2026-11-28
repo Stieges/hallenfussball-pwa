@@ -33,12 +33,18 @@ export interface NextMatchRowProps {
    * Streifen über den Tasten. Dunkle Tafelfarben, der Rahmen als `outline` (kein Platzbedarf), Text bricht um.
    */
   aufTafel?: boolean;
+  /**
+   * Laptop (@SL-246): die Zeile steht in der Schrift der Teamköpfe der Höhenstufe (`--cockpit-zeile-schrift`, „knapp“ bleibt bei `sm`);
+   * der Farbpunkt wächst mit. Ohne diese Angabe und auf der Tafel bleibt alles wie bisher.
+   */
+  breit?: boolean;
 }
 
-const zeileStil = (modus: NextMatchRowProps['modus']): CSSProperties => ({
+const zeileStil = (modus: NextMatchRowProps['modus'], breit = false): CSSProperties => ({
   position: 'relative', display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm, flexWrap: 'wrap', minWidth: 0,
   padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`, boxSizing: 'border-box',
-  background: cssVars.colors.surface, color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.sm,
+  background: cssVars.colors.surface, color: cssVars.colors.textPrimary,
+  fontSize: breit ? `var(--cockpit-zeile-schrift, ${cssVars.fontSizes.sm})` : cssVars.fontSizes.sm,
   // Gleiche Außenmaße in jedem Modus (@SL-155 „die Tasten springen nie“): der Rahmen ist immer mittel breit, nur die Farbe wechselt
   border: `${cssVars.borderWidth.medium} solid ${modus === 'vorwarnung' ? cssVars.colors.nextWarnBorder : cssVars.colors.border}`,
   borderRadius: cssVars.borderRadius.md,
@@ -51,8 +57,9 @@ const tafelStil = (modus: NextMatchRowProps['modus']): CSSProperties => ({
 });
 const labelStil: CSSProperties = { fontWeight: cssVars.fontWeights.bold };
 const teamStil: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: cssVars.spacing.xs };
-const punktStil = (farbe: string): CSSProperties => ({
-  display: 'inline-block', width: cssVars.spacing.sm, height: cssVars.spacing.sm, borderRadius: cssVars.borderRadius.full,
+const punkt = (breit: boolean): string => (breit ? `var(--cockpit-zeile-punkt, ${cssVars.spacing.sm})` : cssVars.spacing.sm);
+const punktStil = (farbe: string, breit: boolean): CSSProperties => ({
+  display: 'inline-block', width: punkt(breit), height: punkt(breit), borderRadius: cssVars.borderRadius.full,
   background: farbe, border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderSolid}`, flex: 'none',
 });
 const balkenSpurStil: CSSProperties = {
@@ -60,16 +67,17 @@ const balkenSpurStil: CSSProperties = {
   borderBottomLeftRadius: cssVars.borderRadius.md, borderBottomRightRadius: cssVars.borderRadius.md,
 };
 
-function Team({ team, index, testId }: { team: NextMatchRowTeam; index: number; testId: string }): ReactElement {
+function Team({ team, index, testId, breit }: { team: NextMatchRowTeam; index: number; testId: string; breit: boolean }): ReactElement {
   return (
     <span style={teamStil}>
-      {team.farbe !== null && <i aria-hidden="true" data-testid={`${testId}-punkt-${index}`} style={punktStil(team.farbe)} />}
+      {team.farbe !== null && <i aria-hidden="true" data-testid={`${testId}-punkt-${index}`} style={punktStil(team.farbe, breit)} />}
       {team.name}
     </span>
   );
 }
 
 export function NextMatchRow(p: NextMatchRowProps): ReactElement {
+  const breit = p.breit === true && !p.aufTafel;
   return (
     <div
       className={p.blinken ? styles.blinken : undefined}
@@ -79,16 +87,16 @@ export function NextMatchRow(p: NextMatchRowProps): ReactElement {
       data-verborgen={p.verborgen ? 'true' : undefined}
       aria-hidden={p.verborgen ? true : undefined}
       data-auf-tafel={p.aufTafel ? 'true' : undefined}
-      style={p.aufTafel ? tafelStil(p.modus) : p.verborgen ? { ...zeileStil(p.modus), visibility: 'hidden' } : zeileStil(p.modus)}
+      style={p.aufTafel ? tafelStil(p.modus) : p.verborgen ? { ...zeileStil(p.modus, breit), visibility: 'hidden' } : zeileStil(p.modus, breit)}
       onAnimationEnd={(e) => { if (e.target === e.currentTarget) { p.onBlinkEnde?.(); } }}
     >
       <span style={{ display: 'inline-flex', color: p.aufTafel ? cssVars.colors.scoreboardTextMuted : cssVars.colors.textSecondary }}><MatchIcons.Calendar size={16} /></span>
       <span style={labelStil}>{p.label}</span>{' '}
       <span>{p.spielText}</span>{' '}
       <span aria-hidden="true">·</span>{' '}
-      <Team team={p.teams[0]} index={0} testId={p.testId} />{' '}
+      <Team team={p.teams[0]} index={0} testId={p.testId} breit={breit} />{' '}
       <span aria-hidden="true">–</span>{' '}
-      <Team team={p.teams[1]} index={1} testId={p.testId} />{' '}
+      <Team team={p.teams[1]} index={1} testId={p.testId} breit={breit} />{' '}
       <span aria-hidden="true">·</span>{' '}
       <span>{p.anstossText}</span>
       {p.wechsel && <span data-testid={`${p.testId}-wechsel`} style={{ fontWeight: cssVars.fontWeights.semibold }}>{p.wechsel.text}</span>}

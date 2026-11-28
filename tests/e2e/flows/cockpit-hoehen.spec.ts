@@ -16,8 +16,8 @@ import { neuLaden } from '../helpers/neuLaden';
 const NAMEN = ['TSV Petting', 'DJK Otting', 'TSV Waging 1', 'DJK Kammer'];
 const FARBEN = ['#6B21A8', '#2E7D32', '#C0392B', '#1E56D9'];
 const NAME_45 = 'Eintracht Oberweiler-Niederstetten 1919 e. V.';
-/** Fensterhöhen der Stufen und ihre Breiten: knapp (620, 719), normal (720, 799), gross (800, 1080 auf dem großen Bildschirm) */
-const FENSTER = [[1280, 620], [1280, 719], [1280, 720], [1280, 799], [1280, 800], [1920, 1080]] as const;
+/** Fensterhöhen der Stufen und ihre Breiten (dazu 1440 × 900 und 1440 × 620 für @SL-246): knapp (620, 719), normal (720, 799), gross (800, 1080 auf dem großen Bildschirm) */
+const FENSTER = [[1440, 900], [1440, 620], [1280, 620], [1280, 719], [1280, 720], [1280, 799], [1280, 800], [1920, 1080]] as const;
 const ZIFFERN_ANTEIL = 0.727; // Höhe der Ziffern in Inter (wie `cockpit.ziffern` in visual:metrics)
 
 const bildDavon = async (page: Page, name: string): Promise<void> => { if (BILDER !== '') { writeFileSync(`${BILDER}/${name}.png`, await page.screenshot()); } };
@@ -55,6 +55,20 @@ for (const [breite, fh] of FENSTER) {
       const leiste = await page.getByRole('toolbar').boundingBox();
       expect((leiste?.y ?? 0) + (leiste?.height ?? 0)).toBeLessThanOrEqual(fh + 1);
       await bildDavon(page, `haupt-${String(fh)}`);
+    });
+
+    test(`@SL-246 Zeile „Nächstes“: ab 720 px in der Schrift der Teamnamen, in „knapp“ nie kleiner als 12 px; Haupttaste ≥ 56 px, Zeile ganz im Fenster (${String(fh)} px)`, async ({ page, seedIndexedDB }) => {
+      await vorbereiten(page, seedIndexedDB);
+      const zeile = page.getByTestId('cockpit-naechstes');
+      await expect(zeile).toBeVisible();
+      const z = await schrift(page, 'cockpit-naechstes');
+      if (fh >= 720) { expect(z, 'Zeile mindestens so groß wie der Teamname').toBeGreaterThanOrEqual(await schrift(page, 'team-name-home')); }
+      else { expect(z, 'Zeile nie kleiner als bisher (12 px)').toBeGreaterThanOrEqual(12); }
+      expect(await hoeheVon(page, 'goal-button-home')).toBeGreaterThanOrEqual(56);
+      const b = await zeile.boundingBox();
+      expect((b?.y ?? 0) + (b?.height ?? 0)).toBeLessThanOrEqual(fh);
+      expect(await zeile.evaluate((el) => el.scrollWidth - el.clientWidth), 'Zeile bricht um, nichts abgeschnitten').toBeLessThanOrEqual(1);
+      await bildDavon(page, `naechstes-${String(fh)}`);
     });
 
     test(`@SL-178 Ziffern von Stand und Uhr sind mindestens 55 px hoch (11 mm), in jeder Stufe (${String(fh)} px)`, async ({ page, seedIndexedDB }) => {

@@ -58,6 +58,7 @@ export function NextMatchArea({ naechstes, phase, restSpielMs, layout = 'breit',
       onBlinkEnde={() => setBlinktNoch(false)}
       verborgen={verborgen}
       aufTafel={aufTafel}
+      breit={layout === 'breit'}
       testId="cockpit-naechstes"
     />
   );

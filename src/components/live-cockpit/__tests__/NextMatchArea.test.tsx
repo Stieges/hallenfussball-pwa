@@ -162,3 +162,18 @@ describe('NextMatchArea am Handy (Layout daumen): erst ab 3:00 und nach dem Abpf
     expect(screen.queryByTestId('cockpit-naechstes')).toBeNull();
   });
 });
+
+describe('NextMatchArea – Größe am Laptop (@SL-246)', () => {
+  it('am Laptop (breit) steht die Zeile in der Schrift der Stufe', () => {
+    zeige(spiel(null, null), 300_000, 'laeuft', 'breit');
+    expect(zeile().style.fontSize).toContain('--cockpit-zeile-schrift');
+  });
+
+  it('Gegenprobe: am Tablet hochkant (daumen) und am Handy (Tafel) unverändert klein', () => {
+    const { unmount } = zeige(spiel(null, null), 100_000, 'laeuft', 'daumen');
+    expect(zeile().style.fontSize).toBe('var(--font-size-sm)');
+    unmount();
+    render(<NextMatchArea naechstes={spiel(null, null)} phase={phase()} restSpielMs={100_000} layout="daumen" aufTafel />);
+    expect(zeile().style.fontSize).toBe('var(--font-size-sm)');
+  });
+});
