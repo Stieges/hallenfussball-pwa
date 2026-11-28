@@ -36,6 +36,7 @@ import { ConfirmDialog, useConfirmDialog } from '../../components/ui/ConfirmDial
 import { useRenameFeedback } from './hooks/useRenameFeedback';
 import { badgeStyle, buttonGroupStyle, teamNameStyle } from './teamsTabCardStyles';
 import { TeamCardHeader } from './components/TeamCardHeader';
+import { TeamsBibColors } from './components/TeamsBibColors';
 
 interface TeamsTabProps {
   tournament: Tournament;
@@ -355,6 +356,9 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
           </div>
         </div>
       </Card>}
+
+      {/* Leibchenfarben dieses Turniers (@W3-029, @W3-041): auch nach dem Veröffentlichen; nur die Turnierleitung */}
+      {canEditTeams && <TeamsBibColors tournament={tournament} onTournamentUpdate={onTournamentUpdate} />}
 
       {/* Active Teams */}
       <Card>
