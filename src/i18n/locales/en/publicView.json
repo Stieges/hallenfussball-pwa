@@ -95,5 +95,15 @@
     "teams_one": "{{count}} team",
     "teams_other": "{{count}} teams",
     "organizer": "Organiser"
+  },
+  "wertung": {
+    "points_one": "Scoring: win {{win}} · draw {{draw}} · loss {{count}} point",
+    "points_other": "Scoring: win {{win}} · draw {{draw}} · loss {{count}} points",
+    "tiebreak": "If level on points: {{list}}",
+    "criterion": {
+      "directComparison": "head-to-head",
+      "goalDifference": "goal difference",
+      "goalsFor": "more goals"
+    }
   }
 }

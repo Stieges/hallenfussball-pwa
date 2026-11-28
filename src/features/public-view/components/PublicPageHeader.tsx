@@ -10,14 +10,18 @@ import { joinMeta, type MatchView } from '../../../core/view';
 import type { Tournament } from '../../../types/tournament';
 import { PublicEndedBadge } from './PublicFinalStandings';
 import { Chevron } from './PublicParticipants';
+import { wertungLines } from '../publicWertung';
 import { anyMatchStarted, firstKickoffTime, headDateText, locationLong, readHeadChoice, writeHeadChoice } from '../publicHeadFacts';
 
 export interface PublicPageHeaderProps {
-  tournament: Pick<Tournament, 'title' | 'ageClass' | 'date' | 'location' | 'organizer' | 'teams' | 'groupPhaseGameDuration'>;
+  tournament: Pick<Tournament, 'title' | 'ageClass' | 'date' | 'location' | 'organizer' | 'teams' | 'groupPhaseGameDuration'>
+    & Partial<Pick<Tournament, 'pointSystem' | 'placementLogic'>>;
   /** Spiele der Ansicht: erster Anstoß und „angepfiffen?“ */
   matches: readonly MatchView[];
   shareCode: string;
   ended: boolean;
+  /** Wertung in den Einzelheiten (@ZM-221); aus bei Kindermodus und ausgeblendeten Tabellen (`rules.tables`). */
+  showScoring?: boolean;
 }
 
 const headerStyle: CSSProperties = { marginBottom: cssVars.spacing.lg, textAlign: 'center' };
@@ -36,9 +40,10 @@ const detailsStyle: CSSProperties = {
 };
 const rowStyle: CSSProperties = { display: 'grid', gridTemplateColumns: 'minmax(6rem, auto) minmax(0, 1fr)', columnGap: cssVars.spacing.md, margin: 0 };
 const labelStyle: CSSProperties = { margin: 0, color: cssVars.colors.textSecondary };
+const wideRowStyle: CSSProperties = { margin: 0, overflowWrap: 'anywhere' };
 const valueStyle: CSSProperties = { margin: 0, overflowWrap: 'anywhere' };
 
-export function PublicPageHeader({ tournament, matches, shareCode, ended }: PublicPageHeaderProps): ReactElement {
+export function PublicPageHeader({ tournament, matches, shareCode, ended, showScoring = false }: PublicPageHeaderProps): ReactElement {
   const { t, i18n } = useTranslation('publicView');
   const [choice, setChoice] = useState<boolean | undefined>(() => readHeadChoice(shareCode));
   const open = choice ?? !anyMatchStarted(matches);
@@ -62,6 +67,12 @@ export function PublicPageHeader({ tournament, matches, shareCode, ended }: Publ
     ['organizer', t('head.organizer'), organizer ?? ''],
   ];
   const shown = rows.filter(([, , value]) => value !== '');
+  const wertung = showScoring && tournament.pointSystem !== undefined && tournament.placementLogic !== undefined
+    ? wertungLines(t, { pointSystem: tournament.pointSystem, placementLogic: tournament.placementLogic }) : undefined;
+  const wide: Array<[string, string]> = wertung === undefined ? [] : [
+    ['scoring', wertung.points],
+    ...(wertung.tiebreakNumbered === undefined ? [] : [['tiebreak', wertung.tiebreakNumbered] as [string, string]]),
+  ];
 
   return (
     <div style={headerStyle}>
@@ -72,13 +83,14 @@ export function PublicPageHeader({ tournament, matches, shareCode, ended }: Publ
           <span style={arrowStyle}><Chevron up={open} /></span>
         </button>
       )}
-      <div id="public-head-details" data-testid="public-head-details" style={{ ...detailsStyle, display: open && shown.length > 0 ? detailsStyle.display : 'none' }} role="group" aria-label={t('head.toggleLabel')}>
+      <div id="public-head-details" data-testid="public-head-details" style={{ ...detailsStyle, display: open && shown.length + wide.length > 0 ? detailsStyle.display : 'none' }} role="group" aria-label={t('head.toggleLabel')}>
         {shown.map(([key, label, value]) => (
           <dl key={key} style={rowStyle} data-testid={`public-head-${key}`}>
             <dt style={labelStyle}>{label}</dt>
             <dd style={valueStyle}>{value}</dd>
           </dl>
         ))}
+        {wide.map(([key, text]) => <p key={key} style={wideRowStyle} data-testid={`public-head-${key}`}>{text}</p>)}
       </div>
       {ended && <div style={{ marginTop: cssVars.spacing.sm }}><PublicEndedBadge /></div>}
     </div>

@@ -95,5 +95,15 @@
     "teams_one": "{{count}} Team",
     "teams_other": "{{count}} Teams",
     "organizer": "Veranstalter"
+  },
+  "wertung": {
+    "points_one": "Wertung: Sieg {{win}} · Unentschieden {{draw}} · Niederlage {{count}} Punkt",
+    "points_other": "Wertung: Sieg {{win}} · Unentschieden {{draw}} · Niederlage {{count}} Punkte",
+    "tiebreak": "Bei Punktgleichheit: {{list}}",
+    "criterion": {
+      "directComparison": "direkter Vergleich",
+      "goalDifference": "Tordifferenz",
+      "goalsFor": "mehr Tore"
+    }
   }
 }

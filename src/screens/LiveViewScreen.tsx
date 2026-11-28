@@ -136,7 +136,7 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
         </div>
 
         <div style={{ ...publicPageContentStyle, transform: `translateY(${pullDistance}px)`, transition: pullDistance > 0 ? 'none' : 'transform 0.3s ease' }}>
-          <PublicPageHeader tournament={tournament} matches={view.matches} shareCode={shareCode} ended={ended} />
+          <PublicPageHeader tournament={tournament} matches={view.matches} shareCode={shareCode} ended={ended} showScoring={view.rules.tables} />
 
           {/* Ohne Netz bleibt der letzte Stand stehen, mit Hinweis (B-15, @ZM-032) */}
           {connectionHint !== null && (

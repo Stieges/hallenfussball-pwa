@@ -11,6 +11,7 @@ import { TieMarker } from '../../../components/ui/molecules/TieMarker';
 import { standingsGroups } from '../../../core/models/standingsGroups';
 import { groupTieView, publicTieMarkOf, type GroupTieView } from '../../../core/standings/tieViews';
 import { GroupTables } from '../../../components/schedule/GroupTables';
+import { wertungLines } from '../publicWertung';
 import type { Standing, Tournament } from '../../../types/tournament';
 
 export interface PublicStandingsTabProps {
@@ -20,6 +21,7 @@ export interface PublicStandingsTabProps {
 
 export const PublicStandingsTab: React.FC<PublicStandingsTabProps> = ({ tournament, standings }) => {
   const { t } = useTranslation('publicView');
+  const tiebreak = wertungLines(t, tournament).tiebreakShort;
   const { t: tTournament } = useTranslation('tournament');
   // Gleichstände einmal je Gruppe rechnen (nicht je Zeile)
   const tieViews = useMemo(
@@ -56,6 +58,9 @@ export const PublicStandingsTab: React.FC<PublicStandingsTabProps> = ({ tourname
         teams={tournament.teams}
         tournament={tournament}
         tieDisplay="public"
+        renderGroupFooter={() => tiebreak === undefined ? null : (
+          <p data-testid="public-standings-tiebreak" style={{ margin: `${cssVars.spacing.sm} 0 0`, fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary }}>{tiebreak}</p>
+        )}
         renderPublicTieMarker={(teamId, groupId) => {
           const view = tieViews.get(groupId);
           const mark = view === undefined ? undefined : publicTieMarkOf(view, teamId);
