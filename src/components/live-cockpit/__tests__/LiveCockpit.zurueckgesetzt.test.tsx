@@ -3,7 +3,7 @@
  * Szenarien: @SL-068 (Spiel 13 steht wieder zum Anpfiff bereit), @SL-130 (neu angepfiffen beginnt es leer, Stand 0:0).
  * Echte deutsche Texte (cockpit.json).
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { initRealDeI18n } from '../../../test/realDeI18n';
 import { LiveCockpit } from '../LiveCockpit';
@@ -28,6 +28,9 @@ vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }))
 const anstossZeit = (iso: string): string => new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 
 describe('LiveCockpit: Zurückgesetzt', () => {
+  // Feste Uhr: die Vorlage setzt den Anstoß auf 2026-11-28T10:00Z; mit der echten Uhr gälte das Spiel danach als „überfällig“. Hier liegt der Anstoß eine Stunde in der Zukunft.
+  beforeEach(() => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-11-28T09:00:00.000Z')); });
+  afterEach(() => { vi.useRealTimers(); });
   it('@SL-068 @SL-130 zurückgesetzt: die Meldezeile nennt Spiel 13, der Stand ist 0:0, die Anstoßzeit steht bei der Uhr (@OB-068)', () => {
     const { rerender } = render(<LiveCockpit {...makeProps(makeLiveMatch({ number: 13, homeScore: 1 }))} />);
     rerender(<LiveCockpit {...makeProps(makeLiveMatch({ number: 13, status: 'NOT_STARTED', homeScore: 0, awayScore: 0, events: [] }), { letzteZuruecksetzung: { id: 'r1', spielNummer: 13 } })} />);
