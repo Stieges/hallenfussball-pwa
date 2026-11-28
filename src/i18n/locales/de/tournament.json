@@ -296,6 +296,9 @@
     "renameSaved": "Name gespeichert",
     "deleteError": "Fehler beim Löschen",
     "restoreConfirm": "Möchtest du dieses Team wiederherstellen?\n\nDas Team wird wieder in der Tabelle und im Spielplan angezeigt.",
+    "bib": {
+      "save": "Speichern"
+    },
     "editInfo": {
       "title": "Team-Bearbeitung",
       "renameLabel": "Umbenennen:",
