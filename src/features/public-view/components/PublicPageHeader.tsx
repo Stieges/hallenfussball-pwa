@@ -10,14 +10,18 @@ import { joinMeta, type MatchView } from '../../../core/view';
 import type { Tournament } from '../../../types/tournament';
 import { PublicEndedBadge } from './PublicFinalStandings';
 import { Chevron } from './PublicParticipants';
+import { wertungLines } from '../publicWertung';
 import { anyMatchStarted, firstKickoffTime, headDateText, locationLong, readHeadChoice, writeHeadChoice } from '../publicHeadFacts';
 
 export interface PublicPageHeaderProps {
-  tournament: Pick<Tournament, 'title' | 'ageClass' | 'date' | 'location' | 'organizer' | 'teams' | 'groupPhaseGameDuration'>;
+  tournament: Pick<Tournament, 'title' | 'ageClass' | 'date' | 'location' | 'organizer' | 'teams' | 'groupPhaseGameDuration'>
+    & Partial<Pick<Tournament, 'pointSystem' | 'placementLogic'>>;
   /** Spiele der Ansicht: erster Anstoß und „angepfiffen?“ */
   matches: readonly MatchView[];
   shareCode: string;
   ended: boolean;
+  /** Wertung in den Einzelheiten (@ZM-221); aus bei Kindermodus und ausgeblendeten Tabellen (`rules.tables`). */
+  showScoring?: boolean;
 }
 
 const headerStyle: CSSProperties = { marginBottom: cssVars.spacing.lg, textAlign: 'center' };
@@ -34,11 +38,11 @@ const detailsStyle: CSSProperties = {
   background: cssVars.colors.surface, border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`, borderRadius: cssVars.borderRadius.lg,
   fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textPrimary,
 };
-const rowStyle: CSSProperties = { display: 'grid', gridTemplateColumns: 'minmax(6rem, auto) minmax(0, 1fr)', columnGap: cssVars.spacing.md, margin: 0 };
+const rowStyle: CSSProperties = { display: 'grid', gridTemplateColumns: '8.5rem minmax(0, 1fr)', columnGap: cssVars.spacing.md, margin: 0 };
 const labelStyle: CSSProperties = { margin: 0, color: cssVars.colors.textSecondary };
 const valueStyle: CSSProperties = { margin: 0, overflowWrap: 'anywhere' };
 
-export function PublicPageHeader({ tournament, matches, shareCode, ended }: PublicPageHeaderProps): ReactElement {
+export function PublicPageHeader({ tournament, matches, shareCode, ended, showScoring = false }: PublicPageHeaderProps): ReactElement {
   const { t, i18n } = useTranslation('publicView');
   const [choice, setChoice] = useState<boolean | undefined>(() => readHeadChoice(shareCode));
   const open = choice ?? !anyMatchStarted(matches);
@@ -61,7 +65,14 @@ export function PublicPageHeader({ tournament, matches, shareCode, ended }: Publ
     ['teams', t('head.teamsLabel'), tournament.teams.length > 0 ? t('head.teams', { count: tournament.teams.length }) : ''],
     ['organizer', t('head.organizer'), organizer ?? ''],
   ];
-  const shown = rows.filter(([, , value]) => value !== '');
+  const shownBase = rows.filter(([, , value]) => value !== '');
+  const wertung = showScoring && tournament.pointSystem !== undefined && tournament.placementLogic !== undefined
+    ? wertungLines(t, { pointSystem: tournament.pointSystem, placementLogic: tournament.placementLogic }) : undefined;
+  const extra: Array<[string, string, string]> = wertung === undefined ? [] : [
+    ['scoring', wertung.pointsLabel, wertung.pointsValue],
+    ...(wertung.tiebreakValue === undefined ? [] : [['tiebreak', wertung.tiebreakLabel, wertung.tiebreakValue] as [string, string, string]]),
+  ];
+  const shown = [...shownBase, ...extra];
 
   return (
     <div style={headerStyle}>

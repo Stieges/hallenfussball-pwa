@@ -25,6 +25,8 @@ export interface GroupStandingsCardProps {
   activeMatchTeamIds?: Set<string>;
   /** TB-6b: Hinweise der Gruppe über der Tabelle und Marke unter dem Teamnamen (nur Ansicht `app`). */
   tieHint?: ReactNode;
+  /** Zeile unter der Tabelle (Zuschauer-Seite: Reihenfolge bei Punktgleichheit, @ZM-221). */
+  footer?: ReactNode;
   tieMarker?: (teamId: string) => ReactNode;
   /** @W2A-059: Marke für Zuschauer, steht (Desktop wie Handy) in der Namenszelle unter dem Namen, nie als eigene Zeile. */
   publicTieMarker?: (teamId: string) => ReactNode;
@@ -48,7 +50,7 @@ const titleStyle: CSSProperties = {
   marginBottom: cssVars.spacing.md,
 };
 
-export const GroupStandingsCard: React.FC<GroupStandingsCardProps> = ({ standings, groupId, title, tournament, activeMatchTeamIds, tieHint, tieMarker, publicTieMarker, groupState }) => {
+export const GroupStandingsCard: React.FC<GroupStandingsCardProps> = ({ standings, groupId, title, tournament, activeMatchTeamIds, tieHint, tieMarker, publicTieMarker, groupState, footer }) => {
   const highlights = placementHighlights(tournament);
   // Sortiert wird einmal je Karte; breite und Handy-Tabelle bekommen dieselbe Zeilenliste (@TS-004).
   const handle = useTableSortState('gruppe', groupId);
@@ -98,6 +100,8 @@ export const GroupStandingsCard: React.FC<GroupStandingsCardProps> = ({ standing
         publicTieMarker={publicTieMarker}
         tieMarker={tieMarker}
       />
+
+      {footer}
 
       {/* CSS for responsive view switching */}
       <style>{`

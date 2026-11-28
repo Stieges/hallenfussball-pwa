@@ -34,6 +34,8 @@ interface GroupTablesProps {
    * GA4 A-13c: Zustandsmarken neben dem Gruppennamen (`marks`) und Zähler, gesperrte Taste und Abschluss-Hinweis darunter (`below`);
    * nur bei `app`. `null` = nichts für diese Gruppe.
    */
+  /** Zeile unter der Tabelle einer Gruppe (Zuschauer: @ZM-221). */
+  renderGroupFooter?: (groupId: string) => ReactNode;
   renderGroupState?: (groupId: string) => { marks: ReactNode; below: ReactNode } | null;
 }
 
@@ -47,6 +49,7 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
   renderTieMarker,
   renderPublicTieMarker,
   renderGroupState,
+  renderGroupFooter,
 }) => {
   const { t } = useTranslation('tournament');
   const groupStandings = useMemo(() => getGroupStandings(standings, teams), [standings, teams]);
@@ -92,6 +95,7 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
             tieHint={tieApp ? renderTieHint?.(group) : undefined}
             tieMarker={tieMarkerFor(group)}
             publicTieMarker={publicTieMarkerFor(group)}
+            footer={renderGroupFooter?.(group)}
             groupState={tieApp ? renderGroupState?.(group) ?? undefined : undefined}
           />
         ))}

@@ -135,6 +135,40 @@ test.describe('@ZM-210 Wann und Wo im Kopf, Einzelheiten zuklappbar', () => {
   });
 });
 
+test.describe('@ZM-221 Wertung in den Einzelheiten und unter der Tabelle', () => {
+  test('aufgeklappt: „Wertung“ und „Bei Punktgleichheit“ nach der Spielzeit; zugeklappt: nicht sichtbar', async ({ page }) => {
+    await oeffne(page, 'vor-gleiche-farbe', { width: 390, height: 844 });
+    await expect(page.getByTestId('public-head-scoring').locator('dt')).toHaveText('Wertung');
+    await expect(page.getByTestId('public-head-scoring').locator('dd')).toHaveText(/^Sieg 3\s·\sUnentschieden 1\s·\sNiederlage 0 Punkte$/);
+    await expect(page.getByTestId('public-head-tiebreak').locator('dt')).toHaveText('Bei Punktgleichheit');
+    await expect(page.getByTestId('public-head-tiebreak').locator('dd')).toHaveText(/^1\.\sdirekter Vergleich\s·\s2\.\sTordifferenz\s·\s3\.\smehr Tore$/);
+    // Spalte der Bezeichnungen: alle Angaben beginnen links an derselben Stelle wie die übrigen Einzelheiten
+    const links = await page.locator('[data-testid^="public-head-"] dd').evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().left)));
+    expect(new Set(links).size).toBe(1);
+    expect(await page.getByTestId('public-head-details').evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+    await bild(page, 'zm221-aufgeklappt');
+    await page.getByTestId('public-head-when-where').click();
+    await expect(page.getByTestId('public-head-scoring')).toBeHidden();
+  });
+
+  test('Reiter „Tabellen“: unter der Tabelle die kurze Zeile zur Punktgleichheit', async ({ page }) => {
+    await oeffne(page, 'laeuft', { width: 390, height: 844 });
+    await page.getByRole('button', { name: 'Tabellen' }).click();
+    const zeile = page.getByTestId('public-standings-tiebreak').first();
+    await expect(zeile).toHaveText('Bei Punktgleichheit: direkter Vergleich, Tordifferenz, mehr Tore', { timeout: 25000 });
+    await bild(page, 'zm221-tabellen');
+  });
+
+  test('Laptop 1440×900: beide Zeilen stehen, nichts läuft waagrecht über', async ({ page }) => {
+    await oeffne(page, 'vor-gleiche-farbe', { width: 1440, height: 900 });
+    await expect(page.getByTestId('public-head-tiebreak')).toBeVisible();
+    await bild(page, 'zm221-laptop-aufgeklappt');
+    await page.getByRole('button', { name: 'Tabellen' }).or(page.getByRole('link', { name: 'Tabellen' })).first().click();
+    await expect(page.getByTestId('public-standings-tiebreak').first()).toBeVisible();
+    await bild(page, 'zm221-laptop-tabellen');
+  });
+});
+
 test.describe('@RE-005 „Zurück“ auf Datenschutz und Impressum bleibt in der App', () => {
   for (const seite of [{ pfad: 'datenschutz', link: 'footer-datenschutz-link' }, { pfad: 'impressum', link: 'footer-impressum-link' }]) {
     test(`${seite.pfad}: vom Reiter „Info“ aus – Zurück führt wieder in den Reiter „Info“`, async ({ page }) => {

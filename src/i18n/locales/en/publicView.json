@@ -95,5 +95,17 @@
     "teams_one": "{{count}} team",
     "teams_other": "{{count}} teams",
     "organizer": "Organiser"
+  },
+  "wertung": {
+    "label": "Scoring",
+    "tiebreakLabel": "If level on points",
+    "pointsValue_one": "Win {{win}} · Draw {{draw}} · Loss {{count}} point",
+    "pointsValue_other": "Win {{win}} · Draw {{draw}} · Loss {{count}} points",
+    "tiebreak": "If level on points: {{list}}",
+    "criterion": {
+      "directComparison": "head-to-head",
+      "goalDifference": "goal difference",
+      "goalsFor": "more goals"
+    }
   }
 }
