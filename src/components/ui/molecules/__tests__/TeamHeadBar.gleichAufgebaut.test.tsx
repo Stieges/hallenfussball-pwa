@@ -54,4 +54,20 @@ describe('TeamHeadBar @SL-245: gleicher Aufbau in beiden Köpfen', () => {
     expect(screen.getByText('Gast').style.float).toBe('right');
     expect(kopf.firstElementChild?.tagName).toBe('SPAN'); // Seite steht im Dokument vor dem Namen
   });
+
+  it('Laptop/Tablet: der Name bricht nur zwischen Wörtern – jedes Wort steht in einem eigenen nowrap-Span, der Text bleibt vollständig', () => {
+    const name = 'TSV Nordheim-Süd 1921 Sportfreunde Oberweiler-Niederstetten';
+    zeige(name, 'Heim', 'kopf');
+    const nameEl = screen.getByTestId('kopf-name');
+    const spans = Array.from(nameEl.querySelectorAll('span')).filter((s) => s.style.whiteSpace === 'nowrap');
+    expect(spans.map((s) => s.textContent)).toEqual(name.split(' '));
+    expect(nameEl.textContent).toBe(name);
+  });
+
+  it('Laptop/Tablet: ein sehr langes Einzelwort wird kleiner statt getrennt', () => {
+    zeige('Sportfreundeoberweilerniederstetten', 'Heim', 'kopf', false, false);
+    const nameEl = screen.getByTestId('kopf-name');
+    expect(nameEl.style.fontSize).toBe('var(--font-size-sm)');
+    expect(nameEl.textContent).toBe('Sportfreundeoberweilerniederstetten');
+  });
 });

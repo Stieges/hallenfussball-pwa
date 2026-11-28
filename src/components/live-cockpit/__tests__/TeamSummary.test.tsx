@@ -26,7 +26,7 @@ describe('TeamSummary (@SL-048)', () => {
   it('FC Nord: Tore (2) mit Nummer und Zeit, „Karten (0): keine“, Zeitstrafen (1), Fouls: 3 – und keine Tasten', () => {
     render(<TeamSummary model={nord} />);
     const feld = screen.getByTestId('team-summary-home');
-    expect(within(feld).getByText('FC Nord')).toBeInTheDocument();
+    expect(within(feld).getByTestId('team-name-home')).toHaveTextContent('FC Nord'); // der Name steht wortweise in nowrap-Spans (@SL-245), daher über den Gesamttext
     expect(screen.getByTestId('team-name-home')).toHaveTextContent('FC Nord'); // dieselbe Kennung wie die Spalte (E2E-Anker)
     expect(within(feld).getByText('Heim')).toBeInTheDocument();
     expect(within(feld).getByText('Tore (2)')).toBeInTheDocument();
@@ -83,5 +83,12 @@ describe('TeamSummary (@SL-048)', () => {
     expect(screen.getByTestId('team-head-home').style.gridRow).toBe('');
     expect(feld.children[1]).not.toBe(screen.getByTestId('team-head-home')); // die Fläche mit Tore/Karten steht in den Zeilen darunter
     expect((feld.children[1] as HTMLElement).style.gridRow).toBe('2 / span 3');
+  });
+
+  it('@SL-245 Handy (kompakt): der Endstand behält den flachen Kopf, nicht den gestapelten', () => {
+    render(<TeamSummary model={nord} kompakt />);
+    const kopf = within(screen.getByTestId('team-summary-home')).getByTestId('team-head-home');
+    expect(kopf).toHaveAttribute('data-kompakt', 'true');
+    expect(kopf).not.toHaveAttribute('data-gestapelt');
   });
 });

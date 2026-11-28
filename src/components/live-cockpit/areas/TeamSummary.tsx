@@ -16,6 +16,8 @@ export interface TeamSummaryProps {
   model: TeamSummaryModel;
   /** Ab 1024 px größere Schrift im Kopf (wie `TeamColumn`). */
   breit?: boolean;
+  /** Handy: flacher Kopf wie bisher (@SL-245) */
+  kompakt?: boolean;
 }
 
 // @SL-245: wie die Tastenspalte auf den vier Zeilen der Zeilenfläche (Subgrid): der Kopf teilt seine Zeile mit dem Kopf der anderen Spalte, beide sind gleich hoch
@@ -46,7 +48,7 @@ function Abschnitt({ titel, leerTitel, testId, eintraege }: { titel: string; lee
   );
 }
 
-export function TeamSummary({ model, breit = false }: TeamSummaryProps): ReactElement {
+export function TeamSummary({ model, breit = false, kompakt = false }: TeamSummaryProps): ReactElement {
   const { t } = useTranslation('cockpit');
   const { seite, name } = model;
   const nummerText = (nummer: number | null, zeit: string): string => (nummer === null ? t('zusammenfassung.ohneNr', { zeit }) : t('zusammenfassung.nr', { nummer, zeit }));
@@ -71,7 +73,7 @@ export function TeamSummary({ model, breit = false }: TeamSummaryProps): ReactEl
   );
   return (
     <section style={spalteStil} data-testid={`team-summary-${seite}`} aria-label={name} tabIndex={0}>
-      <TeamKopf seite={seite} name={name} kasten={model.kasten} breit={breit} />
+      <TeamKopf seite={seite} name={name} kasten={model.kasten} breit={breit} kompakt={kompakt} />
       <div style={flaecheStil}>
         <Abschnitt testId={`team-summary-tore-${seite}`} titel={t('zusammenfassung.tore', { count: model.tore.length })} leerTitel={t('zusammenfassung.toreKeine')} eintraege={model.tore.map(tor)} />
         <Abschnitt testId={`team-summary-karten-${seite}`} titel={t('zusammenfassung.karten', { count: model.karten.length })} leerTitel={t('zusammenfassung.kartenKeine')} eintraege={model.karten.map(karte)} />

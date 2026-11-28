@@ -118,6 +118,7 @@ function TeamHeadBarKompakt({ name, label, fill, bib = null, fuellend = false, t
 
 function TeamHeadBarNormal({ name, label, fill, bib = null, breit = false, fuellend = false, testId, nameTestId }: TeamHeadBarProps): ReactElement {
   const text = fillTextColor(fill);
+  const langesWort = Math.max(...name.split(' ').map((wort) => wort.length)) > LANGES_WORT; // ein sehr langes Einzelwort wird kleiner statt getrennt (wie im Handy-Kopf)
   // @SL-245: am Laptop/Tablet immer „Heim“/„Gast“ in der ersten Zeile, der Name darunter – unabhängig von der Namenslänge, damit beide Köpfe gleich aufgebaut sind
   // (und der Name die ganze Breite bekommt und nur zwischen Wörtern bricht, VISUAL-DESIGN § 2, `titel.wortbruch`)
   const kopf: CSSProperties = {
@@ -131,10 +132,10 @@ function TeamHeadBarNormal({ name, label, fill, bib = null, breit = false, fuell
   };
   const nameStil: CSSProperties = {
     margin: 0, flex: 'none', minWidth: 0, hyphens: 'manual', overflowWrap: 'normal', wordBreak: 'normal', lineHeight: cssVars.lineHeights.bodyMd,
-    fontSize: breit ? 'var(--cockpit-kopf-schrift, var(--font-size-title-lg))' : `clamp(${cssVars.fontSizes.md}, 4vw, ${cssVars.fontSizes.lg})`, fontWeight: cssVars.fontWeights.bold,
+    fontSize: langesWort ? cssVars.fontSizes.sm : breit ? 'var(--cockpit-kopf-schrift, var(--font-size-title-lg))' : `clamp(${cssVars.fontSizes.md}, 4vw, ${cssVars.fontSizes.lg})`, fontWeight: cssVars.fontWeights.bold,
     display: 'flex', alignItems: 'flex-start', gap: cssVars.spacing.xs,
   };
-  const seite: CSSProperties = { flex: 'none', textAlign: 'right', fontSize: cssVars.fontSizes.labelMd, fontWeight: cssVars.fontWeights.bold, textTransform: 'uppercase', lineHeight: cssVars.lineHeights.label }; // eng, damit zwei Zeilen in der knappen Stufe (Kopf 40 px) nicht höher werden (@SL-187)
+  const seite: CSSProperties = { flex: 'none', textAlign: 'right', fontSize: cssVars.fontSizes.labelMd, fontWeight: cssVars.fontWeights.bold, textTransform: 'uppercase', lineHeight: cssVars.lineHeights.label }; // eng: hält den Kopf bei Laptop-Fensterhöhe 620 px möglichst niedrig; er wird mit `breit` trotzdem etwas höher (knapp +6 px, normal +2 px), das fängt der Überschuss der Tor-Taste auf (@SL-187)
   return (
     <div style={kopf} data-testid={testId} data-fill={fill.kind} data-gestapelt="true" data-color={fillBaseColor(fill)}>
       <Streifen fill={fill} />
@@ -144,7 +145,7 @@ function TeamHeadBarNormal({ name, label, fill, bib = null, breit = false, fuell
             <MatchIcons.Shirt size={iconSizeValues.xs} />
           </span>
         )}
-        <span style={{ minWidth: 0 }}>{name}</span>
+        <span style={{ minWidth: 0 }}><Woerter name={name} /></span>
       </p>
       <span style={seite}>{label}</span>
     </div>

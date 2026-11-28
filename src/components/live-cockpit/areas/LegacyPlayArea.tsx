@@ -60,8 +60,8 @@ export function LegacyPlayArea(props: LegacyPlayAreaProps): ReactElement {
           {zustand === 'strafstoss' && strafstossForm ? strafstossForm : zustand !== 'entscheidung' && (
             /* Team-Spalten – „Seiten tauschen“ vertauscht nur die Anzeige */
             <div className={cls(styles.scoreRow, isMobile && styles.scoreRowMobile, isDesktop && styles.scoreRowBreit)}>
-              {zusammenfassung ? <TeamSummary model={zusammenfassung.links} breit={isDesktop} /> : spalte(columns.links)}
-              {zusammenfassung ? <TeamSummary model={zusammenfassung.rechts} breit={isDesktop} /> : spalte(columns.rechts)}
+              {zusammenfassung ? <TeamSummary model={zusammenfassung.links} breit={isDesktop} kompakt={isMobile} /> : spalte(columns.links)}
+              {zusammenfassung ? <TeamSummary model={zusammenfassung.rechts} breit={isDesktop} kompakt={isMobile} /> : spalte(columns.rechts)}
             </div>
           )}
         </Rollbar>
