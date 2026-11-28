@@ -32,7 +32,7 @@ export interface TeamHeadBarProps {
 }
 
 /**
- * Ab dieser Länge steht „Heim“/„Gast“ über dem Namen statt neben ihm: der Name bekommt die ganze Breite und bricht nur zwischen Wörtern um
+ * Handy: ab dieser Länge wird die Schrift kleiner und die Zeilenhöhe enger (am Laptop steht „Heim“/„Gast“ immer über dem Namen, @SL-245): der Name bekommt die ganze Breite und bricht nur zwischen Wörtern um
  * (nie mitten im Wort, VISUAL-DESIGN § 2; gemessen am Handy mit 50 Zeichen, `titel.wortbruch`).
  */
 const LANGER_NAME = 16;
@@ -118,24 +118,25 @@ function TeamHeadBarKompakt({ name, label, fill, bib = null, fuellend = false, t
 
 function TeamHeadBarNormal({ name, label, fill, bib = null, breit = false, fuellend = false, testId, nameTestId }: TeamHeadBarProps): ReactElement {
   const text = fillTextColor(fill);
-  const gestapelt = name.length > LANGER_NAME; // auch am Laptop: „Heim“/„Gast“ über dem langen Namen, sonst bricht er am Bindestrich (VISUAL-DESIGN § 2, `titel.wortbruch`)
+  // @SL-245: am Laptop/Tablet immer „Heim“/„Gast“ in der ersten Zeile, der Name darunter – unabhängig von der Namenslänge, damit beide Köpfe gleich aufgebaut sind
+  // (und der Name die ganze Breite bekommt und nur zwischen Wörtern bricht, VISUAL-DESIGN § 2, `titel.wortbruch`)
   const kopf: CSSProperties = {
-    display: 'flex', flexDirection: gestapelt ? 'column-reverse' : 'row', alignItems: gestapelt ? 'stretch' : 'flex-start', justifyContent: 'space-between', gap: gestapelt ? (breit ? 0 : cssVars.spacing.xs) : cssVars.spacing.sm, boxSizing: 'border-box', minWidth: 0,
+    display: 'flex', flexDirection: 'column-reverse', alignItems: 'stretch', justifyContent: 'center', gap: breit ? 0 : cssVars.spacing.xs, boxSizing: 'border-box', minWidth: 0,
     // Die Schrift bleibt von den Weste-Streifen weg (N3: „Gast“ auf dem Streifen fiele unter 4,5 : 1)
     padding: `${cssVars.spacing.xs} ${fill.kind === 'vest' ? `calc(${cssVars.spacing.sm} + ${cssVars.spacing.sm})` : cssVars.spacing.sm}`, borderRadius: cssVars.borderRadius.md,
     border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderSolid}`, color: text, hyphens: 'manual',
     ...(fuellend ? { flex: '1 1 auto' } : {}),
-    ...(breit ? { minHeight: 'var(--cockpit-kopf, var(--sizing-cockpit-kopf-normal))', alignItems: 'center' } : {}),
+    ...(breit ? { minHeight: 'var(--cockpit-kopf, var(--sizing-cockpit-kopf-normal))' } : {}),
     ...schmaleWeste(fill),
   };
   const nameStil: CSSProperties = {
-    margin: 0, flex: gestapelt ? 'none' : '1 1 0', minWidth: 0, hyphens: 'manual', overflowWrap: 'normal', wordBreak: 'normal', lineHeight: cssVars.lineHeights.bodyMd,
+    margin: 0, flex: 'none', minWidth: 0, hyphens: 'manual', overflowWrap: 'normal', wordBreak: 'normal', lineHeight: cssVars.lineHeights.bodyMd,
     fontSize: breit ? 'var(--cockpit-kopf-schrift, var(--font-size-title-lg))' : `clamp(${cssVars.fontSizes.md}, 4vw, ${cssVars.fontSizes.lg})`, fontWeight: cssVars.fontWeights.bold,
     display: 'flex', alignItems: 'flex-start', gap: cssVars.spacing.xs,
   };
-  const seite: CSSProperties = { flex: 'none', textAlign: gestapelt ? 'right' : undefined, fontSize: cssVars.fontSizes.labelMd, fontWeight: cssVars.fontWeights.bold, textTransform: 'uppercase', lineHeight: cssVars.lineHeights.bodyMd };
+  const seite: CSSProperties = { flex: 'none', textAlign: 'right', fontSize: cssVars.fontSizes.labelMd, fontWeight: cssVars.fontWeights.bold, textTransform: 'uppercase', lineHeight: cssVars.lineHeights.bodyMd };
   return (
-    <div style={kopf} data-testid={testId} data-fill={fill.kind} data-gestapelt={gestapelt ? 'true' : undefined} data-color={fillBaseColor(fill)}>
+    <div style={kopf} data-testid={testId} data-fill={fill.kind} data-gestapelt="true" data-color={fillBaseColor(fill)}>
       <Streifen fill={fill} />
       <p data-teamname="" data-testid={nameTestId} style={nameStil}>
         {bib && (

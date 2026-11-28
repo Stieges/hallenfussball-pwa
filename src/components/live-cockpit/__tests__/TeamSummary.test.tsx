@@ -73,4 +73,15 @@ describe('TeamSummary (@SL-048)', () => {
     expect(screen.getByTestId('team-head-away')).toHaveAttribute('data-color', '#C62828');
     expect(screen.getByTestId('team-summary-away')).toHaveAttribute('tabindex', '0');
   });
+
+  it('@SL-245: die Köpfe beider Zusammenfassungen teilen sich eine Zeile des Rasters (gleich hoch, auch wenn nur ein Name umbricht), wie die Tastenspalten', () => {
+    render(<TeamSummary model={nord} />);
+    const feld = screen.getByTestId('team-summary-home');
+    expect(feld.style.display).toBe('grid');
+    expect(feld.style.gridTemplateRows).toBe('subgrid');
+    expect(feld.style.gridRow).toBe('span 4');
+    expect(screen.getByTestId('team-head-home').style.gridRow).toBe('');
+    expect(feld.children[1]).not.toBe(screen.getByTestId('team-head-home')); // die Fläche mit Tore/Karten steht in den Zeilen darunter
+    expect((feld.children[1] as HTMLElement).style.gridRow).toBe('2 / span 3');
+  });
 });

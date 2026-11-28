@@ -59,7 +59,7 @@ describe('TeamColumn am Laptop', () => {
     expect(kopf.textContent).not.toContain('…');
   });
 
-  it('@SL-182 „Nordheim-Süd“: der lange Name trennt nie mitten im Wort und bricht höchstens an Leerzeichen und Bindestrich; ein kurzer Name steht neben „Gast“', () => {
+  it('@SL-182 „Nordheim-Süd“: der lange Name trennt nie mitten im Wort und bricht höchstens an Leerzeichen und Bindestrich; auch ein kurzer Name steht unter „Gast“ (@SL-245)', () => {
     const lang = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921';
     const { unmount } = render(<TeamColumn {...props({ name: lang })} />);
     const name = screen.getByTestId('team-name-away');
@@ -68,6 +68,6 @@ describe('TeamColumn am Laptop', () => {
     expect(name.style.hyphens).toBe('manual');
     unmount();
     render(<TeamColumn {...props({ name: 'SV Süd' })} />);
-    expect(screen.getByTestId('team-head-away')).not.toHaveAttribute('data-gestapelt');
+    expect(screen.getByTestId('team-head-away')).toHaveAttribute('data-gestapelt', 'true'); // @SL-245: bisher neben „Gast“, jetzt in beiden Köpfen gleich
   });
 });
