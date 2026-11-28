@@ -26,6 +26,8 @@ export interface TeamColumnProps {
   kompakt?: boolean;
   /** Ab 1024 px größere Schrift im Kopf. */
   breit?: boolean;
+  /** Beide Namen des Spiels für die gleiche Schrift der Köpfe (@SL-245). */
+  namen?: readonly string[];
   /** Tastenkürzel dieser Seite (@SL-153): Tor `1`/`2`, Foul `F`/`J`; ohne Angabe (Schalter aus, kein Laptop) weder Hinweis noch `aria-keyshortcuts`. */
   taste?: { tor: string; foul: string };
   /** Vor dem Anpfiff im Platz der Tor-Taste: „Leibchen für …“ dieses Teams (@SL-137, @SL-148). */
@@ -72,7 +74,7 @@ const kbdChipStil = (aufPrimaer: boolean): CSSProperties => ({
   color: aufPrimaer ? cssVars.colors.onPrimary : cssVars.colors.textSecondary,
 });
 
-export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKarte, kompakt = false, breit = false, taste, strafenInTafel = false }: TeamColumnProps): ReactElement {
+export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKarte, kompakt = false, breit = false, namen, taste, strafenInTafel = false }: TeamColumnProps): ReactElement {
   const { t } = useTranslation('cockpit');
   const chips = useFeinerZeiger() && taste !== undefined;
   const { seite, name, fouls, strafen, kartenArten } = model;
@@ -91,7 +93,7 @@ export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKart
   return (
     <section style={spalteStil(kompakt)} data-testid={`team-column-${seite}`} aria-label={name}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm, minWidth: 0 }}>
-      <TeamKopf seite={seite} name={name} kasten={model.kasten} breit={breit} kompakt={kompakt} fuellend />
+      <TeamKopf seite={seite} name={name} kasten={model.kasten} breit={breit} kompakt={kompakt} namen={namen} fuellend />
       {/* Der Zähler steht im Foul-Knopf (Laptop-Mockup Stand 4); eine eigene Zeile nur ohne Foul-Knopf (Halbzeitpause, Nur-Lesen) */}
       {!knoepfe.foul && !(kompakt && model.vorAnpfiff) && <div style={zaehlerStil} data-testid={`team-fouls-${seite}`}>{foulText}</div>}
       </div>

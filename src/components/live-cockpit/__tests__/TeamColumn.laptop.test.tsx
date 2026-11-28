@@ -70,4 +70,12 @@ describe('TeamColumn am Laptop', () => {
     render(<TeamColumn {...props({ name: 'SV Süd' })} />);
     expect(screen.getByTestId('team-head-away')).toHaveAttribute('data-gestapelt', 'true'); // @SL-245: bisher neben „Gast“, jetzt in beiden Köpfen gleich
   });
+
+  it('@SL-245 gleiche Schrift: beide Spalten bekommen die Namen beider Teams, ein langes Wort macht beide Köpfe gleich klein', () => {
+    const wort = 'Sportfreundeoberweilerniedersx';
+    const namen = ['FC Nord', wort];
+    render(<><TeamColumn {...props({ seite: 'home', name: 'FC Nord' }, { namen })} /><TeamColumn {...props({ seite: 'away', name: wort }, { namen })} /></>);
+    expect(screen.getByTestId('team-name-home').style.fontSize).toBe(screen.getByTestId('team-name-away').style.fontSize);
+    expect(screen.getByTestId('team-name-home').style.fontSize).toBe('var(--font-size-sm)');
+  });
 });

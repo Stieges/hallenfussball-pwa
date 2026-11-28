@@ -75,4 +75,30 @@ describe('TeamHeadBar @SL-245: gleicher Aufbau in beiden Köpfen', () => {
     zeige('Eintracht Oberweiler-Niederstetten 1919 e. V.', 'Gast', 'kopf', false, false);
     expect(screen.getByTestId('kopf-name').style.fontSize).not.toBe('var(--font-size-sm)');
   });
+
+  const WORT_27 = 'Sportfreundeoberweilerniedersx'; // 30 Zeichen, deutlich über der Grenze
+  it('@SL-245 gleiche Schrift (Laptop/Tablet): ein langes Wort in EINEM Namen macht beide Köpfe gleich klein; ohne gemeinsame Angabe bliebe der andere groß', () => {
+    const namen = ['FC Nord', WORT_27];
+    render(<>
+      <TeamHeadBar name="FC Nord" label="Heim" fill={FLAECHE} breit testId="heim" nameTestId="heim-name" namen={namen} />
+      <TeamHeadBar name={WORT_27} label="Gast" fill={FLAECHE} breit testId="gast" nameTestId="gast-name" namen={namen} />
+    </>);
+    expect(screen.getByTestId('heim-name').style.fontSize).toBe('var(--font-size-sm)');
+    expect(screen.getByTestId('gast-name').style.fontSize).toBe('var(--font-size-sm)');
+  });
+
+  it('Gegenprobe: ohne gemeinsame Angabe entscheidet jeder Kopf allein (kurzer Name bleibt groß)', () => {
+    zeige('FC Nord', 'Heim', 'kopf');
+    expect(screen.getByTestId('kopf-name').style.fontSize).not.toBe('var(--font-size-sm)');
+  });
+
+  it('@SL-245 gleiche Schrift (Handy): ein langer Name macht beide kompakten Köpfe gleich klein', () => {
+    const namen = ['FC Nord', WORT_27];
+    render(<>
+      <TeamHeadBar name="FC Nord" label="Heim" fill={FLAECHE} kompakt testId="heim" nameTestId="heim-name" namen={namen} />
+      <TeamHeadBar name={WORT_27} label="Gast" fill={FLAECHE} kompakt testId="gast" nameTestId="gast-name" namen={namen} />
+    </>);
+    expect(screen.getByTestId('heim-name').style.fontSize).toBe(screen.getByTestId('gast-name').style.fontSize);
+    expect(screen.getByTestId('heim-name').style.fontSize).toBe('var(--font-size-xs)');
+  });
 });

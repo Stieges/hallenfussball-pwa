@@ -29,6 +29,10 @@ export interface TeamHeadBarProps {
    * (kurze Namen einzeilig), die Weste als schmale Streifen am Rand, damit der Name die Breite behält und nie im Wort bricht.
    */
   kompakt?: boolean;
+  /**
+   * Beide Namen des Spiels (@SL-245: beide Köpfe in gleicher Schriftgröße, der längste Name entscheidet). Ohne Angabe entscheidet nur der eigene Name.
+   */
+  namen?: readonly string[];
 }
 
 /**
@@ -36,6 +40,9 @@ export interface TeamHeadBarProps {
  * (nie mitten im Wort, VISUAL-DESIGN § 2; gemessen am Handy mit 50 Zeichen, `titel.wortbruch`).
  */
 const LANGER_NAME = 16;
+
+const laengstes = (namen: readonly string[], mass: (name: string) => number): number => Math.max(...namen.map(mass));
+const laengstesWort = (name: string): number => Math.max(...name.split(' ').map((wort) => wort.length));
 
 export function TeamHeadBar(props: TeamHeadBarProps): ReactElement {
   return props.kompakt ? <TeamHeadBarKompakt {...props} /> : <TeamHeadBarNormal {...props} />;
@@ -85,10 +92,10 @@ function Woerter({ name }: { name: string }): ReactElement {
   );
 }
 
-function TeamHeadBarKompakt({ name, label, fill, bib = null, fuellend = false, testId, nameTestId }: TeamHeadBarProps): ReactElement {
+function TeamHeadBarKompakt({ name, label, fill, bib = null, fuellend = false, testId, nameTestId, namen = [name] }: TeamHeadBarProps): ReactElement {
   const text = fillTextColor(fill);
-  const lang = name.length > LANGER_NAME;
-  const langesWort = Math.max(...name.split(' ').map((wort) => wort.length)) > LANGES_WORT;
+  const lang = laengstes(namen, (n) => n.length) > LANGER_NAME; // der längste Name beider Köpfe entscheidet (@SL-245)
+  const langesWort = laengstes(namen, laengstesWort) > LANGES_WORT;
   const rand = fill.kind === 'vest' ? `calc(${cssVars.spacing.sm} + ${cssVars.spacing.xs})` : cssVars.spacing.sm;
   const kopf: CSSProperties = {
     display: 'block', boxSizing: 'border-box', minWidth: 0, padding: `${cssVars.spacing.xs} ${rand}`, borderRadius: cssVars.borderRadius.md,
@@ -118,9 +125,9 @@ function TeamHeadBarKompakt({ name, label, fill, bib = null, fuellend = false, t
   );
 }
 
-function TeamHeadBarNormal({ name, label, fill, bib = null, breit = false, fuellend = false, testId, nameTestId }: TeamHeadBarProps): ReactElement {
+function TeamHeadBarNormal({ name, label, fill, bib = null, breit = false, fuellend = false, testId, nameTestId, namen = [name] }: TeamHeadBarProps): ReactElement {
   const text = fillTextColor(fill);
-  const langesWort = Math.max(...name.split(' ').map((wort) => wort.length)) > LANGES_WORT_NORMAL; // ein sehr langes Einzelwort wird kleiner statt getrennt (wie im Handy-Kopf)
+  const langesWort = laengstes(namen, laengstesWort) > LANGES_WORT_NORMAL; // ein sehr langes Einzelwort in EINEM der Namen macht beide Köpfe kleiner statt getrennt (wie im Handy-Kopf)
   // @SL-245: am Laptop/Tablet immer „Heim“/„Gast“ in der ersten Zeile, der Name darunter – unabhängig von der Namenslänge, damit beide Köpfe gleich aufgebaut sind
   // (und der Name die ganze Breite bekommt und nur zwischen Wörtern bricht, VISUAL-DESIGN § 2, `titel.wortbruch`)
   const kopf: CSSProperties = {
