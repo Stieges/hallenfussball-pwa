@@ -134,7 +134,7 @@ function TeamHeadBarNormal({ name, label, fill, bib = null, breit = false, fuell
     fontSize: breit ? 'var(--cockpit-kopf-schrift, var(--font-size-title-lg))' : `clamp(${cssVars.fontSizes.md}, 4vw, ${cssVars.fontSizes.lg})`, fontWeight: cssVars.fontWeights.bold,
     display: 'flex', alignItems: 'flex-start', gap: cssVars.spacing.xs,
   };
-  const seite: CSSProperties = { flex: 'none', textAlign: 'right', fontSize: cssVars.fontSizes.labelMd, fontWeight: cssVars.fontWeights.bold, textTransform: 'uppercase', lineHeight: cssVars.lineHeights.bodyMd };
+  const seite: CSSProperties = { flex: 'none', textAlign: 'right', fontSize: cssVars.fontSizes.labelMd, fontWeight: cssVars.fontWeights.bold, textTransform: 'uppercase', lineHeight: cssVars.lineHeights.label }; // eng, damit zwei Zeilen in der knappen Stufe (Kopf 40 px) nicht höher werden (@SL-187)
   return (
     <div style={kopf} data-testid={testId} data-fill={fill.kind} data-gestapelt="true" data-color={fillBaseColor(fill)}>
       <Streifen fill={fill} />
