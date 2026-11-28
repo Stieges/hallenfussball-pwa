@@ -38,6 +38,8 @@ const spiel13 = makeLiveMatch({
 
 describe('LiveCockpit: Tafel vor dem Anpfiff', () => {
   it('@SL-049 Spiel 13 TSV West – SG Mitte, 15:15, Feld 1 steht zum Anpfiff bereit', () => {
+    // Feste Uhr eine Stunde vor dem Anstoß: mit der echten Uhr gälte das Spiel am 28.11. nach 15:15 als „überfällig“
+    vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(um(14, 15));
     render(<LiveCockpit {...makeProps(spiel13)} />);
     expect(screen.getByTestId('scoreboard-state')).toBeEmptyDOMElement(); // @OB-068: der Platz des Abzeichens bleibt leer, die Anstoßzeit steht bei der Uhr
     expect(screen.getByTestId('scoreboard-name-links')).toHaveTextContent('TSV West');
