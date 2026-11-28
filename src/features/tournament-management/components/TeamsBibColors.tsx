@@ -38,7 +38,7 @@ export function TeamsBibColors({ tournament, onTournamentUpdate }: TeamsBibColor
     <Card style={{ marginBottom: cssVars.spacing.lg }}>
       <div data-testid="teams-bib-colors">
         <BibColorsSettings formData={draft} onUpdate={update} />
-        <Button variant="primary" disabled={!dirty} onClick={save} data-testid="teams-bib-save">{t('teams.bib.save')}</Button>
+        <Button variant="primary" disabled={!dirty} onClick={save} style={{ minHeight: cssVars.touchTargets.primary }} data-testid="teams-bib-save" data-primary>{t('teams.bib.save')}</Button>
       </div>
     </Card>
   );
