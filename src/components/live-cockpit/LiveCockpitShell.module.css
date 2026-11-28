@@ -41,6 +41,8 @@
   --cockpit-fuss: var(--sizing-cockpit-fuss-normal);
   --cockpit-kopf: var(--sizing-cockpit-kopf-normal);
   --cockpit-kopf-schrift: var(--font-size-title-lg);
+  --cockpit-zeile-schrift: var(--cockpit-kopf-schrift); /* Zeile „Nächstes“ wie die Teamnamen (@SL-246) */
+  --cockpit-zeile-punkt: var(--spacing-md);
   --sizing-cockpit-leiste-breit: var(--sizing-cockpit-leiste-normal);
 }
 
@@ -50,6 +52,8 @@
   --cockpit-fuss: var(--sizing-cockpit-fuss-knapp);
   --cockpit-kopf: var(--sizing-cockpit-kopf-knapp);
   --cockpit-kopf-schrift: var(--font-size-title-md);
+  --cockpit-zeile-schrift: var(--font-size-sm); /* knapp: Haupttaste hat Vorrang, Zeile bleibt wie bisher (@SL-246) */
+  --cockpit-zeile-punkt: var(--spacing-sm);
   --sizing-cockpit-leiste-breit: var(--sizing-cockpit-leiste-knapp);
 }
 

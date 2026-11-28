@@ -93,4 +93,20 @@ describe('NextMatchRow', () => {
     expect(screen.getByText('Wechsel in 12 s')).toBeInTheDocument();
     expect(screen.getByTestId('next-wechsel-balken').style.transform).toBe('scaleX(0.4)');
   });
+
+  // @SL-246: am Laptop in der Schrift der Teamköpfe (Stufe der Fensterhöhe), Farbpunkt wächst mit; Handy und Tafel bleiben wie bisher
+  it('@SL-246 am Laptop (breit) nimmt die Zeile die Schrift der Stufe, der Farbpunkt wächst mit', () => {
+    render(<NextMatchRow {...basis({ breit: true })} />);
+    expect(screen.getByTestId('next').style.fontSize).toContain('--cockpit-zeile-schrift');
+    expect(screen.getByTestId('next-punkt-0').style.width).toContain('--cockpit-zeile-punkt');
+  });
+
+  it('@SL-246 Gegenprobe: ohne breit und auf der Tafel bleibt die Schrift klein (sm), der Punkt sm', () => {
+    const { unmount } = render(<NextMatchRow {...basis()} />);
+    expect(screen.getByTestId('next').style.fontSize).toBe('var(--font-size-sm)');
+    expect(screen.getByTestId('next-punkt-0').style.width).toBe('var(--spacing-sm)');
+    unmount();
+    render(<NextMatchRow {...basis({ breit: true, aufTafel: true })} />);
+    expect(screen.getByTestId('next').style.fontSize).toBe('var(--font-size-sm)');
+  });
 });
